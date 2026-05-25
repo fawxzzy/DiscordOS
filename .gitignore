@@ -1,0 +1,17 @@
+# Secrets and local env
+.env
+.env.*
+
+# Package managers and build outputs
+node_modules/
+dist/
+build/
+coverage/
+
+# Framework outputs
+.next/
+.vercel/
+
+# Logs and temp
+*.log
+.DS_Store
