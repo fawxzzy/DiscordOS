@@ -54,6 +54,12 @@ The contract must support migration without changing:
 
 These are documentation contracts only for now. They are not yet implemented as code or runtime adapters.
 
+Current code-facing mirror:
+
+- `src/contracts/feedback.ts`
+  - typed contract surface only
+  - intentionally contains no implementation
+
 ### 1. Feedback Card Identity
 
 ```ts

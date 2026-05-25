@@ -17,5 +17,8 @@ Current governed contract surface:
   - first DiscordOS-owned feedback-domain contract scaffold
   - no copied Fitness implementation
   - no runtime, database, or env dependency yet
+- `src/contracts/feedback.ts`
+  - code-facing type/interface seam only
+  - no adapters, runtime behavior, database client, or env coupling
 
 Until a later approved extraction lane opens, this repo is a governed landing surface for future DiscordOS work, not an active runtime owner.
