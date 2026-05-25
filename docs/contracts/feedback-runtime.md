@@ -59,6 +59,9 @@ Current code-facing mirror:
 - `src/contracts/feedback.ts`
   - typed contract surface only
   - intentionally contains no implementation
+- `src/adapters/feedback/index.ts`
+  - type-only adapter slots for future lookup/store/thread/audit/permission adapters
+  - intentionally contains no implementation
 
 ### 1. Feedback Card Identity
 
@@ -231,6 +234,10 @@ Before real extraction, DiscordOS should implement ports rather than copied logi
 - `FeedbackPermissionPort`
 
 These ports should be satisfied later by adapters, not by direct Fitness code copy.
+
+Current adapter stub location:
+
+- `src/adapters/feedback/`
 
 ## Explicit Non-Goals
 

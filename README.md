@@ -20,5 +20,8 @@ Current governed contract surface:
 - `src/contracts/feedback.ts`
   - code-facing type/interface seam only
   - no adapters, runtime behavior, database client, or env coupling
+- `src/adapters/feedback/index.ts`
+  - adapter slot and bundle types only
+  - still no implementation, runtime behavior, or service clients
 
 Until a later approved extraction lane opens, this repo is a governed landing surface for future DiscordOS work, not an active runtime owner.
