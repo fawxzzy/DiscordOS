@@ -13,6 +13,11 @@ export type {
   FeedbackReportStorePort,
   FeedbackThreadSyncPort,
 } from "../../contracts";
+export type {
+  FeedbackLookupProvider,
+  RawFeedbackLookupIdentity,
+  RawFeedbackLookupProviderResult,
+} from "./lookup";
 
 export type FeedbackAdapterSlotName =
   | "reportStore"

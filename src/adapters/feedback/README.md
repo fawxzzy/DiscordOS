@@ -36,3 +36,11 @@ Do not add:
 
 - `index.ts`
   - re-exports the future adapter seam types only
+- `lookup/`
+  - holds type-only raw provider shapes for future injected lookup execution
+  - no implementation, transport wiring, or runtime logic
+
+## Verification
+
+- `npm run verify:feedback-adapters`
+  - runs no-emit TypeScript verification over feedback contracts and feedback adapter surfaces only

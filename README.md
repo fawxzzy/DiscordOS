@@ -23,5 +23,13 @@ Current governed contract surface:
 - `src/adapters/feedback/index.ts`
   - adapter slot and bundle types only
   - still no implementation, runtime behavior, or service clients
+- `src/adapters/feedback/lookup/types.ts`
+  - raw injected lookup-provider shape only
+  - no Fitness runtime import, no transport wiring, no adapter behavior yet
+
+Current repo-local verification surface:
+
+- `npm run verify:feedback-adapters`
+  - no-emit TypeScript verification for feedback contracts and adapter seams only
 
 Until a later approved extraction lane opens, this repo is a governed landing surface for future DiscordOS work, not an active runtime owner.

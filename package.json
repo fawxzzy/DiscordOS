@@ -1,0 +1,11 @@
+{
+  "name": "@fawxzzy/discordos",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "verify:feedback-adapters": "tsc --project tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
