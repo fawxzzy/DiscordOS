@@ -32,6 +32,11 @@ export {
   FEEDBACK_LOOKUP_NORMALIZATION_SCENARIO_LABELS,
 } from "./scenarios";
 export {
+  FEEDBACK_LOOKUP_FIXTURE_BUILDERS,
+  FEEDBACK_LOOKUP_SCENARIO_BUILDERS,
+  FEEDBACK_LOOKUP_SUPPORT,
+} from "./support";
+export {
   normalizeFeedbackLookupIdentity,
   normalizeFeedbackLookupProviderResult,
 } from "./normalize";

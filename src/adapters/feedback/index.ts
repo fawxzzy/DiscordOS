@@ -34,7 +34,10 @@ export {
   createRawFeedbackLookupIdentityFixture,
   createUnavailableFeedbackLookupProviderResultFixture,
   createUnavailableFeedbackLookupNormalizationScenario,
+  FEEDBACK_LOOKUP_FIXTURE_BUILDERS,
   FEEDBACK_LOOKUP_NORMALIZATION_SCENARIO_LABELS,
+  FEEDBACK_LOOKUP_SCENARIO_BUILDERS,
+  FEEDBACK_LOOKUP_SUPPORT,
   normalizeFeedbackLookupIdentity,
   normalizeFeedbackLookupProviderResult,
 } from "./lookup";
