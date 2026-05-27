@@ -1,5 +1,6 @@
 export type {
   FeedbackLookupProvider,
+  FeedbackLookupProviderRequest,
   RawFeedbackLookupIdentity,
   RawFeedbackLookupProviderResult,
 } from "./types";

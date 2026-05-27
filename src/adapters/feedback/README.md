@@ -39,6 +39,7 @@ Do not add:
 - `lookup/`
   - holds type-only raw provider shapes for future injected lookup execution
   - now also holds pure normalization helpers and a transport-free factory only
+  - formalizes a request-object provider boundary without selecting transport
   - no transport wiring or runtime logic
 
 ## Verification

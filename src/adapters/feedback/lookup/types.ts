@@ -11,6 +11,10 @@ export interface RawFeedbackLookupIdentity {
   updatedAt: string;
 }
 
+export interface FeedbackLookupProviderRequest {
+  reportIdOrPrefix: string;
+}
+
 export type RawFeedbackLookupProviderResult =
   | {
       kind: "found";
@@ -37,6 +41,6 @@ export type RawFeedbackLookupProviderResult =
 
 export interface FeedbackLookupProvider {
   findReportIdentity(
-    reportIdOrPrefix: string
+    request: FeedbackLookupProviderRequest
   ): Promise<RawFeedbackLookupProviderResult>;
 }

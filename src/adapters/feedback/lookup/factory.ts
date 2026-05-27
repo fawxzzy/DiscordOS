@@ -7,7 +7,9 @@ export function createFeedbackLookupPort(
 ): FeedbackLookupPort {
   return {
     async findReportIdentity(reportIdOrPrefix) {
-      const result = await provider.findReportIdentity(reportIdOrPrefix);
+      const result = await provider.findReportIdentity({
+        reportIdOrPrefix,
+      });
       return normalizeFeedbackLookupProviderResult(result);
     },
   };

@@ -15,6 +15,7 @@ export type {
 } from "../../contracts";
 export type {
   FeedbackLookupProvider,
+  FeedbackLookupProviderRequest,
   RawFeedbackLookupIdentity,
   RawFeedbackLookupProviderResult,
 } from "./lookup";
