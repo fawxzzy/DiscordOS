@@ -11,6 +11,8 @@ Current local surfaces:
   - pure normalization from raw lookup results into DiscordOS contract results
 - `factory.ts`
   - transport-free composition of an injected provider with normalization
+- `stub.ts`
+  - transport-neutral callable stub provider backed only by deterministic boundary data
 - `fixtures.ts`
   - deterministic local request, identity, and raw-result builders
   - deterministic stub-boundary and stub-expectation builders
@@ -26,4 +28,5 @@ Guardrails:
 - no bridge wiring
 - no Fitness runtime imports
 - no live provider implementation
+- no non-deterministic callable behavior
 - no runtime, database, Discord, or env-bound code

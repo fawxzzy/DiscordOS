@@ -33,6 +33,7 @@ export {
   createFeedbackLookupProviderRequestFixture,
   createFeedbackLookupProviderStubBoundaryFixture,
   createFeedbackLookupProviderStubExpectationFixture,
+  createFeedbackLookupStubProvider,
   createFoundFeedbackLookupProviderResultFixture,
   createFoundFeedbackLookupNormalizationScenario,
   createInvalidInputFeedbackLookupProviderResultFixture,

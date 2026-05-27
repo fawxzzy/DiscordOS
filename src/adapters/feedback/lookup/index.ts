@@ -14,6 +14,9 @@ export {
   createFeedbackLookupPort,
 } from "./factory";
 export {
+  createFeedbackLookupStubProvider,
+} from "./stub";
+export {
   createAmbiguousFeedbackLookupProviderResultFixture,
   createFeedbackLookupProviderRequestFixture,
   createFeedbackLookupProviderStubBoundaryFixture,
