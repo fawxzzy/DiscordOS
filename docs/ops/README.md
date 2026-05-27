@@ -21,6 +21,8 @@ Current repo-local preconditions:
   - confirms the provider-stub boundary artifact is complete enough to pause and routes any further widening to an explicit implementation-adjacent boundary decision
 - `feedback-lookup-implementation-adjacent-boundary-checkpoint-2026-05-26.md`
   - decides whether an implementation-adjacent lookup lane should open at all and narrows the next safe artifact to a transport-neutral callable stub provider boundary only
+- `feedback-lookup-callable-stub-provider-pause-checkpoint-2026-05-26.md`
+  - confirms the callable stub provider artifact is complete enough to pause and routes any further widening to an explicit live-provider-adjacent boundary decision
 
 Pre-handoff live-state check:
 
