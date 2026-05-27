@@ -29,11 +29,13 @@ export type {
 } from "./lookup";
 export {
   createAmbiguousFeedbackLookupProviderResultFixture,
+  createFeedbackLookupLiveProvider,
   createAmbiguousFeedbackLookupNormalizationScenario,
   createFeedbackLookupNormalizationScenarios,
   createFeedbackLookupLiveProviderCapabilitiesFixture,
   createFeedbackLookupLiveProviderFailureEnvelopeFixture,
   createFeedbackLookupPort,
+  createFeedbackLookupProviderLiveBoundaryFixture,
   createFeedbackLookupProviderRequestFixture,
   createFeedbackLookupProviderStubBoundaryFixture,
   createFeedbackLookupProviderStubExpectationFixture,

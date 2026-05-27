@@ -46,6 +46,7 @@ Do not add:
   - now also exposes deterministic stub-boundary fixtures for provider-adjacent artifact shaping only
   - now also exposes deterministic live-provider capability fixtures for live-provider-adjacent artifact shaping only
   - now also exposes a transport-neutral callable stub provider backed only by deterministic local boundary data
+  - now also exposes a transport-neutral callable live-provider boundary backed only by deterministic local failure-envelope data
   - now also exposes deterministic normalization scenarios for local verification support
   - now also exposes a consolidated scenario registry and collection builder
   - now also exposes consolidated support objects and a lookup-local README

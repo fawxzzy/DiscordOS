@@ -16,12 +16,16 @@ export {
   createFeedbackLookupPort,
 } from "./factory";
 export {
+  createFeedbackLookupLiveProvider,
+} from "./live";
+export {
   createFeedbackLookupStubProvider,
 } from "./stub";
 export {
   createAmbiguousFeedbackLookupProviderResultFixture,
   createFeedbackLookupLiveProviderCapabilitiesFixture,
   createFeedbackLookupLiveProviderFailureEnvelopeFixture,
+  createFeedbackLookupProviderLiveBoundaryFixture,
   createFeedbackLookupProviderRequestFixture,
   createFeedbackLookupProviderStubBoundaryFixture,
   createFeedbackLookupProviderStubExpectationFixture,

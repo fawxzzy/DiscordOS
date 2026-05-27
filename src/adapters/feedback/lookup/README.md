@@ -14,10 +14,13 @@ Current local surfaces:
   - transport-free composition of an injected provider with normalization
 - `stub.ts`
   - transport-neutral callable stub provider backed only by deterministic boundary data
+- `live.ts`
+  - transport-neutral callable live-provider boundary backed only by deterministic local failure-envelope data
 - `fixtures.ts`
   - deterministic local request, identity, and raw-result builders
   - deterministic stub-boundary and stub-expectation builders
   - deterministic live-provider capability and failure-envelope builders
+  - deterministic live-provider boundary builders
 - `scenarios.ts`
   - deterministic normalization scenarios built from the fixtures
 - `support.ts`

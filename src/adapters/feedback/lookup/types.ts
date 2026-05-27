@@ -56,6 +56,7 @@ export interface FeedbackLookupProviderLiveBoundary {
   boundaryKind: "live";
   capabilities: FeedbackLookupLiveProviderCapabilities;
   failureEnvelope: FeedbackLookupLiveProviderFailureEnvelope;
+  unavailableMessage: string;
 }
 
 export interface FeedbackLookupLiveProviderCapabilities {

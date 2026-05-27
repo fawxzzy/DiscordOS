@@ -2,6 +2,7 @@ import {
   createAmbiguousFeedbackLookupProviderResultFixture,
   createFeedbackLookupLiveProviderCapabilitiesFixture,
   createFeedbackLookupLiveProviderFailureEnvelopeFixture,
+  createFeedbackLookupProviderLiveBoundaryFixture,
   createFeedbackLookupProviderRequestFixture,
   createFeedbackLookupProviderStubBoundaryFixture,
   createFeedbackLookupProviderStubExpectationFixture,
@@ -24,6 +25,7 @@ import {
 export const FEEDBACK_LOOKUP_FIXTURE_BUILDERS = {
   createFeedbackLookupLiveProviderCapabilitiesFixture,
   createFeedbackLookupLiveProviderFailureEnvelopeFixture,
+  createFeedbackLookupProviderLiveBoundaryFixture,
   createFeedbackLookupProviderRequestFixture,
   createFeedbackLookupProviderStubExpectationFixture,
   createFeedbackLookupProviderStubBoundaryFixture,

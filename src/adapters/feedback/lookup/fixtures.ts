@@ -1,5 +1,6 @@
 import type {
   FeedbackLookupLiveProviderCapabilities,
+  FeedbackLookupProviderLiveBoundary,
   FeedbackLookupLiveProviderFailureEnvelope,
   FeedbackLookupProviderRequest,
   FeedbackLookupProviderStubBoundary,
@@ -31,6 +32,9 @@ const DEFAULT_FEEDBACK_LOOKUP_LIVE_PROVIDER_FAILURE_ENVELOPE: FeedbackLookupLive
     ambiguousMatch: true,
     notFound: true,
   };
+
+const DEFAULT_FEEDBACK_LOOKUP_LIVE_PROVIDER_UNAVAILABLE_MESSAGE =
+  "Live lookup provider boundary is not connected.";
 
 export function createFeedbackLookupProviderRequestFixture(
   reportIdOrPrefix = "FDB-001"
@@ -141,5 +145,22 @@ export function createFeedbackLookupLiveProviderFailureEnvelopeFixture(
   return {
     ...DEFAULT_FEEDBACK_LOOKUP_LIVE_PROVIDER_FAILURE_ENVELOPE,
     ...overrides,
+  };
+}
+
+export function createFeedbackLookupProviderLiveBoundaryFixture(
+  overrides: Partial<FeedbackLookupProviderLiveBoundary> = {}
+): FeedbackLookupProviderLiveBoundary {
+  return {
+    boundaryKind: "live",
+    capabilities:
+      overrides.capabilities ??
+      createFeedbackLookupLiveProviderCapabilitiesFixture(),
+    failureEnvelope:
+      overrides.failureEnvelope ??
+      createFeedbackLookupLiveProviderFailureEnvelopeFixture(),
+    unavailableMessage:
+      overrides.unavailableMessage ??
+      DEFAULT_FEEDBACK_LOOKUP_LIVE_PROVIDER_UNAVAILABLE_MESSAGE,
   };
 }
