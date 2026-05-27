@@ -41,6 +41,7 @@ Do not add:
   - now also holds pure normalization helpers and a transport-free factory only
   - formalizes a request-object provider boundary without selecting transport
   - now also exposes deterministic fixture builders for local shaping and future tests
+  - now also exposes deterministic normalization scenarios for local verification support
   - no transport wiring or runtime logic
 
 ## Verification

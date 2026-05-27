@@ -17,6 +17,13 @@ export {
   createUnavailableFeedbackLookupProviderResultFixture,
 } from "./fixtures";
 export {
+  createAmbiguousFeedbackLookupNormalizationScenario,
+  createFoundFeedbackLookupNormalizationScenario,
+  createInvalidInputFeedbackLookupNormalizationScenario,
+  createNotFoundFeedbackLookupNormalizationScenario,
+  createUnavailableFeedbackLookupNormalizationScenario,
+} from "./scenarios";
+export {
   normalizeFeedbackLookupIdentity,
   normalizeFeedbackLookupProviderResult,
 } from "./normalize";

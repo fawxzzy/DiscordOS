@@ -21,13 +21,18 @@ export type {
 } from "./lookup";
 export {
   createAmbiguousFeedbackLookupProviderResultFixture,
+  createAmbiguousFeedbackLookupNormalizationScenario,
   createFeedbackLookupPort,
   createFeedbackLookupProviderRequestFixture,
   createFoundFeedbackLookupProviderResultFixture,
+  createFoundFeedbackLookupNormalizationScenario,
   createInvalidInputFeedbackLookupProviderResultFixture,
+  createInvalidInputFeedbackLookupNormalizationScenario,
   createNotFoundFeedbackLookupProviderResultFixture,
+  createNotFoundFeedbackLookupNormalizationScenario,
   createRawFeedbackLookupIdentityFixture,
   createUnavailableFeedbackLookupProviderResultFixture,
+  createUnavailableFeedbackLookupNormalizationScenario,
   normalizeFeedbackLookupIdentity,
   normalizeFeedbackLookupProviderResult,
 } from "./lookup";
