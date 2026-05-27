@@ -7,7 +7,7 @@
 
 ## Objective
 
-Decide whether either of the remaining widening classes should open at all for `FeedbackLookupPort`:
+Decide whether either remaining widening class should open at all for `FeedbackLookupPort`:
 
 - transport-aware
 - externally-executing
@@ -126,7 +126,15 @@ If those are not explicitly opened, the queue should remain paused here.
 
 The current lookup lane should stop widening here.
 
-If work resumes later, it should begin from an explicit higher-level authorization or stack-level prioritization lane, not from implicit continuation inside this repo-local lookup chain.
+Recommended next higher-level package:
+
+- `Full Stack Re-sync Closeout Consolidation`
+
+Why:
+
+- the DiscordOS lookup boundary chain is fully ratcheted
+- the next leverage is stack-level consolidation, not more lookup widening
+- any reopening now requires higher-level authorization rather than repo-local momentum
 
 ## Verification
 
