@@ -22,6 +22,7 @@ export type {
 export {
   createAmbiguousFeedbackLookupProviderResultFixture,
   createAmbiguousFeedbackLookupNormalizationScenario,
+  createFeedbackLookupNormalizationScenarios,
   createFeedbackLookupPort,
   createFeedbackLookupProviderRequestFixture,
   createFoundFeedbackLookupProviderResultFixture,
@@ -33,8 +34,13 @@ export {
   createRawFeedbackLookupIdentityFixture,
   createUnavailableFeedbackLookupProviderResultFixture,
   createUnavailableFeedbackLookupNormalizationScenario,
+  FEEDBACK_LOOKUP_NORMALIZATION_SCENARIO_LABELS,
   normalizeFeedbackLookupIdentity,
   normalizeFeedbackLookupProviderResult,
+} from "./lookup";
+export type {
+  FeedbackLookupNormalizationScenario,
+  FeedbackLookupNormalizationScenarioLabel,
 } from "./lookup";
 
 export type FeedbackAdapterSlotName =

@@ -42,6 +42,7 @@ Do not add:
   - formalizes a request-object provider boundary without selecting transport
   - now also exposes deterministic fixture builders for local shaping and future tests
   - now also exposes deterministic normalization scenarios for local verification support
+  - now also exposes a consolidated scenario registry and collection builder
   - no transport wiring or runtime logic
 
 ## Verification

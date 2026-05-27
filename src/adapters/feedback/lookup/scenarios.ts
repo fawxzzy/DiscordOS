@@ -16,74 +16,89 @@ import type {
   RawFeedbackLookupProviderResult,
 } from "./types";
 
+export type FeedbackLookupNormalizationScenarioLabel =
+  | "found"
+  | "not_found"
+  | "ambiguous"
+  | "invalid_input"
+  | "unavailable";
+
 export interface FeedbackLookupNormalizationScenario {
-  label:
-    | "found"
-    | "not_found"
-    | "ambiguous"
-    | "invalid_input"
-    | "unavailable";
+  label: FeedbackLookupNormalizationScenarioLabel;
   request: FeedbackLookupProviderRequest;
   rawResult: RawFeedbackLookupProviderResult;
   normalizedResult: DiscordOSFeedbackResult<FeedbackCardIdentity>;
 }
 
-export function createFoundFeedbackLookupNormalizationScenario(): FeedbackLookupNormalizationScenario {
-  const request = createFeedbackLookupProviderRequestFixture("FDB-001");
-  const rawResult = createFoundFeedbackLookupProviderResultFixture();
+export const FEEDBACK_LOOKUP_NORMALIZATION_SCENARIO_LABELS: ReadonlyArray<FeedbackLookupNormalizationScenarioLabel> =
+  ["found", "not_found", "ambiguous", "invalid_input", "unavailable"];
 
+function createFeedbackLookupNormalizationScenario(
+  label: FeedbackLookupNormalizationScenarioLabel,
+  request: FeedbackLookupProviderRequest,
+  rawResult: RawFeedbackLookupProviderResult
+): FeedbackLookupNormalizationScenario {
   return {
-    label: "found",
+    label,
     request,
     rawResult,
     normalizedResult: normalizeFeedbackLookupProviderResult(rawResult),
   };
+}
+
+export function createFoundFeedbackLookupNormalizationScenario(): FeedbackLookupNormalizationScenario {
+  return createFeedbackLookupNormalizationScenario(
+    "found",
+    createFeedbackLookupProviderRequestFixture("FDB-001"),
+    createFoundFeedbackLookupProviderResultFixture()
+  );
 }
 
 export function createNotFoundFeedbackLookupNormalizationScenario(): FeedbackLookupNormalizationScenario {
-  const request = createFeedbackLookupProviderRequestFixture("FDB-404");
-  const rawResult = createNotFoundFeedbackLookupProviderResultFixture();
-
-  return {
-    label: "not_found",
-    request,
-    rawResult,
-    normalizedResult: normalizeFeedbackLookupProviderResult(rawResult),
-  };
+  return createFeedbackLookupNormalizationScenario(
+    "not_found",
+    createFeedbackLookupProviderRequestFixture("FDB-404"),
+    createNotFoundFeedbackLookupProviderResultFixture()
+  );
 }
 
 export function createAmbiguousFeedbackLookupNormalizationScenario(): FeedbackLookupNormalizationScenario {
-  const request = createFeedbackLookupProviderRequestFixture("FDB");
-  const rawResult = createAmbiguousFeedbackLookupProviderResultFixture();
-
-  return {
-    label: "ambiguous",
-    request,
-    rawResult,
-    normalizedResult: normalizeFeedbackLookupProviderResult(rawResult),
-  };
+  return createFeedbackLookupNormalizationScenario(
+    "ambiguous",
+    createFeedbackLookupProviderRequestFixture("FDB"),
+    createAmbiguousFeedbackLookupProviderResultFixture()
+  );
 }
 
 export function createInvalidInputFeedbackLookupNormalizationScenario(): FeedbackLookupNormalizationScenario {
-  const request = createFeedbackLookupProviderRequestFixture("");
-  const rawResult = createInvalidInputFeedbackLookupProviderResultFixture();
-
-  return {
-    label: "invalid_input",
-    request,
-    rawResult,
-    normalizedResult: normalizeFeedbackLookupProviderResult(rawResult),
-  };
+  return createFeedbackLookupNormalizationScenario(
+    "invalid_input",
+    createFeedbackLookupProviderRequestFixture(""),
+    createInvalidInputFeedbackLookupProviderResultFixture()
+  );
 }
 
 export function createUnavailableFeedbackLookupNormalizationScenario(): FeedbackLookupNormalizationScenario {
-  const request = createFeedbackLookupProviderRequestFixture("FDB-503");
-  const rawResult = createUnavailableFeedbackLookupProviderResultFixture();
+  return createFeedbackLookupNormalizationScenario(
+    "unavailable",
+    createFeedbackLookupProviderRequestFixture("FDB-503"),
+    createUnavailableFeedbackLookupProviderResultFixture()
+  );
+}
 
-  return {
-    label: "unavailable",
-    request,
-    rawResult,
-    normalizedResult: normalizeFeedbackLookupProviderResult(rawResult),
-  };
+export function createFeedbackLookupNormalizationScenarios(): ReadonlyArray<FeedbackLookupNormalizationScenario> {
+  return FEEDBACK_LOOKUP_NORMALIZATION_SCENARIO_LABELS.map((label) => {
+    switch (label) {
+      case "found":
+        return createFoundFeedbackLookupNormalizationScenario();
+      case "not_found":
+        return createNotFoundFeedbackLookupNormalizationScenario();
+      case "ambiguous":
+        return createAmbiguousFeedbackLookupNormalizationScenario();
+      case "invalid_input":
+        return createInvalidInputFeedbackLookupNormalizationScenario();
+      case "unavailable":
+        return createUnavailableFeedbackLookupNormalizationScenario();
+    }
+  });
 }
