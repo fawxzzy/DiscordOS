@@ -27,6 +27,9 @@ export const FEEDBACK_LOOKUP_FIXTURE_BUILDERS = {
   createUnavailableFeedbackLookupProviderResultFixture,
 } as const;
 
+export type FeedbackLookupFixtureBuilders =
+  typeof FEEDBACK_LOOKUP_FIXTURE_BUILDERS;
+
 export const FEEDBACK_LOOKUP_SCENARIO_BUILDERS = {
   createFoundFeedbackLookupNormalizationScenario,
   createNotFoundFeedbackLookupNormalizationScenario,
@@ -36,8 +39,13 @@ export const FEEDBACK_LOOKUP_SCENARIO_BUILDERS = {
   createFeedbackLookupNormalizationScenarios,
 } as const;
 
+export type FeedbackLookupScenarioBuilders =
+  typeof FEEDBACK_LOOKUP_SCENARIO_BUILDERS;
+
 export const FEEDBACK_LOOKUP_SUPPORT = {
   labels: FEEDBACK_LOOKUP_NORMALIZATION_SCENARIO_LABELS,
   fixtures: FEEDBACK_LOOKUP_FIXTURE_BUILDERS,
   scenarios: FEEDBACK_LOOKUP_SCENARIO_BUILDERS,
 } as const;
+
+export type FeedbackLookupSupport = typeof FEEDBACK_LOOKUP_SUPPORT;

@@ -44,6 +44,7 @@ Do not add:
   - now also exposes deterministic normalization scenarios for local verification support
   - now also exposes a consolidated scenario registry and collection builder
   - now also exposes consolidated support objects and a lookup-local README
+  - now also exposes named support-surface types for those grouped exports
   - no transport wiring or runtime logic
 
 ## Verification

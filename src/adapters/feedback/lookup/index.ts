@@ -36,6 +36,11 @@ export {
   FEEDBACK_LOOKUP_SCENARIO_BUILDERS,
   FEEDBACK_LOOKUP_SUPPORT,
 } from "./support";
+export type {
+  FeedbackLookupFixtureBuilders,
+  FeedbackLookupScenarioBuilders,
+  FeedbackLookupSupport,
+} from "./support";
 export {
   normalizeFeedbackLookupIdentity,
   normalizeFeedbackLookupProviderResult,

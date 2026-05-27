@@ -42,8 +42,11 @@ export {
   normalizeFeedbackLookupProviderResult,
 } from "./lookup";
 export type {
+  FeedbackLookupFixtureBuilders,
   FeedbackLookupNormalizationScenario,
   FeedbackLookupNormalizationScenarioLabel,
+  FeedbackLookupScenarioBuilders,
+  FeedbackLookupSupport,
 } from "./lookup";
 
 export type FeedbackAdapterSlotName =
