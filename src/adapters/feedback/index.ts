@@ -19,6 +19,7 @@ export type {
   RawFeedbackLookupProviderResult,
 } from "./lookup";
 export {
+  createFeedbackLookupPort,
   normalizeFeedbackLookupIdentity,
   normalizeFeedbackLookupProviderResult,
 } from "./lookup";

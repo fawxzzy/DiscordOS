@@ -4,6 +4,9 @@ export type {
   RawFeedbackLookupProviderResult,
 } from "./types";
 export {
+  createFeedbackLookupPort,
+} from "./factory";
+export {
   normalizeFeedbackLookupIdentity,
   normalizeFeedbackLookupProviderResult,
 } from "./normalize";
