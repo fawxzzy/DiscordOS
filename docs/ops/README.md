@@ -37,6 +37,8 @@ Current repo-local preconditions:
   - defines the smallest safe externally backed trust boundary for lookup while keeping transport choice, bridge wiring, and execution blocked
 - `feedback-lookup-externally-backed-trust-boundary-pause-checkpoint-2026-05-27.md`
   - confirms the externally backed trust boundary is complete enough to pause and routes any further widening to an explicit transport-aware-or-externally-executing boundary decision
+- `feedback-lookup-transport-aware-or-externally-executing-boundary-checkpoint-2026-05-27.md`
+  - confirms both transport-aware and externally-executing lookup lanes remain blocked and stops further DiscordOS lookup widening pending explicit higher-level authorization
 
 Pre-handoff live-state check:
 
