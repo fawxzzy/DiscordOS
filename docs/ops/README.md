@@ -35,6 +35,8 @@ Current repo-local preconditions:
   - decides whether any externally backed or transport-aware lookup lane should open at all and narrows the next safe artifact to a transport-neutral external-backing trust boundary only
 - `feedback-lookup-transport-neutral-externally-backed-live-provider-trust-boundary-package-16-2026-05-27.md`
   - defines the smallest safe externally backed trust boundary for lookup while keeping transport choice, bridge wiring, and execution blocked
+- `feedback-lookup-externally-backed-trust-boundary-pause-checkpoint-2026-05-27.md`
+  - confirms the externally backed trust boundary is complete enough to pause and routes any further widening to an explicit transport-aware-or-externally-executing boundary decision
 
 Pre-handoff live-state check:
 
