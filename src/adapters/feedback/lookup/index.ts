@@ -8,6 +8,15 @@ export {
   createFeedbackLookupPort,
 } from "./factory";
 export {
+  createAmbiguousFeedbackLookupProviderResultFixture,
+  createFeedbackLookupProviderRequestFixture,
+  createFoundFeedbackLookupProviderResultFixture,
+  createInvalidInputFeedbackLookupProviderResultFixture,
+  createNotFoundFeedbackLookupProviderResultFixture,
+  createRawFeedbackLookupIdentityFixture,
+  createUnavailableFeedbackLookupProviderResultFixture,
+} from "./fixtures";
+export {
   normalizeFeedbackLookupIdentity,
   normalizeFeedbackLookupProviderResult,
 } from "./normalize";

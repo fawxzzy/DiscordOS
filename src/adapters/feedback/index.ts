@@ -20,7 +20,14 @@ export type {
   RawFeedbackLookupProviderResult,
 } from "./lookup";
 export {
+  createAmbiguousFeedbackLookupProviderResultFixture,
   createFeedbackLookupPort,
+  createFeedbackLookupProviderRequestFixture,
+  createFoundFeedbackLookupProviderResultFixture,
+  createInvalidInputFeedbackLookupProviderResultFixture,
+  createNotFoundFeedbackLookupProviderResultFixture,
+  createRawFeedbackLookupIdentityFixture,
+  createUnavailableFeedbackLookupProviderResultFixture,
   normalizeFeedbackLookupIdentity,
   normalizeFeedbackLookupProviderResult,
 } from "./lookup";
