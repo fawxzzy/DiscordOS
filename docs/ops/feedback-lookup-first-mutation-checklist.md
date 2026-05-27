@@ -2,6 +2,13 @@
 
 Use this checklist before opening the first `FeedbackLookupPort` mutation lane.
 
+Before writing or accepting a handoff for that lane:
+
+- verify live `HEAD`
+- read the latest local receipt
+- confirm repo status is clean
+- confirm the proposed next package is not already landed
+
 Stop immediately if any item fails:
 
 - `npm run verify:feedback-adapters` passes without emitting files

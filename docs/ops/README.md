@@ -11,3 +11,12 @@ Current repo-local preconditions:
 
 - `feedback-lookup-first-mutation-checklist.md`
   - no-op and rollback checklist for the first future `FeedbackLookupPort` mutation lane
+- `feedback-lookup-execution-readiness-recheck-2026-05-26.md`
+  - confirms the preconditions are landed and advances the repo-local queue to the first narrow lookup mutation lane
+
+Pre-handoff live-state check:
+
+- verify live `HEAD`
+- read the latest local receipt
+- confirm repo status is clean
+- confirm the proposed next package is not already landed
