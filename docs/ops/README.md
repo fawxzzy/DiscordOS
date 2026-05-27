@@ -27,6 +27,8 @@ Current repo-local preconditions:
   - decides whether a live-provider-adjacent lookup lane should open at all and narrows the next safe artifact to a transport-neutral live-provider capability boundary only
 - `feedback-lookup-live-provider-capability-pause-checkpoint-2026-05-27.md`
   - confirms the live-provider capability boundary is complete enough to pause and routes any further widening to an explicit callable-live-provider-adjacent boundary decision
+- `feedback-lookup-callable-live-provider-adjacent-boundary-checkpoint-2026-05-27.md`
+  - decides whether a callable-live-provider-adjacent lookup lane should open at all and narrows the next safe artifact to a transport-neutral callable live-provider boundary only
 
 Pre-handoff live-state check:
 
