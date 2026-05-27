@@ -13,6 +13,8 @@ Current repo-local preconditions:
   - no-op and rollback checklist for the first future `FeedbackLookupPort` mutation lane
 - `feedback-lookup-execution-readiness-recheck-2026-05-26.md`
   - confirms the preconditions are landed and advances the repo-local queue to the first narrow lookup mutation lane
+- `feedback-lookup-support-surface-pause-checkpoint-2026-05-26.md`
+  - confirms the local lookup-only support surface is coherent and pauses further lookup-only shaping pending an explicit provider-adjacent boundary decision
 
 Pre-handoff live-state check:
 
