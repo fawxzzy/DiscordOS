@@ -17,6 +17,8 @@ Current repo-local preconditions:
   - confirms the local lookup-only support surface is coherent and pauses further lookup-only shaping pending an explicit provider-adjacent boundary decision
 - `feedback-lookup-provider-adjacent-boundary-checkpoint-2026-05-26.md`
   - decides whether a provider-adjacent lookup lane should open at all and narrows the next safe artifact to a transport-neutral provider stub boundary only
+- `feedback-lookup-provider-stub-boundary-pause-checkpoint-2026-05-26.md`
+  - confirms the provider-stub boundary artifact is complete enough to pause and routes any further widening to an explicit implementation-adjacent boundary decision
 
 Pre-handoff live-state check:
 
