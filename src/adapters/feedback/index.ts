@@ -14,8 +14,14 @@ export type {
   FeedbackThreadSyncPort,
 } from "../../contracts";
 export type {
+  FeedbackLookupLiveProvider,
   FeedbackLookupProvider,
+  FeedbackLookupProviderBoundaryKind,
+  FeedbackLookupProviderLiveBoundary,
   FeedbackLookupProviderRequest,
+  FeedbackLookupProviderStubBoundary,
+  FeedbackLookupProviderStubExpectation,
+  FeedbackLookupStubProvider,
   RawFeedbackLookupIdentity,
   RawFeedbackLookupProviderResult,
 } from "./lookup";
@@ -25,6 +31,8 @@ export {
   createFeedbackLookupNormalizationScenarios,
   createFeedbackLookupPort,
   createFeedbackLookupProviderRequestFixture,
+  createFeedbackLookupProviderStubBoundaryFixture,
+  createFeedbackLookupProviderStubExpectationFixture,
   createFoundFeedbackLookupProviderResultFixture,
   createFoundFeedbackLookupNormalizationScenario,
   createInvalidInputFeedbackLookupProviderResultFixture,

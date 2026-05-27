@@ -1,5 +1,7 @@
 import type {
   FeedbackLookupProviderRequest,
+  FeedbackLookupProviderStubBoundary,
+  FeedbackLookupProviderStubExpectation,
   RawFeedbackLookupIdentity,
   RawFeedbackLookupProviderResult,
 } from "./types";
@@ -75,5 +77,33 @@ export function createUnavailableFeedbackLookupProviderResultFixture(
     kind: "unavailable",
     message,
     warning,
+  };
+}
+
+export function createFeedbackLookupProviderStubExpectationFixture(
+  overrides: Partial<FeedbackLookupProviderStubExpectation> = {}
+): FeedbackLookupProviderStubExpectation {
+  return {
+    request:
+      overrides.request ?? createFeedbackLookupProviderRequestFixture(),
+    result:
+      overrides.result ?? createFoundFeedbackLookupProviderResultFixture(),
+  };
+}
+
+export function createFeedbackLookupProviderStubBoundaryFixture(
+  overrides: Partial<
+    Omit<FeedbackLookupProviderStubBoundary, "boundaryKind">
+  > = {}
+): FeedbackLookupProviderStubBoundary {
+  return {
+    boundaryKind: "stub",
+    expectations:
+      overrides.expectations ?? [
+        createFeedbackLookupProviderStubExpectationFixture(),
+      ],
+    fallbackResult:
+      overrides.fallbackResult ??
+      createUnavailableFeedbackLookupProviderResultFixture(),
   };
 }

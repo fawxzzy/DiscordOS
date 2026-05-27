@@ -40,7 +40,9 @@ Do not add:
   - holds type-only raw provider shapes for future injected lookup execution
   - now also holds pure normalization helpers and a transport-free factory only
   - formalizes a request-object provider boundary without selecting transport
+  - now also distinguishes local `stub` versus `live` provider boundary shapes without implementing either
   - now also exposes deterministic fixture builders for local shaping and future tests
+  - now also exposes deterministic stub-boundary fixtures for provider-adjacent artifact shaping only
   - now also exposes deterministic normalization scenarios for local verification support
   - now also exposes a consolidated scenario registry and collection builder
   - now also exposes consolidated support objects and a lookup-local README

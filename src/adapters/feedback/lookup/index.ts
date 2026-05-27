@@ -1,6 +1,12 @@
 export type {
+  FeedbackLookupLiveProvider,
   FeedbackLookupProvider,
+  FeedbackLookupProviderBoundaryKind,
   FeedbackLookupProviderRequest,
+  FeedbackLookupProviderStubBoundary,
+  FeedbackLookupProviderStubExpectation,
+  FeedbackLookupStubProvider,
+  FeedbackLookupProviderLiveBoundary,
   RawFeedbackLookupIdentity,
   RawFeedbackLookupProviderResult,
 } from "./types";
@@ -10,6 +16,8 @@ export {
 export {
   createAmbiguousFeedbackLookupProviderResultFixture,
   createFeedbackLookupProviderRequestFixture,
+  createFeedbackLookupProviderStubBoundaryFixture,
+  createFeedbackLookupProviderStubExpectationFixture,
   createFoundFeedbackLookupProviderResultFixture,
   createInvalidInputFeedbackLookupProviderResultFixture,
   createNotFoundFeedbackLookupProviderResultFixture,
