@@ -1,4 +1,6 @@
 export type {
+  FeedbackLookupLiveProviderCapabilities,
+  FeedbackLookupLiveProviderFailureEnvelope,
   FeedbackLookupLiveProvider,
   FeedbackLookupProvider,
   FeedbackLookupProviderBoundaryKind,
@@ -18,6 +20,8 @@ export {
 } from "./stub";
 export {
   createAmbiguousFeedbackLookupProviderResultFixture,
+  createFeedbackLookupLiveProviderCapabilitiesFixture,
+  createFeedbackLookupLiveProviderFailureEnvelopeFixture,
   createFeedbackLookupProviderRequestFixture,
   createFeedbackLookupProviderStubBoundaryFixture,
   createFeedbackLookupProviderStubExpectationFixture,

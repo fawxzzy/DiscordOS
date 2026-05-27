@@ -1,4 +1,6 @@
 import type {
+  FeedbackLookupLiveProviderCapabilities,
+  FeedbackLookupLiveProviderFailureEnvelope,
   FeedbackLookupProviderRequest,
   FeedbackLookupProviderStubBoundary,
   FeedbackLookupProviderStubExpectation,
@@ -13,6 +15,22 @@ const DEFAULT_RAW_FEEDBACK_LOOKUP_IDENTITY: RawFeedbackLookupIdentity = {
   createdAt: "2026-05-26T00:00:00.000Z",
   updatedAt: "2026-05-26T00:00:00.000Z",
 };
+
+const DEFAULT_FEEDBACK_LOOKUP_LIVE_PROVIDER_CAPABILITIES: FeedbackLookupLiveProviderCapabilities =
+  {
+    identityLookup: true,
+    batchLookup: false,
+    auditEmission: false,
+    threadMutation: false,
+  };
+
+const DEFAULT_FEEDBACK_LOOKUP_LIVE_PROVIDER_FAILURE_ENVELOPE: FeedbackLookupLiveProviderFailureEnvelope =
+  {
+    unavailable: true,
+    invalidInput: true,
+    ambiguousMatch: true,
+    notFound: true,
+  };
 
 export function createFeedbackLookupProviderRequestFixture(
   reportIdOrPrefix = "FDB-001"
@@ -105,5 +123,23 @@ export function createFeedbackLookupProviderStubBoundaryFixture(
     fallbackResult:
       overrides.fallbackResult ??
       createUnavailableFeedbackLookupProviderResultFixture(),
+  };
+}
+
+export function createFeedbackLookupLiveProviderCapabilitiesFixture(
+  overrides: Partial<FeedbackLookupLiveProviderCapabilities> = {}
+): FeedbackLookupLiveProviderCapabilities {
+  return {
+    ...DEFAULT_FEEDBACK_LOOKUP_LIVE_PROVIDER_CAPABILITIES,
+    ...overrides,
+  };
+}
+
+export function createFeedbackLookupLiveProviderFailureEnvelopeFixture(
+  overrides: Partial<FeedbackLookupLiveProviderFailureEnvelope> = {}
+): FeedbackLookupLiveProviderFailureEnvelope {
+  return {
+    ...DEFAULT_FEEDBACK_LOOKUP_LIVE_PROVIDER_FAILURE_ENVELOPE,
+    ...overrides,
   };
 }

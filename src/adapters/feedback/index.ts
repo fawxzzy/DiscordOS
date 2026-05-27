@@ -14,6 +14,8 @@ export type {
   FeedbackThreadSyncPort,
 } from "../../contracts";
 export type {
+  FeedbackLookupLiveProviderCapabilities,
+  FeedbackLookupLiveProviderFailureEnvelope,
   FeedbackLookupLiveProvider,
   FeedbackLookupProvider,
   FeedbackLookupProviderBoundaryKind,
@@ -29,6 +31,8 @@ export {
   createAmbiguousFeedbackLookupProviderResultFixture,
   createAmbiguousFeedbackLookupNormalizationScenario,
   createFeedbackLookupNormalizationScenarios,
+  createFeedbackLookupLiveProviderCapabilitiesFixture,
+  createFeedbackLookupLiveProviderFailureEnvelopeFixture,
   createFeedbackLookupPort,
   createFeedbackLookupProviderRequestFixture,
   createFeedbackLookupProviderStubBoundaryFixture,

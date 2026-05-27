@@ -54,6 +54,22 @@ export interface FeedbackLookupProviderStubBoundary {
 
 export interface FeedbackLookupProviderLiveBoundary {
   boundaryKind: "live";
+  capabilities: FeedbackLookupLiveProviderCapabilities;
+  failureEnvelope: FeedbackLookupLiveProviderFailureEnvelope;
+}
+
+export interface FeedbackLookupLiveProviderCapabilities {
+  identityLookup: true;
+  batchLookup: false;
+  auditEmission: false;
+  threadMutation: false;
+}
+
+export interface FeedbackLookupLiveProviderFailureEnvelope {
+  unavailable: true;
+  invalidInput: true;
+  ambiguousMatch: true;
+  notFound: true;
 }
 
 export interface FeedbackLookupProvider {
