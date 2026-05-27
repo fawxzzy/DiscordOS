@@ -3,3 +3,7 @@ export type {
   RawFeedbackLookupIdentity,
   RawFeedbackLookupProviderResult,
 } from "./types";
+export {
+  normalizeFeedbackLookupIdentity,
+  normalizeFeedbackLookupProviderResult,
+} from "./normalize";

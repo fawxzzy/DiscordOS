@@ -38,7 +38,8 @@ Do not add:
   - re-exports the future adapter seam types only
 - `lookup/`
   - holds type-only raw provider shapes for future injected lookup execution
-  - no implementation, transport wiring, or runtime logic
+  - now also holds pure normalization helpers only
+  - no transport wiring or runtime logic
 
 ## Verification
 

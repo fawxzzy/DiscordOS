@@ -18,6 +18,10 @@ export type {
   RawFeedbackLookupIdentity,
   RawFeedbackLookupProviderResult,
 } from "./lookup";
+export {
+  normalizeFeedbackLookupIdentity,
+  normalizeFeedbackLookupProviderResult,
+} from "./lookup";
 
 export type FeedbackAdapterSlotName =
   | "reportStore"
