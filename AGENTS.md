@@ -1,7 +1,7 @@
 # DiscordOS Repo Rules
 
 Scope
-- Applies to `C:\ATLAS\repos\DiscordOS`.
+- Applies to `repos/DiscordOS`.
 
 Purpose
 - This is the canonical local DiscordOS repo surface created by the approved bootstrap pass.
