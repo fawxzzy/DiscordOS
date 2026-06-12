@@ -19,7 +19,7 @@ const FEEDBACK_STATUSES = new Set([
 ]);
 const COMPLETION_REVIEW_STATUSES = new Set(["not_required", "pending", "approved", "needs_followup"]);
 const USER_KINDS = new Set(["human", "automation", "unknown"]);
-const PROOF_REPORT_ID_PREFIXES = ["edge-persist-proof-", "shadow-transfer-proof-"];
+const PROOF_REPORT_ID_PREFIXES = ["edge-persist-proof-", "shadow-transfer-proof-", "fitness-live-transfer-"];
 
 const jsonHeaders = {
   "Content-Type": "application/json",
@@ -119,6 +119,7 @@ function normalizePayload(payload: unknown, now = new Date().toISOString()) {
     errors.push("proof_report_id_prefix_required");
   }
   const shadowTransferProof = reportId?.startsWith("shadow-transfer-proof-") ?? false;
+  const fitnessLiveTransferProof = reportId?.startsWith("fitness-live-transfer-") ?? false;
 
   const reportType = enumValue(input, "reportType", "report_type", REPORT_TYPES, null, errors);
   if (reportType === null) {
@@ -166,6 +167,12 @@ function normalizePayload(payload: unknown, now = new Date().toISOString()) {
             "discordos_shadow_transfer_proof_only",
             "discordos_persisted_writer_no_live_cutover",
           ]
+        : fitnessLiveTransferProof
+          ? [
+              "edge_persist_writer_proof_only",
+              "discordos_fitness_live_transfer_proof",
+              "discordos_persisted_writer_no_discord_write",
+            ]
         : ["edge_persist_writer_proof_only", "discordos_persisted_writer_no_traffic_transfer"],
     },
   };
