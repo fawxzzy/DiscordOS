@@ -32,6 +32,13 @@ Current governed contract surface:
   - service-role-only operational grant posture
 - `docs/ops/discordos-feedback-runtime-schema-and-vercel-linkage-2026-06-12.md`
   - owner-side setup receipt for Supabase schema landing and Vercel linkage
+- `api/readiness.js`
+  - first Vercel serverless readiness endpoint
+  - reports configuration presence only, not secret values
+- `supabase/functions/discordos-readiness/index.ts`
+  - JWT-protected Supabase Edge Function readiness mirror
+- `docs/ops/discordos-runtime-readiness-surface-pass-1-2026-06-12.md`
+  - runtime-readiness receipt without Discord bot activation or Fitness traffic cutover
 
 Current repo-local verification surface:
 

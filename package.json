@@ -3,6 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
+    "build": "npm run verify:feedback-adapters",
+    "vercel-build": "npm run verify:feedback-adapters",
     "verify:feedback-adapters": "tsc --project tsconfig.json --noEmit"
   },
   "devDependencies": {
