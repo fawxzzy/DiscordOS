@@ -14,6 +14,7 @@ test("persisted writer config fails closed by default", () => {
     "writer_mode_not_shadow_or_active",
     "missing_supabase_url",
     "missing_service_role_key",
+    "missing_edge_persist_config",
   ]);
 });
 
@@ -28,15 +29,30 @@ test("persisted writer config requires service role even in shadow mode", () => 
   assert.equal(config.writerMode, "shadow");
   assert.equal(config.writerModeAllowsPersistence, true);
   assert.equal(config.supabaseUrlConfigured, true);
+  assert.equal(config.anonKeyConfigured, false);
   assert.equal(config.serviceRoleConfigured, false);
-  assert.deepEqual(config.blockedReasons, ["missing_service_role_key"]);
+  assert.equal(config.edgePersistAvailable, false);
+  assert.deepEqual(config.blockedReasons, ["missing_service_role_key", "missing_edge_persist_config"]);
 });
 
-test("persisted writer inserts through DiscordOS schema with service role headers", async () => {
+test("persisted writer config allows edge persistence without direct service role", () => {
+  const config = _internals.getPersistedWriterConfig({
+    DISCORDOS_PERSISTED_WRITER_ENABLED: "true",
+    DISCORDOS_WRITER_MODE: "shadow",
+    DISCORDOS_SUPABASE_URL: "https://nwexsktuuenfdegzrbut.supabase.co",
+    DISCORDOS_SUPABASE_ANON_KEY: "anon-test-key",
+  });
+
+  assert.equal(config.canAttemptPersistence, true);
+  assert.equal(config.serviceRoleConfigured, false);
+  assert.equal(config.edgePersistAvailable, true);
+});
+
+test("persisted writer inserts through service-role proof RPC", async () => {
   const calls = [];
   const result = await _internals.insertFeedbackReport(
     {
-      report_id: "feedback-123",
+      report_id: "edge-persist-proof-123",
       report_type: "bug",
       status: "new",
       completion_review_status: "not_required",
@@ -50,7 +66,7 @@ test("persisted writer inserts through DiscordOS schema with service role header
           ok: true,
           status: 201,
           async json() {
-            return [{ report_id: "feedback-123", report_type: "bug" }];
+            return [{ report_id: "edge-persist-proof-123", report_type: "bug" }];
           },
         };
       },
@@ -59,15 +75,56 @@ test("persisted writer inserts through DiscordOS schema with service role header
 
   assert.equal(result.ok, true);
   assert.equal(result.status, 201);
-  assert.deepEqual(result.row, { report_id: "feedback-123", report_type: "bug" });
+  assert.deepEqual(result.row, { report_id: "edge-persist-proof-123", report_type: "bug" });
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].url, "https://nwexsktuuenfdegzrbut.supabase.co/rest/v1/discord_feedback_reports");
+  assert.equal(calls[0].url, "https://nwexsktuuenfdegzrbut.supabase.co/rest/v1/rpc/discordos_insert_feedback_proof");
   assert.equal(calls[0].init.method, "POST");
   assert.equal(calls[0].init.headers.apikey, "service-role-test-key");
   assert.equal(calls[0].init.headers.Authorization, "Bearer service-role-test-key");
-  assert.equal(calls[0].init.headers["Accept-Profile"], "discordos");
-  assert.equal(calls[0].init.headers["Content-Profile"], "discordos");
   assert.equal(calls[0].init.headers.Prefer, "return=representation");
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    payload: {
+      report_id: "edge-persist-proof-123",
+      report_type: "bug",
+      status: "new",
+      completion_review_status: "not_required",
+    },
+  });
+});
+
+test("persisted writer invokes edge writer with anon authorization", async () => {
+  const calls = [];
+  const result = await _internals.invokeEdgePersistWriter(
+    {
+      report_id: "edge-persist-proof-123",
+      report_type: "bug",
+    },
+    {
+      supabaseUrl: "https://nwexsktuuenfdegzrbut.supabase.co/",
+      anonKey: "anon-test-key",
+      fetchImpl: async (url, init) => {
+        calls.push({ url, init });
+        return {
+          ok: true,
+          status: 201,
+          async json() {
+            return {
+              ok: true,
+              persisted: true,
+              row: { report_id: "edge-persist-proof-123" },
+            };
+          },
+        };
+      },
+    }
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.status, 201);
+  assert.deepEqual(result.payload.row, { report_id: "edge-persist-proof-123" });
+  assert.equal(calls[0].url, "https://nwexsktuuenfdegzrbut.supabase.co/functions/v1/discordos-feedback-persist");
+  assert.equal(calls[0].init.headers.apikey, "anon-test-key");
+  assert.equal(calls[0].init.headers.Authorization, "Bearer anon-test-key");
 });
 
 test("persisted writer reports database failure without returning secret values", async () => {

@@ -47,7 +47,8 @@ Current governed contract surface:
   - returns `persisted: false`, `writesDiscord: false`, `writesFitness: false`, and `trafficMoved: false`
 - `api/feedback-persist.js`
   - guarded persisted writer endpoint for the future DiscordOS feedback row path
-  - fails closed unless the persisted writer flag, writer mode, Supabase URL, and backend service-role env are all present
+  - can use either direct backend service-role env or the JWT-required Supabase Edge writer path
+  - fails closed unless the persisted writer flag, writer mode, Supabase URL, and one backend persistence runtime are present
   - never sends Discord messages, writes Fitness, or moves traffic
 - `tests/readiness.test.js`
   - fail-closed readiness tests for missing, malformed, anon-role, wrong-project, exact DiscordOS service-role JWT, Edge Function service-role probe shapes, and Discord bot-token probe shapes
@@ -60,6 +61,10 @@ Current governed contract surface:
 - `supabase/functions/discordos-readiness/index.ts`
   - JWT-protected Supabase Edge Function readiness mirror
   - probes service-role access to the private `discordos` schema without returning secret values
+- `supabase/functions/discordos-feedback-persist/index.ts`
+  - JWT-protected proof-only Supabase Edge Function writer for `discordos.discord_feedback_reports`
+  - requires proof report ids to use the `edge-persist-proof-` prefix
+  - writes no Discord messages, writes no Fitness state, and moves no traffic
 - `docs/ops/discordos-runtime-readiness-surface-pass-1-2026-06-12.md`
   - runtime-readiness receipt without Discord bot activation or Fitness traffic cutover
 - `docs/ops/discordos-bot-token-runtime-readiness-proof-2026-06-12.md`

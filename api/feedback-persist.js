@@ -20,8 +20,10 @@ function getPersistedWriterConfig(env = process.env) {
   const activationStatus = activationInternals.getActivationGuardStatus(env);
   const persistedWriterEnabled = enabledFlag(env.DISCORDOS_PERSISTED_WRITER_ENABLED);
   const supabaseUrlConfigured = hasValue(env.DISCORDOS_SUPABASE_URL);
+  const anonKeyConfigured = hasValue(env.DISCORDOS_SUPABASE_ANON_KEY);
   const serviceRoleConfigured = hasValue(env.DISCORDOS_SUPABASE_SERVICE_ROLE_KEY);
   const writerModeAllowsPersistence = activationStatus.writerMode === "shadow" || activationStatus.writerMode === "active";
+  const edgePersistAvailable = supabaseUrlConfigured && anonKeyConfigured;
   const blockedReasons = [];
 
   if (!persistedWriterEnabled) {
@@ -40,30 +42,36 @@ function getPersistedWriterConfig(env = process.env) {
     blockedReasons.push("missing_service_role_key");
   }
 
+  if (!edgePersistAvailable) {
+    blockedReasons.push("missing_edge_persist_config");
+  }
+
+  const hasPersistenceRuntime = serviceRoleConfigured || edgePersistAvailable;
+
   return {
     persistedWriterEnabled,
     writerMode: activationStatus.writerMode,
     writerModeAllowsPersistence,
     supabaseUrlConfigured,
+    anonKeyConfigured,
     serviceRoleConfigured,
-    canAttemptPersistence: blockedReasons.length === 0,
+    edgePersistAvailable,
+    canAttemptPersistence: persistedWriterEnabled && writerModeAllowsPersistence && hasPersistenceRuntime,
     blockedReasons,
   };
 }
 
 async function insertFeedbackReport(row, { supabaseUrl, serviceRoleKey, fetchImpl = fetch }) {
-  const response = await fetchImpl(`${cleanUrl(supabaseUrl)}/rest/v1/${REPORTS_TABLE}`, {
+  const response = await fetchImpl(`${cleanUrl(supabaseUrl)}/rest/v1/rpc/discordos_insert_feedback_proof`, {
     method: "POST",
     headers: {
       apikey: serviceRoleKey,
       Authorization: `Bearer ${serviceRoleKey}`,
       "Content-Type": "application/json",
       Accept: "application/json",
-      "Accept-Profile": SCHEMA,
-      "Content-Profile": SCHEMA,
       Prefer: "return=representation",
     },
-    body: JSON.stringify(row),
+    body: JSON.stringify({ payload: row }),
   });
 
   const payload = await response.json().catch(() => null);
@@ -75,11 +83,30 @@ async function insertFeedbackReport(row, { supabaseUrl, serviceRoleKey, fetchImp
     };
   }
 
-  return {
-    ok: true,
-    status: response.status,
-    row: Array.isArray(payload) ? payload[0] : payload,
-  };
+  return { ok: true, status: response.status, row: Array.isArray(payload) ? payload[0] : payload };
+}
+
+async function invokeEdgePersistWriter(row, { supabaseUrl, anonKey, fetchImpl = fetch }) {
+  const response = await fetchImpl(`${cleanUrl(supabaseUrl)}/functions/v1/discordos-feedback-persist`, {
+    method: "POST",
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${anonKey}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(row),
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    return {
+      ok: false,
+      status: response.status,
+      code: typeof payload?.error === "string" ? payload.error : "EDGE_PERSIST_FAILED",
+      payload,
+    };
+  }
+  return { ok: true, status: response.status, payload };
 }
 
 module.exports = async function feedbackPersist(req, res) {
@@ -136,10 +163,15 @@ module.exports = async function feedbackPersist(req, res) {
     });
   }
 
-  const inserted = await insertFeedbackReport(normalized.value, {
-    supabaseUrl: process.env.DISCORDOS_SUPABASE_URL,
-    serviceRoleKey: process.env.DISCORDOS_SUPABASE_SERVICE_ROLE_KEY,
-  });
+  const inserted = writerConfig.serviceRoleConfigured
+    ? await insertFeedbackReport(normalized.value, {
+        supabaseUrl: process.env.DISCORDOS_SUPABASE_URL,
+        serviceRoleKey: process.env.DISCORDOS_SUPABASE_SERVICE_ROLE_KEY,
+      })
+    : await invokeEdgePersistWriter(normalized.value, {
+        supabaseUrl: process.env.DISCORDOS_SUPABASE_URL,
+        anonKey: process.env.DISCORDOS_SUPABASE_ANON_KEY,
+      });
 
   if (!inserted.ok) {
     return res.status(502).json({
@@ -151,6 +183,7 @@ module.exports = async function feedbackPersist(req, res) {
       writesDiscord: false,
       writesFitness: false,
       trafficMoved: false,
+      persistenceRuntime: writerConfig.serviceRoleConfigured ? "vercel-env-service-role" : "supabase-edge-function",
       databaseStatus: inserted.status,
       databaseErrorCode: inserted.code,
       generatedAt: new Date().toISOString(),
@@ -166,7 +199,8 @@ module.exports = async function feedbackPersist(req, res) {
     writesFitness: false,
     trafficMoved: false,
     writerMode: writerConfig.writerMode,
-    row: inserted.row,
+    persistenceRuntime: writerConfig.serviceRoleConfigured ? "vercel-env-service-role" : "supabase-edge-function",
+    row: writerConfig.serviceRoleConfigured ? inserted.row : inserted.payload.row,
     generatedAt: new Date().toISOString(),
   });
 };
@@ -174,4 +208,5 @@ module.exports = async function feedbackPersist(req, res) {
 module.exports._internals = {
   getPersistedWriterConfig,
   insertFeedbackReport,
+  invokeEdgePersistWriter,
 };
