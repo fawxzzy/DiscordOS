@@ -5,8 +5,9 @@
   "scripts": {
     "build": "npm run verify",
     "vercel-build": "npm run verify",
-    "verify": "npm run verify:feedback-adapters && npm run verify:readiness",
+    "verify": "npm run verify:feedback-adapters && npm run verify:readiness && npm run verify:activation",
     "verify:readiness": "node --test tests/readiness.test.js",
+    "verify:activation": "node --test tests/activation.test.js",
     "verify:feedback-adapters": "tsc --project tsconfig.json --noEmit"
   },
   "devDependencies": {

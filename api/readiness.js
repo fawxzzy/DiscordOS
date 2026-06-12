@@ -2,6 +2,7 @@ const EXPECTED_SUPABASE_REF = "nwexsktuuenfdegzrbut";
 const SERVICE_ROLE = "service_role";
 const EDGE_READINESS_FUNCTION = "discordos-readiness";
 const DISCORD_API_BASE = "https://discord.com/api/v10";
+const { _internals: activationInternals } = require("./activation");
 
 function hasValue(value) {
   return typeof value === "string" && value.trim().length > 0;
@@ -162,6 +163,7 @@ module.exports = async function readiness(req, res) {
   const discordBotStatus = await getDiscordBotStatus({
     token: process.env.DISCORDOS_BOT_TOKEN,
   });
+  const activationGuardStatus = activationInternals.getActivationGuardStatus();
   const serviceRoleConfigured = serviceRoleStatus.configured || edgeServiceRoleStatus.configured;
 
   return res.status(200).json({
@@ -192,8 +194,15 @@ module.exports = async function readiness(req, res) {
     discordBotApiReachable: discordBotStatus.reachable,
     discordBotUserOk: discordBotStatus.botUserOk,
     discordBotReason: discordBotStatus.reason,
-    liveCutover: false,
-    fitnessTrafficMoved: false,
+    activationGuardConfigured: true,
+    writerMode: activationGuardStatus.writerMode,
+    trafficTransferMode: activationGuardStatus.trafficTransferMode,
+    rollbackMode: activationGuardStatus.rollbackMode,
+    writerActivationAllowed: activationGuardStatus.writerActivationAllowed,
+    liveWorkflowParityProved: activationGuardStatus.liveWorkflowParityProved,
+    activationBlockedReasons: activationGuardStatus.blockedReasons,
+    liveCutover: activationGuardStatus.liveCutover,
+    fitnessTrafficMoved: activationGuardStatus.fitnessTrafficMoved,
     generatedAt: new Date().toISOString(),
   });
 };

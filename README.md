@@ -7,6 +7,7 @@ Current status:
 - bootstrap only
 - no Fitness code migrated
 - no bot/runtime cutover
+- no writer activation or Fitness traffic transfer
 - Supabase schema landing exists for private DiscordOS feedback runtime tables
 - Vercel project linkage exists for `fawxzzy-discordos`
 - feedback contract scaffold documented only
@@ -38,8 +39,13 @@ Current governed contract surface:
   - validates that any service-role JWT is for `role=service_role` and ref `nwexsktuuenfdegzrbut`
   - can also prove the Supabase Edge Function has DiscordOS-owned service-role access without moving that service-role value into Vercel
   - can validate the Discord bot token with a read-only Discord `/users/@me` probe without sending messages or returning bot identity values
+- `api/activation.js`
+  - fail-closed activation guard for future writer, traffic-transfer, rollback, and parity-proof switches
+  - defaults to no cutover and no Fitness traffic movement
 - `tests/readiness.test.js`
   - fail-closed readiness tests for missing, malformed, anon-role, wrong-project, exact DiscordOS service-role JWT, Edge Function service-role probe shapes, and Discord bot-token probe shapes
+- `tests/activation.test.js`
+  - fail-closed activation guard tests for default-disabled, shadow, invalid mode, and explicit active cutover conditions
 - `supabase/functions/discordos-readiness/index.ts`
   - JWT-protected Supabase Edge Function readiness mirror
   - probes service-role access to the private `discordos` schema without returning secret values
@@ -47,6 +53,8 @@ Current governed contract surface:
   - runtime-readiness receipt without Discord bot activation or Fitness traffic cutover
 - `docs/ops/discordos-bot-token-runtime-readiness-proof-2026-06-12.md`
   - owner-side proof that DiscordOS can verify the bot credential from runtime without activating writers or moving Fitness traffic
+- `docs/ops/discordos-activation-guard-readiness-proof-2026-06-12.md`
+  - owner-side proof that DiscordOS has a fail-closed activation, rollback, traffic-transfer, and parity guard before any live writer is allowed
 
 Current repo-local verification surface:
 
@@ -54,6 +62,8 @@ Current repo-local verification surface:
   - no-emit TypeScript verification for feedback contracts and adapter seams only
 - `npm run verify:readiness`
   - Node test coverage for the Vercel readiness service-role guard, Supabase Edge probe, and Discord bot-token probe
+- `npm run verify:activation`
+  - Node test coverage for the activation guard
 - `npm run verify`
   - runs both verification surfaces
 
