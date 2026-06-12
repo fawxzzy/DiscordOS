@@ -15,7 +15,7 @@
   - `serviceRoleRoleMatches`
   - `serviceRoleProjectRefMatches`
   - `serviceRoleReason`
-- Added `api/readiness.test.js` with fail-closed coverage for:
+- Added `tests/readiness.test.js` with fail-closed coverage for:
   - missing key
   - malformed token
   - anon/publishable-style JWT role
