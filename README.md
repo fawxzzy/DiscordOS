@@ -35,6 +35,9 @@ Current governed contract surface:
 - `api/readiness.js`
   - first Vercel serverless readiness endpoint
   - reports configuration presence only, not secret values
+  - validates that any service-role JWT is for `role=service_role` and ref `nwexsktuuenfdegzrbut`
+- `api/readiness.test.js`
+  - fail-closed readiness tests for missing, malformed, anon-role, wrong-project, and exact DiscordOS service-role JWT shapes
 - `supabase/functions/discordos-readiness/index.ts`
   - JWT-protected Supabase Edge Function readiness mirror
 - `docs/ops/discordos-runtime-readiness-surface-pass-1-2026-06-12.md`
@@ -44,5 +47,9 @@ Current repo-local verification surface:
 
 - `npm run verify:feedback-adapters`
   - no-emit TypeScript verification for feedback contracts and adapter seams only
+- `npm run verify:readiness`
+  - Node test coverage for the Vercel readiness service-role guard
+- `npm run verify`
+  - runs both verification surfaces
 
 Until a later approved extraction lane opens, this repo is a governed landing surface for future DiscordOS work, not an active runtime owner.
