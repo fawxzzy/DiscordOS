@@ -13,6 +13,7 @@
 - Added `build` and `vercel-build` scripts that run the existing TypeScript verification.
 - Deployed Supabase Edge Function `discordos-readiness` with `verify_jwt=true`.
 - Mirrored the Supabase Edge Function source under `supabase/functions/discordos-readiness/index.ts`.
+- Deployed `fawxzzy-discordos` to Vercel production as an isolated readiness surface.
 
 ## Readiness Semantics
 
@@ -36,7 +37,7 @@ The Supabase Edge Function reports:
 
 This packet does not:
 
-- deploy production traffic as the live Discord owner
+- route production Discord traffic to DiscordOS as the live owner
 - activate a Discord bot
 - read or set service-role secrets
 - read or set Discord bot tokens
@@ -48,4 +49,19 @@ This packet does not:
 
 `runtime ownership and live workflow parity proof`
 
-The next packet must prove server-side secret provisioning, deployment inspection, rollback, and a live workflow parity path before the lane can close at `100%`.
+The next packet must prove server-side secret provisioning, Discord bot runtime activation, rollback, Fitness-to-DiscordOS traffic transfer, and a live workflow parity path before the lane can close at `100%`.
+
+## Deployment Proof
+
+- Vercel alias: `https://fawxzzy-discordos.vercel.app`
+- Readiness endpoint: `https://fawxzzy-discordos.vercel.app/api/readiness`
+- Latest verified production deployment before this receipt update: `dpl_5gHmBUothidfDcifrFUasVC7fXPb`
+- Deployment state: `READY`
+- Deployment target: `production`
+- Readiness response showed:
+  - `supabaseProjectRefConfigured: true`
+  - `supabaseUrlConfigured: true`
+  - `serviceRoleConfigured: false`
+  - `discordBotTokenConfigured: false`
+  - `liveCutover: false`
+  - `fitnessTrafficMoved: false`
