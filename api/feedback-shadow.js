@@ -53,7 +53,10 @@ function enumValue(value, fieldName, allowed, fallback, errors) {
   return value;
 }
 
-function normalizeShadowFeedbackPayload(payload, { now = new Date().toISOString() } = {}) {
+function normalizeShadowFeedbackPayload(
+  payload,
+  { now = new Date().toISOString(), runtimeWarnings = ["shadow_writer_no_persistence"] } = {}
+) {
   const errors = [];
   if (payload === null || typeof payload !== "object" || Array.isArray(payload)) {
     return {
@@ -127,7 +130,7 @@ function normalizeShadowFeedbackPayload(payload, { now = new Date().toISOString(
       forum_title: forumTitle,
       forum_applied_tag_ids: [],
       reporter_mentioned_at: null,
-      runtime_warnings: ["shadow_writer_no_persistence"],
+      runtime_warnings: runtimeWarnings,
       last_forum_sync_at: null,
     },
   };
@@ -195,4 +198,5 @@ module.exports = async function feedbackShadow(req, res) {
 
 module.exports._internals = {
   normalizeShadowFeedbackPayload,
+  readJsonBody,
 };

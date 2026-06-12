@@ -45,12 +45,18 @@ Current governed contract surface:
 - `api/feedback-shadow.js`
   - shadow writer proof endpoint for validating future DiscordOS feedback row shape
   - returns `persisted: false`, `writesDiscord: false`, `writesFitness: false`, and `trafficMoved: false`
+- `api/feedback-persist.js`
+  - guarded persisted writer endpoint for the future DiscordOS feedback row path
+  - fails closed unless the persisted writer flag, writer mode, Supabase URL, and backend service-role env are all present
+  - never sends Discord messages, writes Fitness, or moves traffic
 - `tests/readiness.test.js`
   - fail-closed readiness tests for missing, malformed, anon-role, wrong-project, exact DiscordOS service-role JWT, Edge Function service-role probe shapes, and Discord bot-token probe shapes
 - `tests/activation.test.js`
   - fail-closed activation guard tests for default-disabled, shadow, invalid mode, and explicit active cutover conditions
 - `tests/feedback-shadow.test.js`
   - fail-closed shadow writer tests for invalid payloads and deterministic no-persistence row preview
+- `tests/feedback-persist.test.js`
+  - fail-closed persisted writer tests for disabled/missing-service-role states and service-role REST insert request construction
 - `supabase/functions/discordos-readiness/index.ts`
   - JWT-protected Supabase Edge Function readiness mirror
   - probes service-role access to the private `discordos` schema without returning secret values
@@ -62,6 +68,8 @@ Current governed contract surface:
   - owner-side proof that DiscordOS has a fail-closed activation, rollback, traffic-transfer, and parity guard before any live writer is allowed
 - `docs/ops/discordos-feedback-shadow-writer-readiness-proof-2026-06-12.md`
   - owner-side proof that DiscordOS can validate a future feedback writer payload and row preview without persisting data or moving traffic
+- `docs/ops/discordos-persisted-writer-implementation-proof-2026-06-12.md`
+  - owner-side proof that DiscordOS has a guarded persisted writer implementation path, still disabled without live cutover or Fitness traffic movement
 
 Current repo-local verification surface:
 
@@ -73,6 +81,8 @@ Current repo-local verification surface:
   - Node test coverage for the activation guard
 - `npm run verify:feedback-shadow`
   - Node test coverage for the shadow writer proof surface
+- `npm run verify:feedback-persist`
+  - Node test coverage for the persisted writer guard and REST insert construction
 - `npm run verify`
   - runs both verification surfaces
 
