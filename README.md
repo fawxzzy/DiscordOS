@@ -7,8 +7,8 @@ Current status:
 - bootstrap only
 - no Fitness code migrated
 - no bot/runtime cutover
-- no Supabase schema landing
-- no Vercel project linkage
+- Supabase schema landing exists for private DiscordOS feedback runtime tables
+- Vercel project linkage exists for `fawxzzy-discordos`
 - feedback contract scaffold documented only
 
 Current governed contract surface:
@@ -26,6 +26,12 @@ Current governed contract surface:
 - `src/adapters/feedback/lookup/types.ts`
   - raw injected lookup-provider shape only
   - no Fitness runtime import, no transport wiring, no adapter behavior yet
+- `supabase/migrations/20260612082758_discordos_feedback_runtime_schema_v1.sql`
+  - private DiscordOS feedback runtime schema mirror
+  - RLS enabled with no public policies
+  - service-role-only operational grant posture
+- `docs/ops/discordos-feedback-runtime-schema-and-vercel-linkage-2026-06-12.md`
+  - owner-side setup receipt for Supabase schema landing and Vercel linkage
 
 Current repo-local verification surface:
 
