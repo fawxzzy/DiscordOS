@@ -127,3 +127,77 @@ test("edge service-role status rejects wrong-project edge probe", async () => {
   assert.equal(status.probeOk, true);
   assert.equal(status.projectRefMatches, false);
 });
+
+test("Discord bot status fails closed when token is missing", async () => {
+  const status = await _internals.getDiscordBotStatus({
+    token: "",
+    fetchImpl: async () => {
+      throw new Error("should not fetch");
+    },
+  });
+
+  assert.equal(status.configured, false);
+  assert.equal(status.reachable, false);
+  assert.equal(status.tokenPresent, false);
+  assert.equal(status.botUserOk, false);
+  assert.equal(status.reason, "missing_bot_token");
+});
+
+test("Discord bot status rejects invalid bot token responses", async () => {
+  const status = await _internals.getDiscordBotStatus({
+    token: "test-token",
+    fetchImpl: async () => ({
+      ok: false,
+      status: 401,
+      async json() {
+        return { message: "401: Unauthorized" };
+      },
+    }),
+  });
+
+  assert.equal(status.configured, false);
+  assert.equal(status.reachable, false);
+  assert.equal(status.tokenPresent, true);
+  assert.equal(status.botUserOk, false);
+  assert.equal(status.status, 401);
+  assert.equal(status.reason, "discord_bot_token_invalid");
+});
+
+test("Discord bot status rejects non-bot user responses", async () => {
+  const status = await _internals.getDiscordBotStatus({
+    token: "test-token",
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      async json() {
+        return { bot: false };
+      },
+    }),
+  });
+
+  assert.equal(status.configured, false);
+  assert.equal(status.reachable, true);
+  assert.equal(status.tokenPresent, true);
+  assert.equal(status.botUserOk, false);
+  assert.equal(status.reason, "discord_bot_token_invalid");
+});
+
+test("Discord bot status accepts Discord bot user responses", async () => {
+  const status = await _internals.getDiscordBotStatus({
+    token: "test-token",
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      async json() {
+        return { bot: true };
+      },
+    }),
+  });
+
+  assert.equal(status.configured, true);
+  assert.equal(status.reachable, true);
+  assert.equal(status.tokenPresent, true);
+  assert.equal(status.botUserOk, true);
+  assert.equal(status.status, 200);
+  assert.equal(status.reason, "discord_bot_user_ok");
+});

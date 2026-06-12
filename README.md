@@ -37,20 +37,23 @@ Current governed contract surface:
   - reports configuration presence only, not secret values
   - validates that any service-role JWT is for `role=service_role` and ref `nwexsktuuenfdegzrbut`
   - can also prove the Supabase Edge Function has DiscordOS-owned service-role access without moving that service-role value into Vercel
+  - can validate the Discord bot token with a read-only Discord `/users/@me` probe without sending messages or returning bot identity values
 - `tests/readiness.test.js`
-  - fail-closed readiness tests for missing, malformed, anon-role, wrong-project, exact DiscordOS service-role JWT, and Edge Function service-role probe shapes
+  - fail-closed readiness tests for missing, malformed, anon-role, wrong-project, exact DiscordOS service-role JWT, Edge Function service-role probe shapes, and Discord bot-token probe shapes
 - `supabase/functions/discordos-readiness/index.ts`
   - JWT-protected Supabase Edge Function readiness mirror
   - probes service-role access to the private `discordos` schema without returning secret values
 - `docs/ops/discordos-runtime-readiness-surface-pass-1-2026-06-12.md`
   - runtime-readiness receipt without Discord bot activation or Fitness traffic cutover
+- `docs/ops/discordos-bot-token-runtime-readiness-proof-2026-06-12.md`
+  - owner-side proof that DiscordOS can verify the bot credential from runtime without activating writers or moving Fitness traffic
 
 Current repo-local verification surface:
 
 - `npm run verify:feedback-adapters`
   - no-emit TypeScript verification for feedback contracts and adapter seams only
 - `npm run verify:readiness`
-  - Node test coverage for the Vercel readiness service-role guard
+  - Node test coverage for the Vercel readiness service-role guard, Supabase Edge probe, and Discord bot-token probe
 - `npm run verify`
   - runs both verification surfaces
 

@@ -1,6 +1,7 @@
 const EXPECTED_SUPABASE_REF = "nwexsktuuenfdegzrbut";
 const SERVICE_ROLE = "service_role";
 const EDGE_READINESS_FUNCTION = "discordos-readiness";
+const DISCORD_API_BASE = "https://discord.com/api/v10";
 
 function hasValue(value) {
   return typeof value === "string" && value.trim().length > 0;
@@ -102,6 +103,46 @@ async function getEdgeServiceRoleStatus({ supabaseUrl, anonKey, fetchImpl = fetc
   }
 }
 
+async function getDiscordBotStatus({ token, fetchImpl = fetch }) {
+  if (!hasValue(token)) {
+    return {
+      configured: false,
+      reachable: false,
+      tokenPresent: false,
+      botUserOk: false,
+      reason: "missing_bot_token",
+    };
+  }
+
+  try {
+    const response = await fetchImpl(`${DISCORD_API_BASE}/users/@me`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bot ${token}`,
+      },
+    });
+    const payload = await response.json().catch(() => null);
+    const botUserOk = payload?.bot === true;
+
+    return {
+      configured: response.ok && botUserOk,
+      reachable: response.ok,
+      tokenPresent: true,
+      botUserOk,
+      status: response.status,
+      reason: response.ok && botUserOk ? "discord_bot_user_ok" : "discord_bot_token_invalid",
+    };
+  } catch {
+    return {
+      configured: false,
+      reachable: false,
+      tokenPresent: true,
+      botUserOk: false,
+      reason: "discord_bot_fetch_failed",
+    };
+  }
+}
+
 module.exports = async function readiness(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
@@ -117,6 +158,9 @@ module.exports = async function readiness(req, res) {
   const edgeServiceRoleStatus = await getEdgeServiceRoleStatus({
     supabaseUrl: configuredSupabaseUrl,
     anonKey: process.env.DISCORDOS_SUPABASE_ANON_KEY,
+  });
+  const discordBotStatus = await getDiscordBotStatus({
+    token: process.env.DISCORDOS_BOT_TOKEN,
   });
   const serviceRoleConfigured = serviceRoleStatus.configured || edgeServiceRoleStatus.configured;
 
@@ -142,7 +186,12 @@ module.exports = async function readiness(req, res) {
     edgeServiceRoleProbeOk: edgeServiceRoleStatus.probeOk,
     edgeServiceRoleProjectRefMatches: edgeServiceRoleStatus.projectRefMatches || false,
     edgeServiceRoleReason: edgeServiceRoleStatus.reason,
-    discordBotTokenConfigured: hasValue(process.env.DISCORDOS_BOT_TOKEN),
+    discordBotTokenConfigured: discordBotStatus.tokenPresent,
+    discordBotTokenValid: discordBotStatus.configured,
+    discordBotTokenPresent: discordBotStatus.tokenPresent,
+    discordBotApiReachable: discordBotStatus.reachable,
+    discordBotUserOk: discordBotStatus.botUserOk,
+    discordBotReason: discordBotStatus.reason,
     liveCutover: false,
     fitnessTrafficMoved: false,
     generatedAt: new Date().toISOString(),
@@ -155,4 +204,5 @@ module.exports._internals = {
   decodeJwtPayload,
   getServiceRoleStatus,
   getEdgeServiceRoleStatus,
+  getDiscordBotStatus,
 };
