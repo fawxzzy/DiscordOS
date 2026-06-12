@@ -48,6 +48,34 @@ test("persisted writer config allows edge persistence without direct service rol
   assert.equal(config.edgePersistAvailable, true);
 });
 
+test("transfer secret status requires configured matching header", () => {
+  assert.deepEqual(_internals.getTransferSecretStatus({}, {}), {
+    configured: false,
+    present: false,
+    matches: false,
+  });
+
+  assert.deepEqual(
+    _internals.getTransferSecretStatus(
+      { "x-discordos-feedback-transfer-secret": "shared-secret" },
+      { DISCORDOS_FEEDBACK_TRANSFER_SECRET: "shared-secret" },
+    ),
+    {
+      configured: true,
+      present: true,
+      matches: true,
+    },
+  );
+
+  assert.equal(
+    _internals.getTransferSecretStatus(
+      { "x-discordos-feedback-transfer-secret": "wrong-secret" },
+      { DISCORDOS_FEEDBACK_TRANSFER_SECRET: "shared-secret" },
+    ).matches,
+    false,
+  );
+});
+
 test("live transfer proof rows require active writer, active traffic, and rollback-ready mode", () => {
   assert.equal(_internals.isLiveTransferProofRow(
     { report_id: "fitness-live-transfer-interaction-1" },
@@ -154,6 +182,41 @@ test("persisted writer invokes edge writer with anon authorization", async () =>
   assert.equal(calls[0].url, "https://nwexsktuuenfdegzrbut.supabase.co/functions/v1/discordos-feedback-persist");
   assert.equal(calls[0].init.headers.apikey, "anon-test-key");
   assert.equal(calls[0].init.headers.Authorization, "Bearer anon-test-key");
+});
+
+test("persisted writer forwards transfer secret to edge writer when supplied", async () => {
+  const calls = [];
+  const result = await _internals.invokeEdgePersistWriter(
+    {
+      report_id: "fitness-live-transfer-interaction-123",
+      report_type: "bug",
+    },
+    {
+      supabaseUrl: "https://nwexsktuuenfdegzrbut.supabase.co/",
+      anonKey: "anon-test-key",
+      transferSecret: "shared-transfer-secret",
+      fetchImpl: async (url, init) => {
+        calls.push({ url, init });
+        return {
+          ok: true,
+          status: 201,
+          async json() {
+            return {
+              ok: true,
+              persisted: true,
+              row: {
+                report_id: "fitness-live-transfer-interaction-123",
+                runtime_warnings: ["discordos_fitness_live_transfer"],
+              },
+            };
+          },
+        };
+      },
+    }
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(calls[0].init.headers["X-DiscordOS-Feedback-Transfer-Secret"], "shared-transfer-secret");
 });
 
 test("persisted writer reports database failure without returning secret values", async () => {

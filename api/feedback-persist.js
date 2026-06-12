@@ -12,8 +12,31 @@ function enabledFlag(value) {
   return typeof value === "string" && value.trim().toLowerCase() === "true";
 }
 
+function optionalSecret(value) {
+  return hasValue(value) ? value.trim() : null;
+}
+
 function cleanUrl(value) {
   return value.replace(/\/+$/, "");
+}
+
+function headerValue(headers, name) {
+  const raw = headers?.[name] ?? headers?.[name.toLowerCase()];
+  if (Array.isArray(raw)) {
+    return raw[0] ?? null;
+  }
+  return typeof raw === "string" ? raw : null;
+}
+
+function getTransferSecretStatus(headers = {}, env = process.env) {
+  const expected = optionalSecret(env.DISCORDOS_FEEDBACK_TRANSFER_SECRET);
+  const provided = optionalSecret(headerValue(headers, "x-discordos-feedback-transfer-secret"));
+
+  return {
+    configured: expected !== null,
+    present: provided !== null,
+    matches: expected !== null && provided !== null && provided === expected,
+  };
 }
 
 function getPersistedWriterConfig(env = process.env) {
@@ -110,15 +133,20 @@ async function insertFeedbackReport(row, { supabaseUrl, serviceRoleKey, fetchImp
   return { ok: true, status: response.status, row: Array.isArray(payload) ? payload[0] : payload };
 }
 
-async function invokeEdgePersistWriter(row, { supabaseUrl, anonKey, fetchImpl = fetch }) {
+async function invokeEdgePersistWriter(row, { supabaseUrl, anonKey, transferSecret = null, fetchImpl = fetch }) {
+  const headers = {
+    apikey: anonKey,
+    Authorization: `Bearer ${anonKey}`,
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+  if (hasValue(transferSecret)) {
+    headers["X-DiscordOS-Feedback-Transfer-Secret"] = transferSecret.trim();
+  }
+
   const response = await fetchImpl(`${cleanUrl(supabaseUrl)}/functions/v1/discordos-feedback-persist`, {
     method: "POST",
-    headers: {
-      apikey: anonKey,
-      Authorization: `Bearer ${anonKey}`,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
+    headers,
     body: JSON.stringify(row),
   });
   const payload = await response.json().catch(() => null);
@@ -154,9 +182,33 @@ module.exports = async function feedbackPersist(req, res) {
     });
   }
 
+  const fitnessLiveTransferPayload = isFitnessLiveTransferProofPayload(parsed.value);
+  const transferSecretStatus = getTransferSecretStatus(req.headers);
+  if (fitnessLiveTransferPayload && !transferSecretStatus.matches) {
+    return res.status(401).json({
+      ok: false,
+      service: "discordos-feedback-persisted-writer",
+      error: transferSecretStatus.configured
+        ? "FITNESS_TRANSFER_SECRET_INVALID"
+        : "FITNESS_TRANSFER_SECRET_NOT_CONFIGURED",
+      persisted: false,
+      writesDiscord: false,
+      writesFitness: false,
+      trafficMoved: false,
+      transferSecretConfigured: transferSecretStatus.configured,
+      transferSecretPresent: transferSecretStatus.present,
+      generatedAt: new Date().toISOString(),
+    });
+  }
+
   const normalized = shadowInternals.normalizeShadowFeedbackPayload(parsed.value, {
-    runtimeWarnings: isFitnessLiveTransferProofPayload(parsed.value)
-      ? ["discordos_fitness_live_transfer_proof"]
+    runtimeWarnings: fitnessLiveTransferPayload
+      ? [
+          "discordos_fitness_live_transfer",
+          "discordos_fitness_origin_authenticated",
+          "discordos_fitness_discord_signature_verified",
+          "discordos_persisted_writer_no_discord_write",
+        ]
       : ["discordos_persisted_writer_no_traffic_transfer"],
   });
   if (!normalized.ok) {
@@ -197,6 +249,7 @@ module.exports = async function feedbackPersist(req, res) {
     : await invokeEdgePersistWriter(normalized.value, {
         supabaseUrl: process.env.DISCORDOS_SUPABASE_URL,
         anonKey: process.env.DISCORDOS_SUPABASE_ANON_KEY,
+        transferSecret: fitnessLiveTransferPayload ? process.env.DISCORDOS_FEEDBACK_TRANSFER_SECRET : null,
       });
 
   if (!inserted.ok) {
@@ -243,4 +296,5 @@ module.exports._internals = {
   isLiveTransferProofRow,
   insertFeedbackReport,
   invokeEdgePersistWriter,
+  getTransferSecretStatus,
 };

@@ -30,6 +30,21 @@ function hasValue(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function optionalSecret(value: string | null): string | null {
+  return hasValue(value) ? value.trim() : null;
+}
+
+function transferSecretStatus(req: Request) {
+  const expected = optionalSecret(Deno.env.get("DISCORDOS_FEEDBACK_TRANSFER_SECRET"));
+  const provided = optionalSecret(req.headers.get("x-discordos-feedback-transfer-secret"));
+
+  return {
+    configured: expected !== null,
+    present: provided !== null,
+    matches: expected !== null && provided !== null && provided === expected,
+  };
+}
+
 function firstSecretKeyFromJson(value: string | undefined): string | undefined {
   if (!hasValue(value)) {
     return undefined;
@@ -104,7 +119,7 @@ function enumValue(
   return value;
 }
 
-function normalizePayload(payload: unknown, now = new Date().toISOString()) {
+function normalizePayload(payload: unknown, options: { liveTransferAuthorized?: boolean } = {}, now = new Date().toISOString()) {
   const errors: string[] = [];
   if (payload === null || typeof payload !== "object" || Array.isArray(payload)) {
     return { ok: false, errors: ["payload_must_be_object"] };
@@ -136,6 +151,12 @@ function normalizePayload(payload: unknown, now = new Date().toISOString()) {
     errors
   );
   const reporterUserKind = enumValue(input, "reporterUserKind", "reporter_user_kind", USER_KINDS, "automation", errors);
+  const liveFitnessTransfer =
+    fitnessLiveTransferProof &&
+    options.liveTransferAuthorized === true &&
+    reporterUserKind === "human" &&
+    optionalString(input, "transferSource", "transfer_source", errors) === "fitness-discord-interaction" &&
+    optionalString(input, "sourceProof", "source_proof", errors) === "discord-signature-verified-by-fitness";
 
   if (errors.length > 0) {
     return { ok: false, errors: [...new Set(errors)] };
@@ -168,11 +189,18 @@ function normalizePayload(payload: unknown, now = new Date().toISOString()) {
             "discordos_persisted_writer_no_live_cutover",
           ]
         : fitnessLiveTransferProof
-          ? [
-              "edge_persist_writer_proof_only",
-              "discordos_fitness_live_transfer_proof",
-              "discordos_persisted_writer_no_discord_write",
-            ]
+          ? liveFitnessTransfer
+            ? [
+                "discordos_fitness_live_transfer",
+                "discordos_fitness_origin_authenticated",
+                "discordos_fitness_discord_signature_verified",
+                "discordos_persisted_writer_no_discord_write",
+              ]
+            : [
+                "edge_persist_writer_proof_only",
+                "discordos_fitness_live_transfer_proof",
+                "discordos_persisted_writer_no_discord_write",
+              ]
         : ["edge_persist_writer_proof_only", "discordos_persisted_writer_no_traffic_transfer"],
     },
   };
@@ -226,7 +254,32 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  const normalized = normalizePayload(parsed.value);
+  const secretStatus = transferSecretStatus(req);
+  const fitnessLiveTransferPayload =
+    parsed.value !== null &&
+    typeof parsed.value === "object" &&
+    !Array.isArray(parsed.value) &&
+    typeof (parsed.value as Record<string, unknown>).reportId === "string" &&
+    ((parsed.value as Record<string, unknown>).reportId as string).startsWith("fitness-live-transfer-");
+
+  if (fitnessLiveTransferPayload && !secretStatus.matches) {
+    return new Response(
+      JSON.stringify({
+        ok: false,
+        service: "discordos-feedback-persist",
+        error: secretStatus.configured ? "FITNESS_TRANSFER_SECRET_INVALID" : "FITNESS_TRANSFER_SECRET_NOT_CONFIGURED",
+        persisted: false,
+        writesDiscord: false,
+        writesFitness: false,
+        trafficMoved: false,
+        transferSecretConfigured: secretStatus.configured,
+        transferSecretPresent: secretStatus.present,
+      }),
+      { status: 401, headers: jsonHeaders }
+    );
+  }
+
+  const normalized = normalizePayload(parsed.value, { liveTransferAuthorized: secretStatus.matches });
   if (!normalized.ok) {
     return new Response(JSON.stringify({ ok: false, error: "INVALID_INPUT", errors: normalized.errors, persisted: false }), {
       status: 400,
@@ -276,8 +329,8 @@ Deno.serve(async (req: Request) => {
       persisted: true,
       writesDiscord: false,
       writesFitness: false,
-      trafficMoved: false,
-      proofOnly: true,
+      trafficMoved: fitnessLiveTransferPayload && secretStatus.matches,
+      proofOnly: !(fitnessLiveTransferPayload && secretStatus.matches),
       row: Array.isArray(inserted.payload) ? inserted.payload[0] : inserted.payload,
       generatedAt: new Date().toISOString(),
     }),
