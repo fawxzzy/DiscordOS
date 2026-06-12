@@ -36,10 +36,12 @@ Current governed contract surface:
   - first Vercel serverless readiness endpoint
   - reports configuration presence only, not secret values
   - validates that any service-role JWT is for `role=service_role` and ref `nwexsktuuenfdegzrbut`
+  - can also prove the Supabase Edge Function has DiscordOS-owned service-role access without moving that service-role value into Vercel
 - `tests/readiness.test.js`
-  - fail-closed readiness tests for missing, malformed, anon-role, wrong-project, and exact DiscordOS service-role JWT shapes
+  - fail-closed readiness tests for missing, malformed, anon-role, wrong-project, exact DiscordOS service-role JWT, and Edge Function service-role probe shapes
 - `supabase/functions/discordos-readiness/index.ts`
   - JWT-protected Supabase Edge Function readiness mirror
+  - probes service-role access to the private `discordos` schema without returning secret values
 - `docs/ops/discordos-runtime-readiness-surface-pass-1-2026-06-12.md`
   - runtime-readiness receipt without Discord bot activation or Fitness traffic cutover
 

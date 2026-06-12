@@ -65,3 +65,65 @@ test("service-role status accepts service-role JWTs for the DiscordOS project re
   assert.equal(status.projectRefMatches, true);
   assert.equal(status.reason, "valid");
 });
+
+test("edge service-role status fails closed without probe config", async () => {
+  const status = await _internals.getEdgeServiceRoleStatus({
+    supabaseUrl: "",
+    anonKey: "",
+    fetchImpl: async () => {
+      throw new Error("should not fetch");
+    },
+  });
+
+  assert.equal(status.configured, false);
+  assert.equal(status.reachable, false);
+  assert.equal(status.reason, "missing_edge_probe_config");
+});
+
+test("edge service-role status accepts DiscordOS edge probe success", async () => {
+  const status = await _internals.getEdgeServiceRoleStatus({
+    supabaseUrl: "https://nwexsktuuenfdegzrbut.supabase.co",
+    anonKey: jwtWithPayload({ role: "anon", ref: _internals.EXPECTED_SUPABASE_REF }),
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      async json() {
+        return {
+          supabaseProjectRef: _internals.EXPECTED_SUPABASE_REF,
+          serviceRoleKeyPresent: true,
+          serviceRoleProbeOk: true,
+          serviceRoleProbeReason: "service_role_private_schema_read_ok",
+        };
+      },
+    }),
+  });
+
+  assert.equal(status.configured, true);
+  assert.equal(status.reachable, true);
+  assert.equal(status.keyPresent, true);
+  assert.equal(status.probeOk, true);
+  assert.equal(status.projectRefMatches, true);
+});
+
+test("edge service-role status rejects wrong-project edge probe", async () => {
+  const status = await _internals.getEdgeServiceRoleStatus({
+    supabaseUrl: "https://nwexsktuuenfdegzrbut.supabase.co",
+    anonKey: jwtWithPayload({ role: "anon", ref: _internals.EXPECTED_SUPABASE_REF }),
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      async json() {
+        return {
+          supabaseProjectRef: "lpswxoyfniocuhljgzbc",
+          serviceRoleKeyPresent: true,
+          serviceRoleProbeOk: true,
+        };
+      },
+    }),
+  });
+
+  assert.equal(status.configured, false);
+  assert.equal(status.reachable, true);
+  assert.equal(status.probeOk, true);
+  assert.equal(status.projectRefMatches, false);
+});

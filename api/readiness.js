@@ -1,5 +1,6 @@
 const EXPECTED_SUPABASE_REF = "nwexsktuuenfdegzrbut";
 const SERVICE_ROLE = "service_role";
+const EDGE_READINESS_FUNCTION = "discordos-readiness";
 
 function hasValue(value) {
   return typeof value === "string" && value.trim().length > 0;
@@ -52,7 +53,56 @@ function getServiceRoleStatus(token) {
   };
 }
 
-module.exports = function readiness(req, res) {
+function edgeReadinessUrl(supabaseUrl) {
+  return `${supabaseUrl.replace(/\/+$/, "")}/functions/v1/${EDGE_READINESS_FUNCTION}`;
+}
+
+async function getEdgeServiceRoleStatus({ supabaseUrl, anonKey, fetchImpl = fetch }) {
+  if (!hasValue(supabaseUrl) || !hasValue(anonKey)) {
+    return {
+      configured: false,
+      reachable: false,
+      keyPresent: false,
+      probeOk: false,
+      reason: "missing_edge_probe_config",
+    };
+  }
+
+  try {
+    const response = await fetchImpl(edgeReadinessUrl(supabaseUrl), {
+      method: "GET",
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${anonKey}`,
+      },
+    });
+    const payload = await response.json().catch(() => null);
+    const projectRefMatches = payload?.supabaseProjectRef === EXPECTED_SUPABASE_REF;
+    const probeOk = payload?.serviceRoleProbeOk === true;
+
+    return {
+      configured: response.ok && projectRefMatches && probeOk,
+      reachable: response.ok,
+      keyPresent: payload?.serviceRoleKeyPresent === true,
+      probeOk,
+      projectRefMatches,
+      status: response.status,
+      reason: response.ok
+        ? payload?.serviceRoleProbeReason || (probeOk ? "edge_service_role_probe_ok" : "edge_service_role_probe_failed")
+        : "edge_readiness_unreachable",
+    };
+  } catch {
+    return {
+      configured: false,
+      reachable: false,
+      keyPresent: false,
+      probeOk: false,
+      reason: "edge_readiness_fetch_failed",
+    };
+  }
+}
+
+module.exports = async function readiness(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).json({
@@ -64,6 +114,11 @@ module.exports = function readiness(req, res) {
   const configuredProjectRef = process.env.DISCORDOS_SUPABASE_PROJECT_REF || null;
   const configuredSupabaseUrl = process.env.DISCORDOS_SUPABASE_URL || null;
   const serviceRoleStatus = getServiceRoleStatus(process.env.DISCORDOS_SUPABASE_SERVICE_ROLE_KEY);
+  const edgeServiceRoleStatus = await getEdgeServiceRoleStatus({
+    supabaseUrl: configuredSupabaseUrl,
+    anonKey: process.env.DISCORDOS_SUPABASE_ANON_KEY,
+  });
+  const serviceRoleConfigured = serviceRoleStatus.configured || edgeServiceRoleStatus.configured;
 
   return res.status(200).json({
     ok: true,
@@ -71,11 +126,22 @@ module.exports = function readiness(req, res) {
     runtime: "vercel-serverless-function",
     supabaseProjectRefConfigured: configuredProjectRef === EXPECTED_SUPABASE_REF,
     supabaseUrlConfigured: hasValue(configuredSupabaseUrl),
-    serviceRoleConfigured: serviceRoleStatus.configured,
+    serviceRoleConfigured,
+    serviceRoleRuntime: serviceRoleStatus.configured
+      ? "vercel-env"
+      : edgeServiceRoleStatus.configured
+        ? "supabase-edge-function"
+        : "none",
     serviceRolePresent: serviceRoleStatus.present,
     serviceRoleRoleMatches: serviceRoleStatus.roleMatches,
     serviceRoleProjectRefMatches: serviceRoleStatus.projectRefMatches,
     serviceRoleReason: serviceRoleStatus.reason,
+    edgeServiceRoleConfigured: edgeServiceRoleStatus.configured,
+    edgeServiceRoleReachable: edgeServiceRoleStatus.reachable,
+    edgeServiceRoleKeyPresent: edgeServiceRoleStatus.keyPresent,
+    edgeServiceRoleProbeOk: edgeServiceRoleStatus.probeOk,
+    edgeServiceRoleProjectRefMatches: edgeServiceRoleStatus.projectRefMatches || false,
+    edgeServiceRoleReason: edgeServiceRoleStatus.reason,
     discordBotTokenConfigured: hasValue(process.env.DISCORDOS_BOT_TOKEN),
     liveCutover: false,
     fitnessTrafficMoved: false,
@@ -88,4 +154,5 @@ module.exports._internals = {
   SERVICE_ROLE,
   decodeJwtPayload,
   getServiceRoleStatus,
+  getEdgeServiceRoleStatus,
 };
