@@ -51,6 +51,8 @@ function getPersistedWriterConfig(env = process.env) {
   return {
     persistedWriterEnabled,
     writerMode: activationStatus.writerMode,
+    trafficTransferMode: activationStatus.trafficTransferMode,
+    rollbackMode: activationStatus.rollbackMode,
     writerModeAllowsPersistence,
     supabaseUrlConfigured,
     anonKeyConfigured,
@@ -59,6 +61,28 @@ function getPersistedWriterConfig(env = process.env) {
     canAttemptPersistence: persistedWriterEnabled && writerModeAllowsPersistence && hasPersistenceRuntime,
     blockedReasons,
   };
+}
+
+function isFitnessLiveTransferProofPayload(payload) {
+  return (
+    payload !== null &&
+    typeof payload === "object" &&
+    !Array.isArray(payload) &&
+    typeof payload.reportId === "string" &&
+    payload.reportId.startsWith("fitness-live-transfer-")
+  );
+}
+
+function isLiveTransferProofRow(row, writerConfig) {
+  return (
+    row !== null &&
+    typeof row === "object" &&
+    typeof row.report_id === "string" &&
+    row.report_id.startsWith("fitness-live-transfer-") &&
+    writerConfig.writerMode === "active" &&
+    writerConfig.trafficTransferMode === "active" &&
+    writerConfig.rollbackMode === "discordos-primary-with-fitness-rollback"
+  );
 }
 
 async function insertFeedbackReport(row, { supabaseUrl, serviceRoleKey, fetchImpl = fetch }) {
@@ -131,7 +155,9 @@ module.exports = async function feedbackPersist(req, res) {
   }
 
   const normalized = shadowInternals.normalizeShadowFeedbackPayload(parsed.value, {
-    runtimeWarnings: ["discordos_persisted_writer_no_traffic_transfer"],
+    runtimeWarnings: isFitnessLiveTransferProofPayload(parsed.value)
+      ? ["discordos_fitness_live_transfer_proof"]
+      : ["discordos_persisted_writer_no_traffic_transfer"],
   });
   if (!normalized.ok) {
     return res.status(400).json({
@@ -190,6 +216,9 @@ module.exports = async function feedbackPersist(req, res) {
     });
   }
 
+  const row = writerConfig.serviceRoleConfigured ? inserted.row : inserted.payload.row;
+  const liveTransferProof = isLiveTransferProofRow(row, writerConfig);
+
   return res.status(201).json({
     ok: true,
     service: "discordos-feedback-persisted-writer",
@@ -197,16 +226,21 @@ module.exports = async function feedbackPersist(req, res) {
     persistenceAttempted: true,
     writesDiscord: false,
     writesFitness: false,
-    trafficMoved: false,
+    trafficMoved: liveTransferProof,
+    liveTrafficMoved: liveTransferProof,
+    rollbackExecutionProved: false,
     writerMode: writerConfig.writerMode,
+    trafficTransferMode: writerConfig.trafficTransferMode,
+    rollbackMode: writerConfig.rollbackMode,
     persistenceRuntime: writerConfig.serviceRoleConfigured ? "vercel-env-service-role" : "supabase-edge-function",
-    row: writerConfig.serviceRoleConfigured ? inserted.row : inserted.payload.row,
+    row,
     generatedAt: new Date().toISOString(),
   });
 };
 
 module.exports._internals = {
   getPersistedWriterConfig,
+  isLiveTransferProofRow,
   insertFeedbackReport,
   invokeEdgePersistWriter,
 };

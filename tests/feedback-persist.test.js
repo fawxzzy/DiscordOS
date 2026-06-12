@@ -48,6 +48,35 @@ test("persisted writer config allows edge persistence without direct service rol
   assert.equal(config.edgePersistAvailable, true);
 });
 
+test("live transfer proof rows require active writer, active traffic, and rollback-ready mode", () => {
+  assert.equal(_internals.isLiveTransferProofRow(
+    { report_id: "fitness-live-transfer-interaction-1" },
+    {
+      writerMode: "active",
+      trafficTransferMode: "active",
+      rollbackMode: "discordos-primary-with-fitness-rollback",
+    },
+  ), true);
+
+  assert.equal(_internals.isLiveTransferProofRow(
+    { report_id: "fitness-live-transfer-interaction-1" },
+    {
+      writerMode: "shadow",
+      trafficTransferMode: "active",
+      rollbackMode: "discordos-primary-with-fitness-rollback",
+    },
+  ), false);
+
+  assert.equal(_internals.isLiveTransferProofRow(
+    { report_id: "shadow-transfer-proof-1" },
+    {
+      writerMode: "active",
+      trafficTransferMode: "active",
+      rollbackMode: "discordos-primary-with-fitness-rollback",
+    },
+  ), false);
+});
+
 test("persisted writer inserts through service-role proof RPC", async () => {
   const calls = [];
   const result = await _internals.insertFeedbackReport(
