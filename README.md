@@ -42,10 +42,15 @@ Current governed contract surface:
 - `api/activation.js`
   - fail-closed activation guard for future writer, traffic-transfer, rollback, and parity-proof switches
   - defaults to no cutover and no Fitness traffic movement
+- `api/feedback-shadow.js`
+  - shadow writer proof endpoint for validating future DiscordOS feedback row shape
+  - returns `persisted: false`, `writesDiscord: false`, `writesFitness: false`, and `trafficMoved: false`
 - `tests/readiness.test.js`
   - fail-closed readiness tests for missing, malformed, anon-role, wrong-project, exact DiscordOS service-role JWT, Edge Function service-role probe shapes, and Discord bot-token probe shapes
 - `tests/activation.test.js`
   - fail-closed activation guard tests for default-disabled, shadow, invalid mode, and explicit active cutover conditions
+- `tests/feedback-shadow.test.js`
+  - fail-closed shadow writer tests for invalid payloads and deterministic no-persistence row preview
 - `supabase/functions/discordos-readiness/index.ts`
   - JWT-protected Supabase Edge Function readiness mirror
   - probes service-role access to the private `discordos` schema without returning secret values
@@ -55,6 +60,8 @@ Current governed contract surface:
   - owner-side proof that DiscordOS can verify the bot credential from runtime without activating writers or moving Fitness traffic
 - `docs/ops/discordos-activation-guard-readiness-proof-2026-06-12.md`
   - owner-side proof that DiscordOS has a fail-closed activation, rollback, traffic-transfer, and parity guard before any live writer is allowed
+- `docs/ops/discordos-feedback-shadow-writer-readiness-proof-2026-06-12.md`
+  - owner-side proof that DiscordOS can validate a future feedback writer payload and row preview without persisting data or moving traffic
 
 Current repo-local verification surface:
 
@@ -64,6 +71,8 @@ Current repo-local verification surface:
   - Node test coverage for the Vercel readiness service-role guard, Supabase Edge probe, and Discord bot-token probe
 - `npm run verify:activation`
   - Node test coverage for the activation guard
+- `npm run verify:feedback-shadow`
+  - Node test coverage for the shadow writer proof surface
 - `npm run verify`
   - runs both verification surfaces
 
