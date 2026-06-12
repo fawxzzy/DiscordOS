@@ -202,6 +202,8 @@ module.exports = async function readiness(req, res) {
     shadowWorkflowParityProved: activationGuardStatus.shadowWorkflowParityProved,
     liveWorkflowParityProved: activationGuardStatus.liveWorkflowParityProved,
     liveParityProofIdPresent: activationGuardStatus.liveParityProofIdPresent,
+    liveTrafficProofIdPresent: activationGuardStatus.liveTrafficProofIdPresent,
+    rollbackExecutionProofIdPresent: activationGuardStatus.rollbackExecutionProofIdPresent,
     activationBlockedReasons: activationGuardStatus.blockedReasons,
     liveCutover: activationGuardStatus.liveCutover,
     fitnessTrafficMoved: activationGuardStatus.fitnessTrafficMoved,

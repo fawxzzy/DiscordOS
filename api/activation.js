@@ -46,6 +46,12 @@ function getActivationGuardStatus(env = process.env) {
   const shadowParityProofId = hasValue(env.DISCORDOS_SHADOW_PARITY_PROOF_ID)
     ? env.DISCORDOS_SHADOW_PARITY_PROOF_ID.trim()
     : null;
+  const liveTrafficProofId = hasValue(env.DISCORDOS_LIVE_TRAFFIC_PROOF_ID)
+    ? env.DISCORDOS_LIVE_TRAFFIC_PROOF_ID.trim()
+    : null;
+  const rollbackExecutionProofId = hasValue(env.DISCORDOS_ROLLBACK_EXECUTION_PROOF_ID)
+    ? env.DISCORDOS_ROLLBACK_EXECUTION_PROOF_ID.trim()
+    : null;
 
   if (writerMode !== "active") {
     blockedReasons.push("writer_mode_not_active");
@@ -63,11 +69,21 @@ function getActivationGuardStatus(env = process.env) {
     blockedReasons.push("missing_live_workflow_parity_proof");
   }
 
+  if (liveTrafficProofId === null) {
+    blockedReasons.push("missing_live_traffic_transfer_proof");
+  }
+
+  if (rollbackExecutionProofId === null) {
+    blockedReasons.push("missing_rollback_execution_proof");
+  }
+
   const liveCutover =
     writerMode === "active" &&
     trafficTransferMode === "active" &&
     rollbackMode === "discordos-primary-with-fitness-rollback" &&
     parityProofId !== null &&
+    liveTrafficProofId !== null &&
+    rollbackExecutionProofId !== null &&
     blockedReasons.length === 0;
 
   return {
@@ -77,6 +93,8 @@ function getActivationGuardStatus(env = process.env) {
     shadowWorkflowParityProved: shadowParityProofId !== null,
     liveWorkflowParityProved: liveCutover,
     liveParityProofIdPresent: parityProofId !== null,
+    liveTrafficProofIdPresent: liveTrafficProofId !== null,
+    rollbackExecutionProofIdPresent: rollbackExecutionProofId !== null,
     writerActivationAllowed: liveCutover,
     liveCutover,
     fitnessTrafficMoved: liveCutover,
