@@ -43,6 +43,9 @@ function getActivationGuardStatus(env = process.env) {
   const parityProofId = hasValue(env.DISCORDOS_LIVE_PARITY_PROOF_ID)
     ? env.DISCORDOS_LIVE_PARITY_PROOF_ID.trim()
     : null;
+  const shadowParityProofId = hasValue(env.DISCORDOS_SHADOW_PARITY_PROOF_ID)
+    ? env.DISCORDOS_SHADOW_PARITY_PROOF_ID.trim()
+    : null;
 
   if (writerMode !== "active") {
     blockedReasons.push("writer_mode_not_active");
@@ -71,7 +74,9 @@ function getActivationGuardStatus(env = process.env) {
     writerMode,
     trafficTransferMode,
     rollbackMode,
-    liveWorkflowParityProved: parityProofId !== null,
+    shadowWorkflowParityProved: shadowParityProofId !== null,
+    liveWorkflowParityProved: liveCutover,
+    liveParityProofIdPresent: parityProofId !== null,
     writerActivationAllowed: liveCutover,
     liveCutover,
     fitnessTrafficMoved: liveCutover,

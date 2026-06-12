@@ -5,11 +5,12 @@
   "scripts": {
     "build": "npm run verify",
     "vercel-build": "npm run verify",
-    "verify": "npm run verify:feedback-adapters && npm run verify:readiness && npm run verify:activation && npm run verify:feedback-shadow && npm run verify:feedback-persist",
+    "verify": "npm run verify:feedback-adapters && npm run verify:readiness && npm run verify:activation && npm run verify:feedback-shadow && npm run verify:feedback-persist && npm run verify:feedback-transfer-proof",
     "verify:readiness": "node --test tests/readiness.test.js",
     "verify:activation": "node --test tests/activation.test.js",
     "verify:feedback-shadow": "node --test tests/feedback-shadow.test.js",
     "verify:feedback-persist": "node --test tests/feedback-persist.test.js",
+    "verify:feedback-transfer-proof": "node --test tests/feedback-transfer-proof.test.js",
     "verify:feedback-adapters": "tsc --project tsconfig.json --noEmit"
   },
   "devDependencies": {

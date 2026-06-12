@@ -50,6 +50,11 @@ Current governed contract surface:
   - can use either direct backend service-role env or the JWT-required Supabase Edge writer path
   - fails closed unless the persisted writer flag, writer mode, Supabase URL, and one backend persistence runtime are present
   - never sends Discord messages, writes Fitness, or moves traffic
+- `api/feedback-transfer-proof.js`
+  - proof-only shadow transfer and parity endpoint
+  - requires `DISCORDOS_TRAFFIC_TRANSFER_MODE=shadow`
+  - persists only `shadow-transfer-proof-*` rows
+  - never sends Discord messages, writes Fitness, moves live traffic, or claims rollback execution
 - `tests/readiness.test.js`
   - fail-closed readiness tests for missing, malformed, anon-role, wrong-project, exact DiscordOS service-role JWT, Edge Function service-role probe shapes, and Discord bot-token probe shapes
 - `tests/activation.test.js`
@@ -58,12 +63,14 @@ Current governed contract surface:
   - fail-closed shadow writer tests for invalid payloads and deterministic no-persistence row preview
 - `tests/feedback-persist.test.js`
   - fail-closed persisted writer tests for disabled/missing-service-role states and service-role REST insert request construction
+- `tests/feedback-transfer-proof.test.js`
+  - fail-closed transfer-proof tests for shadow-mode gating and proof-only parity checks
 - `supabase/functions/discordos-readiness/index.ts`
   - JWT-protected Supabase Edge Function readiness mirror
   - probes service-role access to the private `discordos` schema without returning secret values
 - `supabase/functions/discordos-feedback-persist/index.ts`
   - JWT-protected proof-only Supabase Edge Function writer for `discordos.discord_feedback_reports`
-  - requires proof report ids to use the `edge-persist-proof-` prefix
+  - requires proof report ids to use the `edge-persist-proof-` or `shadow-transfer-proof-` prefix
   - writes no Discord messages, writes no Fitness state, and moves no traffic
 - `docs/ops/discordos-runtime-readiness-surface-pass-1-2026-06-12.md`
   - runtime-readiness receipt without Discord bot activation or Fitness traffic cutover
@@ -75,6 +82,8 @@ Current governed contract surface:
   - owner-side proof that DiscordOS can validate a future feedback writer payload and row preview without persisting data or moving traffic
 - `docs/ops/discordos-persisted-writer-implementation-proof-2026-06-12.md`
   - owner-side proof that DiscordOS has a guarded persisted writer implementation path, still disabled without live cutover or Fitness traffic movement
+- `docs/ops/discordos-shadow-transfer-and-parity-proof-2026-06-12.md`
+  - owner-side proof that DiscordOS has a proof-only shadow transfer/parity path below active cutover and rollback execution
 
 Current repo-local verification surface:
 
@@ -88,6 +97,8 @@ Current repo-local verification surface:
   - Node test coverage for the shadow writer proof surface
 - `npm run verify:feedback-persist`
   - Node test coverage for the persisted writer guard and REST insert construction
+- `npm run verify:feedback-transfer-proof`
+  - Node test coverage for the proof-only shadow transfer/parity guard
 - `npm run verify`
   - runs both verification surfaces
 
