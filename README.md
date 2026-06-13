@@ -238,6 +238,8 @@ Current governed contract surface:
   - owner-side proof that runtime-health cron has a durable scheduled-run receipt path through private Supabase storage and a JWT-protected Edge writer
 - `docs/ops/discordos-updates-publication-command-pass-34-2026-06-13.md`
   - owner-side proof that DiscordOS has a repo-local `#updates` publication command and dry-run proof for the runtime hardening closeout post
+- `docs/ops/discordos-updates-publication-live-post-pass-35-2026-06-13.md`
+  - owner-side proof that the runtime hardening closeout post was sent to `#updates` through the DiscordOS command
 
 Current repo-local verification surface:
 

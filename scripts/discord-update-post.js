@@ -252,8 +252,8 @@ async function buildDiscordUpdatePost({
   }
 
   const result = await sendDiscordBotChannel({
-    channelId: env.DISCORDOS_UPDATES_CHANNEL_ID,
-    token: env.DISCORDOS_BOT_TOKEN,
+    channelId: env.DISCORDOS_UPDATES_CHANNEL_ID.trim(),
+    token: env.DISCORDOS_BOT_TOKEN.trim(),
     payload,
     fetchImpl,
   });

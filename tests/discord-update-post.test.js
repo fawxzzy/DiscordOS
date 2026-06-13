@@ -118,8 +118,8 @@ test("discord update post sends bot-channel payload with DiscordOS env only", as
     body: "DiscordOS runtime hardening is closed.",
     apply: true,
     env: {
-      DISCORDOS_UPDATES_CHANNEL_ID: "123",
-      DISCORDOS_BOT_TOKEN: "bot-secret",
+      DISCORDOS_UPDATES_CHANNEL_ID: " 123\n",
+      DISCORDOS_BOT_TOKEN: " bot-secret\n",
       DISCORD_UPDATES_CHANNEL_ID: "fitness-channel",
       DISCORD_BOT_TOKEN: "fitness-token",
     },
