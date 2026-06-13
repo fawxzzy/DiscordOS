@@ -36,7 +36,7 @@ function parseArgs(args) {
 }
 
 function hasValue(value) {
-  return typeof value === "string" && value.trim().length > 0;
+  return updateTargetInternals.normalizeEnvValue(value).length > 0;
 }
 
 function classifyToolchain() {
@@ -62,7 +62,8 @@ function classifyChannelSeparation(env = process.env) {
   if (
     updatesChannelPresent
     && alertBotChannelPresent
-    && env.DISCORDOS_UPDATES_CHANNEL_ID.trim() === env.DISCORDOS_RUNTIME_HEALTH_ALERT_CHANNEL_ID.trim()
+    && updateTargetInternals.normalizeEnvValue(env.DISCORDOS_UPDATES_CHANNEL_ID)
+      === updateTargetInternals.normalizeEnvValue(env.DISCORDOS_RUNTIME_HEALTH_ALERT_CHANNEL_ID)
   ) {
     reasonCodes.push("updates_alerts_channel_collision");
   }

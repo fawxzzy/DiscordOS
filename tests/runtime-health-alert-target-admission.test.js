@@ -62,6 +62,16 @@ test("alert target admission validates bot channel shape and token presence", ()
     shapeValid: true,
     reasonCodes: [],
   });
+  assert.deepEqual(_internals.classifyBotChannel({
+    channelId: "\u00EF\u00BB\u00BF123456789012345678\\r\\n",
+    token: " bot-secret\\n",
+  }), {
+    channelPresent: true,
+    tokenPresent: true,
+    channelShapeValid: true,
+    shapeValid: true,
+    reasonCodes: [],
+  });
 });
 
 test("alert target admission chooses webhook before bot-channel and masks values", () => {
@@ -128,8 +138,8 @@ test("alert target admission can live-probe bot channel with read-only GET", asy
   const result = await _internals.buildRuntimeHealthAlertTargetAdmission({
     probeLive: true,
     env: {
-      DISCORDOS_RUNTIME_HEALTH_ALERT_CHANNEL_ID: "123456789012345678",
-      DISCORDOS_BOT_TOKEN: "bot-secret",
+      DISCORDOS_RUNTIME_HEALTH_ALERT_CHANNEL_ID: "\u00EF\u00BB\u00BF123456789012345678\\r\\n",
+      DISCORDOS_BOT_TOKEN: "bot-secret\\n",
     },
     fetchImpl: async (url, init) => {
       assert.equal(url, `${_internals.DISCORD_API_BASE}/channels/123456789012345678`);

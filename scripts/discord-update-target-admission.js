@@ -29,12 +29,21 @@ function parseArgs(args) {
   return options;
 }
 
+function normalizeEnvValue(value) {
+  return String(value || "")
+    .replace(/^\u00EF\u00BB\u00BF/, "")
+    .replace(/^\uFEFF/, "")
+    .replace(/\\r/g, "\r")
+    .replace(/\\n/g, "\n")
+    .trim();
+}
+
 function hasValue(value) {
-  return typeof value === "string" && value.trim().length > 0;
+  return normalizeEnvValue(value).length > 0;
 }
 
 function isSnowflake(value) {
-  return typeof value === "string" && /^\d{17,20}$/.test(value.trim());
+  return /^\d{17,20}$/.test(normalizeEnvValue(value));
 }
 
 function classifyBotChannel({ channelId, token }) {
@@ -127,11 +136,11 @@ async function probeDiscordUpdateTarget({
   }
 
   const response = await fetchImpl(
-    `${DISCORD_API_BASE}/channels/${env.DISCORDOS_UPDATES_CHANNEL_ID.trim()}`,
+    `${DISCORD_API_BASE}/channels/${normalizeEnvValue(env.DISCORDOS_UPDATES_CHANNEL_ID)}`,
     {
       method: "GET",
       headers: {
-        Authorization: `Bot ${env.DISCORDOS_BOT_TOKEN.trim()}`,
+        Authorization: `Bot ${normalizeEnvValue(env.DISCORDOS_BOT_TOKEN)}`,
       },
     }
   );
@@ -272,6 +281,7 @@ module.exports = {
     DISCORD_API_BASE,
     DEFAULT_EXPECTED_CHANNEL_NAME,
     parseArgs,
+    normalizeEnvValue,
     hasValue,
     isSnowflake,
     classifyBotChannel,

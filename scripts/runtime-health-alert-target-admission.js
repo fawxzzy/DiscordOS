@@ -20,12 +20,21 @@ function parseArgs(args) {
   return options;
 }
 
+function normalizeEnvValue(value) {
+  return String(value || "")
+    .replace(/^\u00EF\u00BB\u00BF/, "")
+    .replace(/^\uFEFF/, "")
+    .replace(/\\r/g, "\r")
+    .replace(/\\n/g, "\n")
+    .trim();
+}
+
 function hasValue(value) {
-  return typeof value === "string" && value.trim().length > 0;
+  return normalizeEnvValue(value).length > 0;
 }
 
 function isSnowflake(value) {
-  return typeof value === "string" && /^\d{17,20}$/.test(value.trim());
+  return /^\d{17,20}$/.test(normalizeEnvValue(value));
 }
 
 function classifyWebhookUrl(value) {
@@ -39,7 +48,7 @@ function classifyWebhookUrl(value) {
 
   let parsed;
   try {
-    parsed = new URL(value);
+    parsed = new URL(normalizeEnvValue(value));
   } catch {
     return {
       present: true,
@@ -140,11 +149,11 @@ async function probeDiscordTarget({ target, env = process.env, fetchImpl = fetch
   }
 
   const response = await fetchImpl(
-    `${DISCORD_API_BASE}/channels/${env.DISCORDOS_RUNTIME_HEALTH_ALERT_CHANNEL_ID}`,
+    `${DISCORD_API_BASE}/channels/${normalizeEnvValue(env.DISCORDOS_RUNTIME_HEALTH_ALERT_CHANNEL_ID)}`,
     {
       method: "GET",
       headers: {
-        Authorization: `Bot ${env.DISCORDOS_BOT_TOKEN}`,
+        Authorization: `Bot ${normalizeEnvValue(env.DISCORDOS_BOT_TOKEN)}`,
       },
     }
   );
@@ -263,6 +272,7 @@ module.exports = {
   _internals: {
     DISCORD_API_BASE,
     parseArgs,
+    normalizeEnvValue,
     isSnowflake,
     classifyWebhookUrl,
     classifyBotChannel,

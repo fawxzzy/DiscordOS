@@ -41,6 +41,16 @@ test("updates target admission validates bot channel shape and token presence", 
     shapeValid: true,
     reasonCodes: [],
   });
+  assert.deepEqual(_internals.classifyBotChannel({
+    channelId: "\u00EF\u00BB\u00BF123456789012345678\\r\\n",
+    token: " bot-secret\\n",
+  }), {
+    channelPresent: true,
+    tokenPresent: true,
+    channelShapeValid: true,
+    shapeValid: true,
+    reasonCodes: [],
+  });
 });
 
 test("updates target admission classifies configured target without values", () => {
@@ -108,8 +118,8 @@ test("updates target admission can live-probe updates channel with read-only GET
   const result = await _internals.buildDiscordUpdateTargetAdmission({
     probeLive: true,
     env: {
-      DISCORDOS_UPDATES_CHANNEL_ID: " 123456789012345678\n",
-      DISCORDOS_BOT_TOKEN: " bot-secret\n",
+      DISCORDOS_UPDATES_CHANNEL_ID: "\u00EF\u00BB\u00BF123456789012345678\\r\\n",
+      DISCORDOS_BOT_TOKEN: " bot-secret\\n",
     },
     fetchImpl: async (url, init) => {
       assert.equal(url, `${_internals.DISCORD_API_BASE}/channels/123456789012345678`);

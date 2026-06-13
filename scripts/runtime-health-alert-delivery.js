@@ -99,7 +99,22 @@ function parseArgs(args) {
 }
 
 function hasValue(value) {
-  return typeof value === "string" && value.trim().length > 0;
+  return String(value || "")
+    .replace(/^\u00EF\u00BB\u00BF/, "")
+    .replace(/^\uFEFF/, "")
+    .replace(/\\r/g, "\r")
+    .replace(/\\n/g, "\n")
+    .trim()
+    .length > 0;
+}
+
+function normalizeEnvValue(value) {
+  return String(value || "")
+    .replace(/^\u00EF\u00BB\u00BF/, "")
+    .replace(/^\uFEFF/, "")
+    .replace(/\\r/g, "\r")
+    .replace(/\\n/g, "\n")
+    .trim();
 }
 
 function getAlertDeliveryTarget(env = process.env) {
@@ -406,13 +421,13 @@ async function deliverAlert({
 
   const result = target.type === "discord_webhook"
     ? await sendDiscordWebhook({
-        webhookUrl: env.DISCORDOS_RUNTIME_HEALTH_ALERT_WEBHOOK_URL,
+        webhookUrl: normalizeEnvValue(env.DISCORDOS_RUNTIME_HEALTH_ALERT_WEBHOOK_URL),
         payload,
         fetchImpl,
       })
     : await sendDiscordBotChannel({
-        channelId: env.DISCORDOS_RUNTIME_HEALTH_ALERT_CHANNEL_ID,
-        token: env.DISCORDOS_BOT_TOKEN,
+        channelId: normalizeEnvValue(env.DISCORDOS_RUNTIME_HEALTH_ALERT_CHANNEL_ID),
+        token: normalizeEnvValue(env.DISCORDOS_BOT_TOKEN),
         payload,
         fetchImpl,
       });

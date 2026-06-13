@@ -302,8 +302,8 @@ async function runApplyPreflight({
   }
 
   const result = await fetchRecentDiscordMessages({
-    channelId: env.DISCORDOS_UPDATES_CHANNEL_ID.trim(),
-    token: env.DISCORDOS_BOT_TOKEN.trim(),
+    channelId: targetAdmissionInternals.normalizeEnvValue(env.DISCORDOS_UPDATES_CHANNEL_ID),
+    token: targetAdmissionInternals.normalizeEnvValue(env.DISCORDOS_BOT_TOKEN),
     limit,
     fetchImpl,
   });
@@ -500,8 +500,8 @@ async function buildDiscordUpdatePost({
   }
 
   const result = await sendDiscordBotChannel({
-    channelId: env.DISCORDOS_UPDATES_CHANNEL_ID.trim(),
-    token: env.DISCORDOS_BOT_TOKEN.trim(),
+    channelId: targetAdmissionInternals.normalizeEnvValue(env.DISCORDOS_UPDATES_CHANNEL_ID),
+    token: targetAdmissionInternals.normalizeEnvValue(env.DISCORDOS_BOT_TOKEN),
     payload,
     fetchImpl,
   });

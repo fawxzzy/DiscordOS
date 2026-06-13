@@ -167,6 +167,7 @@ Current governed contract surface:
   - repo-local read-only target admission command for runtime-health alert delivery
   - validates webhook and bot-channel target shape without printing target values
   - can optionally run a read-only Discord GET probe with `--probe-live`
+  - normalizes BOM and escaped line-break residue from pulled env values before validation or probing
 - `scripts/discord-update-post.js`
   - repo-local `#updates` publication command for curated DiscordOS release/status posts
   - dry-runs by default, requires `--apply` before sending, and uses only `DISCORDOS_UPDATES_CHANNEL_ID` plus `DISCORDOS_BOT_TOKEN`
@@ -181,6 +182,7 @@ Current governed contract surface:
   - repo-local read-only admission command for the `#updates` publication target
   - validates DiscordOS updates env shape locally and can live-probe the channel with a read-only Discord GET
   - fails closed if the updates target points at `#alerts` or any non-`updates` channel
+  - normalizes BOM and escaped line-break residue from pulled env values before validation or probing
 - `scripts/discord-update-preflight.js`
   - repo-local no-send preflight gate for curated `#updates` posts
   - validates embed payload limits, admits the configured `#updates` target, and can live-check recent messages for duplicate embed titles
@@ -302,6 +304,8 @@ Current governed contract surface:
   - owner-side proof that DiscordOS runtime and publication status can be summarized from one read-only operator command
 - `docs/ops/discordos-next-work-recommender-pass-47-2026-06-13.md`
   - owner-side proof that DiscordOS next work can be ranked from current runtime and publication status signals
+- `docs/ops/discordos-env-value-normalization-pass-48-2026-06-13.md`
+  - owner-side proof that DiscordOS target env admission normalizes pulled-env BOM and escaped line-break residue before Discord API use
 
 Current repo-local verification surface:
 

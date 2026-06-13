@@ -1,6 +1,9 @@
 const {
   _internals: updatePostInternals,
 } = require("./discord-update-post");
+const {
+  _internals: targetAdmissionInternals,
+} = require("./discord-update-target-admission");
 
 const DISCORD_API_BASE = updatePostInternals.DISCORD_API_BASE;
 const DEFAULT_LIMIT = 25;
@@ -47,7 +50,7 @@ function parseArgs(args) {
 }
 
 function hasValue(value) {
-  return typeof value === "string" && value.trim().length > 0;
+  return targetAdmissionInternals.normalizeEnvValue(value).length > 0;
 }
 
 function getLookupTarget(env = process.env) {
@@ -148,8 +151,8 @@ async function buildDiscordUpdateLookup({
   }
 
   const result = await fetchDiscordChannelMessages({
-    channelId: env.DISCORDOS_UPDATES_CHANNEL_ID.trim(),
-    token: env.DISCORDOS_BOT_TOKEN.trim(),
+    channelId: targetAdmissionInternals.normalizeEnvValue(env.DISCORDOS_UPDATES_CHANNEL_ID),
+    token: targetAdmissionInternals.normalizeEnvValue(env.DISCORDOS_BOT_TOKEN),
     limit,
     fetchImpl,
   });
