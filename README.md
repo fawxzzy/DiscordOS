@@ -319,6 +319,8 @@ Current governed contract surface:
   - owner-side proof that scheduled cron log checks now distinguish non-passing cron-path traffic from missing cron-path evidence
 - `docs/ops/discordos-live-target-admission-proof-pass-52-2026-06-13.md`
   - owner-side proof that alerts and updates Discord targets pass dedicated live read-only admission probes
+- `docs/ops/discordos-runtime-health-authorized-cron-proof-pass-53-2026-06-13.md`
+  - owner-side proof that the locked production cron route can be invoked intentionally with `CRON_SECRET` without sending alerts while clear
 
 Current repo-local verification surface:
 
