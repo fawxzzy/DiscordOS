@@ -2,7 +2,7 @@
 
 ## Status
 
-`DiscordOS Runtime & Product Hardening` is ready for closeout at `100%`.
+`DiscordOS Runtime & Product Hardening` is closed at `100%`.
 
 This was runtime and operations hardening for DiscordOS overall. It did not open Music Sesh, moderation, publication, or any other named Discord feature lane.
 
@@ -64,6 +64,7 @@ Verification:
 
 ## Durable Receipts
 
+- `docs/ops/discordos-closeout-update-live-post-pass-62-2026-06-13.md`
 - `docs/ops/discordos-next-work-exhaustion-ranking-pass-60-2026-06-13.md`
 - `docs/ops/discordos-next-work-wait-state-ranking-pass-59-2026-06-13.md`
 - `docs/ops/discordos-scheduled-cron-log-identity-guard-pass-58-2026-06-13.md`
@@ -82,3 +83,15 @@ Verification:
 - `docs/ops/discordos-runtime-health-cron-schedule-proof-pass-30-2026-06-13.md`
 - `docs/ops/discordos-runtime-health-cron-alert-delivery-proof-pass-28-2026-06-13.md`
 - `docs/ops/discordos-runtime-health-alert-target-production-deploy-pass-25-2026-06-13.md`
+
+<!-- discordos-update-post-receipt:start -->
+## Discord Publication
+
+- status: `sent`
+- sends messages: `true`
+- Discord HTTP status: `200`
+- channel id: `1504671871512346695`
+- message id: `1515498247915966514`
+- timestamp: `2026-06-13T23:28:58.899000+00:00`
+- mentions disabled: `true`
+<!-- discordos-update-post-receipt:end -->
