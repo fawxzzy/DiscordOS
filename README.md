@@ -335,6 +335,8 @@ Current governed contract surface:
   - owner-side proof that the next-work recommender defers scheduled cron proof while waiting for real Vercel Cron identity
 - `docs/ops/discordos-next-work-exhaustion-ranking-pass-60-2026-06-13.md`
   - owner-side proof that the next-work recommender stops looping on completed admission proof and reports only deferred/end-of-run work
+- `docs/ops/discordos-closeout-update-draft-refresh-pass-61-2026-06-13.md`
+  - owner-side proof that the end-of-run `#updates` draft is current through pass 60 and remains unsent pending guarded apply
 
 Current repo-local verification surface:
 

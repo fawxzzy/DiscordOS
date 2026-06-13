@@ -112,8 +112,8 @@ test("discord update draft validator passes the current closeout update post", a
   });
 
   assert.equal(result.ok, true);
-  assert.equal(result.payload.bodyChars, 2184);
-  assert.equal(result.receiptLinks.count, 5);
+  assert.equal(result.payload.bodyChars, 2718);
+  assert.equal(result.receiptLinks.count, 18);
 });
 
 test("discord update draft validator blocks missing public proof anchors", async () => {
