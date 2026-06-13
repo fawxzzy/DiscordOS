@@ -180,6 +180,10 @@ Current governed contract surface:
   - repo-local read-only admission command for the `#updates` publication target
   - validates DiscordOS updates env shape locally and can live-probe the channel with a read-only Discord GET
   - fails closed if the updates target points at `#alerts` or any non-`updates` channel
+- `scripts/discord-update-preflight.js`
+  - repo-local no-send preflight gate for curated `#updates` posts
+  - validates embed payload limits, admits the configured `#updates` target, and can live-check recent messages for duplicate embed titles
+  - sends no Discord messages, writes no artifacts, and renders only bounded payload metadata
 - `api/cron/runtime-health.js`
   - Vercel Cron guarded runtime-health proof endpoint
   - requires `Authorization: Bearer $CRON_SECRET`
@@ -257,6 +261,8 @@ Current governed contract surface:
   - owner-side proof that existing `#updates` posts can be found by title and backfilled into receipts without reposting
 - `docs/ops/discordos-updates-target-admission-pass-39-2026-06-13.md`
   - owner-side proof that DiscordOS can admit the configured `#updates` target before future public posts
+- `docs/ops/discordos-updates-preflight-command-pass-40-2026-06-13.md`
+  - owner-side proof that DiscordOS can preflight future `#updates` posts before live publication
 
 Current repo-local verification surface:
 
@@ -316,6 +322,8 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local DiscordOS `#updates` read-only lookup command
 - `npm run verify:discord-update-target-admission`
   - Node test coverage for the repo-local DiscordOS `#updates` target admission command
+- `npm run verify:discord-update-preflight`
+  - Node test coverage for the repo-local DiscordOS `#updates` no-send preflight command
 - `npm run verify`
   - runs both verification surfaces
 
@@ -366,6 +374,10 @@ Current repo-local operator surface:
   - validates the configured `#updates` target shape without network access
 - `npm run ops:discord:update-target-admission -- --probe-live`
   - performs a read-only Discord channel GET and fails closed unless the target channel name is `updates`
+- `npm run ops:discord:update-preflight -- --title "<title>" --body-file <path> --body-section "<section>"`
+  - validates a future `#updates` post locally without sending a message
+- `npm run ops:discord:update-preflight -- --title "<title>" --body-file <path> --body-section "<section>" --probe-live`
+  - validates payload and target, then checks recent `#updates` messages for duplicate embed titles without sending a message
 - `npm run ops:runtime-health:scheduled-proof`
   - runs the full cron-ready proof loop: live health capture, fresh summary check, durable alert decision, fail-closed exit
 - `npm run ops:runtime-health:scheduled-proof:json`
@@ -436,5 +448,6 @@ Current updates-channel recommendation:
 - publish from DiscordOS with `npm run ops:discord:update-post -- --title "<title>" --body-file <path> --body-section "<section>" --apply`
 - include `--receipt-file <receipt>` on future live posts so the returned Discord message id is recorded durably
 - run `npm run ops:discord:update-target-admission -- --probe-live` before live public posts when target drift is possible
+- run `npm run ops:discord:update-preflight -- --title "<title>" --body-file <path> --body-section "<section>" --probe-live` immediately before live public posts to block duplicate titles and target drift
 - use `npm run ops:discord:update-lookup` only to backfill receipts for already-published updates
 - keep routine runtime logs, cron proof dumps, and critical alerts out of `#updates`
