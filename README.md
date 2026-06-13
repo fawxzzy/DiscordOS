@@ -327,6 +327,8 @@ Current governed contract surface:
   - owner-side proof that authorized cron runs have durable passing audit rows in the DiscordOS Supabase project
 - `docs/ops/discordos-cron-scheduled-vs-manual-classification-pass-56-2026-06-13.md`
   - owner-side proof that cron audit rows distinguish real scheduled Vercel Cron runs from manual authorized operator proofs
+- `docs/ops/discordos-live-manual-cron-classification-proof-pass-57-2026-06-13.md`
+  - owner-side live proof that production manual authorized cron runs persist as `manual-authorized-runtime-health`
 
 Current repo-local verification surface:
 
