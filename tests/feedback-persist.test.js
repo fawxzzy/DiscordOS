@@ -219,6 +219,33 @@ test("persisted writer forwards transfer secret to edge writer when supplied", a
   assert.equal(calls[0].init.headers["X-DiscordOS-Feedback-Transfer-Secret"], "shared-transfer-secret");
 });
 
+test("persisted writer preserves Fitness provenance fields for edge writer", () => {
+  assert.deepEqual(
+    _internals.buildEdgePersistPayload(
+      {
+        report_id: "fitness-live-transfer-interaction-123",
+        report_type: "bug",
+        reporter_user_kind: "human",
+      },
+      {
+        reportId: "fitness-live-transfer-interaction-123",
+        reportType: "bug",
+        reporterUserKind: "human",
+        transferSource: "fitness-discord-interaction",
+        sourceProof: "discord-signature-verified-by-fitness",
+      },
+      true,
+    ),
+    {
+      report_id: "fitness-live-transfer-interaction-123",
+      report_type: "bug",
+      reporter_user_kind: "human",
+      transfer_source: "fitness-discord-interaction",
+      source_proof: "discord-signature-verified-by-fitness",
+    },
+  );
+});
+
 test("persisted writer reports database failure without returning secret values", async () => {
   const result = await _internals.insertFeedbackReport(
     { report_id: "feedback-123", report_type: "bug" },

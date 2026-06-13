@@ -108,6 +108,18 @@ function isLiveTransferProofRow(row, writerConfig) {
   );
 }
 
+function buildEdgePersistPayload(row, originalPayload, fitnessLiveTransferPayload) {
+  if (!fitnessLiveTransferPayload || originalPayload === null || typeof originalPayload !== "object") {
+    return row;
+  }
+
+  return {
+    ...row,
+    transfer_source: typeof originalPayload.transferSource === "string" ? originalPayload.transferSource : null,
+    source_proof: typeof originalPayload.sourceProof === "string" ? originalPayload.sourceProof : null,
+  };
+}
+
 async function insertFeedbackReport(row, { supabaseUrl, serviceRoleKey, fetchImpl = fetch }) {
   const response = await fetchImpl(`${cleanUrl(supabaseUrl)}/rest/v1/rpc/discordos_insert_feedback_proof`, {
     method: "POST",
@@ -246,7 +258,7 @@ module.exports = async function feedbackPersist(req, res) {
         supabaseUrl: process.env.DISCORDOS_SUPABASE_URL,
         serviceRoleKey: process.env.DISCORDOS_SUPABASE_SERVICE_ROLE_KEY,
       })
-    : await invokeEdgePersistWriter(normalized.value, {
+    : await invokeEdgePersistWriter(buildEdgePersistPayload(normalized.value, parsed.value, fitnessLiveTransferPayload), {
         supabaseUrl: process.env.DISCORDOS_SUPABASE_URL,
         anonKey: process.env.DISCORDOS_SUPABASE_ANON_KEY,
         transferSecret: fitnessLiveTransferPayload ? process.env.DISCORDOS_FEEDBACK_TRANSFER_SECRET : null,
@@ -297,4 +309,5 @@ module.exports._internals = {
   insertFeedbackReport,
   invokeEdgePersistWriter,
   getTransferSecretStatus,
+  buildEdgePersistPayload,
 };
