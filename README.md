@@ -185,6 +185,10 @@ Current governed contract surface:
   - repo-local no-send preflight gate for curated `#updates` posts
   - validates embed payload limits, admits the configured `#updates` target, and can live-check recent messages for duplicate embed titles
   - sends no Discord messages, writes no artifacts, and renders only bounded payload metadata
+- `scripts/discord-update-draft-validator.js`
+  - repo-local no-send validator for drafted `#updates` receipt files
+  - checks embed length, required public proof anchors, durable receipt linkage, and obvious secret-like value leakage
+  - performs no network calls and writes no artifacts
 - `api/cron/runtime-health.js`
   - Vercel Cron guarded runtime-health proof endpoint
   - requires `Authorization: Bearer $CRON_SECRET`
@@ -266,6 +270,8 @@ Current governed contract surface:
   - owner-side proof that DiscordOS can preflight future `#updates` posts before live publication
 - `docs/ops/discordos-updates-apply-preflight-enforcement-pass-41-2026-06-13.md`
   - owner-side proof that live `#updates` publication cannot bypass target admission and duplicate-title protection
+- `docs/ops/discordos-updates-draft-validator-pass-42-2026-06-13.md`
+  - owner-side proof that drafted `#updates` receipt files can be validated before preflight or live apply
 
 Current repo-local verification surface:
 
@@ -327,6 +333,8 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local DiscordOS `#updates` target admission command
 - `npm run verify:discord-update-preflight`
   - Node test coverage for the repo-local DiscordOS `#updates` no-send preflight command
+- `npm run verify:discord-update-draft-validator`
+  - Node test coverage for the repo-local DiscordOS `#updates` draft receipt validator
 - `npm run verify`
   - runs both verification surfaces
 
@@ -381,6 +389,8 @@ Current repo-local operator surface:
   - validates a future `#updates` post locally without sending a message
 - `npm run ops:discord:update-preflight -- --title "<title>" --body-file <path> --body-section "<section>" --probe-live`
   - validates payload and target, then checks recent `#updates` messages for duplicate embed titles without sending a message
+- `npm run ops:discord:update-draft-validator -- --title "<title>" --body-file <path> --body-section "<section>"`
+  - validates a drafted update receipt locally before preflight or live apply
 - `npm run ops:runtime-health:scheduled-proof`
   - runs the full cron-ready proof loop: live health capture, fresh summary check, durable alert decision, fail-closed exit
 - `npm run ops:runtime-health:scheduled-proof:json`
@@ -450,6 +460,7 @@ Current updates-channel recommendation:
 - use `#updates` only for curated public release/status announcements
 - publish from DiscordOS with `npm run ops:discord:update-post -- --title "<title>" --body-file <path> --body-section "<section>" --apply`
 - include `--receipt-file <receipt>` on future live posts so the returned Discord message id is recorded durably
+- run `npm run ops:discord:update-draft-validator -- --title "<title>" --body-file <path> --body-section "<section>"` before preflight when drafting a new public update receipt
 - `--apply` now runs live target admission and duplicate-title preflight automatically before sending
 - run `npm run ops:discord:update-preflight -- --title "<title>" --body-file <path> --body-section "<section>" --probe-live` when you want a no-send preview before the final apply
 - use `npm run ops:discord:update-lookup` only to backfill receipts for already-published updates
