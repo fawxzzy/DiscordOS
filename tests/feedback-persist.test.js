@@ -46,6 +46,7 @@ test("persisted writer config allows edge persistence without direct service rol
   assert.equal(config.canAttemptPersistence, true);
   assert.equal(config.serviceRoleConfigured, false);
   assert.equal(config.edgePersistAvailable, true);
+  assert.deepEqual(config.blockedReasons, []);
 });
 
 test("transfer secret status requires configured matching header", () => {

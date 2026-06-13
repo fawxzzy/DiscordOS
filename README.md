@@ -1,16 +1,16 @@
 # DiscordOS
 
-DiscordOS is the future canonical repo for Discord-owned runtime and workflow surfaces in the ATLAS stack.
+DiscordOS is the canonical repo for Discord-owned runtime and workflow surfaces in the ATLAS stack.
 
 Current status:
 
-- bootstrap only
-- no Fitness code migrated
-- no bot/runtime cutover
-- no writer activation or Fitness traffic transfer
+- standalone DiscordOS runtime surface is live
+- no Fitness product code migrated
+- feedback writer activation and Fitness traffic transfer are proof-closed
+- broader DiscordOS server, bot, moderation, publication, and product work remains open
 - Supabase schema landing exists for private DiscordOS feedback runtime tables
 - Vercel project linkage exists for `fawxzzy-discordos`
-- feedback contract scaffold documented only
+- feedback contract and guarded runtime surfaces are documented and verified
 
 Current governed contract surface:
 
@@ -39,6 +39,10 @@ Current governed contract surface:
   - validates that any service-role JWT is for `role=service_role` and ref `nwexsktuuenfdegzrbut`
   - can also prove the Supabase Edge Function has DiscordOS-owned service-role access without moving that service-role value into Vercel
   - can validate the Discord bot token with a read-only Discord `/users/@me` probe without sending messages or returning bot identity values
+- `api/runtime-health.js`
+  - product-wide runtime health endpoint for server, bot, service-role, writer, activation, and live-transfer posture
+  - returns a bounded `readinessPercent`, component states, and blocked reasons without returning secret values
+  - does not create a named Discord feature lane or publish/update/moderation behavior
 - `api/activation.js`
   - fail-closed activation guard for future writer, traffic-transfer, rollback, and parity-proof switches
   - defaults to no cutover and no Fitness traffic movement
@@ -65,6 +69,10 @@ Current governed contract surface:
   - fail-closed persisted writer tests for disabled/missing-service-role states and service-role REST insert request construction
 - `tests/feedback-transfer-proof.test.js`
   - fail-closed transfer-proof tests for shadow-mode gating and proof-only parity checks
+- `tests/live-transfer-status.test.js`
+  - fail-closed live transfer status tests for missing config, Edge invocation, and Edge failure projection
+- `tests/runtime-health.test.js`
+  - deterministic runtime-health classifier tests for blocked, edge-backed partial readiness, and fully operational generic runtime posture
 - `supabase/functions/discordos-readiness/index.ts`
   - JWT-protected Supabase Edge Function readiness mirror
   - probes service-role access to the private `discordos` schema without returning secret values
@@ -84,6 +92,146 @@ Current governed contract surface:
   - owner-side proof that DiscordOS has a guarded persisted writer implementation path, still disabled without live cutover or Fitness traffic movement
 - `docs/ops/discordos-shadow-transfer-and-parity-proof-2026-06-12.md`
   - owner-side proof that DiscordOS has a proof-only shadow transfer/parity path below active cutover and rollback execution
+- `docs/ops/discordos-live-cutover-proof-capture-2026-06-12.md`
+  - owner-side proof that the final feedback live cutover guard is green
+- `docs/ops/discordos-runtime-health-surface-pass-1-2026-06-13.md`
+  - owner-side proof that DiscordOS has a product-wide runtime health classifier below named feature lanes
+- `docs/ops/discordos-runtime-health-live-proof-pass-2-2026-06-13.md`
+  - owner-side proof that production `/api/runtime-health` is deployed and reports operational posture
+- `scripts/runtime-health-proof.js`
+  - repo-local live proof command for production `/api/runtime-health`
+  - emits Markdown by default and JSON with `--json`
+  - fails closed unless the runtime-health contract is operational by default
+- `docs/ops/discordos-runtime-health-proof-command-pass-3-2026-06-13.md`
+  - owner-side proof that live runtime-health checks are now repeatable from a repo command
+- `docs/ops/discordos-runtime-health-event-classification-pass-4-2026-06-13.md`
+  - owner-side proof that live runtime-health checks now emit a reusable operational event classification
+- `docs/ops/discordos-runtime-health-snapshot-command-pass-5-2026-06-13.md`
+  - owner-side proof that live runtime-health checks can persist timestamped runtime snapshots under ATLAS `runtime/`
+- `scripts/runtime-health-summary.js`
+  - repo-local read-only summary command for runtime-health snapshots
+  - reports latest state, pass/fail counts, event types, blocked reasons, freshness, and recent snapshot rows
+  - fails closed by default when the latest snapshot is stale, while `--allow-stale` keeps old-history audits possible
+- `scripts/runtime-health-check.js`
+  - repo-local one-command runtime-health check
+  - fetches production health, writes a timestamped snapshot, and immediately runs the freshness-guarded summary
+  - fails closed unless the live proof and latest fresh summary both pass
+- `scripts/runtime-health-alert.js`
+  - repo-local read-only alert-threshold decision command for runtime-health snapshots
+  - emits `discordos.runtime_health.alert_clear` or `discordos.runtime_health.alert_triggered`
+  - can write durable alert-decision snapshots under ATLAS `runtime/`
+  - does not send alerts, publish messages, or mutate Discord state
+- `scripts/runtime-health-scheduled-proof.js`
+  - repo-local cron-ready scheduled proof command
+  - captures production runtime health, writes a health snapshot, writes an alert-decision snapshot, and exits fail-closed
+  - does not install a scheduler or deliver alerts
+- `scripts/runtime-health-artifact-rollup.js`
+  - repo-local read-only rollup command for runtime-health and alert-decision artifacts
+  - summarizes artifact counts, latest health state, and latest alert-decision state
+  - does not delete or rotate runtime artifacts
+- `scripts/runtime-health-retention-plan.js`
+  - repo-local read-only retention planning command for runtime-health and alert-decision artifacts
+  - classifies artifacts as `retain` or `eligible_for_review`
+  - does not delete, move, archive, or rotate runtime artifacts
+- `scripts/runtime-health-operations-admission.js`
+  - repo-local read-only admission gate for runtime-health next actions
+  - reports retention enforcement, scheduled proof, and alert delivery as admissible, blocked, or not needed
+  - does not enforce retention, install a scheduler, deliver alerts, or expose alert target values
+- `scripts/runtime-health-status.js`
+  - repo-local read-only status board for runtime-health operations
+  - combines live production health, public cron-guard proof, alert target admission, retention/admission state, and next actions
+  - sends no Discord messages and writes no runtime artifacts
+- `scripts/runtime-health-cron-production-proof.js`
+  - repo-local production proof command for the deployed cron guard
+  - checks production runtime health is green and unauthenticated cron access remains locked
+  - does not require or expose `CRON_SECRET`
+- `scripts/runtime-health-cron-schedule-proof.js`
+  - repo-local Vercel cron registry proof command
+  - compares the deployed cron table to `vercel.json` and fails closed on schedule drift, disabled crons, undeployed crons, or modified cron state
+  - sends no Discord messages and writes no runtime artifacts
+- `scripts/runtime-health-cron-scheduled-log-proof.js`
+  - repo-local Vercel log proof command for the daily scheduled cron invocation
+  - searches production logs for a `200` `/api/cron/runtime-health` candidate in the selected time window
+  - sends no Discord messages and writes no runtime artifacts
+- `scripts/runtime-health-cron-authorized-proof.js`
+  - repo-local authorized proof command for the deployed cron route
+  - requires `CRON_SECRET` from the process environment
+  - validates the production cron proof and alert-delivery gate without printing or persisting the secret
+- `scripts/runtime-health-alert-delivery.js`
+  - repo-local alert delivery command for runtime-health alert decisions
+  - supports Discord webhook and Discord bot-channel targets when explicitly configured
+  - skips clear alerts by default, skips warning alerts by default, and requires `--send` before network delivery
+  - formats send-eligible critical alerts as a red Discord embed with mentions disabled
+  - suppresses repeated sends for the same critical fingerprint for 24 hours by default
+- `scripts/runtime-health-alert-target-admission.js`
+  - repo-local read-only target admission command for runtime-health alert delivery
+  - validates webhook and bot-channel target shape without printing target values
+  - can optionally run a read-only Discord GET probe with `--probe-live`
+- `api/cron/runtime-health.js`
+  - Vercel Cron guarded runtime-health proof endpoint
+  - requires `Authorization: Bearer $CRON_SECRET`
+  - returns in-memory runtime health and alert classification without writing artifacts
+  - can deliver critical-only alerts to `#alerts` when `DISCORDOS_RUNTIME_HEALTH_ALERT_SEND=enabled`
+  - can write sanitized runtime-health cron execution receipts when `DISCORDOS_RUNTIME_HEALTH_CRON_AUDIT_WRITE=enabled`
+- `supabase/migrations/20260613143000_discordos_runtime_health_cron_runs.sql`
+  - private `discordos.runtime_health_cron_runs` table plus service-role-only insert/status RPCs
+  - stores sanitized cron execution metadata only
+- `supabase/functions/discordos-runtime-health-cron-audit/index.ts`
+  - JWT-protected Supabase Edge writer for runtime-health cron receipts
+  - keeps the service credential inside the Supabase runtime boundary
+  - writes no Discord messages and returns no secret values
+- `vercel.json`
+  - schedules `/api/cron/runtime-health` daily at `0 8 * * *`
+- `docs/ops/discordos-runtime-health-summary-command-pass-6-2026-06-13.md`
+  - owner-side proof that runtime-health history can be summarized from ATLAS `runtime/`
+- `docs/ops/discordos-runtime-health-freshness-guard-pass-7-2026-06-13.md`
+  - owner-side proof that runtime-health snapshot summaries now fail closed when the newest snapshot is stale
+- `docs/ops/discordos-runtime-health-check-command-pass-8-2026-06-13.md`
+  - owner-side proof that production runtime-health capture and freshness summary now run from one fail-closed command
+- `docs/ops/discordos-runtime-health-alert-threshold-pass-9-2026-06-13.md`
+  - owner-side proof that runtime-health snapshot history now produces a deterministic alert-threshold decision without delivery behavior
+- `docs/ops/discordos-runtime-health-alert-decision-snapshot-pass-10-2026-06-13.md`
+  - owner-side proof that alert-threshold decisions can be persisted as non-overwriting ATLAS runtime snapshots
+- `docs/ops/discordos-runtime-health-scheduled-proof-pass-11-2026-06-13.md`
+  - owner-side proof that runtime-health capture plus alert-decision evidence can run as one cron-ready command without installing a scheduler
+- `docs/ops/discordos-runtime-health-artifact-rollup-pass-12-2026-06-13.md`
+  - owner-side proof that accumulated runtime-health and alert-decision artifacts can be summarized without mutating runtime state
+- `docs/ops/discordos-runtime-health-retention-plan-pass-13-2026-06-13.md`
+  - owner-side proof that runtime-health artifact retention can be planned without destructive cleanup
+- `docs/ops/discordos-runtime-health-operations-admission-pass-14-2026-06-13.md`
+  - owner-side proof that runtime-health next actions can be admission-checked without side effects
+- `docs/ops/discordos-runtime-health-vercel-cron-pass-15-2026-06-13.md`
+  - owner-side proof that runtime-health has a guarded Vercel Cron endpoint and schedule config
+- `docs/ops/discordos-runtime-health-vercel-cron-production-pass-16-2026-06-13.md`
+  - owner-side proof that the guarded Vercel Cron runtime-health surface was deployed to production with encrypted `CRON_SECRET`
+- `docs/ops/discordos-runtime-health-cron-production-proof-command-pass-17-2026-06-13.md`
+  - owner-side proof that the deployed cron guard can be rechecked from a repo command without exposing `CRON_SECRET`
+- `docs/ops/discordos-runtime-health-alert-delivery-command-pass-18-2026-06-13.md`
+  - owner-side proof that runtime-health alert delivery is plumbed with no-send defaults and secret-safe target handling
+- `docs/ops/discordos-runtime-health-cron-authorized-proof-command-pass-19-2026-06-13.md`
+  - owner-side proof that the production cron route can be invoked with `CRON_SECRET` and validated without side effects
+- `docs/ops/discordos-runtime-health-alert-target-admission-pass-20-2026-06-13.md`
+  - owner-side proof that runtime-health alert delivery targets can be admitted before any delivery attempt
+- `docs/ops/discordos-runtime-health-status-command-pass-21-2026-06-13.md`
+  - owner-side proof that runtime-health status and next actions can be checked from one read-only command
+- `docs/ops/discordos-runtime-health-cron-scheduled-log-proof-command-pass-22-2026-06-13.md`
+  - owner-side proof that real daily scheduled cron evidence can be captured from Vercel logs once the schedule window arrives
+- `docs/ops/discordos-runtime-health-critical-alert-delivery-policy-pass-23-2026-06-13.md`
+  - owner-side proof that runtime-health alert delivery is critical-only by default with red embed formatting and mentions disabled
+- `docs/ops/discordos-runtime-health-alert-channel-target-pass-24-2026-06-13.md`
+  - owner-side proof that Discord `#alerts` exists and DiscordOS production targets it by channel id
+- `docs/ops/discordos-runtime-health-alert-target-production-deploy-pass-25-2026-06-13.md`
+  - owner-side proof that the alert target env is attached to fresh production deployment `dpl_3yCdhsZUapMLAkwkhxJDkYq9PVm6`
+- `docs/ops/discordos-runtime-health-alert-repeat-suppression-pass-26-2026-06-13.md`
+  - owner-side proof that runtime-health alert delivery suppresses repeated sends for the same critical fingerprint by default
+- `docs/ops/discordos-runtime-health-cron-critical-alert-delivery-pass-27-2026-06-13.md`
+  - owner-side proof that the guarded Vercel Cron route can deliver only critical runtime-health alerts when production delivery is enabled
+- `docs/ops/discordos-runtime-health-cron-alert-delivery-proof-pass-28-2026-06-13.md`
+  - owner-side proof that authorized cron proof verifies delivery is enabled, skipped-clear, and bot-channel targeted in the current healthy state
+- `docs/ops/discordos-runtime-health-cron-schedule-proof-pass-30-2026-06-13.md`
+  - owner-side proof that deployed Vercel cron schedule drift can be checked from the repo without relying on historical runtime logs
+- `docs/ops/discordos-runtime-health-cron-audit-receipts-pass-31-2026-06-13.md`
+  - owner-side proof that runtime-health cron has a durable scheduled-run receipt path through private Supabase storage and a JWT-protected Edge writer
 
 Current repo-local verification surface:
 
@@ -99,7 +247,142 @@ Current repo-local verification surface:
   - Node test coverage for the persisted writer guard and REST insert construction
 - `npm run verify:feedback-transfer-proof`
   - Node test coverage for the proof-only shadow transfer/parity guard
+- `npm run verify:live-transfer-status`
+  - Node test coverage for the live transfer status proof reader
+- `npm run verify:runtime-health`
+  - Node test coverage for the repo-local runtime health classifier
+- `npm run verify:runtime-health-cron`
+  - Node test coverage for the guarded Vercel Cron runtime-health endpoint
+- `npm run verify:runtime-health-cron-production-proof`
+  - Node test coverage for the production cron guard proof command
+- `npm run verify:runtime-health-cron-schedule-proof`
+  - Node test coverage for the Vercel cron registry schedule proof command
+- `npm run verify:runtime-health-cron-scheduled-log-proof`
+  - Node test coverage for the scheduled cron log proof command
+- `npm run verify:runtime-health-cron-authorized-proof`
+  - Node test coverage for the authorized production cron proof command
+- `npm run verify:runtime-health-cron-audit-proof`
+  - Node test coverage for the service-role-only cron audit receipt proof command
+- `npm run verify:runtime-health-proof`
+  - Node test coverage for the repo-local live proof command
+- `npm run verify:runtime-health-summary`
+  - Node test coverage for the repo-local snapshot summary and freshness guard
+- `npm run verify:runtime-health-check`
+  - Node test coverage for the repo-local combined runtime health check command
+- `npm run verify:runtime-health-alert`
+  - Node test coverage for the repo-local alert-threshold decision command
+- `npm run verify:runtime-health-alert-target-admission`
+  - Node test coverage for the repo-local alert target admission command
+- `npm run verify:runtime-health-alert-delivery`
+  - Node test coverage for the repo-local runtime-health alert delivery command
+- `npm run verify:runtime-health-scheduled-proof`
+  - Node test coverage for the repo-local scheduled proof command
+- `npm run verify:runtime-health-rollup`
+  - Node test coverage for the repo-local runtime-health artifact rollup command
+- `npm run verify:runtime-health-retention-plan`
+  - Node test coverage for the repo-local runtime-health artifact retention planning command
+- `npm run verify:runtime-health-admission`
+  - Node test coverage for the repo-local runtime-health operations admission command
+- `npm run verify:runtime-health-status`
+  - Node test coverage for the repo-local runtime-health status command
 - `npm run verify`
   - runs both verification surfaces
 
-Until a later approved extraction lane opens, this repo is a governed landing surface for future DiscordOS work, not an active runtime owner.
+Current repo-local operator surface:
+
+- `npm run ops:runtime-health:proof`
+  - checks production `/api/runtime-health` and emits a Markdown proof with event type and severity
+- `npm run ops:runtime-health:proof:json`
+  - checks production `/api/runtime-health` and emits a JSON proof payload with a safe operational event object
+- `npm run ops:runtime-health:snapshot`
+  - checks production `/api/runtime-health`, emits Markdown, and writes a timestamped JSON snapshot under `runtime/discordos/runtime-health`
+- `npm run ops:runtime-health:snapshot:json`
+  - checks production `/api/runtime-health`, writes a timestamped JSON snapshot, and emits the JSON proof payload
+- `npm run ops:runtime-health:summary`
+  - summarizes recent runtime-health snapshots from `runtime/discordos/runtime-health`
+  - requires the newest snapshot to pass and be fresh within 24 hours unless overridden for audit review
+- `npm run ops:runtime-health:summary:json`
+  - summarizes recent runtime-health snapshots as JSON
+- `npm run ops:runtime-health:check`
+  - fetches production `/api/runtime-health`, writes a snapshot, then verifies the latest fresh summary in one command
+- `npm run ops:runtime-health:check:json`
+  - runs the combined runtime-health check and emits JSON
+- `npm run ops:runtime-health:alert`
+  - reads runtime-health snapshots and emits a bounded alert clear or triggered decision
+- `npm run ops:runtime-health:alert:json`
+  - reads runtime-health snapshots and emits the alert decision as JSON
+- `npm run ops:runtime-health:alert:snapshot`
+  - reads runtime-health snapshots, emits the alert decision, and writes a durable alert-decision JSON snapshot
+- `npm run ops:runtime-health:alert:snapshot:json`
+  - writes the alert-decision snapshot and emits the decision as JSON
+- `npm run ops:runtime-health:alert-delivery`
+  - evaluates runtime-health alert delivery with no-send defaults
+- `npm run ops:runtime-health:alert-delivery:json`
+  - emits the alert delivery decision as JSON
+- `npm run ops:runtime-health:alert-target-admission`
+  - validates configured alert delivery target shape without sending messages or exposing target values
+- `npm run ops:runtime-health:alert-target-admission:json`
+  - emits the alert target admission result as JSON
+- `npm run ops:runtime-health:scheduled-proof`
+  - runs the full cron-ready proof loop: live health capture, fresh summary check, durable alert decision, fail-closed exit
+- `npm run ops:runtime-health:scheduled-proof:json`
+  - runs the scheduled proof loop and emits JSON
+- `npm run ops:runtime-health:rollup`
+  - summarizes runtime-health snapshots and alert-decision snapshots without mutating them
+- `npm run ops:runtime-health:rollup:json`
+  - emits the artifact rollup as JSON
+- `npm run ops:runtime-health:retention-plan`
+  - reads runtime-health and alert-decision artifacts and emits a non-destructive retention plan
+- `npm run ops:runtime-health:retention-plan:json`
+  - emits the non-destructive retention plan as JSON
+- `npm run ops:runtime-health:admission`
+  - emits a no-side-effect admission plan for retention enforcement, scheduled proof, and alert delivery
+- `npm run ops:runtime-health:admission:json`
+  - emits the operations admission plan as JSON
+- `npm run ops:runtime-health:status`
+  - emits the read-only runtime-health status board and next actions
+- `npm run ops:runtime-health:status:json`
+  - emits the runtime-health status board as JSON
+- `npm run ops:runtime-health:cron-production-proof`
+  - proves the production alias is operational and the cron endpoint is publicly locked
+- `npm run ops:runtime-health:cron-production-proof:json`
+  - emits the production cron guard proof as JSON
+- `npm run ops:runtime-health:cron-schedule-proof`
+  - proves the deployed Vercel cron registry matches the local expected cron schedule
+- `npm run ops:runtime-health:cron-schedule-proof:json`
+  - emits the deployed cron schedule proof as JSON
+- `npm run ops:runtime-health:cron-scheduled-log-proof`
+  - searches Vercel production logs for a successful daily cron invocation
+- `npm run ops:runtime-health:cron-scheduled-log-proof:json`
+  - emits the scheduled cron log proof as JSON
+- `npm run ops:runtime-health:cron-authorized-proof`
+  - invokes the production cron route using `CRON_SECRET` from the environment and validates the returned proof
+- `npm run ops:runtime-health:cron-authorized-proof:json`
+  - emits the authorized cron proof as JSON
+- `npm run ops:runtime-health:cron-audit-proof`
+  - reads the latest private Supabase runtime-health cron receipt through a service-role-only status RPC
+- `npm run ops:runtime-health:cron-audit-proof:json`
+  - emits the private cron receipt proof as JSON
+
+Current scheduled runtime surface:
+
+- `/api/cron/runtime-health`
+  - guarded by `CRON_SECRET`
+  - configured in `vercel.json` for daily production invocation at `0 8 * * *`
+  - latest production deployment `dpl_HUWifJFefawJbMzJ2tgG7reTzunW`
+  - 2026-06-13 11:15 AM EDT proof window did not produce a scheduled invocation or private cron audit row
+  - 2026-06-13 11:45 AM EDT proof window produced Vercel `200` scheduled invocation proof and private Supabase audit row `runtime-health-cron-vercel-daily-runtime-health-20260613T155511740Z`
+  - writes sanitized private Supabase cron receipt rows only when `DISCORDOS_RUNTIME_HEALTH_CRON_AUDIT_WRITE=enabled`
+  - does not mutate Discord state
+  - delivers only critical runtime-health alerts when `DISCORDOS_RUNTIME_HEALTH_ALERT_SEND=enabled`
+
+This repo is now the governed landing surface for DiscordOS runtime and product hardening work. Future named workflows still need explicit lane admission before they become product scope.
+
+Current alert-channel recommendation:
+
+- use the dedicated `#alerts` channel cloned from `#updates`
+- do not mix runtime alerts into the normal updates channel
+- production currently targets `#alerts` through `DISCORDOS_RUNTIME_HEALTH_ALERT_CHANNEL_ID`
+- production scheduled cron has `DISCORDOS_RUNTIME_HEALTH_ALERT_SEND=enabled`
+- keep delivery critical-only by default; clear and warning states remain local operator output unless explicitly overridden
+- keep repeat suppression enabled by default so identical critical alerts do not flood the channel

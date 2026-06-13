@@ -61,7 +61,7 @@ function getPersistedWriterConfig(env = process.env) {
     blockedReasons.push("missing_supabase_url");
   }
 
-  if (!serviceRoleConfigured) {
+  if (!serviceRoleConfigured && !edgePersistAvailable) {
     blockedReasons.push("missing_service_role_key");
   }
 
