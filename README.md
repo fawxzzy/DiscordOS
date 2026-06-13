@@ -339,6 +339,8 @@ Current governed contract surface:
   - owner-side proof that the end-of-run `#updates` draft is current through pass 60 and remains unsent pending guarded apply
 - `docs/ops/discordos-closeout-update-live-post-pass-62-2026-06-13.md`
   - owner-side proof that the final runtime/product hardening closeout update was published to `#updates`
+- `docs/ops/discordos-vercel-production-bot-token-pull-fix-pass-63-2026-06-13.md`
+  - owner-side proof that production `DISCORDOS_BOT_TOKEN` now hydrates through `vercel env pull` for local operator workflows
 
 Current repo-local verification surface:
 
