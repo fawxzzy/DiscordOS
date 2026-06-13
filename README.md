@@ -205,6 +205,10 @@ Current governed contract surface:
   - repo-local read-only operator status bundle for DiscordOS runtime, publication, and publication receipts
   - combines runtime-health status, publication target/toolchain status, and publication receipt audit into one dashboard
   - sends no Discord messages and writes no artifacts
+- `scripts/discordos-next-work-recommender.js`
+  - repo-local read-only recommender for ranking the next DiscordOS runtime/product hardening moves
+  - consumes the operator status bundle and emits scored recommendations with reason codes and command hints
+  - sends no Discord messages and writes no artifacts
 - `api/cron/runtime-health.js`
   - Vercel Cron guarded runtime-health proof endpoint
   - requires `Authorization: Bearer $CRON_SECRET`
@@ -296,6 +300,8 @@ Current governed contract surface:
   - owner-side proof that DiscordOS publication receipts can be audited for message-id coverage from one read-only command
 - `docs/ops/discordos-operator-status-bundle-pass-46-2026-06-13.md`
   - owner-side proof that DiscordOS runtime and publication status can be summarized from one read-only operator command
+- `docs/ops/discordos-next-work-recommender-pass-47-2026-06-13.md`
+  - owner-side proof that DiscordOS next work can be ranked from current runtime and publication status signals
 
 Current repo-local verification surface:
 
@@ -367,6 +373,8 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local DiscordOS publication receipt audit command
 - `npm run verify:discordos-operator-status`
   - Node test coverage for the repo-local DiscordOS operator status bundle command
+- `npm run verify:discordos-next-work`
+  - Node test coverage for the repo-local DiscordOS next-work recommender command
 - `npm run verify`
   - runs both verification surfaces
 
@@ -437,6 +445,10 @@ Current repo-local operator surface:
   - summarizes runtime-health status, publication status, and publication receipt audit in one read-only dashboard
 - `npm run ops:discordos:operator-status:json`
   - emits the operator status bundle as JSON
+- `npm run ops:discordos:next-work`
+  - ranks the next DiscordOS runtime/product hardening moves from current status signals
+- `npm run ops:discordos:next-work:json`
+  - emits scored next-work recommendations as JSON
 - `npm run ops:runtime-health:scheduled-proof`
   - runs the full cron-ready proof loop: live health capture, fresh summary check, durable alert decision, fail-closed exit
 - `npm run ops:runtime-health:scheduled-proof:json`
