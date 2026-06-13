@@ -171,6 +171,7 @@ Current governed contract surface:
   - repo-local `#updates` publication command for curated DiscordOS release/status posts
   - dry-runs by default, requires `--apply` before sending, and uses only `DISCORDOS_UPDATES_CHANNEL_ID` plus `DISCORDOS_BOT_TOKEN`
   - formats normal updates as green embeds with mentions disabled
+  - returns Discord response metadata, including message id, channel id, and timestamp, after successful sends
 - `api/cron/runtime-health.js`
   - Vercel Cron guarded runtime-health proof endpoint
   - requires `Authorization: Bearer $CRON_SECRET`
@@ -240,6 +241,8 @@ Current governed contract surface:
   - owner-side proof that DiscordOS has a repo-local `#updates` publication command and dry-run proof for the runtime hardening closeout post
 - `docs/ops/discordos-updates-publication-live-post-pass-35-2026-06-13.md`
   - owner-side proof that the runtime hardening closeout post was sent to `#updates` through the DiscordOS command
+- `docs/ops/discordos-updates-message-id-capture-pass-36-2026-06-13.md`
+  - owner-side proof that future `#updates` posts return Discord message ids for durable receipt references
 
 Current repo-local verification surface:
 

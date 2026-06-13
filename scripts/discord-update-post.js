@@ -199,9 +199,13 @@ async function sendDiscordBotChannel({ channelId, token, payload, fetchImpl = fe
     },
     body: JSON.stringify(payload),
   });
+  const responseBody = typeof response.json === "function" ? await response.json().catch(() => null) : null;
   return {
     ok: response.ok,
     status: response.status,
+    messageId: typeof responseBody?.id === "string" ? responseBody.id : null,
+    channelId: typeof responseBody?.channel_id === "string" ? responseBody.channel_id : channelId,
+    timestamp: typeof responseBody?.timestamp === "string" ? responseBody.timestamp : null,
   };
 }
 
@@ -265,6 +269,9 @@ async function buildDiscordUpdatePost({
     status: result.ok ? "sent" : "failed",
     target,
     httpStatus: result.status,
+    messageId: result.messageId,
+    channelId: result.channelId,
+    timestamp: result.timestamp,
     reasonCodes: result.ok ? [] : ["updates_post_request_failed"],
   };
 }
@@ -284,6 +291,15 @@ function renderMarkdown(result) {
 
   if (result.httpStatus) {
     lines.push(`- http status: \`${result.httpStatus}\``);
+  }
+  if (result.messageId) {
+    lines.push(`- message id: \`${result.messageId}\``);
+  }
+  if (result.channelId) {
+    lines.push(`- channel id: \`${result.channelId}\``);
+  }
+  if (result.timestamp) {
+    lines.push(`- timestamp: \`${result.timestamp}\``);
   }
   if (result.payloadPreview) {
     lines.push(`- payload title: \`${result.payloadPreview.embeds[0].title}\``);

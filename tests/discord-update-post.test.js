@@ -133,6 +133,11 @@ test("discord update post sends bot-channel payload with DiscordOS env only", as
       return {
         ok: true,
         status: 200,
+        json: async () => ({
+          id: "1516000000000000000",
+          channel_id: "123",
+          timestamp: "2026-06-13T20:00:00.000000+00:00",
+        }),
       };
     },
   });
@@ -141,6 +146,30 @@ test("discord update post sends bot-channel payload with DiscordOS env only", as
   assert.equal(result.status, "sent");
   assert.equal(result.sendsMessages, true);
   assert.equal(result.httpStatus, 200);
+  assert.equal(result.messageId, "1516000000000000000");
+  assert.equal(result.channelId, "123");
+  assert.equal(result.timestamp, "2026-06-13T20:00:00.000000+00:00");
+});
+
+test("discord update post send tolerates missing response json while preserving status", async () => {
+  const result = await _internals.sendDiscordBotChannel({
+    channelId: "123",
+    token: "bot-secret",
+    payload: _internals.buildDiscordUpdatePayload({
+      title: "Runtime hardening closed",
+      body: "DiscordOS runtime hardening is closed.",
+    }),
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+    }),
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.status, 200);
+  assert.equal(result.messageId, null);
+  assert.equal(result.channelId, "123");
+  assert.equal(result.timestamp, null);
 });
 
 test("discord update post resolves body-file sections from repo-relative paths", async () => {
@@ -172,6 +201,9 @@ test("discord update post renders markdown without target values", () => {
       type: "discord_bot_channel",
     },
     reasonCodes: ["apply_flag_not_set"],
+    messageId: "1516000000000000000",
+    channelId: "123",
+    timestamp: "2026-06-13T20:00:00.000000+00:00",
     payloadPreview: {
       embeds: [
         {
@@ -184,6 +216,7 @@ test("discord update post renders markdown without target values", () => {
 
   assert(rendered.includes("# DiscordOS Update Post"));
   assert(rendered.includes("status: `dry_run`"));
+  assert(rendered.includes("message id: `1516000000000000000`"));
+  assert(rendered.includes("timestamp: `2026-06-13T20:00:00.000000+00:00`"));
   assert(!rendered.includes("bot-secret"));
-  assert(!rendered.includes("123"));
 });
