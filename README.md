@@ -189,6 +189,10 @@ Current governed contract surface:
   - repo-local no-send validator for drafted `#updates` receipt files
   - checks embed length, required public proof anchors, durable receipt linkage, and obvious secret-like value leakage
   - performs no network calls and writes no artifacts
+- `scripts/discord-update-release-check.js`
+  - repo-local no-send release check for curated `#updates` posts
+  - runs draft validation plus live no-send preflight and reports whether the post is ready for guarded apply
+  - sends no Discord messages and writes no artifacts
 - `api/cron/runtime-health.js`
   - Vercel Cron guarded runtime-health proof endpoint
   - requires `Authorization: Bearer $CRON_SECRET`
@@ -272,6 +276,8 @@ Current governed contract surface:
   - owner-side proof that live `#updates` publication cannot bypass target admission and duplicate-title protection
 - `docs/ops/discordos-updates-draft-validator-pass-42-2026-06-13.md`
   - owner-side proof that drafted `#updates` receipt files can be validated before preflight or live apply
+- `docs/ops/discordos-updates-release-check-pass-43-2026-06-13.md`
+  - owner-side proof that drafted `#updates` posts can run one no-send release check before guarded apply
 
 Current repo-local verification surface:
 
@@ -335,6 +341,8 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local DiscordOS `#updates` no-send preflight command
 - `npm run verify:discord-update-draft-validator`
   - Node test coverage for the repo-local DiscordOS `#updates` draft receipt validator
+- `npm run verify:discord-update-release-check`
+  - Node test coverage for the repo-local DiscordOS `#updates` no-send release check
 - `npm run verify`
   - runs both verification surfaces
 
@@ -391,6 +399,8 @@ Current repo-local operator surface:
   - validates payload and target, then checks recent `#updates` messages for duplicate embed titles without sending a message
 - `npm run ops:discord:update-draft-validator -- --title "<title>" --body-file <path> --body-section "<section>"`
   - validates a drafted update receipt locally before preflight or live apply
+- `npm run ops:discord:update-release-check -- --title "<title>" --body-file <path> --body-section "<section>"`
+  - runs draft validation and live no-send preflight in one readiness check before guarded apply
 - `npm run ops:runtime-health:scheduled-proof`
   - runs the full cron-ready proof loop: live health capture, fresh summary check, durable alert decision, fail-closed exit
 - `npm run ops:runtime-health:scheduled-proof:json`
@@ -461,6 +471,7 @@ Current updates-channel recommendation:
 - publish from DiscordOS with `npm run ops:discord:update-post -- --title "<title>" --body-file <path> --body-section "<section>" --apply`
 - include `--receipt-file <receipt>` on future live posts so the returned Discord message id is recorded durably
 - run `npm run ops:discord:update-draft-validator -- --title "<title>" --body-file <path> --body-section "<section>"` before preflight when drafting a new public update receipt
+- run `npm run ops:discord:update-release-check -- --title "<title>" --body-file <path> --body-section "<section>"` before final apply when a single no-send readiness check is preferred
 - `--apply` now runs live target admission and duplicate-title preflight automatically before sending
 - run `npm run ops:discord:update-preflight -- --title "<title>" --body-file <path> --body-section "<section>" --probe-live` when you want a no-send preview before the final apply
 - use `npm run ops:discord:update-lookup` only to backfill receipts for already-published updates
