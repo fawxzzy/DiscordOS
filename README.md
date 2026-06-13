@@ -193,6 +193,10 @@ Current governed contract surface:
   - repo-local no-send release check for curated `#updates` posts
   - runs draft validation plus live no-send preflight and reports whether the post is ready for guarded apply
   - sends no Discord messages and writes no artifacts
+- `scripts/discord-publication-status.js`
+  - repo-local read-only status command for the DiscordOS publication toolchain
+  - summarizes draft validation, release check, target admission, lookup, apply guard, and `#updates` / `#alerts` separation
+  - sends no Discord messages and writes no artifacts
 - `api/cron/runtime-health.js`
   - Vercel Cron guarded runtime-health proof endpoint
   - requires `Authorization: Bearer $CRON_SECRET`
@@ -278,6 +282,8 @@ Current governed contract surface:
   - owner-side proof that drafted `#updates` receipt files can be validated before preflight or live apply
 - `docs/ops/discordos-updates-release-check-pass-43-2026-06-13.md`
   - owner-side proof that drafted `#updates` posts can run one no-send release check before guarded apply
+- `docs/ops/discordos-publication-status-pass-44-2026-06-13.md`
+  - owner-side proof that DiscordOS publication status can be summarized from one read-only command
 
 Current repo-local verification surface:
 
@@ -343,6 +349,8 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local DiscordOS `#updates` draft receipt validator
 - `npm run verify:discord-update-release-check`
   - Node test coverage for the repo-local DiscordOS `#updates` no-send release check
+- `npm run verify:discord-publication-status`
+  - Node test coverage for the repo-local DiscordOS publication status command
 - `npm run verify`
   - runs both verification surfaces
 
@@ -401,6 +409,10 @@ Current repo-local operator surface:
   - validates a drafted update receipt locally before preflight or live apply
 - `npm run ops:discord:update-release-check -- --title "<title>" --body-file <path> --body-section "<section>"`
   - runs draft validation and live no-send preflight in one readiness check before guarded apply
+- `npm run ops:discord:publication-status`
+  - summarizes the publication command chain and updates/alerts separation without network access
+- `npm run ops:discord:publication-status -- --probe-live`
+  - live-probes configured updates and alert targets with read-only Discord GET requests
 - `npm run ops:runtime-health:scheduled-proof`
   - runs the full cron-ready proof loop: live health capture, fresh summary check, durable alert decision, fail-closed exit
 - `npm run ops:runtime-health:scheduled-proof:json`
@@ -468,6 +480,7 @@ Current alert-channel recommendation:
 Current updates-channel recommendation:
 
 - use `#updates` only for curated public release/status announcements
+- use `npm run ops:discord:publication-status -- --probe-live` to inspect the full publication chain and channel separation
 - publish from DiscordOS with `npm run ops:discord:update-post -- --title "<title>" --body-file <path> --body-section "<section>" --apply`
 - include `--receipt-file <receipt>` on future live posts so the returned Discord message id is recorded durably
 - run `npm run ops:discord:update-draft-validator -- --title "<title>" --body-file <path> --body-section "<section>"` before preflight when drafting a new public update receipt
