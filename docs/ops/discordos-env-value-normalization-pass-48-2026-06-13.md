@@ -10,7 +10,7 @@ This pass does not send Discord messages, does not write runtime artifacts, does
 
 The next-work recommender selected `run-live-operator-status-probe`.
 
-The current local shell had no Discord target env, so the live probe was rerun with a temporary Vercel production env pull under `C:\ATLAS\tmp`.
+The current local shell had no Discord target env, so the live probe was rerun with a temporary Vercel production env pull under `tmp/`.
 
 Sanitized finding:
 

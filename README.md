@@ -152,6 +152,7 @@ Current governed contract surface:
 - `scripts/runtime-health-cron-scheduled-log-proof.js`
   - repo-local Vercel log proof command for the daily scheduled cron invocation
   - searches production logs for a `200` `/api/cron/runtime-health` candidate in the selected time window
+  - reports cron-path candidate status counts so unauthorized probe traffic is distinguishable from missing scheduled cron evidence
   - sends no Discord messages and writes no runtime artifacts
 - `scripts/runtime-health-cron-authorized-proof.js`
   - repo-local authorized proof command for the deployed cron route
@@ -312,6 +313,10 @@ Current governed contract surface:
   - owner-side proof that DiscordOS target env admission normalizes pulled-env BOM and escaped line-break residue before Discord API use
 - `docs/ops/discordos-operator-env-readiness-pass-49-2026-06-13.md`
   - owner-side proof that DiscordOS operator env readiness can be inspected without exposing env values or sending Discord messages
+- `docs/ops/discordos-operator-live-status-proof-pass-50-2026-06-13.md`
+  - owner-side proof that DiscordOS operator env readiness and live operator status pass with secrets overlaid in-memory only
+- `docs/ops/discordos-runtime-health-cron-scheduled-log-proof-hardening-pass-51-2026-06-13.md`
+  - owner-side proof that scheduled cron log checks now distinguish non-passing cron-path traffic from missing cron-path evidence
 
 Current repo-local verification surface:
 
@@ -494,7 +499,7 @@ Current repo-local operator surface:
 - `npm run ops:runtime-health:cron-schedule-proof:json`
   - emits the deployed cron schedule proof as JSON
 - `npm run ops:runtime-health:cron-scheduled-log-proof`
-  - searches Vercel production logs for a successful daily cron invocation
+  - searches Vercel production logs for a successful daily cron invocation and reports status counts for cron-path candidates
 - `npm run ops:runtime-health:cron-scheduled-log-proof:json`
   - emits the scheduled cron log proof as JSON
 - `npm run ops:runtime-health:cron-authorized-proof`

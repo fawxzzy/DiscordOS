@@ -15,3 +15,5 @@ coverage/
 # Logs and temp
 *.log
 .DS_Store
+
+.vercel

@@ -193,10 +193,28 @@ function selectScheduledCronCandidates(records, expectedPath) {
     .filter((record) => record.containsExpectedPath);
 }
 
+function summarizeStatusCounts(records) {
+  return records.reduce((counts, record) => {
+    const key = record.statusCode === null || record.statusCode === undefined
+      ? "unknown"
+      : String(record.statusCode);
+    counts[key] = (counts[key] || 0) + 1;
+    return counts;
+  }, {});
+}
+
+function renderStatusCounts(counts) {
+  const entries = Object.entries(counts).sort(([left], [right]) => left.localeCompare(right));
+  return entries.length > 0
+    ? entries.map(([status, count]) => `${status}:${count}`).join(",")
+    : "none";
+}
+
 function summarizeScheduledCronLogProof({ records, expectedPath, project, since, until }) {
   const candidates = selectScheduledCronCandidates(records, expectedPath);
   const passingCandidates = candidates.filter((record) => record.statusCode === 200);
   const latestPassing = passingCandidates[0] || null;
+  const latestCandidate = candidates[0] || null;
   const proof = {
     ok: Boolean(latestPassing),
     destructive: false,
@@ -209,8 +227,14 @@ function summarizeScheduledCronLogProof({ records, expectedPath, project, since,
     totalLogRecords: records.length,
     candidateCount: candidates.length,
     passingCandidateCount: passingCandidates.length,
+    candidateStatusCounts: summarizeStatusCounts(candidates),
+    latestCandidate,
     latestPassing,
-    reasonCodes: latestPassing ? [] : ["scheduled_cron_log_not_found"],
+    reasonCodes: latestPassing
+      ? []
+      : candidates.length > 0
+        ? ["scheduled_cron_no_passing_candidate"]
+        : ["scheduled_cron_log_not_found"],
   };
 
   return {
@@ -285,6 +309,9 @@ function renderMarkdown(proof) {
     `- total log records: \`${proof.totalLogRecords}\``,
     `- cron candidate count: \`${proof.candidateCount}\``,
     `- passing candidate count: \`${proof.passingCandidateCount}\``,
+    `- candidate status counts: \`${renderStatusCounts(proof.candidateStatusCounts || {})}\``,
+    `- latest candidate timestamp: \`${proof.latestCandidate?.timestamp || "none"}\``,
+    `- latest candidate status: \`${proof.latestCandidate?.statusCode ?? "none"}\``,
     `- latest passing timestamp: \`${proof.latestPassing?.timestamp || "none"}\``,
     `- latest passing status: \`${proof.latestPassing?.statusCode ?? "none"}\``,
     `- reason codes: \`${proof.reasonCodes.join(",") || "none"}\``,
@@ -324,6 +351,8 @@ module.exports = {
     parseJsonLines,
     normalizeLogRecord,
     selectScheduledCronCandidates,
+    summarizeStatusCounts,
+    renderStatusCounts,
     summarizeScheduledCronLogProof,
     classifyScheduledCronLogProofEvent,
     buildRuntimeHealthCronScheduledLogProof,

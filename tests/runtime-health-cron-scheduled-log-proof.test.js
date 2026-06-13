@@ -153,10 +153,12 @@ test("scheduled cron log proof passes with a 200 cron path candidate", () => {
   assert.equal(proof.writesArtifacts, false);
   assert.equal(proof.candidateCount, 1);
   assert.equal(proof.passingCandidateCount, 1);
+  assert.deepEqual(proof.candidateStatusCounts, { 200: 1 });
+  assert.equal(proof.latestCandidate.statusCode, 200);
   assert.equal(proof.event.type, "discordos.runtime_health.cron_scheduled_log_proof_pass");
 });
 
-test("scheduled cron log proof fails closed without a 200 cron path candidate", () => {
+test("scheduled cron log proof fails closed when cron candidates are non-passing", () => {
   const proof = _internals.summarizeScheduledCronLogProof({
     project: "fawxzzy-discordos",
     since: "2026-06-13T07:55:00Z",
@@ -173,8 +175,51 @@ test("scheduled cron log proof fails closed without a 200 cron path candidate", 
   });
 
   assert.equal(proof.ok, false);
-  assert.deepEqual(proof.reasonCodes, ["scheduled_cron_log_not_found"]);
+  assert.deepEqual(proof.candidateStatusCounts, { 401: 1 });
+  assert.equal(proof.latestCandidate.statusCode, 401);
+  assert.deepEqual(proof.reasonCodes, ["scheduled_cron_no_passing_candidate"]);
   assert.equal(proof.event.type, "discordos.runtime_health.cron_scheduled_log_proof_missing");
+});
+
+test("scheduled cron log proof fails closed without cron path candidates", () => {
+  const proof = _internals.summarizeScheduledCronLogProof({
+    project: "fawxzzy-discordos",
+    since: "2026-06-13T07:55:00Z",
+    until: "2026-06-13T08:10:00Z",
+    expectedPath: "/api/cron/runtime-health",
+    records: [
+      {
+        timestamp: "2026-06-13T08:00:04.000Z",
+        method: "GET",
+        path: "/api/readiness",
+        statusCode: 200,
+      },
+    ],
+  });
+
+  assert.equal(proof.ok, false);
+  assert.equal(proof.candidateCount, 0);
+  assert.deepEqual(proof.candidateStatusCounts, {});
+  assert.equal(proof.latestCandidate, null);
+  assert.deepEqual(proof.reasonCodes, ["scheduled_cron_log_not_found"]);
+});
+
+test("scheduled cron log proof summarizes status counts", () => {
+  assert.deepEqual(
+    _internals.summarizeStatusCounts([
+      { statusCode: 401 },
+      { statusCode: 401 },
+      { statusCode: 500 },
+      { statusCode: null },
+    ]),
+    {
+      401: 2,
+      500: 1,
+      unknown: 1,
+    }
+  );
+  assert.equal(_internals.renderStatusCounts({ 401: 2, 200: 1 }), "200:1,401:2");
+  assert.equal(_internals.renderStatusCounts({}), "none");
 });
 
 test("scheduled cron log proof invokes Vercel logs and summarizes output", async () => {
@@ -224,6 +269,13 @@ test("scheduled cron log proof renders markdown", () => {
     totalLogRecords: 1,
     candidateCount: 1,
     passingCandidateCount: 1,
+    candidateStatusCounts: {
+      200: 1,
+    },
+    latestCandidate: {
+      timestamp: "2026-06-13T08:00:04.000Z",
+      statusCode: 200,
+    },
     latestPassing: {
       timestamp: "2026-06-13T08:00:04.000Z",
       statusCode: 200,
