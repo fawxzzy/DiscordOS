@@ -172,6 +172,7 @@ Current governed contract surface:
   - dry-runs by default, requires `--apply` before sending, and uses only `DISCORDOS_UPDATES_CHANNEL_ID` plus `DISCORDOS_BOT_TOKEN`
   - formats normal updates as green embeds with mentions disabled
   - returns Discord response metadata, including message id, channel id, and timestamp, after successful sends
+  - can write a bounded Discord publication block into an existing ops receipt with `--receipt-file`
 - `api/cron/runtime-health.js`
   - Vercel Cron guarded runtime-health proof endpoint
   - requires `Authorization: Bearer $CRON_SECRET`
@@ -243,6 +244,8 @@ Current governed contract surface:
   - owner-side proof that the runtime hardening closeout post was sent to `#updates` through the DiscordOS command
 - `docs/ops/discordos-updates-message-id-capture-pass-36-2026-06-13.md`
   - owner-side proof that future `#updates` posts return Discord message ids for durable receipt references
+- `docs/ops/discordos-updates-receipt-file-mode-pass-37-2026-06-13.md`
+  - owner-side proof that successful future `#updates` posts can write their Discord publication metadata into a matching ops receipt
 
 Current repo-local verification surface:
 
@@ -340,6 +343,8 @@ Current repo-local operator surface:
   - dry-runs a curated DiscordOS `#updates` post by default
 - `npm run ops:discord:update-post:json`
   - emits the update publication result as JSON
+- `npm run ops:discord:update-post -- --title "<title>" --body-file <path> --body-section "<section>" --receipt-file <receipt> --apply`
+  - sends the update and writes the returned Discord publication metadata into the existing receipt
 - `npm run ops:runtime-health:scheduled-proof`
   - runs the full cron-ready proof loop: live health capture, fresh summary check, durable alert decision, fail-closed exit
 - `npm run ops:runtime-health:scheduled-proof:json`
@@ -408,4 +413,5 @@ Current updates-channel recommendation:
 
 - use `#updates` only for curated public release/status announcements
 - publish from DiscordOS with `npm run ops:discord:update-post -- --title "<title>" --body-file <path> --body-section "<section>" --apply`
+- include `--receipt-file <receipt>` on future live posts so the returned Discord message id is recorded durably
 - keep routine runtime logs, cron proof dumps, and critical alerts out of `#updates`

@@ -5,6 +5,8 @@ const DISCORD_API_BASE = "https://discord.com/api/v10";
 const UPDATE_EMBED_COLOR = 5763719;
 const MAX_EMBED_TITLE_LENGTH = 256;
 const MAX_EMBED_DESCRIPTION_LENGTH = 4096;
+const RECEIPT_BLOCK_START = "<!-- discordos-update-post-receipt:start -->";
+const RECEIPT_BLOCK_END = "<!-- discordos-update-post-receipt:end -->";
 
 function parseArgs(args) {
   const options = {
@@ -13,6 +15,7 @@ function parseArgs(args) {
     body: null,
     bodyFile: null,
     bodySection: null,
+    receiptFile: null,
     apply: false,
   };
 
@@ -51,6 +54,13 @@ function parseArgs(args) {
         throw new Error("missing_body_section_value");
       }
       options.bodySection = value.trim();
+      index += 1;
+    } else if (arg === "--receipt-file") {
+      const value = args[index + 1];
+      if (typeof value !== "string" || value.trim().length === 0) {
+        throw new Error("missing_receipt_file_value");
+      }
+      options.receiptFile = value.trim();
       index += 1;
     } else {
       throw new Error(`unsupported_argument:${arg}`);
@@ -209,11 +219,67 @@ async function sendDiscordBotChannel({ channelId, token, payload, fetchImpl = fe
   };
 }
 
+function buildDiscordPublicationReceiptBlock(result) {
+  if (result.status !== "sent") {
+    throw new Error("receipt_requires_sent_update");
+  }
+
+  return [
+    RECEIPT_BLOCK_START,
+    "## Discord Publication",
+    "",
+    "- status: `sent`",
+    `- sends messages: \`${result.sendsMessages ? "true" : "false"}\``,
+    `- Discord HTTP status: \`${result.httpStatus || "unknown"}\``,
+    `- channel id: \`${result.channelId || "unknown"}\``,
+    `- message id: \`${result.messageId || "unknown"}\``,
+    `- timestamp: \`${result.timestamp || "unknown"}\``,
+    "- mentions disabled: `true`",
+    RECEIPT_BLOCK_END,
+  ].join("\n");
+}
+
+function upsertDiscordPublicationReceiptBlock(markdown, receiptBlock) {
+  const normalized = String(markdown || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trimEnd();
+  const startIndex = normalized.indexOf(RECEIPT_BLOCK_START);
+  const endIndex = normalized.indexOf(RECEIPT_BLOCK_END);
+
+  if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+    const before = normalized.slice(0, startIndex).trimEnd();
+    const after = normalized.slice(endIndex + RECEIPT_BLOCK_END.length).trimStart();
+    return `${before}\n\n${receiptBlock}${after ? `\n\n${after}` : ""}\n`;
+  }
+
+  return `${normalized}\n\n${receiptBlock}\n`;
+}
+
+async function writeDiscordPublicationReceipt({ receiptFile, result, cwd = process.cwd() }) {
+  if (!hasValue(receiptFile)) {
+    return {
+      requested: false,
+      written: false,
+      path: null,
+    };
+  }
+
+  const resolvedReceiptFile = resolveRepoPath(receiptFile, cwd);
+  const current = await fs.readFile(resolvedReceiptFile, "utf8");
+  const next = upsertDiscordPublicationReceiptBlock(current, buildDiscordPublicationReceiptBlock(result));
+  await fs.writeFile(resolvedReceiptFile, next, "utf8");
+
+  return {
+    requested: true,
+    written: true,
+    path: receiptFile,
+  };
+}
+
 async function buildDiscordUpdatePost({
   title,
   body,
   bodyFile,
   bodySection,
+  receiptFile,
   apply = false,
   env = process.env,
   fetchImpl = fetch,
@@ -239,6 +305,11 @@ async function buildDiscordUpdatePost({
       status: "dry_run",
       target,
       reasonCodes: ["apply_flag_not_set"],
+      receipt: {
+        requested: hasValue(receiptFile),
+        written: false,
+        path: receiptFile || null,
+      },
       payloadPreview: payload,
     };
   }
@@ -251,6 +322,11 @@ async function buildDiscordUpdatePost({
       status: "blocked",
       target,
       reasonCodes: ["updates_target_missing"],
+      receipt: {
+        requested: hasValue(receiptFile),
+        written: false,
+        path: receiptFile || null,
+      },
       payloadPreview: payload,
     };
   }
@@ -262,7 +338,7 @@ async function buildDiscordUpdatePost({
     fetchImpl,
   });
 
-  return {
+  const postResult = {
     ok: result.ok,
     destructive: false,
     sendsMessages: result.ok,
@@ -273,6 +349,41 @@ async function buildDiscordUpdatePost({
     channelId: result.channelId,
     timestamp: result.timestamp,
     reasonCodes: result.ok ? [] : ["updates_post_request_failed"],
+  };
+
+  if (postResult.ok && hasValue(receiptFile)) {
+    try {
+      const receipt = await writeDiscordPublicationReceipt({
+        receiptFile,
+        result: postResult,
+        cwd,
+      });
+      return {
+        ...postResult,
+        receipt,
+      };
+    } catch (_error) {
+      return {
+        ...postResult,
+        ok: false,
+        status: "sent_receipt_write_failed",
+        receipt: {
+          requested: true,
+          written: false,
+          path: receiptFile,
+        },
+        reasonCodes: ["receipt_write_failed"],
+      };
+    }
+  }
+
+  return {
+    ...postResult,
+    receipt: {
+      requested: hasValue(receiptFile),
+      written: false,
+      path: receiptFile || null,
+    },
   };
 }
 
@@ -300,6 +411,10 @@ function renderMarkdown(result) {
   }
   if (result.timestamp) {
     lines.push(`- timestamp: \`${result.timestamp}\``);
+  }
+  if (result.receipt?.requested) {
+    lines.push(`- receipt file: \`${result.receipt.path}\``);
+    lines.push(`- receipt written: \`${result.receipt.written ? "true" : "false"}\``);
   }
   if (result.payloadPreview) {
     lines.push(`- payload title: \`${result.payloadPreview.embeds[0].title}\``);
@@ -333,6 +448,8 @@ module.exports = {
     UPDATE_EMBED_COLOR,
     MAX_EMBED_TITLE_LENGTH,
     MAX_EMBED_DESCRIPTION_LENGTH,
+    RECEIPT_BLOCK_START,
+    RECEIPT_BLOCK_END,
     parseArgs,
     hasValue,
     resolveRepoPath,
@@ -343,6 +460,9 @@ module.exports = {
     buildDiscordUpdatePayload,
     getUpdateTarget,
     sendDiscordBotChannel,
+    buildDiscordPublicationReceiptBlock,
+    upsertDiscordPublicationReceiptBlock,
+    writeDiscordPublicationReceipt,
     buildDiscordUpdatePost,
     renderMarkdown,
   },
