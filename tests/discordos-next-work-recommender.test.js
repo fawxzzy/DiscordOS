@@ -170,6 +170,7 @@ test("next work recommender downgrades live env checks after receipt-backed proo
     liveOperatorStatusProof: true,
     liveTargetAdmissionProof: true,
     authorizedCronProof: true,
+    scheduledCronIdentityGuard: false,
   });
   assert.equal(recommendations[0].id, "refresh-scheduled-cron-proof");
   assert(!ids.includes("run-live-operator-status-probe"));
@@ -178,6 +179,38 @@ test("next work recommender downgrades live env checks after receipt-backed proo
   assert.equal(
     recommendations.find((recommendation) => recommendation.id === "inspect-operator-env-readiness").status,
     "deferred"
+  );
+});
+
+test("next work recommender surfaces operations admission when only deferred work remains", () => {
+  const receiptState = _internals.classifyReceiptState([
+    "discordos-operator-live-status-proof-pass-50-2026-06-13.md",
+    "discordos-live-target-admission-proof-pass-52-2026-06-13.md",
+    "discordos-runtime-health-authorized-cron-proof-pass-53-2026-06-13.md",
+    "discordos-scheduled-cron-log-identity-guard-pass-58-2026-06-13.md",
+  ]);
+  const recommendations = _internals.recommendNextWork(baseOperatorStatus(), {
+    max: 5,
+    receiptState,
+  });
+  const ids = recommendations.map((recommendation) => recommendation.id);
+
+  assert.deepEqual(receiptState, {
+    liveOperatorStatusProof: true,
+    liveTargetAdmissionProof: true,
+    authorizedCronProof: true,
+    scheduledCronIdentityGuard: true,
+  });
+  assert.equal(recommendations[0].id, "inspect-runtime-operations-admission");
+  assert.equal(recommendations[0].status, "recommended");
+  assert(ids.includes("refresh-scheduled-cron-proof"));
+  assert.equal(
+    recommendations.find((recommendation) => recommendation.id === "refresh-scheduled-cron-proof").status,
+    "deferred"
+  );
+  assert.deepEqual(
+    recommendations.find((recommendation) => recommendation.id === "refresh-scheduled-cron-proof").reasonCodes,
+    ["scheduled_cron_proof_waiting_for_identity"]
   );
 });
 

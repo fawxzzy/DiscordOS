@@ -82,6 +82,9 @@ function classifyReceiptState(fileNames = []) {
     authorizedCronProof: fileNames.some((fileName) =>
       fileName.includes("discordos-runtime-health-authorized-cron-proof-pass")
     ),
+    scheduledCronIdentityGuard: fileNames.some((fileName) =>
+      fileName.includes("discordos-scheduled-cron-log-identity-guard-pass")
+    ),
   };
 }
 
@@ -190,13 +193,21 @@ function recommendNextWork(operatorStatus, { max = 5, receiptState = classifyRec
 
   addIf(operatorStatus.runtime.nextActions.includes("capture_first_real_scheduled_cron_run_after_schedule"), recommendations, buildRecommendation({
     id: "refresh-scheduled-cron-proof",
-    score: 70,
+    score: receiptState.scheduledCronIdentityGuard ? 20 : 70,
+    status: receiptState.scheduledCronIdentityGuard ? "deferred" : "recommended",
     category: "runtime",
-    title: "Refresh scheduled cron proof when the next production schedule window lands",
+    title: receiptState.scheduledCronIdentityGuard
+      ? "Refresh scheduled cron proof after a real Vercel Cron identity signal appears"
+      : "Refresh scheduled cron proof when the next production schedule window lands",
     command: "npm run ops:runtime-health:cron-scheduled-log-proof",
-    reasonCodes: ["scheduled_cron_proof_recommended"],
+    reasonCodes: [
+      receiptState.scheduledCronIdentityGuard
+        ? "scheduled_cron_proof_waiting_for_identity"
+        : "scheduled_cron_proof_recommended",
+    ],
     evidence: {
       runtimeNextActions: operatorStatus.runtime.nextActions,
+      scheduledCronIdentityGuard: receiptState.scheduledCronIdentityGuard,
     },
   }));
 
@@ -257,6 +268,24 @@ function recommendNextWork(operatorStatus, { max = 5, receiptState = classifyRec
       },
     })
   );
+
+  if (
+    operatorStatus.ok
+      && recommendations.length > 0
+      && recommendations.every((recommendation) => recommendation.status === "deferred")
+  ) {
+    recommendations.push(buildRecommendation({
+      id: "inspect-runtime-operations-admission",
+      score: 55,
+      category: "runtime",
+      title: "Inspect runtime operations admission for current non-waiting maintenance gates",
+      command: "npm run ops:runtime-health:admission",
+      reasonCodes: ["only_deferred_recommendations_remain"],
+      evidence: {
+        deferredRecommendationIds: recommendations.map((recommendation) => recommendation.id),
+      },
+    }));
+  }
 
   if (recommendations.length === 0) {
     recommendations.push(buildRecommendation({

@@ -331,6 +331,8 @@ Current governed contract surface:
   - owner-side live proof that production manual authorized cron runs persist as `manual-authorized-runtime-health`
 - `docs/ops/discordos-scheduled-cron-log-identity-guard-pass-58-2026-06-13.md`
   - owner-side proof that scheduled cron log proof fails closed when a `200` cron-path log lacks Vercel Cron identity
+- `docs/ops/discordos-next-work-wait-state-ranking-pass-59-2026-06-13.md`
+  - owner-side proof that the next-work recommender defers scheduled cron proof while waiting for real Vercel Cron identity
 
 Current repo-local verification surface:
 
