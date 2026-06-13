@@ -211,6 +211,10 @@ Current governed contract surface:
   - repo-local read-only recommender for ranking the next DiscordOS runtime/product hardening moves
   - consumes the operator status bundle and emits scored recommendations with reason codes and command hints
   - sends no Discord messages and writes no artifacts
+- `scripts/discordos-operator-env-readiness.js`
+  - repo-local read-only operator env readiness command for DiscordOS updates, alerts, and bot-token availability
+  - reports target readiness booleans and reason codes without printing target ids, webhook URLs, or token values
+  - sends no Discord messages and writes no artifacts
 - `api/cron/runtime-health.js`
   - Vercel Cron guarded runtime-health proof endpoint
   - requires `Authorization: Bearer $CRON_SECRET`
@@ -306,6 +310,8 @@ Current governed contract surface:
   - owner-side proof that DiscordOS next work can be ranked from current runtime and publication status signals
 - `docs/ops/discordos-env-value-normalization-pass-48-2026-06-13.md`
   - owner-side proof that DiscordOS target env admission normalizes pulled-env BOM and escaped line-break residue before Discord API use
+- `docs/ops/discordos-operator-env-readiness-pass-49-2026-06-13.md`
+  - owner-side proof that DiscordOS operator env readiness can be inspected without exposing env values or sending Discord messages
 
 Current repo-local verification surface:
 
@@ -379,6 +385,8 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local DiscordOS operator status bundle command
 - `npm run verify:discordos-next-work`
   - Node test coverage for the repo-local DiscordOS next-work recommender command
+- `npm run verify:discordos-env-readiness`
+  - Node test coverage for the repo-local DiscordOS operator env readiness command
 - `npm run verify`
   - runs both verification surfaces
 
@@ -453,6 +461,10 @@ Current repo-local operator surface:
   - ranks the next DiscordOS runtime/product hardening moves from current status signals
 - `npm run ops:discordos:next-work:json`
   - emits scored next-work recommendations as JSON
+- `npm run ops:discordos:env-readiness`
+  - checks current process env readiness for updates, alerts, and bot-token-backed live probes without printing values
+- `npm run ops:discordos:env-readiness:json`
+  - emits the operator env readiness result as JSON
 - `npm run ops:runtime-health:scheduled-proof`
   - runs the full cron-ready proof loop: live health capture, fresh summary check, durable alert decision, fail-closed exit
 - `npm run ops:runtime-health:scheduled-proof:json`

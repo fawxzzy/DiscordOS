@@ -117,6 +117,24 @@ function recommendNextWork(operatorStatus, { max = 5 } = {}) {
     },
   }));
 
+  addIf(
+    operatorStatus.ok
+      && (!operatorStatus.runtime.alertTargetConfigured || !operatorStatus.publication.updatesTargetConfigured),
+    recommendations,
+    buildRecommendation({
+      id: "inspect-operator-env-readiness",
+      score: 85,
+      category: "operator-env",
+      title: "Inspect operator env readiness before attempting live Discord target probes",
+      command: "npm run ops:discordos:env-readiness",
+      reasonCodes: ["operator_env_not_loaded"],
+      evidence: {
+        runtimeAlertTargetConfigured: operatorStatus.runtime.alertTargetConfigured,
+        updatesTargetConfigured: operatorStatus.publication.updatesTargetConfigured,
+      },
+    })
+  );
+
   addIf(operatorStatus.ok && !operatorStatus.probeLive, recommendations, buildRecommendation({
     id: "run-live-operator-status-probe",
     score: 80,

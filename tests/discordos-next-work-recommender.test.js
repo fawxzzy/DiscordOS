@@ -147,10 +147,10 @@ test("next work recommender recommends live probe and env checks for local-only 
   const ids = recommendations.map((recommendation) => recommendation.id);
 
   assert.deepEqual(ids, [
+    "inspect-operator-env-readiness",
     "run-live-operator-status-probe",
     "refresh-scheduled-cron-proof",
     "verify-alert-target-env-in-operator-shell",
-    "verify-updates-target-env-in-operator-shell",
   ]);
 });
 
@@ -201,7 +201,7 @@ test("next work recommender can build from live-shaped local fixtures", async ()
   assert.equal(result.destructive, false);
   assert.equal(result.sendsMessages, false);
   assert.equal(result.writesArtifacts, false);
-  assert.equal(result.topRecommendation.id, "run-live-operator-status-probe");
+  assert.equal(result.topRecommendation.id, "inspect-operator-env-readiness");
   assert.equal(result.event.type, "discordos.next_work.recommendations_ready");
 });
 
