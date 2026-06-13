@@ -317,6 +317,8 @@ Current governed contract surface:
   - owner-side proof that DiscordOS operator env readiness and live operator status pass with secrets overlaid in-memory only
 - `docs/ops/discordos-runtime-health-cron-scheduled-log-proof-hardening-pass-51-2026-06-13.md`
   - owner-side proof that scheduled cron log checks now distinguish non-passing cron-path traffic from missing cron-path evidence
+- `docs/ops/discordos-live-target-admission-proof-pass-52-2026-06-13.md`
+  - owner-side proof that alerts and updates Discord targets pass dedicated live read-only admission probes
 
 Current repo-local verification surface:
 
