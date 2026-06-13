@@ -97,6 +97,26 @@ test("cron runtime health authorization accepts matching bearer", () => {
   );
 });
 
+test("cron runtime health classifies Vercel scheduled requests by user agent", () => {
+  assert.equal(
+    _internals.getCronScheduleName({
+      headers: {
+        "user-agent": "vercel-cron/1.0",
+      },
+    }),
+    "vercel-daily-runtime-health"
+  );
+  assert.equal(
+    _internals.getCronScheduleName({
+      headers: {
+        "user-agent": "node",
+      },
+    }),
+    "manual-authorized-runtime-health"
+  );
+  assert.equal(_internals.isVercelCronRequest({ headers: {} }), false);
+});
+
 test("cron runtime health builds no-side-effect passing proof", async () => {
   const env = operationalEnv();
   const proof = await _internals.buildCronRuntimeHealthProof({
@@ -210,6 +230,7 @@ test("cron runtime health audit writer persists sanitized run receipts", async (
       const parsed = JSON.parse(init.body);
       assert.equal(parsed.payload.run_id, "runtime-health-cron-vercel-daily-runtime-health-20260613T040000000Z");
       assert.equal(parsed.payload.schedule_name, "vercel-daily-runtime-health");
+      assert.equal(parsed.payload.source, "vercel-cron-runtime-health");
       assert.equal(parsed.payload.status, "pass");
       assert.equal(parsed.payload.event_type, "discordos.runtime_health.cron_pass");
       assert.equal(parsed.payload.posture, "operational");
@@ -234,6 +255,42 @@ test("cron runtime health audit writer persists sanitized run receipts", async (
   assert.equal(audit.runtime, "vercel-env-service-role");
   assert.equal(audit.httpStatus, 201);
   assert.equal(audit.runId, "runtime-health-cron-vercel-daily-runtime-health-20260613T040000000Z");
+});
+
+test("cron runtime health audit payload distinguishes manual authorized proofs", () => {
+  const payload = _internals.buildCronAuditPayload({
+    scheduleName: "manual-authorized-runtime-health",
+    generatedAt: "2026-06-13T04:00:00.000Z",
+    ok: true,
+    event: {
+      type: "discordos.runtime_health.cron_pass",
+      severity: "info",
+    },
+    snapshot: {
+      posture: "operational",
+      readinessPercent: 100,
+      blockedReasons: [],
+    },
+    alert: {
+      event: {
+        type: "discordos.runtime_health.alert_clear",
+      },
+      severity: "ok",
+    },
+    alertDelivery: {
+      enabled: true,
+      status: "skipped_clear",
+      targetType: "discord_bot_channel",
+      reasonCodes: ["alert_clear_delivery_not_requested"],
+    },
+    alertDelivered: false,
+    artifactWritten: false,
+    destructive: false,
+  });
+
+  assert.equal(payload.run_id, "runtime-health-cron-manual-authorized-runtime-health-20260613T040000000Z");
+  assert.equal(payload.schedule_name, "manual-authorized-runtime-health");
+  assert.equal(payload.source, "manual-authorized-runtime-health");
 });
 
 test("cron runtime health audit writer can use Supabase Edge persistence", async () => {

@@ -325,6 +325,8 @@ Current governed contract surface:
   - owner-side proof that the next-work recommender uses durable receipts to avoid repeating completed live proof work
 - `docs/ops/discordos-runtime-health-cron-audit-connector-proof-pass-55-2026-06-13.md`
   - owner-side proof that authorized cron runs have durable passing audit rows in the DiscordOS Supabase project
+- `docs/ops/discordos-cron-scheduled-vs-manual-classification-pass-56-2026-06-13.md`
+  - owner-side proof that cron audit rows distinguish real scheduled Vercel Cron runs from manual authorized operator proofs
 
 Current repo-local verification surface:
 

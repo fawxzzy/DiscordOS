@@ -15,6 +15,17 @@ function headerValue(req, name) {
   return headers[name] || headers[lowerName] || null;
 }
 
+function isVercelCronRequest(req) {
+  const userAgent = headerValue(req, "user-agent");
+  return typeof userAgent === "string" && userAgent.includes("vercel-cron/1.0");
+}
+
+function getCronScheduleName(req) {
+  return isVercelCronRequest(req)
+    ? "vercel-daily-runtime-health"
+    : "manual-authorized-runtime-health";
+}
+
 function getCronAuthorization(req, env = process.env) {
   if (!hasValue(env.CRON_SECRET)) {
     return {
@@ -122,7 +133,9 @@ function buildCronAuditPayload(proof) {
       generatedAt: proof.generatedAt,
     }),
     schedule_name: proof.scheduleName,
-    source: "vercel-cron-runtime-health",
+    source: proof.scheduleName === "vercel-daily-runtime-health"
+      ? "vercel-cron-runtime-health"
+      : "manual-authorized-runtime-health",
     status: proof.ok ? "pass" : "fail",
     generated_at: proof.generatedAt,
     event_type: proof.event.type,
@@ -409,7 +422,9 @@ module.exports = async function cronRuntimeHealth(req, res) {
     });
   }
 
-  const proof = await buildCronRuntimeHealthProof();
+  const proof = await buildCronRuntimeHealthProof({
+    scheduleName: getCronScheduleName(req),
+  });
   const audit = await writeCronAuditRun({
     proof,
     env: process.env,
@@ -426,6 +441,8 @@ module.exports = async function cronRuntimeHealth(req, res) {
 module.exports._internals = {
   hasValue,
   headerValue,
+  isVercelCronRequest,
+  getCronScheduleName,
   getCronAuthorization,
   summaryFromCronSnapshot,
   classifyCronEvent,
