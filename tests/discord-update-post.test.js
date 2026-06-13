@@ -6,6 +6,33 @@ const test = require("node:test");
 
 const { _internals } = require("../scripts/discord-update-post");
 
+const UPDATES_CHANNEL_ID = "1504671871512346695";
+
+function channelProbeBody(name = "updates") {
+  return {
+    name,
+    type: 5,
+  };
+}
+
+function message({
+  id = "1516000000000000000",
+  channelId = UPDATES_CHANNEL_ID,
+  timestamp = "2026-06-13T20:00:00.000000+00:00",
+  title = "Runtime hardening closed",
+} = {}) {
+  return {
+    id,
+    channel_id: channelId,
+    timestamp,
+    embeds: [
+      {
+        title,
+      },
+    ],
+  };
+}
+
 test("discord update post args default to dry-run publication", () => {
   assert.deepEqual(_internals.parseArgs([]), {
     json: false,
@@ -123,19 +150,44 @@ test("discord update post apply blocks without DiscordOS target env", async () =
 });
 
 test("discord update post sends bot-channel payload with DiscordOS env only", async () => {
+  const requests = [];
   const result = await _internals.buildDiscordUpdatePost({
     title: "Runtime hardening closed",
     body: "DiscordOS runtime hardening is closed.",
     apply: true,
     env: {
-      DISCORDOS_UPDATES_CHANNEL_ID: " 123\n",
+      DISCORDOS_UPDATES_CHANNEL_ID: ` ${UPDATES_CHANNEL_ID}\n`,
       DISCORDOS_BOT_TOKEN: " bot-secret\n",
       DISCORD_UPDATES_CHANNEL_ID: "fitness-channel",
       DISCORD_BOT_TOKEN: "fitness-token",
     },
     fetchImpl: async (url, init) => {
-      assert.equal(url, `${_internals.DISCORD_API_BASE}/channels/123/messages`);
+      requests.push({ url, init });
       assert.equal(init.headers.Authorization, "Bot bot-secret");
+      if (url === `${_internals.DISCORD_API_BASE}/channels/${UPDATES_CHANNEL_ID}`) {
+        assert.equal(init.method, "GET");
+        assert.equal(init.body, undefined);
+        return {
+          ok: true,
+          status: 200,
+          json: async () => channelProbeBody(),
+        };
+      }
+      if (url === `${_internals.DISCORD_API_BASE}/channels/${UPDATES_CHANNEL_ID}/messages?limit=${_internals.DEFAULT_PREFLIGHT_LIMIT}`) {
+        assert.equal(init.method, "GET");
+        assert.equal(init.body, undefined);
+        return {
+          ok: true,
+          status: 200,
+          json: async () => [
+            message({
+              title: "Older Update",
+            }),
+          ],
+        };
+      }
+      assert.equal(url, `${_internals.DISCORD_API_BASE}/channels/${UPDATES_CHANNEL_ID}/messages`);
+      assert.equal(init.method, "POST");
       const parsed = JSON.parse(init.body);
       assert.equal(parsed.content, "");
       assert.equal(parsed.embeds[0].title, "Runtime hardening closed");
@@ -145,7 +197,7 @@ test("discord update post sends bot-channel payload with DiscordOS env only", as
         status: 200,
         json: async () => ({
           id: "1516000000000000000",
-          channel_id: "123",
+          channel_id: UPDATES_CHANNEL_ID,
           timestamp: "2026-06-13T20:00:00.000000+00:00",
         }),
       };
@@ -157,13 +209,81 @@ test("discord update post sends bot-channel payload with DiscordOS env only", as
   assert.equal(result.sendsMessages, true);
   assert.equal(result.httpStatus, 200);
   assert.equal(result.messageId, "1516000000000000000");
-  assert.equal(result.channelId, "123");
+  assert.equal(result.channelId, UPDATES_CHANNEL_ID);
   assert.equal(result.timestamp, "2026-06-13T20:00:00.000000+00:00");
+  assert.equal(result.preflight.status, "ready");
+  assert.equal(result.preflight.duplicateCheck.status, "not_found");
+  assert.equal(requests.length, 3);
   assert.deepEqual(result.receipt, {
     requested: false,
     written: false,
     path: null,
   });
+});
+
+test("discord update post apply blocks duplicate titles before sending", async () => {
+  const requests = [];
+  const result = await _internals.buildDiscordUpdatePost({
+    title: "Runtime hardening closed",
+    body: "DiscordOS runtime hardening is closed.",
+    apply: true,
+    env: {
+      DISCORDOS_UPDATES_CHANNEL_ID: UPDATES_CHANNEL_ID,
+      DISCORDOS_BOT_TOKEN: "bot-secret",
+    },
+    fetchImpl: async (url, init) => {
+      requests.push({ url, init });
+      assert.equal(init.method, "GET");
+      if (url === `${_internals.DISCORD_API_BASE}/channels/${UPDATES_CHANNEL_ID}`) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => channelProbeBody(),
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => [message()],
+      };
+    },
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "preflight_blocked");
+  assert.equal(result.sendsMessages, false);
+  assert.deepEqual(result.reasonCodes, ["updates_duplicate_title_found"]);
+  assert.equal(result.preflight.duplicateCheck.status, "duplicate_found");
+  assert.equal(result.preflight.duplicateCheck.duplicate.messageId, "1516000000000000000");
+  assert.equal(requests.length, 2);
+});
+
+test("discord update post apply blocks target drift before sending", async () => {
+  const result = await _internals.buildDiscordUpdatePost({
+    title: "Runtime hardening closed",
+    body: "DiscordOS runtime hardening is closed.",
+    apply: true,
+    env: {
+      DISCORDOS_UPDATES_CHANNEL_ID: UPDATES_CHANNEL_ID,
+      DISCORDOS_BOT_TOKEN: "bot-secret",
+    },
+    fetchImpl: async (url, init) => {
+      assert.equal(url, `${_internals.DISCORD_API_BASE}/channels/${UPDATES_CHANNEL_ID}`);
+      assert.equal(init.method, "GET");
+      return {
+        ok: true,
+        status: 200,
+        json: async () => channelProbeBody("alerts"),
+      };
+    },
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "preflight_blocked");
+  assert.equal(result.sendsMessages, false);
+  assert.deepEqual(result.reasonCodes, ["updates_channel_points_to_alerts"]);
+  assert.equal(result.preflight.status, "target_blocked");
+  assert.equal(result.preflight.duplicateCheck.status, "skipped");
 });
 
 test("discord update post send tolerates missing response json while preserving status", async () => {
@@ -244,18 +364,34 @@ test("discord update post writes receipt file only after successful send", async
     apply: true,
     cwd: dir,
     env: {
-      DISCORDOS_UPDATES_CHANNEL_ID: "123",
+      DISCORDOS_UPDATES_CHANNEL_ID: UPDATES_CHANNEL_ID,
       DISCORDOS_BOT_TOKEN: "bot-secret",
     },
-    fetchImpl: async () => ({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        id: "1516000000000000000",
-        channel_id: "123",
-        timestamp: "2026-06-13T20:00:00.000000+00:00",
-      }),
-    }),
+    fetchImpl: async (url) => {
+      if (url === `${_internals.DISCORD_API_BASE}/channels/${UPDATES_CHANNEL_ID}`) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => channelProbeBody(),
+        };
+      }
+      if (url === `${_internals.DISCORD_API_BASE}/channels/${UPDATES_CHANNEL_ID}/messages?limit=${_internals.DEFAULT_PREFLIGHT_LIMIT}`) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => [],
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: "1516000000000000000",
+          channel_id: UPDATES_CHANNEL_ID,
+          timestamp: "2026-06-13T20:00:00.000000+00:00",
+        }),
+      };
+    },
   });
   const updatedReceipt = await fs.readFile(receiptPath, "utf8");
 
@@ -278,18 +414,34 @@ test("discord update post reports sent receipt write failures without hiding sen
     apply: true,
     cwd: await fs.mkdtemp(path.join(os.tmpdir(), "discordos-update-receipt-missing-")),
     env: {
-      DISCORDOS_UPDATES_CHANNEL_ID: "123",
+      DISCORDOS_UPDATES_CHANNEL_ID: UPDATES_CHANNEL_ID,
       DISCORDOS_BOT_TOKEN: "bot-secret",
     },
-    fetchImpl: async () => ({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        id: "1516000000000000000",
-        channel_id: "123",
-        timestamp: "2026-06-13T20:00:00.000000+00:00",
-      }),
-    }),
+    fetchImpl: async (url) => {
+      if (url === `${_internals.DISCORD_API_BASE}/channels/${UPDATES_CHANNEL_ID}`) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => channelProbeBody(),
+        };
+      }
+      if (url === `${_internals.DISCORD_API_BASE}/channels/${UPDATES_CHANNEL_ID}/messages?limit=${_internals.DEFAULT_PREFLIGHT_LIMIT}`) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => [],
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: "1516000000000000000",
+          channel_id: UPDATES_CHANNEL_ID,
+          timestamp: "2026-06-13T20:00:00.000000+00:00",
+        }),
+      };
+    },
   });
 
   assert.equal(result.ok, false);

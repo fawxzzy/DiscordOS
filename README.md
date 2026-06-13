@@ -170,6 +170,7 @@ Current governed contract surface:
 - `scripts/discord-update-post.js`
   - repo-local `#updates` publication command for curated DiscordOS release/status posts
   - dry-runs by default, requires `--apply` before sending, and uses only `DISCORDOS_UPDATES_CHANNEL_ID` plus `DISCORDOS_BOT_TOKEN`
+  - `--apply` now runs live target admission and duplicate-title preflight before sending
   - formats normal updates as green embeds with mentions disabled
   - returns Discord response metadata, including message id, channel id, and timestamp, after successful sends
   - can write a bounded Discord publication block into an existing ops receipt with `--receipt-file`
@@ -263,6 +264,8 @@ Current governed contract surface:
   - owner-side proof that DiscordOS can admit the configured `#updates` target before future public posts
 - `docs/ops/discordos-updates-preflight-command-pass-40-2026-06-13.md`
   - owner-side proof that DiscordOS can preflight future `#updates` posts before live publication
+- `docs/ops/discordos-updates-apply-preflight-enforcement-pass-41-2026-06-13.md`
+  - owner-side proof that live `#updates` publication cannot bypass target admission and duplicate-title protection
 
 Current repo-local verification surface:
 
@@ -367,7 +370,7 @@ Current repo-local operator surface:
 - `npm run ops:discord:update-post:json`
   - emits the update publication result as JSON
 - `npm run ops:discord:update-post -- --title "<title>" --body-file <path> --body-section "<section>" --receipt-file <receipt> --apply`
-  - sends the update and writes the returned Discord publication metadata into the existing receipt
+  - runs live preflight, sends only if target admission and duplicate-title checks pass, then writes returned Discord publication metadata into the existing receipt
 - `npm run ops:discord:update-lookup -- --title "<title>" --receipt-file <receipt>`
   - finds an already-published update by embed title and writes its Discord publication metadata into the existing receipt without sending a new post
 - `npm run ops:discord:update-target-admission`
@@ -447,7 +450,7 @@ Current updates-channel recommendation:
 - use `#updates` only for curated public release/status announcements
 - publish from DiscordOS with `npm run ops:discord:update-post -- --title "<title>" --body-file <path> --body-section "<section>" --apply`
 - include `--receipt-file <receipt>` on future live posts so the returned Discord message id is recorded durably
-- run `npm run ops:discord:update-target-admission -- --probe-live` before live public posts when target drift is possible
-- run `npm run ops:discord:update-preflight -- --title "<title>" --body-file <path> --body-section "<section>" --probe-live` immediately before live public posts to block duplicate titles and target drift
+- `--apply` now runs live target admission and duplicate-title preflight automatically before sending
+- run `npm run ops:discord:update-preflight -- --title "<title>" --body-file <path> --body-section "<section>" --probe-live` when you want a no-send preview before the final apply
 - use `npm run ops:discord:update-lookup` only to backfill receipts for already-published updates
 - keep routine runtime logs, cron proof dumps, and critical alerts out of `#updates`

@@ -1,10 +1,14 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
+const {
+  _internals: targetAdmissionInternals,
+} = require("./discord-update-target-admission");
 
 const DISCORD_API_BASE = "https://discord.com/api/v10";
 const UPDATE_EMBED_COLOR = 5763719;
 const MAX_EMBED_TITLE_LENGTH = 256;
 const MAX_EMBED_DESCRIPTION_LENGTH = 4096;
+const DEFAULT_PREFLIGHT_LIMIT = 25;
 const RECEIPT_BLOCK_START = "<!-- discordos-update-post-receipt:start -->";
 const RECEIPT_BLOCK_END = "<!-- discordos-update-post-receipt:end -->";
 
@@ -219,6 +223,146 @@ async function sendDiscordBotChannel({ channelId, token, payload, fetchImpl = fe
   };
 }
 
+async function fetchRecentDiscordMessages({
+  channelId,
+  token,
+  limit = DEFAULT_PREFLIGHT_LIMIT,
+  fetchImpl = fetch,
+}) {
+  const response = await fetchImpl(`${DISCORD_API_BASE}/channels/${channelId}/messages?limit=${limit}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bot ${token}`,
+    },
+  });
+  const responseBody = typeof response.json === "function" ? await response.json().catch(() => null) : null;
+  return {
+    ok: response.ok,
+    status: response.status,
+    messages: Array.isArray(responseBody) ? responseBody : [],
+  };
+}
+
+function getMessageEmbedTitle(message) {
+  const embeds = Array.isArray(message?.embeds) ? message.embeds : [];
+  for (const embed of embeds) {
+    if (typeof embed?.title === "string" && embed.title.trim().length > 0) {
+      return embed.title.trim();
+    }
+  }
+  return null;
+}
+
+function summarizeDiscordMessage(message) {
+  if (!message) {
+    return null;
+  }
+
+  return {
+    messageId: typeof message.id === "string" ? message.id : null,
+    channelId: typeof message.channel_id === "string" ? message.channel_id : null,
+    timestamp: typeof message.timestamp === "string" ? message.timestamp : null,
+    title: getMessageEmbedTitle(message),
+  };
+}
+
+function findMessageByEmbedTitle(messages, title) {
+  const normalizedTitle = String(title || "").trim();
+  return messages.find((message) => getMessageEmbedTitle(message) === normalizedTitle) || null;
+}
+
+async function runApplyPreflight({
+  payload,
+  env = process.env,
+  fetchImpl = fetch,
+  limit = DEFAULT_PREFLIGHT_LIMIT,
+}) {
+  const targetAdmission = await targetAdmissionInternals.buildDiscordUpdateTargetAdmission({
+    env,
+    probeLive: true,
+    expectedName: targetAdmissionInternals.DEFAULT_EXPECTED_CHANNEL_NAME,
+    fetchImpl,
+  });
+
+  if (!targetAdmission.ok) {
+    return {
+      ok: false,
+      status: "target_blocked",
+      sendsMessages: false,
+      targetAdmission,
+      duplicateCheck: {
+        attempted: false,
+        status: "skipped",
+        reasonCodes: ["target_not_admitted"],
+      },
+      reasonCodes: targetAdmission.reasonCodes.length
+        ? targetAdmission.reasonCodes
+        : ["updates_target_admission_failed"],
+    };
+  }
+
+  const result = await fetchRecentDiscordMessages({
+    channelId: env.DISCORDOS_UPDATES_CHANNEL_ID.trim(),
+    token: env.DISCORDOS_BOT_TOKEN.trim(),
+    limit,
+    fetchImpl,
+  });
+
+  if (!result.ok) {
+    return {
+      ok: false,
+      status: "duplicate_lookup_failed",
+      sendsMessages: false,
+      targetAdmission,
+      duplicateCheck: {
+        attempted: true,
+        status: "failed",
+        httpStatus: result.status,
+        searchedMessages: 0,
+        duplicate: null,
+        reasonCodes: ["updates_duplicate_lookup_failed"],
+      },
+      reasonCodes: ["updates_duplicate_lookup_failed"],
+    };
+  }
+
+  const title = payload.embeds[0].title;
+  const duplicate = summarizeDiscordMessage(findMessageByEmbedTitle(result.messages, title));
+  if (duplicate) {
+    return {
+      ok: false,
+      status: "duplicate_found",
+      sendsMessages: false,
+      targetAdmission,
+      duplicateCheck: {
+        attempted: true,
+        status: "duplicate_found",
+        httpStatus: result.status,
+        searchedMessages: result.messages.length,
+        duplicate,
+        reasonCodes: ["updates_duplicate_title_found"],
+      },
+      reasonCodes: ["updates_duplicate_title_found"],
+    };
+  }
+
+  return {
+    ok: true,
+    status: "ready",
+    sendsMessages: false,
+    targetAdmission,
+    duplicateCheck: {
+      attempted: true,
+      status: "not_found",
+      httpStatus: result.status,
+      searchedMessages: result.messages.length,
+      duplicate: null,
+      reasonCodes: [],
+    },
+    reasonCodes: [],
+  };
+}
+
 function buildDiscordPublicationReceiptBlock(result) {
   if (result.status !== "sent") {
     throw new Error("receipt_requires_sent_update");
@@ -331,6 +475,30 @@ async function buildDiscordUpdatePost({
     };
   }
 
+  const preflight = await runApplyPreflight({
+    payload,
+    env,
+    fetchImpl,
+  });
+
+  if (!preflight.ok) {
+    return {
+      ok: false,
+      destructive: false,
+      sendsMessages: false,
+      status: "preflight_blocked",
+      target,
+      reasonCodes: preflight.reasonCodes,
+      receipt: {
+        requested: hasValue(receiptFile),
+        written: false,
+        path: receiptFile || null,
+      },
+      payloadPreview: payload,
+      preflight,
+    };
+  }
+
   const result = await sendDiscordBotChannel({
     channelId: env.DISCORDOS_UPDATES_CHANNEL_ID.trim(),
     token: env.DISCORDOS_BOT_TOKEN.trim(),
@@ -349,6 +517,7 @@ async function buildDiscordUpdatePost({
     channelId: result.channelId,
     timestamp: result.timestamp,
     reasonCodes: result.ok ? [] : ["updates_post_request_failed"],
+    preflight,
   };
 
   if (postResult.ok && hasValue(receiptFile)) {
@@ -420,6 +589,14 @@ function renderMarkdown(result) {
     lines.push(`- payload title: \`${result.payloadPreview.embeds[0].title}\``);
     lines.push(`- payload body chars: \`${result.payloadPreview.embeds[0].description.length}\``);
   }
+  if (result.preflight) {
+    lines.push(`- preflight status: \`${result.preflight.status}\``);
+    lines.push(`- preflight target admitted: \`${result.preflight.targetAdmission.ok ? "true" : "false"}\``);
+    lines.push(`- preflight duplicate status: \`${result.preflight.duplicateCheck.status}\``);
+    if (result.preflight.duplicateCheck.duplicate?.messageId) {
+      lines.push(`- preflight duplicate message id: \`${result.preflight.duplicateCheck.duplicate.messageId}\``);
+    }
+  }
 
   return `${lines.join("\n")}\n`;
 }
@@ -448,6 +625,7 @@ module.exports = {
     UPDATE_EMBED_COLOR,
     MAX_EMBED_TITLE_LENGTH,
     MAX_EMBED_DESCRIPTION_LENGTH,
+    DEFAULT_PREFLIGHT_LIMIT,
     RECEIPT_BLOCK_START,
     RECEIPT_BLOCK_END,
     parseArgs,
@@ -460,6 +638,11 @@ module.exports = {
     buildDiscordUpdatePayload,
     getUpdateTarget,
     sendDiscordBotChannel,
+    fetchRecentDiscordMessages,
+    getMessageEmbedTitle,
+    summarizeDiscordMessage,
+    findMessageByEmbedTitle,
+    runApplyPreflight,
     buildDiscordPublicationReceiptBlock,
     upsertDiscordPublicationReceiptBlock,
     writeDiscordPublicationReceipt,
