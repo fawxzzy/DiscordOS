@@ -176,6 +176,10 @@ Current governed contract surface:
 - `scripts/discord-update-lookup.js`
   - repo-local read-only lookup command for previously published `#updates` embed posts
   - searches recent messages by embed title and can backfill the Discord publication block into an ops receipt without sending a new post
+- `scripts/discord-update-target-admission.js`
+  - repo-local read-only admission command for the `#updates` publication target
+  - validates DiscordOS updates env shape locally and can live-probe the channel with a read-only Discord GET
+  - fails closed if the updates target points at `#alerts` or any non-`updates` channel
 - `api/cron/runtime-health.js`
   - Vercel Cron guarded runtime-health proof endpoint
   - requires `Authorization: Bearer $CRON_SECRET`
@@ -251,6 +255,8 @@ Current governed contract surface:
   - owner-side proof that successful future `#updates` posts can write their Discord publication metadata into a matching ops receipt
 - `docs/ops/discordos-updates-lookup-backfill-command-pass-38-2026-06-13.md`
   - owner-side proof that existing `#updates` posts can be found by title and backfilled into receipts without reposting
+- `docs/ops/discordos-updates-target-admission-pass-39-2026-06-13.md`
+  - owner-side proof that DiscordOS can admit the configured `#updates` target before future public posts
 
 Current repo-local verification surface:
 
@@ -308,6 +314,8 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local DiscordOS `#updates` publication command
 - `npm run verify:discord-update-lookup`
   - Node test coverage for the repo-local DiscordOS `#updates` read-only lookup command
+- `npm run verify:discord-update-target-admission`
+  - Node test coverage for the repo-local DiscordOS `#updates` target admission command
 - `npm run verify`
   - runs both verification surfaces
 
@@ -354,6 +362,10 @@ Current repo-local operator surface:
   - sends the update and writes the returned Discord publication metadata into the existing receipt
 - `npm run ops:discord:update-lookup -- --title "<title>" --receipt-file <receipt>`
   - finds an already-published update by embed title and writes its Discord publication metadata into the existing receipt without sending a new post
+- `npm run ops:discord:update-target-admission`
+  - validates the configured `#updates` target shape without network access
+- `npm run ops:discord:update-target-admission -- --probe-live`
+  - performs a read-only Discord channel GET and fails closed unless the target channel name is `updates`
 - `npm run ops:runtime-health:scheduled-proof`
   - runs the full cron-ready proof loop: live health capture, fresh summary check, durable alert decision, fail-closed exit
 - `npm run ops:runtime-health:scheduled-proof:json`
@@ -423,5 +435,6 @@ Current updates-channel recommendation:
 - use `#updates` only for curated public release/status announcements
 - publish from DiscordOS with `npm run ops:discord:update-post -- --title "<title>" --body-file <path> --body-section "<section>" --apply`
 - include `--receipt-file <receipt>` on future live posts so the returned Discord message id is recorded durably
+- run `npm run ops:discord:update-target-admission -- --probe-live` before live public posts when target drift is possible
 - use `npm run ops:discord:update-lookup` only to backfill receipts for already-published updates
 - keep routine runtime logs, cron proof dumps, and critical alerts out of `#updates`

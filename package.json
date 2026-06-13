@@ -45,7 +45,9 @@
     "ops:discord:update-post:json": "node scripts/discord-update-post.js --json",
     "ops:discord:update-lookup": "node scripts/discord-update-lookup.js",
     "ops:discord:update-lookup:json": "node scripts/discord-update-lookup.js --json",
-    "verify": "npm run verify:feedback-adapters && npm run verify:readiness && npm run verify:activation && npm run verify:feedback-shadow && npm run verify:feedback-persist && npm run verify:feedback-transfer-proof && npm run verify:live-transfer-status && npm run verify:runtime-health && npm run verify:runtime-health-cron && npm run verify:runtime-health-cron-production-proof && npm run verify:runtime-health-cron-schedule-proof && npm run verify:runtime-health-cron-scheduled-log-proof && npm run verify:runtime-health-cron-authorized-proof && npm run verify:runtime-health-cron-audit-proof && npm run verify:runtime-health-proof && npm run verify:runtime-health-summary && npm run verify:runtime-health-check && npm run verify:runtime-health-alert && npm run verify:runtime-health-alert-target-admission && npm run verify:runtime-health-alert-delivery && npm run verify:runtime-health-scheduled-proof && npm run verify:runtime-health-rollup && npm run verify:runtime-health-retention-plan && npm run verify:runtime-health-admission && npm run verify:runtime-health-status && npm run verify:discord-update-post && npm run verify:discord-update-lookup",
+    "ops:discord:update-target-admission": "node scripts/discord-update-target-admission.js",
+    "ops:discord:update-target-admission:json": "node scripts/discord-update-target-admission.js --json",
+    "verify": "npm run verify:feedback-adapters && npm run verify:readiness && npm run verify:activation && npm run verify:feedback-shadow && npm run verify:feedback-persist && npm run verify:feedback-transfer-proof && npm run verify:live-transfer-status && npm run verify:runtime-health && npm run verify:runtime-health-cron && npm run verify:runtime-health-cron-production-proof && npm run verify:runtime-health-cron-schedule-proof && npm run verify:runtime-health-cron-scheduled-log-proof && npm run verify:runtime-health-cron-authorized-proof && npm run verify:runtime-health-cron-audit-proof && npm run verify:runtime-health-proof && npm run verify:runtime-health-summary && npm run verify:runtime-health-check && npm run verify:runtime-health-alert && npm run verify:runtime-health-alert-target-admission && npm run verify:runtime-health-alert-delivery && npm run verify:runtime-health-scheduled-proof && npm run verify:runtime-health-rollup && npm run verify:runtime-health-retention-plan && npm run verify:runtime-health-admission && npm run verify:runtime-health-status && npm run verify:discord-update-post && npm run verify:discord-update-lookup && npm run verify:discord-update-target-admission",
     "verify:readiness": "node --test tests/readiness.test.js",
     "verify:activation": "node --test tests/activation.test.js",
     "verify:feedback-shadow": "node --test tests/feedback-shadow.test.js",
@@ -72,6 +74,7 @@
     "verify:runtime-health-status": "node --test tests/runtime-health-status.test.js",
     "verify:discord-update-post": "node --test tests/discord-update-post.test.js",
     "verify:discord-update-lookup": "node --test tests/discord-update-lookup.test.js",
+    "verify:discord-update-target-admission": "node --test tests/discord-update-target-admission.test.js",
     "verify:feedback-adapters": "tsc --project tsconfig.json --noEmit"
   },
   "devDependencies": {
