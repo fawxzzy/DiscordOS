@@ -55,7 +55,7 @@ Result:
 
 Temp cleanup:
 
-- temp env path: `C:\ATLAS\tmp\discordos-updates-live.env`
+- temp env path: `tmp/discordos-updates-live.env`
 - cleanup result: `temp_env_removed=true`
 
 ## Marker Consequence
@@ -64,3 +64,14 @@ Temp cleanup:
 
 DiscordOS now owns a tested `#updates` publication command and has used it for the runtime hardening closeout post.
 
+<!-- discordos-update-post-receipt:start -->
+## Discord Publication
+
+- status: `sent`
+- sends messages: `true`
+- Discord HTTP status: `200`
+- channel id: `1504671871512346695`
+- message id: `1515396583846445097`
+- timestamp: `2026-06-13T16:45:00.296000+00:00`
+- mentions disabled: `true`
+<!-- discordos-update-post-receipt:end -->

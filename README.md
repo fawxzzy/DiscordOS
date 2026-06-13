@@ -173,6 +173,9 @@ Current governed contract surface:
   - formats normal updates as green embeds with mentions disabled
   - returns Discord response metadata, including message id, channel id, and timestamp, after successful sends
   - can write a bounded Discord publication block into an existing ops receipt with `--receipt-file`
+- `scripts/discord-update-lookup.js`
+  - repo-local read-only lookup command for previously published `#updates` embed posts
+  - searches recent messages by embed title and can backfill the Discord publication block into an ops receipt without sending a new post
 - `api/cron/runtime-health.js`
   - Vercel Cron guarded runtime-health proof endpoint
   - requires `Authorization: Bearer $CRON_SECRET`
@@ -246,6 +249,8 @@ Current governed contract surface:
   - owner-side proof that future `#updates` posts return Discord message ids for durable receipt references
 - `docs/ops/discordos-updates-receipt-file-mode-pass-37-2026-06-13.md`
   - owner-side proof that successful future `#updates` posts can write their Discord publication metadata into a matching ops receipt
+- `docs/ops/discordos-updates-lookup-backfill-command-pass-38-2026-06-13.md`
+  - owner-side proof that existing `#updates` posts can be found by title and backfilled into receipts without reposting
 
 Current repo-local verification surface:
 
@@ -301,6 +306,8 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local runtime-health status command
 - `npm run verify:discord-update-post`
   - Node test coverage for the repo-local DiscordOS `#updates` publication command
+- `npm run verify:discord-update-lookup`
+  - Node test coverage for the repo-local DiscordOS `#updates` read-only lookup command
 - `npm run verify`
   - runs both verification surfaces
 
@@ -345,6 +352,8 @@ Current repo-local operator surface:
   - emits the update publication result as JSON
 - `npm run ops:discord:update-post -- --title "<title>" --body-file <path> --body-section "<section>" --receipt-file <receipt> --apply`
   - sends the update and writes the returned Discord publication metadata into the existing receipt
+- `npm run ops:discord:update-lookup -- --title "<title>" --receipt-file <receipt>`
+  - finds an already-published update by embed title and writes its Discord publication metadata into the existing receipt without sending a new post
 - `npm run ops:runtime-health:scheduled-proof`
   - runs the full cron-ready proof loop: live health capture, fresh summary check, durable alert decision, fail-closed exit
 - `npm run ops:runtime-health:scheduled-proof:json`
@@ -414,4 +423,5 @@ Current updates-channel recommendation:
 - use `#updates` only for curated public release/status announcements
 - publish from DiscordOS with `npm run ops:discord:update-post -- --title "<title>" --body-file <path> --body-section "<section>" --apply`
 - include `--receipt-file <receipt>` on future live posts so the returned Discord message id is recorded durably
+- use `npm run ops:discord:update-lookup` only to backfill receipts for already-published updates
 - keep routine runtime logs, cron proof dumps, and critical alerts out of `#updates`
