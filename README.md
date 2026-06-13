@@ -197,6 +197,10 @@ Current governed contract surface:
   - repo-local read-only status command for the DiscordOS publication toolchain
   - summarizes draft validation, release check, target admission, lookup, apply guard, and `#updates` / `#alerts` separation
   - sends no Discord messages and writes no artifacts
+- `scripts/discord-publication-audit-rollup.js`
+  - repo-local read-only audit command for DiscordOS publication receipts under `docs/ops`
+  - summarizes published receipts, draft update receipts, proof-only receipts, and receipt-backfill gaps
+  - sends no Discord messages and writes no artifacts
 - `api/cron/runtime-health.js`
   - Vercel Cron guarded runtime-health proof endpoint
   - requires `Authorization: Bearer $CRON_SECRET`
@@ -284,6 +288,8 @@ Current governed contract surface:
   - owner-side proof that drafted `#updates` posts can run one no-send release check before guarded apply
 - `docs/ops/discordos-publication-status-pass-44-2026-06-13.md`
   - owner-side proof that DiscordOS publication status can be summarized from one read-only command
+- `docs/ops/discordos-publication-audit-rollup-pass-45-2026-06-13.md`
+  - owner-side proof that DiscordOS publication receipts can be audited for message-id coverage from one read-only command
 
 Current repo-local verification surface:
 
@@ -351,6 +357,8 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local DiscordOS `#updates` no-send release check
 - `npm run verify:discord-publication-status`
   - Node test coverage for the repo-local DiscordOS publication status command
+- `npm run verify:discord-publication-audit`
+  - Node test coverage for the repo-local DiscordOS publication receipt audit command
 - `npm run verify`
   - runs both verification surfaces
 
@@ -413,6 +421,10 @@ Current repo-local operator surface:
   - summarizes the publication command chain and updates/alerts separation without network access
 - `npm run ops:discord:publication-status -- --probe-live`
   - live-probes configured updates and alert targets with read-only Discord GET requests
+- `npm run ops:discord:publication-audit`
+  - audits DiscordOS publication receipts under `docs/ops` without sending messages or writing artifacts
+- `npm run ops:discord:publication-audit:json`
+  - emits the publication receipt audit as JSON
 - `npm run ops:runtime-health:scheduled-proof`
   - runs the full cron-ready proof loop: live health capture, fresh summary check, durable alert decision, fail-closed exit
 - `npm run ops:runtime-health:scheduled-proof:json`
@@ -481,6 +493,7 @@ Current updates-channel recommendation:
 
 - use `#updates` only for curated public release/status announcements
 - use `npm run ops:discord:publication-status -- --probe-live` to inspect the full publication chain and channel separation
+- use `npm run ops:discord:publication-audit` to confirm published update receipts have durable Discord message ids and no backfill gaps
 - publish from DiscordOS with `npm run ops:discord:update-post -- --title "<title>" --body-file <path> --body-section "<section>" --apply`
 - include `--receipt-file <receipt>` on future live posts so the returned Discord message id is recorded durably
 - run `npm run ops:discord:update-draft-validator -- --title "<title>" --body-file <path> --body-section "<section>"` before preflight when drafting a new public update receipt
