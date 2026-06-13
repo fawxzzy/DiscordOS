@@ -321,6 +321,8 @@ Current governed contract surface:
   - owner-side proof that alerts and updates Discord targets pass dedicated live read-only admission probes
 - `docs/ops/discordos-runtime-health-authorized-cron-proof-pass-53-2026-06-13.md`
   - owner-side proof that the locked production cron route can be invoked intentionally with `CRON_SECRET` without sending alerts while clear
+- `docs/ops/discordos-next-work-receipt-aware-ranking-pass-54-2026-06-13.md`
+  - owner-side proof that the next-work recommender uses durable receipts to avoid repeating completed live proof work
 
 Current repo-local verification surface:
 

@@ -154,6 +154,33 @@ test("next work recommender recommends live probe and env checks for local-only 
   ]);
 });
 
+test("next work recommender downgrades live env checks after receipt-backed proofs", () => {
+  const receiptState = _internals.classifyReceiptState([
+    "discordos-operator-live-status-proof-pass-50-2026-06-13.md",
+    "discordos-live-target-admission-proof-pass-52-2026-06-13.md",
+    "discordos-runtime-health-authorized-cron-proof-pass-53-2026-06-13.md",
+  ]);
+  const recommendations = _internals.recommendNextWork(baseOperatorStatus(), {
+    max: 5,
+    receiptState,
+  });
+  const ids = recommendations.map((recommendation) => recommendation.id);
+
+  assert.deepEqual(receiptState, {
+    liveOperatorStatusProof: true,
+    liveTargetAdmissionProof: true,
+    authorizedCronProof: true,
+  });
+  assert.equal(recommendations[0].id, "refresh-scheduled-cron-proof");
+  assert(!ids.includes("run-live-operator-status-probe"));
+  assert(!ids.includes("verify-alert-target-env-in-operator-shell"));
+  assert(!ids.includes("verify-updates-target-env-in-operator-shell"));
+  assert.equal(
+    recommendations.find((recommendation) => recommendation.id === "inspect-operator-env-readiness").status,
+    "deferred"
+  );
+});
+
 test("next work recommender can build from live-shaped local fixtures", async () => {
   const snapshotDir = await fs.mkdtemp(path.join(os.tmpdir(), "discordos-next-work-health-"));
   const alertDir = await fs.mkdtemp(path.join(os.tmpdir(), "discordos-next-work-alert-"));

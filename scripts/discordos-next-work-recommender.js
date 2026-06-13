@@ -1,6 +1,7 @@
 const {
   _internals: operatorStatusInternals,
 } = require("./discordos-operator-status");
+const fs = require("node:fs/promises");
 
 function parseArgs(args) {
   let max = 5;
@@ -70,7 +71,29 @@ function rankRecommendations(recommendations, max = 5) {
     .slice(0, max);
 }
 
-function recommendNextWork(operatorStatus, { max = 5 } = {}) {
+function classifyReceiptState(fileNames = []) {
+  return {
+    liveOperatorStatusProof: fileNames.some((fileName) =>
+      fileName.includes("discordos-operator-live-status-proof-pass")
+    ),
+    liveTargetAdmissionProof: fileNames.some((fileName) =>
+      fileName.includes("discordos-live-target-admission-proof-pass")
+    ),
+    authorizedCronProof: fileNames.some((fileName) =>
+      fileName.includes("discordos-runtime-health-authorized-cron-proof-pass")
+    ),
+  };
+}
+
+async function readReceiptState(docsDir) {
+  try {
+    return classifyReceiptState(await fs.readdir(docsDir));
+  } catch {
+    return classifyReceiptState([]);
+  }
+}
+
+function recommendNextWork(operatorStatus, { max = 5, receiptState = classifyReceiptState([]) } = {}) {
   const recommendations = [];
 
   addIf(!operatorStatus.runtime.ok, recommendations, buildRecommendation({
@@ -135,7 +158,23 @@ function recommendNextWork(operatorStatus, { max = 5 } = {}) {
     })
   );
 
-  addIf(operatorStatus.ok && !operatorStatus.probeLive, recommendations, buildRecommendation({
+  if (
+    operatorStatus.ok
+      && receiptState.liveTargetAdmissionProof
+      && (!operatorStatus.runtime.alertTargetConfigured || !operatorStatus.publication.updatesTargetConfigured)
+  ) {
+    const envRecommendation = recommendations.find((recommendation) =>
+      recommendation.id === "inspect-operator-env-readiness"
+    );
+    if (envRecommendation) {
+      envRecommendation.score = 25;
+      envRecommendation.status = "deferred";
+      envRecommendation.title = "Reload operator env only when the next live Discord action needs it";
+      envRecommendation.reasonCodes = ["operator_env_not_loaded_after_live_target_proof"];
+    }
+  }
+
+  addIf(operatorStatus.ok && !operatorStatus.probeLive && !receiptState.liveOperatorStatusProof, recommendations, buildRecommendation({
     id: "run-live-operator-status-probe",
     score: 80,
     category: "operator-proof",
@@ -163,7 +202,8 @@ function recommendNextWork(operatorStatus, { max = 5 } = {}) {
 
   addIf(
     !operatorStatus.runtime.alertTargetConfigured
-      && !operatorStatus.publication.alertsTargetConfigured,
+      && !operatorStatus.publication.alertsTargetConfigured
+      && !receiptState.liveTargetAdmissionProof,
     recommendations,
     buildRecommendation({
       id: "verify-alert-target-env-in-operator-shell",
@@ -181,7 +221,8 @@ function recommendNextWork(operatorStatus, { max = 5 } = {}) {
 
   addIf(
     !operatorStatus.publication.updatesTargetConfigured
-      && operatorStatus.publication.channelSeparation === "separated",
+      && operatorStatus.publication.channelSeparation === "separated"
+      && !receiptState.liveTargetAdmissionProof,
     recommendations,
     buildRecommendation({
       id: "verify-updates-target-env-in-operator-shell",
@@ -255,7 +296,8 @@ async function buildDiscordOSNextWorkRecommendations({
   ...operatorOptions
 } = {}) {
   const operatorStatus = await operatorStatusInternals.buildDiscordOSOperatorStatus(operatorOptions);
-  const recommendations = recommendNextWork(operatorStatus, { max });
+  const receiptState = await readReceiptState(operatorOptions.docsDir);
+  const recommendations = recommendNextWork(operatorStatus, { max, receiptState });
   const result = {
     ok: true,
     destructive: false,
@@ -270,6 +312,7 @@ async function buildDiscordOSNextWorkRecommendations({
       publicationOk: operatorStatus.publication.ok,
       publicationAuditOk: operatorStatus.publicationAudit.ok,
     },
+    receiptState,
     recommendations,
     topRecommendation: recommendations[0] || null,
     reasonCodes: [...new Set(recommendations.flatMap((recommendation) => recommendation.reasonCodes))],
@@ -339,6 +382,8 @@ module.exports = {
     parseArgs,
     buildRecommendation,
     rankRecommendations,
+    classifyReceiptState,
+    readReceiptState,
     recommendNextWork,
     classifyNextWorkEvent,
     buildDiscordOSNextWorkRecommendations,
