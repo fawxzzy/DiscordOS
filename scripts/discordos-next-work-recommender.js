@@ -85,6 +85,9 @@ function classifyReceiptState(fileNames = []) {
     scheduledCronIdentityGuard: fileNames.some((fileName) =>
       fileName.includes("discordos-scheduled-cron-log-identity-guard-pass")
     ),
+    runtimeOperationsAdmissionProof: fileNames.some((fileName) =>
+      fileName.includes("discordos-next-work-wait-state-ranking-pass")
+    ),
   };
 }
 
@@ -274,17 +277,32 @@ function recommendNextWork(operatorStatus, { max = 5, receiptState = classifyRec
       && recommendations.length > 0
       && recommendations.every((recommendation) => recommendation.status === "deferred")
   ) {
-    recommendations.push(buildRecommendation({
-      id: "inspect-runtime-operations-admission",
-      score: 55,
-      category: "runtime",
-      title: "Inspect runtime operations admission for current non-waiting maintenance gates",
-      command: "npm run ops:runtime-health:admission",
-      reasonCodes: ["only_deferred_recommendations_remain"],
-      evidence: {
-        deferredRecommendationIds: recommendations.map((recommendation) => recommendation.id),
-      },
-    }));
+    if (!receiptState.runtimeOperationsAdmissionProof) {
+      recommendations.push(buildRecommendation({
+        id: "inspect-runtime-operations-admission",
+        score: 55,
+        category: "runtime",
+        title: "Inspect runtime operations admission for current non-waiting maintenance gates",
+        command: "npm run ops:runtime-health:admission",
+        reasonCodes: ["only_deferred_recommendations_remain"],
+        evidence: {
+          deferredRecommendationIds: recommendations.map((recommendation) => recommendation.id),
+        },
+      }));
+    } else {
+      recommendations.push(buildRecommendation({
+        id: "summarize-deferred-work-before-final-update",
+        score: 45,
+        category: "runtime-product",
+        title: "Summarize deferred work and confirm no non-waiting runtime/product moves remain",
+        command: "npm run ops:discordos:next-work",
+        reasonCodes: ["non_waiting_work_exhausted"],
+        evidence: {
+          deferredRecommendationIds: recommendations.map((recommendation) => recommendation.id),
+          runtimeOperationsAdmissionProof: true,
+        },
+      }));
+    }
   }
 
   if (recommendations.length === 0) {

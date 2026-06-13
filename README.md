@@ -333,6 +333,8 @@ Current governed contract surface:
   - owner-side proof that scheduled cron log proof fails closed when a `200` cron-path log lacks Vercel Cron identity
 - `docs/ops/discordos-next-work-wait-state-ranking-pass-59-2026-06-13.md`
   - owner-side proof that the next-work recommender defers scheduled cron proof while waiting for real Vercel Cron identity
+- `docs/ops/discordos-next-work-exhaustion-ranking-pass-60-2026-06-13.md`
+  - owner-side proof that the next-work recommender stops looping on completed admission proof and reports only deferred/end-of-run work
 
 Current repo-local verification surface:
 
