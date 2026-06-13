@@ -9,6 +9,7 @@ Current status:
 - no Fitness product code has been migrated here
 - broader server, bot, publication, moderation, and product hardening work remains open unless a specific lane admits it
 - generic runtime-health snapshots now have repo-local summary, freshness, stale-history audit, one-command live check, alert-threshold decision, durable alert-decision snapshot, cron-ready scheduled proof, artifact-rollup, non-destructive retention-plan, operations-admission commands, a guarded Vercel Cron runtime-health endpoint with gated critical-alert delivery, repeatable production cron guard proof, scheduled cron log proof, authorized cron proof with delivery-gate validation, read-only alert target admission, read-only status board, and critical-only alert delivery commands with repeat suppression
+- curated `#updates` publication now has a DiscordOS-owned dry-run-first command with green embed formatting and disabled mentions
 
 Current governed docs surface:
 

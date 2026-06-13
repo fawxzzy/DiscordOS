@@ -167,6 +167,10 @@ Current governed contract surface:
   - repo-local read-only target admission command for runtime-health alert delivery
   - validates webhook and bot-channel target shape without printing target values
   - can optionally run a read-only Discord GET probe with `--probe-live`
+- `scripts/discord-update-post.js`
+  - repo-local `#updates` publication command for curated DiscordOS release/status posts
+  - dry-runs by default, requires `--apply` before sending, and uses only `DISCORDOS_UPDATES_CHANNEL_ID` plus `DISCORDOS_BOT_TOKEN`
+  - formats normal updates as green embeds with mentions disabled
 - `api/cron/runtime-health.js`
   - Vercel Cron guarded runtime-health proof endpoint
   - requires `Authorization: Bearer $CRON_SECRET`
@@ -232,6 +236,8 @@ Current governed contract surface:
   - owner-side proof that deployed Vercel cron schedule drift can be checked from the repo without relying on historical runtime logs
 - `docs/ops/discordos-runtime-health-cron-audit-receipts-pass-31-2026-06-13.md`
   - owner-side proof that runtime-health cron has a durable scheduled-run receipt path through private Supabase storage and a JWT-protected Edge writer
+- `docs/ops/discordos-updates-publication-command-pass-34-2026-06-13.md`
+  - owner-side proof that DiscordOS has a repo-local `#updates` publication command and dry-run proof for the runtime hardening closeout post
 
 Current repo-local verification surface:
 
@@ -285,6 +291,8 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local runtime-health operations admission command
 - `npm run verify:runtime-health-status`
   - Node test coverage for the repo-local runtime-health status command
+- `npm run verify:discord-update-post`
+  - Node test coverage for the repo-local DiscordOS `#updates` publication command
 - `npm run verify`
   - runs both verification surfaces
 
@@ -323,6 +331,10 @@ Current repo-local operator surface:
   - validates configured alert delivery target shape without sending messages or exposing target values
 - `npm run ops:runtime-health:alert-target-admission:json`
   - emits the alert target admission result as JSON
+- `npm run ops:discord:update-post`
+  - dry-runs a curated DiscordOS `#updates` post by default
+- `npm run ops:discord:update-post:json`
+  - emits the update publication result as JSON
 - `npm run ops:runtime-health:scheduled-proof`
   - runs the full cron-ready proof loop: live health capture, fresh summary check, durable alert decision, fail-closed exit
 - `npm run ops:runtime-health:scheduled-proof:json`
@@ -386,3 +398,9 @@ Current alert-channel recommendation:
 - production scheduled cron has `DISCORDOS_RUNTIME_HEALTH_ALERT_SEND=enabled`
 - keep delivery critical-only by default; clear and warning states remain local operator output unless explicitly overridden
 - keep repeat suppression enabled by default so identical critical alerts do not flood the channel
+
+Current updates-channel recommendation:
+
+- use `#updates` only for curated public release/status announcements
+- publish from DiscordOS with `npm run ops:discord:update-post -- --title "<title>" --body-file <path> --body-section "<section>" --apply`
+- keep routine runtime logs, cron proof dumps, and critical alerts out of `#updates`

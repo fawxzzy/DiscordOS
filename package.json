@@ -41,7 +41,9 @@
     "ops:runtime-health:alert-target-admission:json": "node scripts/runtime-health-alert-target-admission.js --json",
     "ops:runtime-health:alert-delivery": "node scripts/runtime-health-alert-delivery.js",
     "ops:runtime-health:alert-delivery:json": "node scripts/runtime-health-alert-delivery.js --json",
-    "verify": "npm run verify:feedback-adapters && npm run verify:readiness && npm run verify:activation && npm run verify:feedback-shadow && npm run verify:feedback-persist && npm run verify:feedback-transfer-proof && npm run verify:live-transfer-status && npm run verify:runtime-health && npm run verify:runtime-health-cron && npm run verify:runtime-health-cron-production-proof && npm run verify:runtime-health-cron-schedule-proof && npm run verify:runtime-health-cron-scheduled-log-proof && npm run verify:runtime-health-cron-authorized-proof && npm run verify:runtime-health-cron-audit-proof && npm run verify:runtime-health-proof && npm run verify:runtime-health-summary && npm run verify:runtime-health-check && npm run verify:runtime-health-alert && npm run verify:runtime-health-alert-target-admission && npm run verify:runtime-health-alert-delivery && npm run verify:runtime-health-scheduled-proof && npm run verify:runtime-health-rollup && npm run verify:runtime-health-retention-plan && npm run verify:runtime-health-admission && npm run verify:runtime-health-status",
+    "ops:discord:update-post": "node scripts/discord-update-post.js",
+    "ops:discord:update-post:json": "node scripts/discord-update-post.js --json",
+    "verify": "npm run verify:feedback-adapters && npm run verify:readiness && npm run verify:activation && npm run verify:feedback-shadow && npm run verify:feedback-persist && npm run verify:feedback-transfer-proof && npm run verify:live-transfer-status && npm run verify:runtime-health && npm run verify:runtime-health-cron && npm run verify:runtime-health-cron-production-proof && npm run verify:runtime-health-cron-schedule-proof && npm run verify:runtime-health-cron-scheduled-log-proof && npm run verify:runtime-health-cron-authorized-proof && npm run verify:runtime-health-cron-audit-proof && npm run verify:runtime-health-proof && npm run verify:runtime-health-summary && npm run verify:runtime-health-check && npm run verify:runtime-health-alert && npm run verify:runtime-health-alert-target-admission && npm run verify:runtime-health-alert-delivery && npm run verify:runtime-health-scheduled-proof && npm run verify:runtime-health-rollup && npm run verify:runtime-health-retention-plan && npm run verify:runtime-health-admission && npm run verify:runtime-health-status && npm run verify:discord-update-post",
     "verify:readiness": "node --test tests/readiness.test.js",
     "verify:activation": "node --test tests/activation.test.js",
     "verify:feedback-shadow": "node --test tests/feedback-shadow.test.js",
@@ -66,6 +68,7 @@
     "verify:runtime-health-retention-plan": "node --test tests/runtime-health-retention-plan.test.js",
     "verify:runtime-health-admission": "node --test tests/runtime-health-operations-admission.test.js",
     "verify:runtime-health-status": "node --test tests/runtime-health-status.test.js",
+    "verify:discord-update-post": "node --test tests/discord-update-post.test.js",
     "verify:feedback-adapters": "tsc --project tsconfig.json --noEmit"
   },
   "devDependencies": {
