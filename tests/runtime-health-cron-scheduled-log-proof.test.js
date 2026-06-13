@@ -82,13 +82,14 @@ test("scheduled cron log proof parses JSON lines", () => {
 test("scheduled cron log proof normalizes flexible Vercel log records", () => {
   assert.deepEqual(
     _internals.normalizeLogRecord(
-      {
-        timestamp: "2026-06-13T08:00:01.000Z",
-        requestId: "req_123",
-        method: "GET",
-        path: "/api/cron/runtime-health",
-        statusCode: 200,
-      },
+    {
+      timestamp: "2026-06-13T08:00:01.000Z",
+      requestId: "req_123",
+      method: "GET",
+      path: "/api/cron/runtime-health",
+      statusCode: 200,
+      userAgent: "vercel-cron/1.0",
+    },
       "/api/cron/runtime-health"
     ),
     {
@@ -98,6 +99,7 @@ test("scheduled cron log proof normalizes flexible Vercel log records", () => {
       path: "/api/cron/runtime-health",
       statusCode: 200,
       containsExpectedPath: true,
+      vercelCronIdentity: true,
     }
   );
 });
@@ -108,9 +110,9 @@ test("scheduled cron log proof normalizes current Vercel JSON log records", () =
       {
         id: "z4bcd-1781366111100-4b31a8702e55",
         timestamp: 1781366111100,
-        requestMethod: "GET",
-        requestPath: "/api/cron/runtime-health",
-        responseStatusCode: 200,
+      requestMethod: "GET",
+      requestPath: "/api/cron/runtime-health",
+      responseStatusCode: 200,
       },
       "/api/cron/runtime-health"
     ),
@@ -121,11 +123,24 @@ test("scheduled cron log proof normalizes current Vercel JSON log records", () =
       path: "/api/cron/runtime-health",
       statusCode: 200,
       containsExpectedPath: true,
+      vercelCronIdentity: false,
     }
   );
 });
 
-test("scheduled cron log proof passes with a 200 cron path candidate", () => {
+test("scheduled cron log proof detects Vercel Cron identity from flexible fields", () => {
+  assert.equal(_internals.recordContainsCronIdentity({ userAgent: "vercel-cron/1.0" }), true);
+  assert.equal(_internals.recordContainsCronIdentity({
+    request: {
+      headers: {
+        "user-agent": "vercel-cron/1.0",
+      },
+    },
+  }), true);
+  assert.equal(_internals.recordContainsCronIdentity({ userAgent: "node" }), false);
+});
+
+test("scheduled cron log proof passes with a verified 200 cron path candidate", () => {
   const proof = _internals.summarizeScheduledCronLogProof({
     project: "fawxzzy-discordos",
     since: "2026-06-13T07:55:00Z",
@@ -137,6 +152,7 @@ test("scheduled cron log proof passes with a 200 cron path candidate", () => {
         method: "GET",
         path: "/api/cron/runtime-health",
         statusCode: 200,
+        userAgent: "vercel-cron/1.0",
       },
       {
         timestamp: "2026-06-13T07:59:01.000Z",
@@ -153,9 +169,37 @@ test("scheduled cron log proof passes with a 200 cron path candidate", () => {
   assert.equal(proof.writesArtifacts, false);
   assert.equal(proof.candidateCount, 1);
   assert.equal(proof.passingCandidateCount, 1);
+  assert.equal(proof.verifiedCandidateCount, 1);
+  assert.equal(proof.verifiedPassingCandidateCount, 1);
+  assert.equal(proof.unverifiedPassingCandidateCount, 0);
   assert.deepEqual(proof.candidateStatusCounts, { 200: 1 });
   assert.equal(proof.latestCandidate.statusCode, 200);
   assert.equal(proof.event.type, "discordos.runtime_health.cron_scheduled_log_proof_pass");
+});
+
+test("scheduled cron log proof fails closed for unverified 200 cron path candidates", () => {
+  const proof = _internals.summarizeScheduledCronLogProof({
+    project: "fawxzzy-discordos",
+    since: "2026-06-13T07:55:00Z",
+    until: "2026-06-13T08:10:00Z",
+    expectedPath: "/api/cron/runtime-health",
+    records: [
+      {
+        timestamp: "2026-06-13T08:00:04.000Z",
+        method: "GET",
+        path: "/api/cron/runtime-health",
+        statusCode: 200,
+      },
+    ],
+  });
+
+  assert.equal(proof.ok, false);
+  assert.equal(proof.passingCandidateCount, 1);
+  assert.equal(proof.verifiedPassingCandidateCount, 0);
+  assert.equal(proof.unverifiedPassingCandidateCount, 1);
+  assert.equal(proof.latestPassing, null);
+  assert.equal(proof.latestUnverifiedPassing.statusCode, 200);
+  assert.deepEqual(proof.reasonCodes, ["scheduled_cron_identity_unverified"]);
 });
 
 test("scheduled cron log proof fails closed when cron candidates are non-passing", () => {
@@ -240,6 +284,7 @@ test("scheduled cron log proof invokes Vercel logs and summarizes output", async
             method: "GET",
             path: "/api/cron/runtime-health",
             statusCode: 200,
+            userAgent: "vercel-cron/1.0",
           }),
           "",
         ].join("\n"),
@@ -269,6 +314,9 @@ test("scheduled cron log proof renders markdown", () => {
     totalLogRecords: 1,
     candidateCount: 1,
     passingCandidateCount: 1,
+    verifiedCandidateCount: 1,
+    verifiedPassingCandidateCount: 1,
+    unverifiedPassingCandidateCount: 0,
     candidateStatusCounts: {
       200: 1,
     },
@@ -280,6 +328,7 @@ test("scheduled cron log proof renders markdown", () => {
       timestamp: "2026-06-13T08:00:04.000Z",
       statusCode: 200,
     },
+    latestUnverifiedPassing: null,
     reasonCodes: [],
   });
 

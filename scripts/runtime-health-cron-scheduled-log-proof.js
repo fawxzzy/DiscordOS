@@ -174,6 +174,22 @@ function recordContainsPath(record, expectedPath) {
   return fields.some((field) => textFromValue(field).includes(expectedPath));
 }
 
+function recordContainsCronIdentity(record) {
+  const fields = [
+    record?.userAgent,
+    record?.user_agent,
+    record?.requestUserAgent,
+    record?.request?.userAgent,
+    record?.request?.headers?.["user-agent"],
+    record?.request?.headers?.["User-Agent"],
+    record?.headers?.["user-agent"],
+    record?.headers?.["User-Agent"],
+    record?.message,
+    record?.text,
+  ];
+  return fields.some((field) => textFromValue(field).includes("vercel-cron/1.0"));
+}
+
 function normalizeLogRecord(record, expectedPath) {
   return {
     timestamp: getFirstTimestampString(record, ["timestamp", "time", "createdAt", "date"]),
@@ -184,6 +200,7 @@ function normalizeLogRecord(record, expectedPath) {
     statusCode: getFirstNumber(record, ["statusCode", "responseStatusCode", "status", "status_code"]) ||
       getFirstNumber(record?.response, ["statusCode", "status"]),
     containsExpectedPath: recordContainsPath(record, expectedPath),
+    vercelCronIdentity: recordContainsCronIdentity(record),
   };
 }
 
@@ -213,7 +230,11 @@ function renderStatusCounts(counts) {
 function summarizeScheduledCronLogProof({ records, expectedPath, project, since, until }) {
   const candidates = selectScheduledCronCandidates(records, expectedPath);
   const passingCandidates = candidates.filter((record) => record.statusCode === 200);
-  const latestPassing = passingCandidates[0] || null;
+  const verifiedCandidates = candidates.filter((record) => record.vercelCronIdentity);
+  const verifiedPassingCandidates = verifiedCandidates.filter((record) => record.statusCode === 200);
+  const unverifiedPassingCandidates = passingCandidates.filter((record) => !record.vercelCronIdentity);
+  const latestPassing = verifiedPassingCandidates[0] || null;
+  const latestUnverifiedPassing = unverifiedPassingCandidates[0] || null;
   const latestCandidate = candidates[0] || null;
   const proof = {
     ok: Boolean(latestPassing),
@@ -227,14 +248,20 @@ function summarizeScheduledCronLogProof({ records, expectedPath, project, since,
     totalLogRecords: records.length,
     candidateCount: candidates.length,
     passingCandidateCount: passingCandidates.length,
+    verifiedCandidateCount: verifiedCandidates.length,
+    verifiedPassingCandidateCount: verifiedPassingCandidates.length,
+    unverifiedPassingCandidateCount: unverifiedPassingCandidates.length,
     candidateStatusCounts: summarizeStatusCounts(candidates),
     latestCandidate,
     latestPassing,
-    reasonCodes: latestPassing
-      ? []
-      : candidates.length > 0
-        ? ["scheduled_cron_no_passing_candidate"]
-        : ["scheduled_cron_log_not_found"],
+    latestUnverifiedPassing,
+    reasonCodes: latestPassing ? [] : (
+      unverifiedPassingCandidates.length > 0
+        ? ["scheduled_cron_identity_unverified"]
+        : candidates.length > 0
+          ? ["scheduled_cron_no_passing_candidate"]
+          : ["scheduled_cron_log_not_found"]
+    ),
   };
 
   return {
@@ -256,6 +283,7 @@ function classifyScheduledCronLogProofEvent(proof) {
       expectedPath: proof.expectedPath,
       candidateCount: proof.candidateCount,
       passingCandidateCount: proof.passingCandidateCount,
+      verifiedPassingCandidateCount: proof.verifiedPassingCandidateCount,
     },
   };
 }
@@ -309,11 +337,15 @@ function renderMarkdown(proof) {
     `- total log records: \`${proof.totalLogRecords}\``,
     `- cron candidate count: \`${proof.candidateCount}\``,
     `- passing candidate count: \`${proof.passingCandidateCount}\``,
+    `- verified candidate count: \`${proof.verifiedCandidateCount}\``,
+    `- verified passing candidate count: \`${proof.verifiedPassingCandidateCount}\``,
+    `- unverified passing candidate count: \`${proof.unverifiedPassingCandidateCount}\``,
     `- candidate status counts: \`${renderStatusCounts(proof.candidateStatusCounts || {})}\``,
     `- latest candidate timestamp: \`${proof.latestCandidate?.timestamp || "none"}\``,
     `- latest candidate status: \`${proof.latestCandidate?.statusCode ?? "none"}\``,
     `- latest passing timestamp: \`${proof.latestPassing?.timestamp || "none"}\``,
     `- latest passing status: \`${proof.latestPassing?.statusCode ?? "none"}\``,
+    `- latest unverified passing timestamp: \`${proof.latestUnverifiedPassing?.timestamp || "none"}\``,
     `- reason codes: \`${proof.reasonCodes.join(",") || "none"}\``,
   ];
 
@@ -349,6 +381,7 @@ module.exports = {
     getVercelExecutable,
     runVercelLogs,
     parseJsonLines,
+    recordContainsCronIdentity,
     normalizeLogRecord,
     selectScheduledCronCandidates,
     summarizeStatusCounts,
