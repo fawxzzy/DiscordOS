@@ -5,6 +5,8 @@
   "scripts": {
     "build": "npm run verify",
     "vercel-build": "npm run verify",
+    "ops:repo-hygiene:cleanup": "node scripts/repo-hygiene.js cleanup",
+    "ops:vercel:run": "node scripts/repo-hygiene.js with-vercel-link",
     "ops:runtime-health:proof": "node scripts/runtime-health-proof.js",
     "ops:runtime-health:proof:json": "node scripts/runtime-health-proof.js --json",
     "ops:runtime-health:snapshot": "node scripts/runtime-health-proof.js --write-snapshot",
@@ -39,6 +41,8 @@
     "ops:runtime-health:cron-audit-proof:json": "node scripts/runtime-health-cron-audit-proof.js --json",
     "ops:runtime-health:alert-target-admission": "node scripts/runtime-health-alert-target-admission.js",
     "ops:runtime-health:alert-target-admission:json": "node scripts/runtime-health-alert-target-admission.js --json",
+    "ops:atlas-health:watch": "node scripts/atlas-health-watch.js",
+    "ops:atlas-health:watch:json": "node scripts/atlas-health-watch.js --json",
     "ops:runtime-health:alert-delivery": "node scripts/runtime-health-alert-delivery.js",
     "ops:runtime-health:alert-delivery:json": "node scripts/runtime-health-alert-delivery.js --json",
     "ops:discord:update-post": "node scripts/discord-update-post.js",
@@ -63,7 +67,9 @@
     "ops:discordos:next-work:json": "node scripts/discordos-next-work-recommender.js --json",
     "ops:discordos:env-readiness": "node scripts/discordos-operator-env-readiness.js",
     "ops:discordos:env-readiness:json": "node scripts/discordos-operator-env-readiness.js --json",
-    "verify": "npm run verify:feedback-adapters && npm run verify:readiness && npm run verify:activation && npm run verify:feedback-shadow && npm run verify:feedback-persist && npm run verify:feedback-transfer-proof && npm run verify:live-transfer-status && npm run verify:runtime-health && npm run verify:runtime-health-cron && npm run verify:runtime-health-cron-production-proof && npm run verify:runtime-health-cron-schedule-proof && npm run verify:runtime-health-cron-scheduled-log-proof && npm run verify:runtime-health-cron-authorized-proof && npm run verify:runtime-health-cron-audit-proof && npm run verify:runtime-health-proof && npm run verify:runtime-health-summary && npm run verify:runtime-health-check && npm run verify:runtime-health-alert && npm run verify:runtime-health-alert-target-admission && npm run verify:runtime-health-alert-delivery && npm run verify:runtime-health-scheduled-proof && npm run verify:runtime-health-rollup && npm run verify:runtime-health-retention-plan && npm run verify:runtime-health-admission && npm run verify:runtime-health-status && npm run verify:discord-update-post && npm run verify:discord-update-lookup && npm run verify:discord-update-target-admission && npm run verify:discord-update-preflight && npm run verify:discord-update-draft-validator && npm run verify:discord-update-release-check && npm run verify:discord-publication-status && npm run verify:discord-publication-audit && npm run verify:discordos-operator-status && npm run verify:discordos-next-work && npm run verify:discordos-env-readiness",
+    "verify": "node scripts/repo-hygiene.js verify",
+    "verify:_inner": "npm run verify:repo-hygiene && npm run verify:feedback-adapters && npm run verify:readiness && npm run verify:activation && npm run verify:feedback-shadow && npm run verify:feedback-persist && npm run verify:feedback-transfer-proof && npm run verify:live-transfer-status && npm run verify:runtime-health && npm run verify:runtime-health-cron && npm run verify:runtime-health-cron-production-proof && npm run verify:runtime-health-cron-schedule-proof && npm run verify:runtime-health-cron-scheduled-log-proof && npm run verify:runtime-health-cron-authorized-proof && npm run verify:runtime-health-cron-audit-proof && npm run verify:runtime-health-proof && npm run verify:runtime-health-summary && npm run verify:runtime-health-check && npm run verify:runtime-health-alert && npm run verify:runtime-health-alert-target-admission && npm run verify:runtime-health-alert-delivery && npm run verify:atlas-health-watch && npm run verify:runtime-health-scheduled-proof && npm run verify:runtime-health-rollup && npm run verify:runtime-health-retention-plan && npm run verify:runtime-health-admission && npm run verify:runtime-health-status && npm run verify:discord-update-post && npm run verify:discord-update-lookup && npm run verify:discord-update-target-admission && npm run verify:discord-update-preflight && npm run verify:discord-update-draft-validator && npm run verify:discord-update-release-check && npm run verify:discord-publication-status && npm run verify:discord-publication-audit && npm run verify:discordos-operator-status && npm run verify:discordos-next-work && npm run verify:discordos-env-readiness",
+    "verify:repo-hygiene": "node --test tests/repo-hygiene.test.js",
     "verify:readiness": "node --test tests/readiness.test.js",
     "verify:activation": "node --test tests/activation.test.js",
     "verify:feedback-shadow": "node --test tests/feedback-shadow.test.js",
@@ -83,6 +89,7 @@
     "verify:runtime-health-alert": "node --test tests/runtime-health-alert.test.js",
     "verify:runtime-health-alert-target-admission": "node --test tests/runtime-health-alert-target-admission.test.js",
     "verify:runtime-health-alert-delivery": "node --test tests/runtime-health-alert-delivery.test.js",
+    "verify:atlas-health-watch": "node --test tests/atlas-health-watch.test.js",
     "verify:runtime-health-scheduled-proof": "node --test tests/runtime-health-scheduled-proof.test.js",
     "verify:runtime-health-rollup": "node --test tests/runtime-health-artifact-rollup.test.js",
     "verify:runtime-health-retention-plan": "node --test tests/runtime-health-retention-plan.test.js",
@@ -99,7 +106,7 @@
     "verify:discordos-operator-status": "node --test tests/discordos-operator-status.test.js",
     "verify:discordos-next-work": "node --test tests/discordos-next-work-recommender.test.js",
     "verify:discordos-env-readiness": "node --test tests/discordos-operator-env-readiness.test.js",
-    "verify:feedback-adapters": "tsc --project tsconfig.json --noEmit"
+    "verify:feedback-adapters": "npx --yes -p typescript@5.9.3 tsc --project tsconfig.json --noEmit"
   },
   "devDependencies": {
     "typescript": "^5.9.3"

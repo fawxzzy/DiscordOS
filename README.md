@@ -150,7 +150,7 @@ Current governed contract surface:
   - compares the deployed cron table to `vercel.json` and fails closed on schedule drift, disabled crons, undeployed crons, or modified cron state
   - sends no Discord messages and writes no runtime artifacts
 - `scripts/runtime-health-cron-scheduled-log-proof.js`
-  - repo-local Vercel log proof command for the daily scheduled cron invocation
+  - repo-local Vercel log proof command for the scheduled cron invocation
   - searches production logs for a `200` `/api/cron/runtime-health` candidate in the selected time window
   - reports cron-path candidate status counts so unauthorized probe traffic is distinguishable from missing scheduled cron evidence
   - sends no Discord messages and writes no runtime artifacts
@@ -164,6 +164,13 @@ Current governed contract surface:
   - skips clear alerts by default, skips warning alerts by default, and requires `--send` before network delivery
   - formats send-eligible critical alerts as a red Discord embed with mentions disabled
   - suppresses repeated sends for the same critical fingerprint for 24 hours by default
+- `config/atlas-health-targets.json`
+  - bounded public ATLAS health watch target list for DiscordOS, Foundation, Fitness, Trove, and Mazer
+  - defaults to public HTTP/JSON availability checks only; deeper project checks can be supplied through `DISCORDOS_ATLAS_HEALTH_TARGETS_JSON`
+- `scripts/atlas-health-watch.js`
+  - repo-local ATLAS health watch command for critical-only multi-project availability checks
+  - dry-runs by default, sends no routine clear posts, disables mentions, and suppresses identical critical alerts for 24 hours
+  - can share the existing `#alerts` target or use dedicated `DISCORDOS_ATLAS_HEALTH_ALERT_*` env values
 - `scripts/runtime-health-alert-target-admission.js`
   - repo-local read-only target admission command for runtime-health alert delivery
   - validates webhook and bot-channel target shape without printing target values
@@ -222,6 +229,7 @@ Current governed contract surface:
   - returns in-memory runtime health and alert classification without writing artifacts
   - can deliver critical-only alerts to `#alerts` when `DISCORDOS_RUNTIME_HEALTH_ALERT_SEND=enabled`
   - can write sanitized runtime-health cron execution receipts when `DISCORDOS_RUNTIME_HEALTH_CRON_AUDIT_WRITE=enabled`
+  - can also run the ATLAS health watch when `DISCORDOS_ATLAS_HEALTH_WATCH_ENABLED=enabled`
 - `supabase/migrations/20260613143000_discordos_runtime_health_cron_runs.sql`
   - private `discordos.runtime_health_cron_runs` table plus service-role-only insert/status RPCs
   - stores sanitized cron execution metadata only
@@ -230,7 +238,7 @@ Current governed contract surface:
   - keeps the service credential inside the Supabase runtime boundary
   - writes no Discord messages and returns no secret values
 - `vercel.json`
-  - schedules `/api/cron/runtime-health` daily at `0 8 * * *`
+  - schedules `/api/cron/runtime-health` at `0 4,16 * * *` for 12:00 AM and 12:00 PM Eastern while New York observes daylight time
 - `docs/ops/discordos-runtime-health-summary-command-pass-6-2026-06-13.md`
   - owner-side proof that runtime-health history can be summarized from ATLAS `runtime/`
 - `docs/ops/discordos-runtime-health-freshness-guard-pass-7-2026-06-13.md`
@@ -264,7 +272,7 @@ Current governed contract surface:
 - `docs/ops/discordos-runtime-health-status-command-pass-21-2026-06-13.md`
   - owner-side proof that runtime-health status and next actions can be checked from one read-only command
 - `docs/ops/discordos-runtime-health-cron-scheduled-log-proof-command-pass-22-2026-06-13.md`
-  - owner-side proof that real daily scheduled cron evidence can be captured from Vercel logs once the schedule window arrives
+  - owner-side proof that real scheduled cron evidence can be captured from Vercel logs once the schedule window arrives
 - `docs/ops/discordos-runtime-health-critical-alert-delivery-policy-pass-23-2026-06-13.md`
   - owner-side proof that runtime-health alert delivery is critical-only by default with red embed formatting and mentions disabled
 - `docs/ops/discordos-runtime-health-alert-channel-target-pass-24-2026-06-13.md`
@@ -341,11 +349,15 @@ Current governed contract surface:
   - owner-side proof that the final runtime/product hardening closeout update was published to `#updates`
 - `docs/ops/discordos-vercel-production-bot-token-pull-fix-pass-63-2026-06-13.md`
   - owner-side proof that production `DISCORDOS_BOT_TOKEN` now hydrates through `vercel env pull` for local operator workflows
+- `docs/ops/discordos-atlas-health-watch-pass-64-2026-06-13.md`
+  - owner-side proof that DiscordOS now owns a critical-only ATLAS health watch integrated into the guarded runtime-health cron
 
 Current repo-local verification surface:
 
+- `npm run verify:repo-hygiene`
+  - Node test coverage for the self-pruning repo-local hygiene wrapper and disposable Vercel link materialization
 - `npm run verify:feedback-adapters`
-  - no-emit TypeScript verification for feedback contracts and adapter seams only
+  - no-emit TypeScript verification for feedback contracts and adapter seams only, using an ephemeral TypeScript tool install instead of repo-local `node_modules`
 - `npm run verify:readiness`
   - Node test coverage for the Vercel readiness service-role guard, Supabase Edge probe, and Discord bot-token probe
 - `npm run verify:activation`
@@ -384,6 +396,8 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local alert target admission command
 - `npm run verify:runtime-health-alert-delivery`
   - Node test coverage for the repo-local runtime-health alert delivery command
+- `npm run verify:atlas-health-watch`
+  - Node test coverage for the repo-local ATLAS health watch command
 - `npm run verify:runtime-health-scheduled-proof`
   - Node test coverage for the repo-local scheduled proof command
 - `npm run verify:runtime-health-rollup`
@@ -417,10 +431,14 @@ Current repo-local verification surface:
 - `npm run verify:discordos-env-readiness`
   - Node test coverage for the repo-local DiscordOS operator env readiness command
 - `npm run verify`
-  - runs both verification surfaces
+  - runs the full repo-local verification surface, then prunes repo-local `.vercel` and `node_modules` residue before exit
 
 Current repo-local operator surface:
 
+- `npm run ops:repo-hygiene:cleanup`
+  - removes repo-local generated-state residue under `.vercel` and `node_modules`
+- `npm run ops:vercel:run -- <command> [args...]`
+  - materializes `.vercel/project.json` from committed non-secret config, runs one local command inside the repo root, then prunes `.vercel` before exit
 - `npm run ops:runtime-health:proof`
   - checks production `/api/runtime-health` and emits a Markdown proof with event type and severity
 - `npm run ops:runtime-health:proof:json`
@@ -454,6 +472,10 @@ Current repo-local operator surface:
   - validates configured alert delivery target shape without sending messages or exposing target values
 - `npm run ops:runtime-health:alert-target-admission:json`
   - emits the alert target admission result as JSON
+- `npm run ops:atlas-health:watch`
+  - checks configured ATLAS public health targets and dry-runs any critical-only alert payload
+- `npm run ops:atlas-health:watch:json`
+  - emits the ATLAS health watch result as JSON
 - `npm run ops:discord:update-post`
   - dry-runs a curated DiscordOS `#updates` post by default
 - `npm run ops:discord:update-post:json`
@@ -523,7 +545,7 @@ Current repo-local operator surface:
 - `npm run ops:runtime-health:cron-schedule-proof:json`
   - emits the deployed cron schedule proof as JSON
 - `npm run ops:runtime-health:cron-scheduled-log-proof`
-  - searches Vercel production logs for a successful daily cron invocation and reports status counts for cron-path candidates
+  - searches Vercel production logs for a successful scheduled cron invocation and reports status counts for cron-path candidates
 - `npm run ops:runtime-health:cron-scheduled-log-proof:json`
   - emits the scheduled cron log proof as JSON
 - `npm run ops:runtime-health:cron-authorized-proof`
@@ -539,13 +561,14 @@ Current scheduled runtime surface:
 
 - `/api/cron/runtime-health`
   - guarded by `CRON_SECRET`
-  - configured in `vercel.json` for daily production invocation at `0 8 * * *`
+  - configured in `vercel.json` for production invocation at `0 4,16 * * *`
   - latest production deployment `dpl_HUWifJFefawJbMzJ2tgG7reTzunW`
   - 2026-06-13 11:15 AM EDT proof window did not produce a scheduled invocation or private cron audit row
   - 2026-06-13 11:45 AM EDT proof window produced Vercel `200` scheduled invocation proof and private Supabase audit row `runtime-health-cron-vercel-daily-runtime-health-20260613T155511740Z`
   - writes sanitized private Supabase cron receipt rows only when `DISCORDOS_RUNTIME_HEALTH_CRON_AUDIT_WRITE=enabled`
-  - does not mutate Discord state
+  - can run the ATLAS health watch when `DISCORDOS_ATLAS_HEALTH_WATCH_ENABLED=enabled`
   - delivers only critical runtime-health alerts when `DISCORDOS_RUNTIME_HEALTH_ALERT_SEND=enabled`
+  - delivers only critical ATLAS health alerts when `DISCORDOS_ATLAS_HEALTH_ALERT_SEND=enabled`
 
 This repo is now the governed landing surface for DiscordOS runtime and product hardening work. Future named workflows still need explicit lane admission before they become product scope.
 

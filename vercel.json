@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/runtime-health",
-      "schedule": "0 8 * * *"
+      "schedule": "0 4,16 * * *"
     }
   ]
 }

@@ -2,6 +2,7 @@ const { _internals: runtimeHealthInternals } = require("../runtime-health");
 const { _internals: readinessInternals } = require("../readiness");
 const { _internals: alertInternals } = require("../../scripts/runtime-health-alert");
 const { _internals: alertDeliveryInternals } = require("../../scripts/runtime-health-alert-delivery");
+const { _internals: atlasHealthInternals } = require("../../scripts/atlas-health-watch");
 const os = require("node:os");
 const path = require("node:path");
 
@@ -111,6 +112,25 @@ function getCronAlertCooldownHours(env = process.env) {
 
 function getCronAuditWriteEnabled(env = process.env) {
   return env.DISCORDOS_RUNTIME_HEALTH_CRON_AUDIT_WRITE === "enabled";
+}
+
+function getCronAtlasHealthWatchEnabled(env = process.env) {
+  return env.DISCORDOS_ATLAS_HEALTH_WATCH_ENABLED === "enabled";
+}
+
+function getCronAtlasHealthAlertSendEnabled(env = process.env) {
+  return env.DISCORDOS_ATLAS_HEALTH_ALERT_SEND === "enabled";
+}
+
+function getCronAtlasHealthSuppressionDir(env = process.env) {
+  return hasValue(env.DISCORDOS_ATLAS_HEALTH_ALERT_SUPPRESSION_DIR)
+    ? env.DISCORDOS_ATLAS_HEALTH_ALERT_SUPPRESSION_DIR
+    : path.join(os.tmpdir(), "discordos-atlas-health-watch");
+}
+
+function getCronAtlasHealthCooldownHours(env = process.env) {
+  const value = Number.parseFloat(env.DISCORDOS_ATLAS_HEALTH_ALERT_COOLDOWN_HOURS || "24");
+  return Number.isFinite(value) && value > 0 ? value : 24;
 }
 
 function cleanUrl(value) {
@@ -405,6 +425,44 @@ async function buildCronRuntimeHealthProof({
   };
 }
 
+async function buildCronAtlasHealthWatch({
+  env = process.env,
+  fetchImpl = fetch,
+  now = new Date(),
+} = {}) {
+  const enabled = getCronAtlasHealthWatchEnabled(env);
+  const send = getCronAtlasHealthAlertSendEnabled(env);
+  const cooldownHours = getCronAtlasHealthCooldownHours(env);
+
+  if (!enabled) {
+    return {
+      ok: true,
+      enabled,
+      status: "disabled",
+      alertSendEnabled: send,
+      alertDelivered: false,
+      reasonCodes: ["atlas_health_watch_disabled"],
+    };
+  }
+
+  const result = await atlasHealthInternals.buildAtlasHealthWatch({
+    env,
+    fetchImpl,
+    now,
+    send,
+    cooldownHours,
+    suppressionDir: getCronAtlasHealthSuppressionDir(env),
+  });
+
+  return {
+    ...result,
+    enabled,
+    status: result.ok ? "pass" : "critical",
+    alertSendEnabled: send,
+    alertDelivered: result.alertDelivery.sent === true,
+  };
+}
+
 module.exports = async function cronRuntimeHealth(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
@@ -430,11 +488,17 @@ module.exports = async function cronRuntimeHealth(req, res) {
     env: process.env,
     fetchImpl: fetch,
   });
-  const ok = proof.ok && audit.ok;
+  const atlasHealthWatch = await buildCronAtlasHealthWatch({
+    env: process.env,
+    fetchImpl: fetch,
+    now: new Date(proof.generatedAt),
+  });
+  const ok = proof.ok && audit.ok && atlasHealthWatch.ok;
   return res.status(ok ? 200 : proof.ok ? 502 : 409).json({
     ...proof,
     ok,
     cronAudit: audit,
+    atlasHealthWatch,
   });
 };
 
@@ -450,6 +514,10 @@ module.exports._internals = {
   getCronAlertSuppressionDir,
   getCronAlertCooldownHours,
   getCronAuditWriteEnabled,
+  getCronAtlasHealthWatchEnabled,
+  getCronAtlasHealthAlertSendEnabled,
+  getCronAtlasHealthSuppressionDir,
+  getCronAtlasHealthCooldownHours,
   buildCronAuditRunId,
   buildCronAuditPayload,
   insertCronAuditRun,
@@ -457,4 +525,5 @@ module.exports._internals = {
   writeCronAuditRun,
   buildCronAlertDelivery,
   buildCronRuntimeHealthProof,
+  buildCronAtlasHealthWatch,
 };

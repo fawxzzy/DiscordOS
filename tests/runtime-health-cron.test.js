@@ -171,6 +171,67 @@ test("cron runtime health audit writer skips by default", async () => {
   });
 });
 
+test("cron atlas health watch skips unless explicitly enabled", async () => {
+  const watch = await _internals.buildCronAtlasHealthWatch({
+    env: {},
+    fetchImpl: async () => {
+      throw new Error("should not fetch when disabled");
+    },
+  });
+
+  assert.deepEqual(watch, {
+    ok: true,
+    enabled: false,
+    status: "disabled",
+    alertSendEnabled: false,
+    alertDelivered: false,
+    reasonCodes: ["atlas_health_watch_disabled"],
+  });
+});
+
+test("cron atlas health watch runs critical-only alert delivery when enabled", async () => {
+  const watch = await _internals.buildCronAtlasHealthWatch({
+    env: {
+      DISCORDOS_ATLAS_HEALTH_WATCH_ENABLED: "enabled",
+      DISCORDOS_ATLAS_HEALTH_ALERT_SEND: "enabled",
+      DISCORDOS_ATLAS_HEALTH_ALERT_CHANNEL_ID: "123",
+      DISCORDOS_ATLAS_HEALTH_ALERT_SUPPRESSION_DIR: await require("node:fs/promises").mkdtemp(
+        require("node:path").join(require("node:os").tmpdir(), "discordos-atlas-health-cron-suppression-")
+      ),
+      DISCORDOS_BOT_TOKEN: "bot-token",
+      DISCORDOS_ATLAS_HEALTH_TARGETS_JSON: JSON.stringify({
+        targets: [
+          {
+            id: "foundation",
+            label: "Foundation",
+            owner: "Foundation",
+            url: "https://example.test",
+            kind: "http-ok",
+          },
+        ],
+      }),
+    },
+    fetchImpl: async (url, init = {}) => {
+      if (String(url).includes("/channels/123/messages")) {
+        assert.equal(init.method, "POST");
+        const parsed = JSON.parse(init.body);
+        assert.equal(parsed.embeds[0].title, "ATLAS Critical Health Alert");
+        assert.deepEqual(parsed.allowed_mentions, { parse: [] });
+        return response({ id: "message-1" });
+      }
+      return response("server error", { ok: false, status: 500 });
+    },
+    now: new Date("2026-06-13T04:00:00.000Z"),
+  });
+
+  assert.equal(watch.ok, false);
+  assert.equal(watch.enabled, true);
+  assert.equal(watch.status, "critical");
+  assert.equal(watch.alertSendEnabled, true);
+  assert.equal(watch.alertDelivered, true);
+  assert.equal(watch.criticalCount, 1);
+});
+
 test("cron runtime health audit writer fails closed when enabled without service role config", async () => {
   const audit = await _internals.writeCronAuditRun({
     proof: {
