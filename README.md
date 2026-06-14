@@ -21,6 +21,24 @@ Current governed contract surface:
 - `src/contracts/feedback.ts`
   - code-facing type/interface seam only
   - no adapters, runtime behavior, database client, or env coupling
+- `docs/contracts/discordos-data-runtime.md`
+  - shared contract-only data spine for future DiscordOS feature lanes
+  - covers feedback, publication, moderation, Music Sesh, board, and operator domains without opening those feature lanes
+- `src/contracts/data.ts`
+  - code-facing data contract identity, field, proof, registry, and event-envelope types only
+  - no runtime behavior, database client, fetch, Discord client, or env coupling
+- `docs/contracts/discordos-moderation-workflow-v0.md`
+  - contract-only moderation workflow v0 boundary
+  - defines case identity, case state, action contract, event envelope, and forbidden live behaviors
+- `src/contracts/moderation.ts`
+  - code-facing moderation case/action/event-envelope types only
+  - no Discord API calls, permission grants, persistence, or env coupling
+- `docs/contracts/discordos-board-card-workflow-v0.md`
+  - contract-only board/card workflow v0 boundary
+  - defines card identity, state transitions, publication boundary, and forbidden live behaviors
+- `src/contracts/board.ts`
+  - code-facing board/card identity, state, transition, and event-envelope types only
+  - no persistent board storage, Discord sends, or env coupling
 - `src/adapters/feedback/index.ts`
   - adapter slot and bundle types only
   - still no implementation, runtime behavior, or service clients
@@ -245,6 +263,10 @@ Current governed contract surface:
   - repo-local read-only status command for the DiscordOS publication toolchain
   - summarizes draft validation, release check, forum/card preflight, forum/card lifecycle publication, forum/card release check, target admission, lookup, apply guard, and `#updates` / `#alerts` separation
   - sends no Discord messages and writes no artifacts
+- `scripts/discord-publication-docs-status.js`
+  - repo-local read-only status command for DiscordOS publication/docs reliability
+  - checks that package scripts, README command anchors, and docs README publication anchors stay aligned
+  - sends no Discord messages and writes no artifacts
 - `scripts/discord-publication-audit-rollup.js`
   - repo-local read-only audit command for DiscordOS publication receipts under `docs/ops`
   - summarizes published receipts, draft update receipts, proof-only receipts, receipt-backfill gaps, and Git-tracked durability warnings
@@ -273,7 +295,15 @@ Current governed contract surface:
   - treats current runtime, ATLAS health, updates, and forum/card lifecycle producer surfaces as attached
 - `scripts/discordos-operator-env-readiness.js`
   - repo-local read-only operator env readiness command for DiscordOS updates, alerts, and bot-token availability
-  - reports target readiness booleans and reason codes without printing target ids, webhook URLs, or token values
+  - reports target readiness booleans, a safe readiness plan, live-action readiness, and reason codes without printing target ids, webhook URLs, or token values
+  - sends no Discord messages and writes no artifacts
+- `scripts/discordos-data-contract-status.js`
+  - repo-local read-only status command for the DiscordOS shared data contract spine
+  - checks docs anchors, code-facing exports, admitted domains, and runtime-free source boundaries
+  - sends no Discord messages and writes no artifacts
+- `scripts/discordos-feature-contract-status.js`
+  - repo-local read-only status command for feature-specific contract v0 surfaces
+  - verifies moderation and board/card contract docs, source exports, required package scripts, and runtime-free source boundaries
   - sends no Discord messages and writes no artifacts
 - `api/cron/runtime-health.js`
   - Vercel Cron guarded runtime-health proof endpoint
@@ -519,6 +549,8 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local DiscordOS `#updates` no-send release check
 - `npm run verify:discord-publication-status`
   - Node test coverage for the repo-local DiscordOS publication status command
+- `npm run verify:discord-publication-docs-status`
+  - Node test coverage for the repo-local DiscordOS publication/docs reliability status command
 - `npm run verify:discord-publication-audit`
   - Node test coverage for the repo-local DiscordOS publication receipt audit command
 - `npm run verify:discordos-operator-status`
@@ -533,6 +565,10 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local DiscordOS notification policy status command
 - `npm run verify:discordos-env-readiness`
   - Node test coverage for the repo-local DiscordOS operator env readiness command
+- `npm run verify:discordos-data-contract-status`
+  - Node test coverage for the repo-local DiscordOS data contract status command
+- `npm run verify:discordos-feature-contract-status`
+  - Node test coverage for the repo-local DiscordOS feature contract status command
 - `npm run verify`
   - runs the full repo-local verification surface, then prunes repo-local `.vercel` and `node_modules` residue before exit
 
@@ -624,6 +660,8 @@ Current repo-local operator surface:
   - summarizes the publication command chain and updates/alerts separation without network access
 - `npm run ops:discord:publication-status -- --probe-live`
   - live-probes configured updates and alert targets with read-only Discord GET requests
+- `npm run ops:discord:publication-docs-status`
+  - checks publication command/docs alignment without sending messages or writing artifacts
 - `npm run ops:discord:publication-audit`
   - audits DiscordOS publication receipts under `docs/ops` without sending messages or writing artifacts
 - `npm run ops:discord:publication-audit:json`
@@ -664,6 +702,14 @@ Current repo-local operator surface:
   - checks current process env readiness for updates, alerts, and bot-token-backed live probes without printing values
 - `npm run ops:discordos:env-readiness:json`
   - emits the operator env readiness result as JSON
+- `npm run ops:discordos:data-contract-status`
+  - checks the shared DiscordOS data-contract docs and type-only source boundary
+- `npm run ops:discordos:data-contract-status:json`
+  - emits the data-contract status result as JSON
+- `npm run ops:discordos:moderation-status`
+  - checks the moderation workflow v0 contract and type-only source boundary
+- `npm run ops:discordos:board-card-status`
+  - checks the board/card workflow v0 contract, type-only source boundary, and required forum/card package scripts
 - `npm run ops:runtime-health:scheduled-proof`
   - runs the full cron-ready proof loop: live health capture, fresh summary check, durable alert decision, fail-closed exit
 - `npm run ops:runtime-health:scheduled-proof:json`

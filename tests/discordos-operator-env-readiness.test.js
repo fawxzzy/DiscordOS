@@ -17,6 +17,9 @@ test("operator env readiness blocks without target env", () => {
   assert.equal(result.alerts.targetReady, false);
   assert(result.reasonCodes.includes("updates_channel_id_missing"));
   assert(result.reasonCodes.includes("bot_token_missing"));
+  assert.equal(result.readinessPlan.status, "action_required");
+  assert(result.readinessPlan.nextActions.includes("configure_discordos_updates_channel_id"));
+  assert(result.readinessPlan.nextActions.includes("load_discordos_bot_token"));
 });
 
 test("operator env readiness accepts normalized bot-channel targets", () => {
@@ -32,6 +35,9 @@ test("operator env readiness accepts normalized bot-channel targets", () => {
   assert.equal(result.updates.channelShapeValid, true);
   assert.equal(result.alerts.channelShapeValid, true);
   assert.equal(result.alerts.targetMode, "discord_bot_channel");
+  assert.equal(result.readinessPlan.status, "ready");
+  assert.equal(result.readinessPlan.liveActionReadiness.updatesPostReady, true);
+  assert.equal(result.readinessPlan.liveActionReadiness.criticalAlertDeliveryReady, true);
   assert.deepEqual(result.reasonCodes, []);
 });
 
@@ -47,6 +53,8 @@ test("operator env readiness allows webhook alert target without bot token for a
 
   assert.equal(result.ok, true);
   assert.equal(result.alerts.targetMode, "discord_webhook");
+  assert.equal(result.readinessPlan.liveActionReadiness.alertUsesWebhook, true);
+  assert.equal(result.readinessPlan.liveActionReadiness.alertUsesBotChannel, false);
 });
 
 test("operator env readiness reports empty pulled token separately from channel shape", () => {
@@ -61,7 +69,22 @@ test("operator env readiness reports empty pulled token separately from channel 
   assert.equal(result.ok, false);
   assert.equal(result.updates.channelShapeValid, true);
   assert.equal(result.alerts.channelShapeValid, true);
+  assert.equal(result.readinessPlan.blockedCheckCount, 2);
   assert.deepEqual(result.reasonCodes, ["bot_token_missing"]);
+});
+
+test("operator env readiness plan does not require bot token for webhook-only alerts", () => {
+  const classified = _internals.classifyOperatorEnvReadiness({
+    DISCORDOS_RUNTIME_HEALTH_ALERT_WEBHOOK_URL:
+      "https://discord.com/api/webhooks/1515220075366580224/webhook-secret",
+  });
+  const plan = _internals.buildOperatorEnvReadinessPlan(classified);
+  const alertBotCheck = plan.checks.find((check) => check.id === "bot_token_for_alert_channel");
+
+  assert.equal(alertBotCheck.ready, true);
+  assert.equal(plan.liveActionReadiness.alertUsesWebhook, true);
+  assert.equal(plan.liveActionReadiness.alertProbeReady, true);
+  assert.equal(plan.liveActionReadiness.updatesPostReady, false);
 });
 
 test("operator env readiness renders markdown without target values", () => {
@@ -76,6 +99,7 @@ test("operator env readiness renders markdown without target values", () => {
 
   assert(rendered.includes("# DiscordOS Operator Env Readiness"));
   assert(rendered.includes("updates target ready: `true`"));
+  assert(rendered.includes("readiness plan: `ready`"));
   assert(!rendered.includes("1504671871512346695"));
   assert(!rendered.includes("1515220075366580224"));
   assert(!rendered.includes("bot-secret"));

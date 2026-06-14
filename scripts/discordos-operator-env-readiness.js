@@ -96,6 +96,80 @@ function classifyOperatorEnvReadiness(env = process.env) {
   };
 }
 
+function buildReadinessCheck({ id, scope, ready, requiredFor, reasonCodes = [], nextAction }) {
+  return {
+    id,
+    scope,
+    ready,
+    requiredFor,
+    reasonCodes,
+    nextAction: ready ? null : nextAction,
+  };
+}
+
+function buildOperatorEnvReadinessPlan(result) {
+  const alertUsesWebhook = result.alerts.webhookPresent;
+  const alertUsesBotChannel = !alertUsesWebhook && result.alerts.channelPresent;
+  const checks = [
+    buildReadinessCheck({
+      id: "updates_channel",
+      scope: "updates",
+      ready: result.updates.channelShapeValid,
+      requiredFor: ["updates_probe", "updates_post"],
+      reasonCodes: result.updates.channelShapeValid ? [] : result.reasonCodes.filter((code) =>
+        code.startsWith("updates_channel_id_")
+      ),
+      nextAction: "configure_discordos_updates_channel_id",
+    }),
+    buildReadinessCheck({
+      id: "bot_token_for_updates",
+      scope: "updates",
+      ready: result.updates.botTokenPresent,
+      requiredFor: ["updates_probe", "updates_post"],
+      reasonCodes: result.updates.botTokenPresent ? [] : ["bot_token_missing"],
+      nextAction: "load_discordos_bot_token",
+    }),
+    buildReadinessCheck({
+      id: "alert_target",
+      scope: "alerts",
+      ready: result.alerts.webhookShapeValid || result.alerts.channelShapeValid,
+      requiredFor: ["alert_probe", "critical_alert_delivery"],
+      reasonCodes: result.alerts.webhookShapeValid || result.alerts.channelShapeValid
+        ? []
+        : result.reasonCodes.filter((code) =>
+          code.startsWith("alert_channel_id_") || code.startsWith("alert_webhook_")
+        ),
+      nextAction: "configure_discordos_alert_target",
+    }),
+    buildReadinessCheck({
+      id: "bot_token_for_alert_channel",
+      scope: "alerts",
+      ready: !alertUsesBotChannel || result.alerts.botTokenPresent,
+      requiredFor: ["alert_bot_channel_probe", "critical_alert_delivery"],
+      reasonCodes: !alertUsesBotChannel || result.alerts.botTokenPresent ? [] : ["bot_token_missing"],
+      nextAction: "load_discordos_bot_token",
+    }),
+  ];
+  const blockedChecks = checks.filter((check) => !check.ready);
+
+  return {
+    status: blockedChecks.length === 0 ? "ready" : "action_required",
+    checks,
+    readyCheckCount: checks.length - blockedChecks.length,
+    blockedCheckCount: blockedChecks.length,
+    liveActionReadiness: {
+      updatesProbeReady: result.updates.targetReady,
+      updatesPostReady: result.updates.targetReady,
+      alertProbeReady: result.alerts.targetReady,
+      criticalAlertDeliveryReady: result.alerts.targetReady,
+      alertTargetMode: result.alerts.targetMode,
+      alertUsesWebhook,
+      alertUsesBotChannel,
+    },
+    nextActions: [...new Set(blockedChecks.map((check) => check.nextAction).filter(Boolean))],
+  };
+}
+
 function classifyOperatorEnvReadinessEvent(result) {
   return {
     type: result.ok
@@ -108,13 +182,19 @@ function classifyOperatorEnvReadinessEvent(result) {
       updatesTargetReady: result.updates.targetReady,
       alertTargetReady: result.alerts.targetReady,
       alertTargetMode: result.alerts.targetMode,
+      readinessPlanStatus: result.readinessPlan.status,
+      blockedCheckCount: result.readinessPlan.blockedCheckCount,
       reasonCodeCount: result.reasonCodes.length,
     },
   };
 }
 
 function buildDiscordOSOperatorEnvReadiness({ env = process.env } = {}) {
-  const result = classifyOperatorEnvReadiness(env);
+  const classified = classifyOperatorEnvReadiness(env);
+  const result = {
+    ...classified,
+    readinessPlan: buildOperatorEnvReadinessPlan(classified),
+  };
   return {
     ...result,
     event: classifyOperatorEnvReadinessEvent(result),
@@ -142,6 +222,10 @@ function renderMarkdown(result) {
     `- alerts channel present: \`${result.alerts.channelPresent ? "true" : "false"}\``,
     `- alerts channel shape valid: \`${result.alerts.channelShapeValid ? "true" : "false"}\``,
     `- bot token present: \`${result.updates.botTokenPresent ? "true" : "false"}\``,
+    `- readiness plan: \`${result.readinessPlan.status}\``,
+    `- ready checks: \`${result.readinessPlan.readyCheckCount}\``,
+    `- blocked checks: \`${result.readinessPlan.blockedCheckCount}\``,
+    `- next actions: \`${result.readinessPlan.nextActions.join(",") || "none"}\``,
     `- reason codes: \`${result.reasonCodes.join(",") || "none"}\``,
   ];
 
@@ -172,6 +256,8 @@ module.exports = {
     classifyChannelId,
     classifySecretPresence,
     classifyOperatorEnvReadiness,
+    buildReadinessCheck,
+    buildOperatorEnvReadinessPlan,
     classifyOperatorEnvReadinessEvent,
     buildDiscordOSOperatorEnvReadiness,
     renderMarkdown,
