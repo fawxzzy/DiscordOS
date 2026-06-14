@@ -58,12 +58,35 @@ function buildAlertReadiness({ env = process.env } = {}) {
 
   return {
     ready: watchEnabled && alertSendEnabled && target.configured,
+    status: watchEnabled && alertSendEnabled && target.configured
+      ? "ready"
+      : "env_action_required",
     watchEnabled,
     alertSendEnabled,
     targetConfigured: target.configured,
     targetType: target.type,
     reasonCodes,
   };
+}
+
+function classifyWatchStatus(watch) {
+  if (watch.skipped === true && watch.skipReason === "atlas_health_schedule_not_due") {
+    return "schedule_not_due";
+  }
+  if (!watch.ok) {
+    return "critical_targets";
+  }
+  return "healthy";
+}
+
+function classifyStatusKind({ watch, alertReadiness }) {
+  if (!watch.ok) {
+    return "critical_targets";
+  }
+  if (!alertReadiness.ready) {
+    return "alert_env_action_required";
+  }
+  return "ready";
 }
 
 function determineNextActions({ watch, alertReadiness }) {
@@ -110,12 +133,18 @@ function summarizeWatchCadence(watch) {
 
 function classifyAtlasHealthStatusEvent(status) {
   return {
-    type: status.ok ? "atlas.health_status.ready" : "atlas.health_status.action_required",
-    severity: status.ok ? "info" : "warning",
+    type: status.status === "critical_targets"
+      ? "atlas.health_status.critical_targets"
+      : status.status === "alert_env_action_required"
+        ? "atlas.health_status.alert_env_action_required"
+        : "atlas.health_status.ready",
+    severity: status.status === "critical_targets" ? "error" : status.ok ? "info" : "warning",
     subject: "atlas.health",
     status: status.ok ? "pass" : "fail",
     dimensions: {
+      status: status.status,
       healthWatchStatus: status.watch.ok ? "pass" : "fail",
+      watchStatus: status.watch.status,
       cadenceStatus: status.watch.cadenceStatus,
       skipped: status.watch.skipped === true,
       targetCount: status.watch.targetCount,
@@ -146,14 +175,17 @@ async function buildAtlasHealthStatus({
   const alertReadiness = buildAlertReadiness({ env });
   const nextActions = determineNextActions({ watch, alertReadiness });
   const cadence = summarizeWatchCadence(watch);
+  const statusKind = classifyStatusKind({ watch, alertReadiness });
   const status = {
-    ok: watch.ok && alertReadiness.ready,
+    ok: statusKind === "ready",
+    status: statusKind,
     destructive: false,
     sendsMessages: false,
     writesArtifacts: false,
     generatedAt: now.toISOString(),
     watch: {
       ok: watch.ok,
+      status: classifyWatchStatus(watch),
       eventType: watch.event.type,
       skipped: cadence.skipped,
       skipReason: cadence.skipReason,
@@ -190,6 +222,7 @@ function renderMarkdown(status) {
     "# ATLAS Health Status",
     "",
     `- result: \`${status.ok ? "pass" : "fail"}\``,
+    `- status: \`${status.status}\``,
     `- destructive: \`${status.destructive ? "true" : "false"}\``,
     `- sends messages: \`${status.sendsMessages ? "true" : "false"}\``,
     `- writes artifacts: \`${status.writesArtifacts ? "true" : "false"}\``,
@@ -200,6 +233,7 @@ function renderMarkdown(status) {
     "## Watch",
     "",
     `- result: \`${status.watch.ok ? "pass" : "fail"}\``,
+    `- status: \`${status.watch.status}\``,
     `- event type: \`${status.watch.eventType}\``,
     `- cadence status: \`${status.watch.cadenceStatus}\``,
     `- skipped: \`${status.watch.skipped ? "true" : "false"}\``,
@@ -223,6 +257,7 @@ function renderMarkdown(status) {
     "## Alert Readiness",
     "",
     `- ready: \`${status.alertReadiness.ready ? "true" : "false"}\``,
+    `- status: \`${status.alertReadiness.status}\``,
     `- watch env enabled: \`${status.alertReadiness.watchEnabled ? "true" : "false"}\``,
     `- alert send env enabled: \`${status.alertReadiness.alertSendEnabled ? "true" : "false"}\``,
     `- target configured: \`${status.alertReadiness.targetConfigured ? "true" : "false"}\``,
@@ -263,6 +298,8 @@ module.exports = {
     determineNextActions,
     summarizeWatchCadence,
     classifyAtlasHealthStatusEvent,
+    classifyWatchStatus,
+    classifyStatusKind,
     buildAtlasHealthStatus,
     renderMarkdown,
   },

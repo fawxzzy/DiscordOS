@@ -44,8 +44,10 @@ test("atlas health status passes when watch is green and alert path is armed", a
   });
 
   assert.equal(status.ok, true);
+  assert.equal(status.status, "ready");
   assert.equal(status.sendsMessages, false);
   assert.equal(status.watch.targetCount, 1);
+  assert.equal(status.watch.status, "healthy");
   assert.equal(status.watch.criticalCount, 0);
   assert.equal(status.watch.cadenceStatus, "checked");
   assert.equal(status.watch.skipped, false);
@@ -88,7 +90,9 @@ test("atlas health status explains when weekday schedule is not due", async () =
   });
 
   assert.equal(status.ok, true);
+  assert.equal(status.status, "ready");
   assert.equal(status.watch.ok, true);
+  assert.equal(status.watch.status, "schedule_not_due");
   assert.equal(status.watch.cadenceStatus, "schedule_not_due");
   assert.equal(status.watch.skipped, true);
   assert.equal(status.watch.skipReason, "atlas_health_schedule_not_due");
@@ -123,7 +127,11 @@ test("atlas health status reports missing env flags without failing target healt
   });
 
   assert.equal(status.watch.ok, true);
+  assert.equal(status.watch.status, "healthy");
   assert.equal(status.ok, false);
+  assert.equal(status.status, "alert_env_action_required");
+  assert.equal(status.alertReadiness.status, "env_action_required");
+  assert.equal(status.event.type, "atlas.health_status.alert_env_action_required");
   assert.deepEqual(status.alertReadiness.reasonCodes, [
     "atlas_health_watch_env_disabled",
     "atlas_health_alert_send_env_disabled",
@@ -161,9 +169,12 @@ test("atlas health status flags critical targets without sending alerts", async 
   });
 
   assert.equal(status.ok, false);
+  assert.equal(status.status, "critical_targets");
+  assert.equal(status.watch.status, "critical_targets");
   assert.equal(status.watch.criticalCount, 1);
   assert.deepEqual(status.nextActions, ["inspect_critical_atlas_health_targets"]);
   assert.equal(status.watch.alertDeliveryDryRunStatus, "dry_run");
+  assert.equal(status.event.type, "atlas.health_status.critical_targets");
   assert(!requests.some((url) => url.includes("/channels/123/messages")));
 });
 
@@ -238,6 +249,7 @@ test("atlas health status accepts runtime health alert target fallback", () => {
 test("atlas health status renders markdown without target values", () => {
   const rendered = _internals.renderMarkdown({
     ok: true,
+    status: "ready",
     destructive: false,
     sendsMessages: false,
     writesArtifacts: false,
@@ -248,6 +260,7 @@ test("atlas health status renders markdown without target values", () => {
     nextActions: ["continue_atlas_health_monitoring"],
     watch: {
       ok: true,
+      status: "healthy",
       eventType: "atlas.health_watch.pass",
       cadenceStatus: "checked",
       skipped: false,
@@ -278,6 +291,7 @@ test("atlas health status renders markdown without target values", () => {
     },
     alertReadiness: {
       ready: true,
+      status: "ready",
       watchEnabled: true,
       alertSendEnabled: true,
       targetConfigured: true,

@@ -194,12 +194,15 @@ test("operator status combines runtime, publication, and audit status", async ()
   assert.equal(status.publicationAudit.publishedReceipts, 1);
   assert.equal(status.publicationAudit.untrackedPublicationReceipts, 0);
   assert.equal(status.atlasHealth.ok, true);
+  assert.equal(status.atlasHealth.status, "ready");
+  assert.equal(status.atlasHealth.watchStatus, "healthy");
   assert.equal(status.atlasHealth.targetCount, 1);
   assert.equal(status.atlasHealth.cadenceStatus, "checked");
   assert.equal(status.atlasHealth.skipped, false);
   assert.deepEqual(status.atlasHealth.runDays, []);
   assert.equal(status.atlasHealth.timezone, "UTC");
   assert.equal(status.atlasHealth.alertReady, true);
+  assert.equal(status.atlasHealth.alertReadinessStatus, "ready");
   assert.equal(status.notificationPolicy.ok, true);
   assert.equal(status.notificationPolicy.routeCount, 4);
   assert.equal(status.notificationPolicy.readyAttachedProducerCount, 4);
@@ -339,7 +342,9 @@ test("operator status renders markdown without target secret values", () => {
     },
     atlasHealth: {
       ok: true,
+      status: "ready",
       eventType: "atlas.health_status.ready",
+      watchStatus: "healthy",
       cadenceStatus: "checked",
       skipped: false,
       skipReason: null,
@@ -352,6 +357,7 @@ test("operator status renders markdown without target secret values", () => {
       timezone: "UTC",
       targetChecksPerMonth: 150,
       alertReady: true,
+      alertReadinessStatus: "ready",
       alertTargetType: "discord_bot_channel",
       nextActions: ["continue_atlas_health_monitoring"],
       reasonCodes: [],

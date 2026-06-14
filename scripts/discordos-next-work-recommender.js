@@ -187,21 +187,46 @@ function recommendNextWork(operatorStatus, { max = 5, receiptState = receiptStat
     },
   }));
 
-  addIf(!operatorStatus.atlasHealth?.ok, recommendations, buildRecommendation({
-    id: "repair-atlas-health-status",
-    score: 88,
-    category: "atlas-health",
-    title: "Repair ATLAS health watch targets or alert readiness",
-    command: "npm run ops:atlas-health:status",
-    reasonCodes: operatorStatus.atlasHealth?.reasonCodes?.length
-      ? operatorStatus.atlasHealth.reasonCodes
-      : ["atlas_health_status_not_ready"],
-    evidence: {
-      targetCount: operatorStatus.atlasHealth?.targetCount ?? null,
-      criticalCount: operatorStatus.atlasHealth?.criticalCount ?? null,
-      alertReady: operatorStatus.atlasHealth?.alertReady === true,
-    },
-  }));
+  addIf(
+    !operatorStatus.atlasHealth?.ok && operatorStatus.atlasHealth?.status === "critical_targets",
+    recommendations,
+    buildRecommendation({
+      id: "repair-atlas-health-critical-targets",
+      score: 88,
+      category: "atlas-health",
+      title: "Inspect critical ATLAS health targets before new product work",
+      command: "npm run ops:atlas-health:status",
+      reasonCodes: operatorStatus.atlasHealth?.reasonCodes?.length
+        ? operatorStatus.atlasHealth.reasonCodes
+        : ["atlas_health_critical_targets"],
+      evidence: {
+        targetCount: operatorStatus.atlasHealth?.targetCount ?? null,
+        criticalCount: operatorStatus.atlasHealth?.criticalCount ?? null,
+        watchStatus: operatorStatus.atlasHealth?.watchStatus || null,
+      },
+    })
+  );
+
+  addIf(
+    !operatorStatus.atlasHealth?.ok && operatorStatus.atlasHealth?.status !== "critical_targets",
+    recommendations,
+    buildRecommendation({
+      id: "configure-atlas-health-alert-readiness",
+      score: 88,
+      category: "atlas-health",
+      title: "Configure ATLAS health alert readiness for the operator shell",
+      command: "npm run ops:atlas-health:status",
+      reasonCodes: operatorStatus.atlasHealth?.reasonCodes?.length
+        ? operatorStatus.atlasHealth.reasonCodes
+        : ["atlas_health_alert_readiness_not_ready"],
+      evidence: {
+        targetCount: operatorStatus.atlasHealth?.targetCount ?? null,
+        criticalCount: operatorStatus.atlasHealth?.criticalCount ?? null,
+        alertReady: operatorStatus.atlasHealth?.alertReady === true,
+        alertReadinessStatus: operatorStatus.atlasHealth?.alertReadinessStatus || null,
+      },
+    })
+  );
 
   addIf(operatorStatus.notificationPolicy && !operatorStatus.notificationPolicy.ok, recommendations, buildRecommendation({
     id: "repair-notification-policy-routes",

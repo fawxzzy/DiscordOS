@@ -52,7 +52,9 @@ function baseOperatorStatus(overrides = {}) {
     },
     atlasHealth: {
       ok: true,
+      status: "ready",
       eventType: "atlas.health_status.ready",
+      watchStatus: "healthy",
       targetCount: 5,
       passCount: 5,
       failCount: 0,
@@ -60,6 +62,7 @@ function baseOperatorStatus(overrides = {}) {
       configuredSchedule: "0 16 * * *",
       targetChecksPerMonth: 150,
       alertReady: true,
+      alertReadinessStatus: "ready",
       alertTargetType: "discord_bot_channel",
       nextActions: ["continue_atlas_health_monitoring"],
       reasonCodes: [],
@@ -177,20 +180,40 @@ test("next work recommender recommends live probe and env checks for local-only 
   ]);
 });
 
-test("next work recommender surfaces atlas health blockers explicitly", () => {
+test("next work recommender surfaces atlas health alert readiness blockers explicitly", () => {
   const recommendations = _internals.recommendNextWork(baseOperatorStatus({
     ok: false,
     atlasHealth: {
       ...baseOperatorStatus().atlasHealth,
       ok: false,
+      status: "alert_env_action_required",
       alertReady: false,
+      alertReadinessStatus: "env_action_required",
       reasonCodes: ["atlas_health_alert_send_env_disabled"],
     },
   }), { max: 3 });
 
-  assert.equal(recommendations[0].id, "repair-atlas-health-status");
+  assert.equal(recommendations[0].id, "configure-atlas-health-alert-readiness");
   assert.equal(recommendations[0].category, "atlas-health");
   assert.deepEqual(recommendations[0].reasonCodes, ["atlas_health_alert_send_env_disabled"]);
+});
+
+test("next work recommender separates critical atlas health target blockers", () => {
+  const recommendations = _internals.recommendNextWork(baseOperatorStatus({
+    ok: false,
+    atlasHealth: {
+      ...baseOperatorStatus().atlasHealth,
+      ok: false,
+      status: "critical_targets",
+      watchStatus: "critical_targets",
+      criticalCount: 1,
+      reasonCodes: ["http_status_not_ok"],
+    },
+  }), { max: 3 });
+
+  assert.equal(recommendations[0].id, "repair-atlas-health-critical-targets");
+  assert.equal(recommendations[0].category, "atlas-health");
+  assert.deepEqual(recommendations[0].reasonCodes, ["http_status_not_ok"]);
 });
 
 test("next work recommender surfaces notification policy blockers explicitly", () => {
