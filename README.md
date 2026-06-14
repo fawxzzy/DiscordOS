@@ -247,7 +247,7 @@ Current governed contract surface:
   - keeps the service credential inside the Supabase runtime boundary
   - writes no Discord messages and returns no secret values
 - `vercel.json`
-  - schedules `/api/cron/runtime-health` at `0 16 * * *` for 12:00 PM Eastern while New York observes daylight time
+  - schedules `/api/cron/runtime-health` at `0 2 * * *` for 10:00 PM Eastern while New York observes daylight time
   - preserves a Hobby-compatible daily cadence; twice-daily 12:00 AM and 12:00 PM requires a Vercel plan above Hobby
 - `docs/ops/discordos-runtime-health-summary-command-pass-6-2026-06-13.md`
   - owner-side proof that runtime-health history can be summarized from ATLAS `runtime/`
@@ -375,6 +375,8 @@ Current governed contract surface:
   - owner-side proof that ATLAS cross-project health sweeps now skip weekends while DiscordOS runtime health remains daily
 - `docs/ops/discordos-production-env-operator-wrapper-pass-71-2026-06-14.md`
   - owner-side proof that production-env operator status and next-work checks now run through a reusable secret-safe wrapper
+- `docs/ops/discordos-runtime-health-cron-10pm-schedule-pass-72-2026-06-14.md`
+  - owner-side proof that the runtime-health Vercel Cron was moved to 10:00 PM EDT for the next scheduled identity capture
 - `docs/ops/discordos-next-work-final-followup-state-pass-69-2026-06-13.md`
   - owner-side proof that next-work now reports only the deferred scheduled cron identity proof after the final follow-up post
 
@@ -603,8 +605,8 @@ Current scheduled runtime surface:
 
 - `/api/cron/runtime-health`
   - guarded by `CRON_SECRET`
-  - configured in `vercel.json` for production invocation at `0 16 * * *`
-  - latest production deployment `dpl_EjhiNuY3Rv63ABipq7N1oLc7RKrg`
+  - configured in `vercel.json` for production invocation at `0 2 * * *`, which is 10:00 PM Eastern while New York observes daylight time
+  - latest production deployment `dpl_9jFuiFNuCbdortFZdjBLP6W9MY38`
   - 2026-06-13 11:15 AM EDT proof window did not produce a scheduled invocation or private cron audit row
   - 2026-06-13 11:45 AM EDT proof window produced Vercel `200` scheduled invocation proof and private Supabase audit row `runtime-health-cron-vercel-daily-runtime-health-20260613T155511740Z`
   - writes sanitized private Supabase cron receipt rows only when `DISCORDOS_RUNTIME_HEALTH_CRON_AUDIT_WRITE=enabled`
