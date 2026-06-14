@@ -174,6 +174,10 @@ Current governed contract surface:
   - defaults to public HTTP/JSON availability checks only; deeper project checks can be supplied through `DISCORDOS_ATLAS_HEALTH_TARGETS_JSON`
   - target sweeps can be reduced at runtime with `DISCORDOS_ATLAS_HEALTH_TARGET_ALLOWLIST` or `DISCORDOS_ATLAS_HEALTH_TARGET_EXCLUDE`
   - defaults ATLAS cross-project sweeps to weekdays at `0 16 * * 1-5`, while the DiscordOS runtime cron remains daily
+- `config/discordos-notification-routes.json`
+  - committed no-secret notification route policy for DiscordOS runtime/product notification intents
+  - maps source/type/severity to target classes such as `alerts` and `updates`
+  - stores only target environment variable names, never channel ids, webhook URLs, or bot tokens
 - `scripts/atlas-health-watch.js`
   - repo-local ATLAS health watch command for critical-only multi-project availability checks
   - dry-runs by default, sends no routine clear posts, disables mentions, and suppresses identical critical alerts for 24 hours
@@ -236,6 +240,10 @@ Current governed contract surface:
   - repo-local read-only operator dashboard that combines status posture with the current top next-work command
   - gives operators one compact command for routine DiscordOS status and next-action checks
   - sends no Discord messages and writes no artifacts
+- `scripts/discordos-notification-router.js`
+  - repo-local no-send notification route resolver for runtime health, ATLAS health, update, and forum/card event intents
+  - enforces severity minimums before critical alerts can target `#alerts`
+  - returns target environment variable names only and never prints configured target values
 - `scripts/discordos-operator-env-readiness.js`
   - repo-local read-only operator env readiness command for DiscordOS updates, alerts, and bot-token availability
   - reports target readiness booleans and reason codes without printing target ids, webhook URLs, or token values
@@ -486,6 +494,8 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local DiscordOS next-work recommender command
 - `npm run verify:discordos-dashboard`
   - Node test coverage for the repo-local DiscordOS operator dashboard command
+- `npm run verify:discordos-notification-router`
+  - Node test coverage for the repo-local DiscordOS notification route resolver
 - `npm run verify:discordos-env-readiness`
   - Node test coverage for the repo-local DiscordOS operator env readiness command
 - `npm run verify`
@@ -596,6 +606,10 @@ Current repo-local operator surface:
   - runs the compact operator dashboard with production Vercel env overlaid through the temp env wrapper
 - `npm run ops:discordos:dashboard:prod:json`
   - emits the production-env compact operator dashboard as JSON
+- `npm run ops:discordos:notification-router`
+  - resolves a DiscordOS notification intent to a no-send target route using committed route policy
+- `npm run ops:discordos:notification-router:json`
+  - emits the notification route decision as JSON
 - `npm run ops:discordos:env-readiness`
   - checks current process env readiness for updates, alerts, and bot-token-backed live probes without printing values
 - `npm run ops:discordos:env-readiness:json`

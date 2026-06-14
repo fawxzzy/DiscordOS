@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "routes": [
+    {
+      "id": "runtime-health-critical-alert",
+      "source": "runtime-health",
+      "type": "discordos.runtime_health.alert_triggered",
+      "minSeverity": "critical",
+      "target": "alerts",
+      "targetEnv": "DISCORDOS_RUNTIME_HEALTH_ALERT_CHANNEL_ID",
+      "fallbackTargetEnv": "DISCORDOS_RUNTIME_HEALTH_ALERT_WEBHOOK_URL",
+      "enabled": true
+    },
+    {
+      "id": "atlas-health-critical-alert",
+      "source": "atlas-health",
+      "type": "atlas.health_watch.critical",
+      "minSeverity": "critical",
+      "target": "alerts",
+      "targetEnv": "DISCORDOS_ATLAS_HEALTH_ALERT_CHANNEL_ID",
+      "fallbackTargetEnv": "DISCORDOS_RUNTIME_HEALTH_ALERT_CHANNEL_ID",
+      "enabled": true
+    },
+    {
+      "id": "updates-publication-info",
+      "source": "updates",
+      "type": "discordos.updates.publication",
+      "minSeverity": "info",
+      "target": "updates",
+      "targetEnv": "DISCORDOS_UPDATES_CHANNEL_ID",
+      "enabled": true
+    },
+    {
+      "id": "forum-card-lifecycle-info",
+      "source": "forum-card",
+      "type": "discordos.forum_card.lifecycle",
+      "minSeverity": "info",
+      "target": "updates",
+      "targetEnv": "DISCORDOS_UPDATES_CHANNEL_ID",
+      "enabled": true
+    }
+  ]
+}
