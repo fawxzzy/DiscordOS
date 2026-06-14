@@ -73,6 +73,63 @@ function rankRecommendations(recommendations, max = 5) {
     .slice(0, max);
 }
 
+function buildSteadyStateRecommendations(operatorStatus) {
+  return [
+    buildRecommendation({
+      id: "review-runtime-alert-drill-surface",
+      score: 58,
+      category: "runtime-alerts",
+      title: "Review the runtime alert drill surface while production health is green",
+      command: "npm run ops:runtime-health:alert-delivery",
+      reasonCodes: ["runtime_health_ready_for_alert_drill_review"],
+      evidence: {
+        posture: operatorStatus.runtime.posture,
+        readinessPercent: operatorStatus.runtime.readinessPercent,
+        alertTargetConfigured: operatorStatus.runtime.alertTargetConfigured,
+      },
+    }),
+    buildRecommendation({
+      id: "review-atlas-health-target-coverage",
+      score: 56,
+      category: "atlas-health",
+      title: "Review ATLAS health target coverage and cadence for missing critical surfaces",
+      command: "npm run ops:atlas-health:status",
+      reasonCodes: ["atlas_health_ready_for_coverage_review"],
+      evidence: {
+        targetCount: operatorStatus.atlasHealth?.targetCount ?? null,
+        criticalCount: operatorStatus.atlasHealth?.criticalCount ?? null,
+        targetChecksPerMonth: operatorStatus.atlasHealth?.targetChecksPerMonth ?? null,
+      },
+    }),
+    buildRecommendation({
+      id: "audit-discord-publication-tooling-gaps",
+      score: 54,
+      category: "publication",
+      title: "Audit Discord publication tooling for the next command or post-format gap",
+      command: "npm run ops:discord:publication-audit",
+      reasonCodes: ["publication_ready_for_tooling_gap_review"],
+      evidence: {
+        publishedReceipts: operatorStatus.publicationAudit.publishedReceipts,
+        draftUpdateReceipts: operatorStatus.publicationAudit.draftUpdateReceipts,
+        needsBackfill: operatorStatus.publicationAudit.needsBackfill,
+      },
+    }),
+    buildRecommendation({
+      id: "inspect-operator-command-ergonomics",
+      score: 52,
+      category: "operator-env",
+      title: "Inspect operator command ergonomics for the next low-friction workflow improvement",
+      command: "npm run ops:discordos:operator-status",
+      reasonCodes: ["operator_status_ready_for_command_ergonomics"],
+      evidence: {
+        runtimeOk: operatorStatus.runtime.ok,
+        publicationOk: operatorStatus.publication.ok,
+        atlasHealthOk: operatorStatus.atlasHealth?.ok === true,
+      },
+    }),
+  ];
+}
+
 function recommendNextWork(operatorStatus, { max = 5, receiptState = receiptStateInternals.classifyReceiptState([]) } = {}) {
   const recommendations = [];
 
@@ -300,17 +357,7 @@ function recommendNextWork(operatorStatus, { max = 5, receiptState = receiptStat
   }
 
   if (recommendations.length === 0) {
-    recommendations.push(buildRecommendation({
-      id: "continue-discordos-runtime-product-hardening",
-      score: 50,
-      category: "runtime-product",
-      title: "Continue broad DiscordOS runtime and product hardening discovery",
-      command: "npm run ops:discordos:operator-status",
-      reasonCodes: ["no_blocking_status_signal"],
-      evidence: {
-        operatorStatus: operatorStatus.ok ? "ready" : "action_required",
-      },
-    }));
+    recommendations.push(...buildSteadyStateRecommendations(operatorStatus));
   }
 
   return rankRecommendations(recommendations, max);
@@ -424,6 +471,7 @@ module.exports = {
     parseArgs,
     buildRecommendation,
     rankRecommendations,
+    buildSteadyStateRecommendations,
     classifyReceiptState: receiptStateInternals.classifyReceiptState,
     readReceiptState: receiptStateInternals.readReceiptState,
     recommendNextWork,

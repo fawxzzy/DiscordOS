@@ -383,6 +383,8 @@ Current governed contract surface:
   - owner-side proof that runtime/operator status now treats scheduled cron audit proof as closure instead of an open capture action
 - `docs/ops/discordos-atlas-health-cadence-status-pass-75-2026-06-14.md`
   - owner-side proof that ATLAS health/operator status now explains weekday scheduled-skip cadence explicitly
+- `docs/ops/discordos-next-work-steady-state-recommendations-pass-76-2026-06-14.md`
+  - owner-side proof that next-work now emits concrete ranked runtime/product hardening recommendations in green steady state
 - `docs/ops/discordos-next-work-final-followup-state-pass-69-2026-06-13.md`
   - owner-side proof that next-work now reports only the deferred scheduled cron identity proof after the final follow-up post
 

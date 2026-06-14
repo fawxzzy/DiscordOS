@@ -361,7 +361,57 @@ test("next work recommender stops waiting after scheduled cron audit proof recei
 
   assert.equal(receiptState.scheduledCronAuditProof, true);
   assert.deepEqual(recommendations.map((recommendation) => recommendation.id), [
-    "continue-discordos-runtime-product-hardening",
+    "review-runtime-alert-drill-surface",
+    "review-atlas-health-target-coverage",
+    "audit-discord-publication-tooling-gaps",
+    "inspect-operator-command-ergonomics",
+  ]);
+  assert.deepEqual(recommendations[0].reasonCodes, ["runtime_health_ready_for_alert_drill_review"]);
+  assert.equal(recommendations[0].category, "runtime-alerts");
+});
+
+test("next work recommender gives concrete steady-state hardening categories", () => {
+  const readyStatus = baseOperatorStatus({
+    runtime: {
+      ...baseOperatorStatus().runtime,
+      alertTargetConfigured: true,
+      nextActions: ["continue_runtime_monitoring"],
+    },
+    publication: {
+      ...baseOperatorStatus().publication,
+      updatesTargetConfigured: true,
+      alertsTargetConfigured: true,
+    },
+    publicationAudit: {
+      ...baseOperatorStatus().publicationAudit,
+      publishedReceipts: 4,
+      draftUpdateReceipts: 0,
+      needsBackfill: 0,
+    },
+  });
+  const recommendations = _internals.recommendNextWork(readyStatus, {
+    max: 3,
+    receiptState: _internals.classifyReceiptState([
+      "discordos-operator-live-status-proof-pass-50-2026-06-13.md",
+      "discordos-live-target-admission-proof-pass-52-2026-06-13.md",
+      "discordos-runtime-health-scheduled-audit-proof-pass-73-2026-06-14.md",
+    ]),
+  });
+
+  assert.deepEqual(recommendations.map((recommendation) => recommendation.id), [
+    "review-runtime-alert-drill-surface",
+    "review-atlas-health-target-coverage",
+    "audit-discord-publication-tooling-gaps",
+  ]);
+  assert.deepEqual(recommendations.map((recommendation) => recommendation.status), [
+    "recommended",
+    "recommended",
+    "recommended",
+  ]);
+  assert.deepEqual(recommendations.map((recommendation) => recommendation.command), [
+    "npm run ops:runtime-health:alert-delivery",
+    "npm run ops:atlas-health:status",
+    "npm run ops:discord:publication-audit",
   ]);
 });
 
