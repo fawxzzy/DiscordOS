@@ -140,8 +140,67 @@ function buildSteadyStateRecommendations(
   return recommendations;
 }
 
+function isOnlyLocalAtlasHealthEnvGap(operatorStatus) {
+  const atlasHealth = operatorStatus.atlasHealth;
+  if (!atlasHealth || atlasHealth.ok) {
+    return false;
+  }
+
+  const allowedReasonCodes = new Set([
+    "atlas_health_watch_env_disabled",
+    "atlas_health_alert_send_env_disabled",
+    "atlas_health_alert_target_missing",
+  ]);
+  const reasonCodes = Array.isArray(atlasHealth.reasonCodes) ? atlasHealth.reasonCodes : [];
+
+  return operatorStatus.runtime?.ok === true
+    && operatorStatus.publication?.ok === true
+    && operatorStatus.publicationAudit?.ok === true
+    && operatorStatus.notificationPolicy?.ok === true
+    && atlasHealth.status === "alert_env_action_required"
+    && (atlasHealth.watchStatus === "schedule_not_due" || atlasHealth.watchStatus === "healthy")
+    && (atlasHealth.criticalCount ?? 0) === 0
+    && reasonCodes.length > 0
+    && reasonCodes.every((reasonCode) => allowedReasonCodes.has(reasonCode));
+}
+
+function atlasHealthProdProofsSatisfyLocalGap(receiptState) {
+  return receiptState.atlasHealthProdStatusProof === true
+    && receiptState.atlasHealthProdDashboardProof === true;
+}
+
+function shouldDeferLocalAtlasHealthEnvGap(operatorStatus, receiptState) {
+  return isOnlyLocalAtlasHealthEnvGap(operatorStatus)
+    && atlasHealthProdProofsSatisfyLocalGap(receiptState);
+}
+
+function summarizeOperatorStatusForNextWork(operatorStatus, receiptState) {
+  const atlasHealthDeferred = shouldDeferLocalAtlasHealthEnvGap(operatorStatus, receiptState);
+  const ok = atlasHealthDeferred
+    ? operatorStatus.runtime.ok
+      && operatorStatus.publication.ok
+      && operatorStatus.publicationAudit.ok
+      && operatorStatus.notificationPolicy?.ok === true
+    : operatorStatus.ok;
+
+  return {
+    ok,
+    eventType: ok
+      ? "discordos.operator.status_ready"
+      : operatorStatus.event?.type || "discordos.operator.status_action_required",
+    probeLive: operatorStatus.probeLive,
+    runtimeOk: operatorStatus.runtime.ok,
+    publicationOk: operatorStatus.publication.ok,
+    publicationAuditOk: operatorStatus.publicationAudit.ok,
+    atlasHealthOk: atlasHealthDeferred ? true : operatorStatus.atlasHealth?.ok === true,
+    notificationPolicyOk: operatorStatus.notificationPolicy?.ok === true,
+    deferredLocalAtlasHealthEnvGap: atlasHealthDeferred,
+  };
+}
+
 function recommendNextWork(operatorStatus, { max = 5, receiptState = receiptStateInternals.classifyReceiptState([]) } = {}) {
   const recommendations = [];
+  const deferLocalAtlasHealthEnvGap = shouldDeferLocalAtlasHealthEnvGap(operatorStatus, receiptState);
 
   addIf(!operatorStatus.runtime.ok, recommendations, buildRecommendation({
     id: "repair-runtime-or-cron-status",
@@ -208,7 +267,9 @@ function recommendNextWork(operatorStatus, { max = 5, receiptState = receiptStat
   );
 
   addIf(
-    !operatorStatus.atlasHealth?.ok && operatorStatus.atlasHealth?.status !== "critical_targets",
+    !operatorStatus.atlasHealth?.ok
+      && operatorStatus.atlasHealth?.status !== "critical_targets"
+      && !deferLocalAtlasHealthEnvGap,
     recommendations,
     buildRecommendation({
       id: "configure-atlas-health-alert-readiness",
@@ -275,6 +336,20 @@ function recommendNextWork(operatorStatus, { max = 5, receiptState = receiptStat
       envRecommendation.status = "deferred";
       envRecommendation.title = "Reload operator env only when the next live Discord action needs it";
       envRecommendation.reasonCodes = ["operator_env_not_loaded_after_live_target_proof"];
+    }
+  }
+
+  if (
+    operatorStatus.ok
+      && receiptState.liveTargetAdmissionProof
+      && receiptState.operatorDashboardErgonomicsProof
+  ) {
+    const envRecommendationIndex = recommendations.findIndex((recommendation) =>
+      recommendation.id === "inspect-operator-env-readiness"
+        && recommendation.status === "deferred"
+    );
+    if (envRecommendationIndex >= 0) {
+      recommendations.splice(envRecommendationIndex, 1);
     }
   }
 
@@ -437,22 +512,14 @@ async function buildDiscordOSNextWorkRecommendations({
   const operatorStatus = await operatorStatusInternals.buildDiscordOSOperatorStatus(operatorOptions);
   const receiptState = await receiptStateInternals.readReceiptState(operatorOptions.docsDir);
   const recommendations = recommendNextWork(operatorStatus, { max, receiptState });
+  const summarizedOperatorStatus = summarizeOperatorStatusForNextWork(operatorStatus, receiptState);
   const result = {
     ok: true,
     destructive: false,
     sendsMessages: false,
     writesArtifacts: false,
     status: "ready",
-    operatorStatus: {
-      ok: operatorStatus.ok,
-      eventType: operatorStatus.event.type,
-      probeLive: operatorStatus.probeLive,
-      runtimeOk: operatorStatus.runtime.ok,
-      publicationOk: operatorStatus.publication.ok,
-      publicationAuditOk: operatorStatus.publicationAudit.ok,
-      atlasHealthOk: operatorStatus.atlasHealth?.ok === true,
-      notificationPolicyOk: operatorStatus.notificationPolicy?.ok === true,
-    },
+    operatorStatus: summarizedOperatorStatus,
     receiptState,
     recommendations,
     topRecommendation: recommendations[0] || null,
@@ -526,6 +593,10 @@ module.exports = {
     buildSteadyStateRecommendations,
     classifyReceiptState: receiptStateInternals.classifyReceiptState,
     readReceiptState: receiptStateInternals.readReceiptState,
+    isOnlyLocalAtlasHealthEnvGap,
+    atlasHealthProdProofsSatisfyLocalGap,
+    shouldDeferLocalAtlasHealthEnvGap,
+    summarizeOperatorStatusForNextWork,
     recommendNextWork,
     classifyNextWorkEvent,
     buildDiscordOSNextWorkRecommendations,

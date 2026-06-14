@@ -33,6 +33,12 @@ function classifyReceiptState(fileNames = []) {
     atlasHealthTargetFilterProof: fileNames.some((fileName) =>
       fileName.includes("discordos-atlas-health-target-filter-pass")
     ),
+    atlasHealthProdStatusProof: fileNames.some((fileName) =>
+      fileName.includes("discordos-atlas-health-prod-status-proof-pass")
+    ),
+    atlasHealthProdDashboardProof: fileNames.some((fileName) =>
+      fileName.includes("discordos-atlas-health-prod-dashboard-proof-pass")
+    ),
     publicationAuditGitDurabilityProof: fileNames.some((fileName) =>
       fileName.includes("discordos-publication-audit-git-durability-pass")
     ),

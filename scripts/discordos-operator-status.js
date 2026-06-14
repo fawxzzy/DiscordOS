@@ -26,6 +26,41 @@ const {
 const {
   _internals: notificationPolicyInternals,
 } = require("./discordos-notification-policy-status");
+const {
+  _internals: receiptStateInternals,
+} = require("./discordos-receipt-state");
+
+function isOnlyLocalAtlasHealthEnvGap({ runtimeStatus, publicationStatus, publicationAudit, atlasHealthStatus, notificationPolicyStatus }) {
+  const allowedReasonCodes = new Set([
+    "atlas_health_watch_env_disabled",
+    "atlas_health_alert_send_env_disabled",
+    "atlas_health_alert_target_missing",
+  ]);
+  const reasonCodes = Array.isArray(atlasHealthStatus?.alertReadiness?.reasonCodes)
+    ? atlasHealthStatus.alertReadiness.reasonCodes
+    : [];
+
+  return runtimeStatus.ok
+    && publicationStatus.ok
+    && publicationAudit.ok
+    && notificationPolicyStatus.ok
+    && atlasHealthStatus.ok === false
+    && atlasHealthStatus.status === "alert_env_action_required"
+    && (atlasHealthStatus.watch.status === "schedule_not_due" || atlasHealthStatus.watch.status === "healthy")
+    && atlasHealthStatus.watch.criticalCount === 0
+    && reasonCodes.length > 0
+    && reasonCodes.every((reasonCode) => allowedReasonCodes.has(reasonCode));
+}
+
+function atlasHealthProdProofsSatisfyLocalGap(receiptState) {
+  return receiptState.atlasHealthProdStatusProof === true
+    && receiptState.atlasHealthProdDashboardProof === true;
+}
+
+function shouldDeferLocalAtlasHealthEnvGap(statuses, receiptState) {
+  return isOnlyLocalAtlasHealthEnvGap(statuses)
+    && atlasHealthProdProofsSatisfyLocalGap(receiptState);
+}
 
 function parseArgs(args) {
   const options = {
@@ -125,8 +160,16 @@ function determineOperatorNextActions({
   publicationAudit,
   atlasHealthStatus = { ok: true, nextActions: [] },
   notificationPolicyStatus = { ok: true },
+  receiptState = receiptStateInternals.classifyReceiptState([]),
 }) {
   const actions = [];
+  const deferLocalAtlasHealthEnvGap = shouldDeferLocalAtlasHealthEnvGap({
+    runtimeStatus,
+    publicationStatus,
+    publicationAudit,
+    atlasHealthStatus,
+    notificationPolicyStatus,
+  }, receiptState);
 
   if (!runtimeStatus.ok) {
     actions.push("repair_runtime_or_cron_status");
@@ -140,7 +183,7 @@ function determineOperatorNextActions({
     actions.push("backfill_publication_receipts");
   }
 
-  if (!atlasHealthStatus.ok) {
+  if (!atlasHealthStatus.ok && !deferLocalAtlasHealthEnvGap) {
     actions.push(...(atlasHealthStatus.nextActions || []));
   }
 
@@ -152,7 +195,10 @@ function determineOperatorNextActions({
     actions.push("keep_update_drafts_until_next_public_post");
   }
 
-  if (publicationAudit.counts.untrackedPublicationReceipts > 0) {
+  if (
+    publicationAudit.counts.untrackedPublicationReceipts > 0
+    && !receiptState.publicationAuditGitDurabilityProof
+  ) {
     actions.push("review_untracked_publication_receipts");
   }
 
@@ -197,7 +243,7 @@ async function buildDiscordOSOperatorStatus({
   fetchImpl = fetch,
   cwd = process.cwd(),
 } = {}) {
-  const [runtimeStatus, publicationStatus, publicationAudit, atlasHealthStatus, notificationPolicyStatus] = await Promise.all([
+  const [runtimeStatus, publicationStatus, publicationAudit, atlasHealthStatus, notificationPolicyStatus, receiptState] = await Promise.all([
     runtimeStatusInternals.buildRuntimeHealthStatus({
       baseUrl,
       snapshotDir,
@@ -226,14 +272,25 @@ async function buildDiscordOSOperatorStatus({
       fetchImpl,
     }),
     notificationPolicyInternals.buildNotificationPolicyStatus(),
+    receiptStateInternals.readReceiptState(docsDir),
   ]);
 
+  const deferLocalAtlasHealthEnvGap = shouldDeferLocalAtlasHealthEnvGap({
+    runtimeStatus,
+    publicationStatus,
+    publicationAudit,
+    atlasHealthStatus,
+    notificationPolicyStatus,
+  }, receiptState);
+  const effectiveAtlasHealthOk = deferLocalAtlasHealthEnvGap ? true : atlasHealthStatus.ok;
+
   const status = {
-    ok: runtimeStatus.ok && publicationStatus.ok && publicationAudit.ok && atlasHealthStatus.ok && notificationPolicyStatus.ok,
+    ok: runtimeStatus.ok && publicationStatus.ok && publicationAudit.ok && effectiveAtlasHealthOk && notificationPolicyStatus.ok,
     destructive: false,
     sendsMessages: false,
     writesArtifacts: false,
     probeLive,
+    receiptState,
     runtime: {
       ok: runtimeStatus.ok,
       eventType: runtimeStatus.event.type,
@@ -263,12 +320,13 @@ async function buildDiscordOSOperatorStatus({
       draftUpdateReceipts: publicationAudit.counts.draftUpdateReceipts,
       needsBackfill: publicationAudit.counts.needsBackfill,
       untrackedPublicationReceipts: publicationAudit.counts.untrackedPublicationReceipts,
+      gitDurabilityProof: receiptState.publicationAuditGitDurabilityProof,
       reasonCodes: publicationAudit.reasonCodes,
     },
     atlasHealth: {
-      ok: atlasHealthStatus.ok,
-      status: atlasHealthStatus.status,
-      eventType: atlasHealthStatus.event.type,
+      ok: effectiveAtlasHealthOk,
+      status: deferLocalAtlasHealthEnvGap ? "ready_with_prod_proof" : atlasHealthStatus.status,
+      eventType: effectiveAtlasHealthOk ? "atlas.health_status.ready" : atlasHealthStatus.event.type,
       watchStatus: atlasHealthStatus.watch.status,
       cadenceStatus: atlasHealthStatus.watch.cadenceStatus,
       skipped: atlasHealthStatus.watch.skipped,
@@ -285,6 +343,7 @@ async function buildDiscordOSOperatorStatus({
       alertReadinessStatus: atlasHealthStatus.alertReadiness.status,
       alertTargetType: atlasHealthStatus.alertReadiness.targetType,
       nextActions: atlasHealthStatus.nextActions,
+      deferredLocalEnvGap: deferLocalAtlasHealthEnvGap,
       reasonCodes: atlasHealthStatus.alertReadiness.reasonCodes,
     },
     notificationPolicy: {
@@ -308,6 +367,7 @@ async function buildDiscordOSOperatorStatus({
     publicationAudit,
     atlasHealthStatus,
     notificationPolicyStatus,
+    receiptState,
   });
 
   return {
@@ -366,6 +426,7 @@ function renderMarkdown(status) {
     `- needs backfill: \`${status.publicationAudit.needsBackfill}\``,
     `- untracked publication receipts: \`${status.publicationAudit.untrackedPublicationReceipts}\``,
     `- reason codes: \`${status.publicationAudit.reasonCodes.join(",") || "none"}\``,
+    `- git durability proof: \`${status.publicationAudit.gitDurabilityProof ? "true" : "false"}\``,
     "",
     "## ATLAS Health",
     "",
@@ -387,6 +448,7 @@ function renderMarkdown(status) {
     `- alert ready: \`${status.atlasHealth.alertReady ? "true" : "false"}\``,
     `- alert readiness status: \`${status.atlasHealth.alertReadinessStatus || "unknown"}\``,
     `- alert target type: \`${status.atlasHealth.alertTargetType}\``,
+    `- deferred local env gap: \`${status.atlasHealth.deferredLocalEnvGap ? "true" : "false"}\``,
     `- next actions: \`${status.atlasHealth.nextActions.join(",")}\``,
     `- reason codes: \`${status.atlasHealth.reasonCodes.join(",") || "none"}\``,
     "",
@@ -428,6 +490,10 @@ if (require.main === module) {
 module.exports = {
   _internals: {
     parseArgs,
+    isOnlyLocalAtlasHealthEnvGap,
+    atlasHealthProdProofsSatisfyLocalGap,
+    shouldDeferLocalAtlasHealthEnvGap,
+    classifyReceiptState: receiptStateInternals.classifyReceiptState,
     determineOperatorNextActions,
     classifyOperatorStatusEvent,
     buildDiscordOSOperatorStatus,

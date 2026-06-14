@@ -199,6 +199,50 @@ test("next work recommender surfaces atlas health alert readiness blockers expli
   assert.deepEqual(recommendations[0].reasonCodes, ["atlas_health_alert_send_env_disabled"]);
 });
 
+test("next work recommender defers local atlas health env gaps after prod proofs", () => {
+  const localAtlasGapStatus = baseOperatorStatus({
+    ok: false,
+    event: {
+      type: "discordos.operator.status_action_required",
+    },
+    atlasHealth: {
+      ...baseOperatorStatus().atlasHealth,
+      ok: false,
+      status: "alert_env_action_required",
+      watchStatus: "schedule_not_due",
+      criticalCount: 0,
+      alertReady: false,
+      alertReadinessStatus: "env_action_required",
+      reasonCodes: [
+        "atlas_health_watch_env_disabled",
+        "atlas_health_alert_send_env_disabled",
+      ],
+    },
+  });
+  const receiptState = _internals.classifyReceiptState([
+    "discordos-atlas-health-prod-status-proof-pass-89-2026-06-14.md",
+    "discordos-atlas-health-prod-dashboard-proof-pass-91-2026-06-14.md",
+  ]);
+
+  const blockedRecommendations = _internals.recommendNextWork(localAtlasGapStatus, { max: 4 });
+  assert.equal(blockedRecommendations[0].id, "configure-atlas-health-alert-readiness");
+
+  const deferredRecommendations = _internals.recommendNextWork(localAtlasGapStatus, {
+    max: 4,
+    receiptState,
+  });
+  const deferredIds = deferredRecommendations.map((recommendation) => recommendation.id);
+  assert.equal(receiptState.atlasHealthProdStatusProof, true);
+  assert.equal(receiptState.atlasHealthProdDashboardProof, true);
+  assert.equal(_internals.shouldDeferLocalAtlasHealthEnvGap(localAtlasGapStatus, receiptState), true);
+  assert(!deferredIds.includes("configure-atlas-health-alert-readiness"));
+
+  const summary = _internals.summarizeOperatorStatusForNextWork(localAtlasGapStatus, receiptState);
+  assert.equal(summary.ok, true);
+  assert.equal(summary.atlasHealthOk, true);
+  assert.equal(summary.deferredLocalAtlasHealthEnvGap, true);
+});
+
 test("next work recommender separates critical atlas health target blockers", () => {
   const recommendations = _internals.recommendNextWork(baseOperatorStatus({
     ok: false,
@@ -254,6 +298,8 @@ test("next work recommender downgrades live env checks after receipt-backed proo
     finalFollowupUpdateProof: false,
     runtimeAlertDrillSurfaceProof: false,
     atlasHealthTargetFilterProof: false,
+    atlasHealthProdStatusProof: false,
+    atlasHealthProdDashboardProof: false,
     publicationAuditGitDurabilityProof: false,
     operatorDashboardErgonomicsProof: false,
   });
@@ -290,6 +336,8 @@ test("next work recommender surfaces operations admission when only deferred wor
     finalFollowupUpdateProof: false,
     runtimeAlertDrillSurfaceProof: false,
     atlasHealthTargetFilterProof: false,
+    atlasHealthProdStatusProof: false,
+    atlasHealthProdDashboardProof: false,
     publicationAuditGitDurabilityProof: false,
     operatorDashboardErgonomicsProof: false,
   });
@@ -330,6 +378,8 @@ test("next work recommender summarizes exhausted non-waiting work after operatio
     finalFollowupUpdateProof: false,
     runtimeAlertDrillSurfaceProof: false,
     atlasHealthTargetFilterProof: false,
+    atlasHealthProdStatusProof: false,
+    atlasHealthProdDashboardProof: false,
     publicationAuditGitDurabilityProof: false,
     operatorDashboardErgonomicsProof: false,
   });
@@ -383,6 +433,8 @@ test("next work recommender leaves only scheduled cron proof deferred after fina
     finalFollowupUpdateProof: true,
     runtimeAlertDrillSurfaceProof: false,
     atlasHealthTargetFilterProof: false,
+    atlasHealthProdStatusProof: false,
+    atlasHealthProdDashboardProof: false,
     publicationAuditGitDurabilityProof: false,
     operatorDashboardErgonomicsProof: false,
   });
@@ -432,6 +484,54 @@ test("next work recommender stops waiting after scheduled cron audit proof recei
   ]);
   assert.deepEqual(recommendations[0].reasonCodes, ["runtime_health_ready_for_alert_drill_review"]);
   assert.equal(recommendations[0].category, "runtime-alerts");
+});
+
+test("next work recommender defers local atlas health env warnings after prod proofs", () => {
+  const localAtlasGapStatus = baseOperatorStatus({
+    ok: false,
+    atlasHealth: {
+      ...baseOperatorStatus().atlasHealth,
+      ok: false,
+      status: "alert_env_action_required",
+      watchStatus: "schedule_not_due",
+      criticalCount: 0,
+      alertReady: false,
+      alertReadinessStatus: "env_action_required",
+      reasonCodes: [
+        "atlas_health_watch_env_disabled",
+        "atlas_health_alert_send_env_disabled",
+        "atlas_health_alert_target_missing",
+      ],
+    },
+  });
+  const receiptState = _internals.classifyReceiptState([
+    "discordos-operator-live-status-proof-pass-50-2026-06-13.md",
+    "discordos-live-target-admission-proof-pass-52-2026-06-13.md",
+    "discordos-runtime-health-authorized-cron-proof-pass-53-2026-06-13.md",
+    "discordos-scheduled-cron-log-identity-guard-pass-58-2026-06-13.md",
+    "discordos-next-work-wait-state-ranking-pass-59-2026-06-13.md",
+    "discordos-runtime-product-hardening-followup-live-post-pass-68-2026-06-13.md",
+    "discordos-runtime-health-scheduled-audit-proof-pass-73-2026-06-14.md",
+    "discordos-runtime-alert-drill-surface-pass-77-2026-06-14.md",
+    "discordos-atlas-health-target-filter-pass-78-2026-06-14.md",
+    "discordos-publication-audit-git-durability-pass-80-2026-06-14.md",
+    "discordos-operator-dashboard-ergonomics-pass-81-2026-06-14.md",
+    "discordos-atlas-health-prod-status-proof-pass-90-2026-06-14.md",
+    "discordos-atlas-health-prod-dashboard-proof-pass-91-2026-06-14.md",
+  ]);
+
+  assert.equal(_internals.shouldDeferLocalAtlasHealthEnvGap(localAtlasGapStatus, receiptState), true);
+
+  const recommendations = _internals.recommendNextWork(localAtlasGapStatus, {
+    max: 5,
+    receiptState,
+  });
+  const summary = _internals.summarizeOperatorStatusForNextWork(localAtlasGapStatus, receiptState);
+
+  assert.equal(summary.ok, true);
+  assert.equal(summary.atlasHealthOk, true);
+  assert.equal(summary.deferredLocalAtlasHealthEnvGap, true);
+  assert.deepEqual(recommendations, []);
 });
 
 test("next work recommender advances past completed steady-state review receipts", () => {

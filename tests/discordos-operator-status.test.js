@@ -252,6 +252,53 @@ test("operator status surfaces atlas health blockers as next actions", () => {
   assert.deepEqual(actions, ["enable_discordos_atlas_health_alert_send_env"]);
 });
 
+test("operator status defers local atlas env and untracked receipt review after proofs", () => {
+  const actions = _internals.determineOperatorNextActions({
+    runtimeStatus: { ok: true },
+    publicationStatus: { ok: true },
+    publicationAudit: {
+      ok: true,
+      counts: {
+        draftUpdateReceipts: 0,
+        needsBackfill: 0,
+        untrackedPublicationReceipts: 1,
+      },
+    },
+    atlasHealthStatus: {
+      ok: false,
+      status: "alert_env_action_required",
+      watch: {
+        status: "schedule_not_due",
+        criticalCount: 0,
+      },
+      alertReadiness: {
+        reasonCodes: [
+          "atlas_health_watch_env_disabled",
+          "atlas_health_alert_send_env_disabled",
+          "atlas_health_alert_target_missing",
+        ],
+      },
+      nextActions: [
+        "enable_discordos_atlas_health_watch_env",
+        "enable_discordos_atlas_health_alert_send_env",
+        "configure_atlas_health_alert_target",
+      ],
+    },
+    notificationPolicyStatus: {
+      ok: true,
+    },
+    receiptState: {
+      ..._internals.classifyReceiptState([
+        "discordos-atlas-health-prod-status-proof-pass-90-2026-06-14.md",
+        "discordos-atlas-health-prod-dashboard-proof-pass-91-2026-06-14.md",
+        "discordos-publication-audit-git-durability-pass-80-2026-06-14.md",
+      ]),
+    },
+  });
+
+  assert.deepEqual(actions, ["continue_discordos_runtime_product_hardening"]);
+});
+
 test("operator status surfaces untracked publication receipts as next actions", () => {
   const actions = _internals.determineOperatorNextActions({
     runtimeStatus: { ok: true },
@@ -338,6 +385,7 @@ test("operator status renders markdown without target secret values", () => {
       draftUpdateReceipts: 0,
       needsBackfill: 0,
       untrackedPublicationReceipts: 1,
+      gitDurabilityProof: true,
       reasonCodes: [],
     },
     atlasHealth: {
@@ -359,6 +407,7 @@ test("operator status renders markdown without target secret values", () => {
       alertReady: true,
       alertReadinessStatus: "ready",
       alertTargetType: "discord_bot_channel",
+      deferredLocalEnvGap: false,
       nextActions: ["continue_atlas_health_monitoring"],
       reasonCodes: [],
     },
