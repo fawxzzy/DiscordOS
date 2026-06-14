@@ -563,7 +563,7 @@ Current scheduled runtime surface:
 - `/api/cron/runtime-health`
   - guarded by `CRON_SECRET`
   - configured in `vercel.json` for production invocation at `0 16 * * *`
-  - latest production deployment `dpl_HUWifJFefawJbMzJ2tgG7reTzunW`
+  - latest production deployment `dpl_Ds921FSrkRWEXFgJKUJ1i67h6Dp5`
   - 2026-06-13 11:15 AM EDT proof window did not produce a scheduled invocation or private cron audit row
   - 2026-06-13 11:45 AM EDT proof window produced Vercel `200` scheduled invocation proof and private Supabase audit row `runtime-health-cron-vercel-daily-runtime-health-20260613T155511740Z`
   - writes sanitized private Supabase cron receipt rows only when `DISCORDOS_RUNTIME_HEALTH_CRON_AUDIT_WRITE=enabled`

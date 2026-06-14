@@ -73,6 +73,60 @@ Current result:
 - `DISCORDOS_ATLAS_HEALTH_ALERT_SEND`: exact `enabled`, length `7`
 - temp env file removed after verification
 
+## Production Deploy Proof
+
+Command:
+
+```powershell
+npm run ops:vercel:run -- vercel deploy --prod --yes
+```
+
+Current result:
+
+- deployment id: `dpl_Ds921FSrkRWEXFgJKUJ1i67h6Dp5`
+- production URL: `https://fawxzzy-discordos-dre7ep6qs-fawxzzy.vercel.app`
+- ready state: `READY`
+- alias: `https://fawxzzy-discordos.vercel.app`
+
+Command:
+
+```powershell
+npm run ops:vercel:run -- npm run ops:runtime-health:cron-schedule-proof:json
+```
+
+Current result:
+
+- result: `pass`
+- expected path: `/api/cron/runtime-health`
+- expected schedule: `0 16 * * *`
+- exact matching cron count: `1`
+- deployed host: `fawxzzy-discordos-dre7ep6qs-fawxzzy.vercel.app`
+- undeployed count: `0`
+- modified count: `0`
+
+## Authorized Cron Proof
+
+Command:
+
+```powershell
+Invoke-WebRequest https://fawxzzy-discordos.vercel.app/api/cron/runtime-health
+```
+
+Run with `Authorization: Bearer $CRON_SECRET` loaded from a temp production env file. The secret was not printed or persisted.
+
+Current result:
+
+- HTTP status: `200`
+- cron result: `pass`
+- schedule name: `manual-authorized-runtime-health`
+- cron audit status: `written`
+- ATLAS watch enabled: `true`
+- ATLAS watch status: `pass`
+- ATLAS target count: `5`
+- ATLAS critical count: `0`
+- ATLAS delivery status: `skipped_clear`
+- ATLAS alert delivered: `false`
+
 ## Verification
 
 Commands:
