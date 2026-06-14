@@ -85,9 +85,9 @@ test("notification policy status classifies ready routes and attached producers"
   assert.equal(result.enabledRouteCount, 4);
   assert.equal(result.alertsRouteCount, 2);
   assert.equal(result.updatesRouteCount, 2);
-  assert.equal(result.attachedProducerCount, 4);
-  assert.equal(result.readyAttachedProducerCount, 4);
-  assert.equal(result.reservedProducerCount, 1);
+  assert.equal(result.attachedProducerCount, 5);
+  assert.equal(result.readyAttachedProducerCount, 5);
+  assert.equal(result.reservedProducerCount, 0);
   assert.equal(result.event.type, "discordos.notification.policy_ready");
 });
 
@@ -135,9 +135,10 @@ test("notification policy status renders markdown without secret target values",
   const rendered = _internals.renderMarkdown(result);
 
   assert(rendered.includes("# DiscordOS Notification Policy Status"));
-  assert(rendered.includes("attached producers: `4/4`"));
+  assert(rendered.includes("attached producers: `5/5`"));
   assert(rendered.includes("runtime-health-critical-alert"));
   assert(rendered.includes("discord-update-post"));
+  assert(rendered.includes("forum-card-lifecycle"));
   assert(!rendered.includes("bot-secret"));
   assert(!rendered.includes("https://discord.com/api/webhooks"));
 });

@@ -46,8 +46,8 @@ const PRODUCER_SURFACES = [
     type: "discordos.forum_card.lifecycle",
     severity: "info",
     expectedTarget: "updates",
-    state: "reserved",
-    command: null,
+    state: "attached",
+    command: "npm run ops:discord:forum-card-lifecycle",
   },
 ];
 
