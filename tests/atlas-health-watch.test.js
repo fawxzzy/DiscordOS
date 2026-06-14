@@ -6,10 +6,11 @@ const test = require("node:test");
 
 const { _internals } = require("../scripts/atlas-health-watch");
 
-function configEnv(targets) {
+function configEnv(targets, schedule = null) {
   return {
     DISCORDOS_ATLAS_HEALTH_TARGETS_JSON: JSON.stringify({
       version: 1,
+      ...(schedule ? { schedule } : {}),
       targets,
     }),
   };
@@ -75,6 +76,46 @@ test("atlas health watch passes when all targets are healthy", async () => {
 test("atlas health watch estimates monthly checks from configured schedule", () => {
   assert.equal(_internals.estimateRunsPerMonthFromCron("0 16 * * *"), 30);
   assert.equal(_internals.estimateRunsPerMonthFromCron("0 4,16 * * *"), 60);
+  assert.equal(_internals.estimateRunsPerMonthFromCron("0 16 * * 1-5"), 21);
+  assert.equal(_internals.estimateRunsPerMonthFromCron("0 4,16 * * 1-5"), 43);
+  assert.deepEqual(_internals.runDaysFromCron("0 16 * * 1-5"), [
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+  ]);
+});
+
+test("atlas health watch skips target checks when configured schedule is not due", async () => {
+  const result = await _internals.buildAtlasHealthWatch({
+    env: configEnv([
+      {
+        id: "runtime",
+        label: "Runtime",
+        owner: "DiscordOS",
+        url: "https://example.test/api/runtime-health",
+        kind: "json-ok",
+      },
+    ], {
+      cron: "0 16 * * 1-5",
+      timezone: "UTC",
+    }),
+    fetchImpl: async () => {
+      throw new Error("target fetch should be skipped outside configured run days");
+    },
+    now: new Date("2026-06-13T16:00:00.000Z"),
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.skipped, true);
+  assert.equal(result.skipReason, "atlas_health_schedule_not_due");
+  assert.equal(result.targetCount, 1);
+  assert.equal(result.checks.length, 0);
+  assert.equal(result.alertDelivery.status, "skipped_schedule");
+  assert.deepEqual(result.alertDelivery.reasonCodes, ["atlas_health_schedule_not_due"]);
+  assert.equal(result.usageEstimate.runsPerMonth, 21);
+  assert.equal(result.usageEstimate.targetChecksPerMonth, 21);
 });
 
 test("atlas health watch marks json ok false as critical without sending in dry run", async () => {

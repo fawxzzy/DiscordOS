@@ -167,10 +167,12 @@ Current governed contract surface:
 - `config/atlas-health-targets.json`
   - bounded public ATLAS health watch target list for DiscordOS, Foundation, Fitness, Trove, and Mazer
   - defaults to public HTTP/JSON availability checks only; deeper project checks can be supplied through `DISCORDOS_ATLAS_HEALTH_TARGETS_JSON`
+  - defaults ATLAS cross-project sweeps to weekdays at `0 16 * * 1-5`, while the DiscordOS runtime cron remains daily
 - `scripts/atlas-health-watch.js`
   - repo-local ATLAS health watch command for critical-only multi-project availability checks
   - dry-runs by default, sends no routine clear posts, disables mentions, and suppresses identical critical alerts for 24 hours
   - can share the existing `#alerts` target or use dedicated `DISCORDOS_ATLAS_HEALTH_ALERT_*` env values
+  - skips target fetches when the configured ATLAS sweep schedule is not due
 - `scripts/atlas-health-status.js`
   - repo-local read-only status command for ATLAS health watch posture and alert readiness
   - checks current configured target health, local/process env arming flags, alert target shape, and usage estimate without sending Discord messages
@@ -365,6 +367,8 @@ Current governed contract surface:
   - final follow-up `#updates` post draft and publication receipt for passes 63 through 67
 - `docs/ops/discordos-runtime-product-hardening-followup-live-post-pass-68-2026-06-13.md`
   - owner-side proof that the final follow-up update was published to `#updates`
+- `docs/ops/discordos-atlas-health-weekday-cadence-pass-70-2026-06-14.md`
+  - owner-side proof that ATLAS cross-project health sweeps now skip weekends while DiscordOS runtime health remains daily
 - `docs/ops/discordos-next-work-final-followup-state-pass-69-2026-06-13.md`
   - owner-side proof that next-work now reports only the deferred scheduled cron identity proof after the final follow-up post
 
@@ -584,11 +588,11 @@ Current scheduled runtime surface:
 - `/api/cron/runtime-health`
   - guarded by `CRON_SECRET`
   - configured in `vercel.json` for production invocation at `0 16 * * *`
-  - latest production deployment `dpl_Ds921FSrkRWEXFgJKUJ1i67h6Dp5`
+  - latest production deployment `dpl_EjhiNuY3Rv63ABipq7N1oLc7RKrg`
   - 2026-06-13 11:15 AM EDT proof window did not produce a scheduled invocation or private cron audit row
   - 2026-06-13 11:45 AM EDT proof window produced Vercel `200` scheduled invocation proof and private Supabase audit row `runtime-health-cron-vercel-daily-runtime-health-20260613T155511740Z`
   - writes sanitized private Supabase cron receipt rows only when `DISCORDOS_RUNTIME_HEALTH_CRON_AUDIT_WRITE=enabled`
-  - can run the ATLAS health watch when `DISCORDOS_ATLAS_HEALTH_WATCH_ENABLED=enabled`
+  - can run the ATLAS health watch when `DISCORDOS_ATLAS_HEALTH_WATCH_ENABLED=enabled`; the default ATLAS sweep schedule is weekday-only `0 16 * * 1-5`, currently estimated at `105` target checks/month across 5 targets
   - delivers only critical runtime-health alerts when `DISCORDOS_RUNTIME_HEALTH_ALERT_SEND=enabled`
   - delivers only critical ATLAS health alerts when `DISCORDOS_ATLAS_HEALTH_ALERT_SEND=enabled`
 

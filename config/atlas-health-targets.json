@@ -1,9 +1,10 @@
 {
   "version": 1,
   "schedule": {
-    "cron": "0 16 * * *",
+    "cron": "0 16 * * 1-5",
     "timezone": "America/New_York",
-    "note": "Runs at 12:00 PM Eastern while New York observes daylight time. Twice-daily 12:00 AM and 12:00 PM cadence requires a Vercel plan above Hobby."
+    "runDays": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+    "note": "ATLAS cross-project health sweep runs weekdays at 12:00 PM Eastern while New York observes daylight time. The DiscordOS runtime cron remains daily; ATLAS watch skips weekends to reduce cross-project Vercel usage."
   },
   "targets": [
     {

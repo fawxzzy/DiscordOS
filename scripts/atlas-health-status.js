@@ -132,6 +132,8 @@ async function buildAtlasHealthStatus({
     watch: {
       ok: watch.ok,
       eventType: watch.event.type,
+      skipped: watch.skipped === true,
+      skipReason: watch.skipReason || null,
       targetCount: watch.targetCount,
       passCount: watch.passCount,
       failCount: watch.failCount,
@@ -171,6 +173,8 @@ function renderMarkdown(status) {
     "",
     `- result: \`${status.watch.ok ? "pass" : "fail"}\``,
     `- event type: \`${status.watch.eventType}\``,
+    `- skipped: \`${status.watch.skipped ? "true" : "false"}\``,
+    `- skip reason: \`${status.watch.skipReason || "none"}\``,
     `- targets: \`${status.watch.targetCount}\``,
     `- passing: \`${status.watch.passCount}\``,
     `- failing: \`${status.watch.failCount}\``,

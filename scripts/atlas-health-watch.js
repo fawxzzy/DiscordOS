@@ -8,6 +8,31 @@ const CRITICAL_EMBED_COLOR = 14233637;
 const DEFAULT_CONFIG_PATH = path.resolve(__dirname, "..", "config", "atlas-health-targets.json");
 const DEFAULT_SUPPRESSION_DIR = path.join(os.tmpdir(), "discordos-atlas-health-watch");
 const DEFAULT_TIMEOUT_MS = 8000;
+const DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+const DAY_ALIASES = {
+  "0": "sunday",
+  "7": "sunday",
+  sun: "sunday",
+  sunday: "sunday",
+  "1": "monday",
+  mon: "monday",
+  monday: "monday",
+  "2": "tuesday",
+  tue: "tuesday",
+  tuesday: "tuesday",
+  "3": "wednesday",
+  wed: "wednesday",
+  wednesday: "wednesday",
+  "4": "thursday",
+  thu: "thursday",
+  thursday: "thursday",
+  "5": "friday",
+  fri: "friday",
+  friday: "friday",
+  "6": "saturday",
+  sat: "saturday",
+  saturday: "saturday",
+};
 
 function hasValue(value) {
   return typeof value === "string" && value.trim().length > 0;
@@ -96,6 +121,91 @@ function normalizeTarget(entry) {
   };
 }
 
+function normalizeDayToken(value) {
+  const key = String(value || "").trim().toLowerCase();
+  return DAY_ALIASES[key] || null;
+}
+
+function expandDayRange(start, end) {
+  const startDay = normalizeDayToken(start);
+  const endDay = normalizeDayToken(end);
+  if (!startDay || !endDay) {
+    return [];
+  }
+
+  const startIndex = DAY_NAMES.indexOf(startDay);
+  const endIndex = DAY_NAMES.indexOf(endDay);
+  if (startIndex <= endIndex) {
+    return DAY_NAMES.slice(startIndex, endIndex + 1);
+  }
+  return [...DAY_NAMES.slice(startIndex), ...DAY_NAMES.slice(0, endIndex + 1)];
+}
+
+function normalizeRunDays(value) {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const runDays = [];
+  for (const entry of value) {
+    const day = normalizeDayToken(entry);
+    if (day && !runDays.includes(day)) {
+      runDays.push(day);
+    }
+  }
+
+  return runDays.length > 0 ? runDays : null;
+}
+
+function runDaysFromCron(cron) {
+  const parts = String(cron || "").trim().split(/\s+/);
+  if (parts.length !== 5 || !parts[4] || parts[4] === "*") {
+    return null;
+  }
+
+  const runDays = [];
+  for (const token of parts[4].split(",")) {
+    const cleaned = token.trim();
+    if (!cleaned) {
+      continue;
+    }
+    const rangeMatch = cleaned.match(/^([a-z0-9]+)-([a-z0-9]+)$/i);
+    const days = rangeMatch
+      ? expandDayRange(rangeMatch[1], rangeMatch[2])
+      : [normalizeDayToken(cleaned)].filter(Boolean);
+    for (const day of days) {
+      if (!runDays.includes(day)) {
+        runDays.push(day);
+      }
+    }
+  }
+
+  return runDays.length > 0 ? runDays : null;
+}
+
+function normalizeSchedule(schedule) {
+  if (!schedule || typeof schedule !== "object") {
+    return null;
+  }
+
+  const cron = typeof schedule.cron === "string" && schedule.cron.trim()
+    ? schedule.cron.trim()
+    : null;
+  const timezone = typeof schedule.timezone === "string" && schedule.timezone.trim()
+    ? schedule.timezone.trim()
+    : "UTC";
+  const runDays = normalizeRunDays(schedule.runDays)
+    || normalizeRunDays(schedule.daysOfWeek)
+    || runDaysFromCron(cron);
+
+  return {
+    ...schedule,
+    cron,
+    timezone,
+    runDays,
+  };
+}
+
 function normalizeConfig(config) {
   const targets = Array.isArray(config?.targets)
     ? config.targets.map(normalizeTarget).filter((target) => target.enabled)
@@ -107,7 +217,7 @@ function normalizeConfig(config) {
 
   return {
     version: Number.isInteger(config?.version) ? config.version : 1,
-    schedule: config?.schedule && typeof config.schedule === "object" ? config.schedule : null,
+    schedule: normalizeSchedule(config?.schedule),
     targets,
   };
 }
@@ -334,6 +444,27 @@ function classifyAtlasHealthEvent(result) {
   };
 }
 
+function getScheduleDayName(schedule, now = new Date()) {
+  const timezone = schedule?.timezone || "UTC";
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      weekday: "long",
+    }).format(now).toLowerCase();
+  } catch (_error) {
+    return DAY_NAMES[now.getUTCDay()];
+  }
+}
+
+function isScheduleDue(schedule, now = new Date()) {
+  const normalized = normalizeSchedule(schedule);
+  if (!normalized?.runDays?.length) {
+    return true;
+  }
+
+  return normalized.runDays.includes(getScheduleDayName(normalized, now));
+}
+
 function estimateRunsPerMonthFromCron(cron) {
   const parts = String(cron || "").trim().split(/\s+/);
   if (parts.length !== 5) {
@@ -345,7 +476,21 @@ function estimateRunsPerMonthFromCron(cron) {
     .map((value) => value.trim())
     .filter(Boolean);
   const dailyRuns = Math.max(1, hours.length);
-  return dailyRuns * 30;
+  const runDays = runDaysFromCron(cron);
+  const daysPerWeek = runDays?.length || 7;
+  return Math.max(1, Math.round(dailyRuns * 30 * (daysPerWeek / 7)));
+}
+
+function buildUsageEstimate(config, targetCount) {
+  const runsPerMonth = estimateRunsPerMonthFromCron(config.schedule?.cron);
+  return {
+    configuredSchedule: config.schedule?.cron || null,
+    runDays: config.schedule?.runDays || null,
+    timezone: config.schedule?.timezone || null,
+    runsPerMonth,
+    targetChecksPerMonth: targetCount * runsPerMonth,
+    discordPosts: "0 unless a critical target fails",
+  };
 }
 
 function buildDiscordAlertPayload(result) {
@@ -542,6 +687,39 @@ async function buildAtlasHealthWatch({
   suppressionDir = DEFAULT_SUPPRESSION_DIR,
 } = {}) {
   const config = await loadConfig({ configPath, env, fsImpl });
+  const usageEstimate = buildUsageEstimate(config, config.targets.length);
+  if (!isScheduleDue(config.schedule, now)) {
+    const result = {
+      ok: true,
+      generatedAt: now.toISOString(),
+      destructive: false,
+      sendsMessages: false,
+      writesArtifacts: false,
+      skipped: true,
+      skipReason: "atlas_health_schedule_not_due",
+      targetCount: config.targets.length,
+      passCount: 0,
+      failCount: 0,
+      criticalCount: 0,
+      criticalTargets: [],
+      checks: [],
+      usageEstimate,
+    };
+
+    return {
+      ...result,
+      event: classifyAtlasHealthEvent(result),
+      alertDelivery: {
+        ok: true,
+        enabled: send,
+        status: "skipped_schedule",
+        targetType: getAlertTarget(env).type,
+        sent: false,
+        reasonCodes: ["atlas_health_schedule_not_due"],
+      },
+    };
+  }
+
   const checks = await Promise.all(
     config.targets.map((target) => checkTarget(target, { fetchImpl, timeoutMs }))
   );
@@ -559,9 +737,7 @@ async function buildAtlasHealthWatch({
     criticalTargets,
     checks,
     usageEstimate: {
-      configuredSchedule: config.schedule?.cron || null,
-      runsPerMonth: estimateRunsPerMonthFromCron(config.schedule?.cron),
-      targetChecksPerMonth: checks.length * estimateRunsPerMonthFromCron(config.schedule?.cron),
+      ...usageEstimate,
       discordPosts: criticalTargets.length === 0 ? "0 unless a critical target fails" : "bounded by repeat suppression",
     },
   };
@@ -639,6 +815,9 @@ module.exports = {
     DEFAULT_TIMEOUT_MS,
     parseArgs,
     normalizeTarget,
+    normalizeDayToken,
+    runDaysFromCron,
+    normalizeSchedule,
     normalizeConfig,
     loadConfig,
     getAlertTarget,
@@ -652,7 +831,9 @@ module.exports = {
     evaluateSuppressionRecord,
     writeSuppressionRecord,
     classifyAtlasHealthEvent,
+    isScheduleDue,
     estimateRunsPerMonthFromCron,
+    buildUsageEstimate,
     buildDiscordAlertPayload,
     sendDiscordWebhook,
     sendDiscordBotChannel,
