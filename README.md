@@ -248,6 +248,10 @@ Current governed contract surface:
   - repo-local no-send notification route resolver for runtime health, ATLAS health, update, and forum/card event intents
   - enforces severity minimums before critical alerts can target `#alerts`
   - returns target environment variable names only and never prints configured target values
+- `scripts/discordos-notification-policy-status.js`
+  - repo-local no-send notification policy audit for route coverage, target classes, and producer-surface attachment
+  - reports route ids, target classes, min severities, and env variable names without reading or printing secret values
+  - treats current runtime, ATLAS health, and updates producer surfaces as attached, with forum/card lifecycle reserved for future work
 - `scripts/discordos-operator-env-readiness.js`
   - repo-local read-only operator env readiness command for DiscordOS updates, alerts, and bot-token availability
   - reports target readiness booleans and reason codes without printing target ids, webhook URLs, or token values
@@ -500,6 +504,8 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local DiscordOS operator dashboard command
 - `npm run verify:discordos-notification-router`
   - Node test coverage for the repo-local DiscordOS notification route resolver
+- `npm run verify:discordos-notification-policy-status`
+  - Node test coverage for the repo-local DiscordOS notification policy status command
 - `npm run verify:discordos-env-readiness`
   - Node test coverage for the repo-local DiscordOS operator env readiness command
 - `npm run verify`
@@ -614,6 +620,10 @@ Current repo-local operator surface:
   - resolves a DiscordOS notification intent to a no-send target route using committed route policy
 - `npm run ops:discordos:notification-router:json`
   - emits the notification route decision as JSON
+- `npm run ops:discordos:notification-policy-status`
+  - audits the committed notification route policy and attached producer surfaces without sending messages
+- `npm run ops:discordos:notification-policy-status:json`
+  - emits the notification policy status as JSON
 - `npm run ops:discordos:env-readiness`
   - checks current process env readiness for updates, alerts, and bot-token-backed live probes without printing values
 - `npm run ops:discordos:env-readiness:json`
