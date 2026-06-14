@@ -8,8 +8,6 @@ const DEFAULT_BODY_SECTION = "Update Post";
 const REQUIRED_BODY_ANCHORS = [
   "What changed:",
   "Proof:",
-  "Current production state:",
-  "Verification:",
 ];
 const SECRET_VALUE_PATTERNS = [
   { code: "discord_webhook_url_present", pattern: /https:\/\/discord(?:app)?\.com\/api\/webhooks\/\d+\/[A-Za-z0-9._-]+/i },
@@ -109,6 +107,13 @@ function validateRequiredBodyAnchors(body) {
     .map((anchor) => `missing_public_body_anchor:${anchor.replace(/[^a-z0-9]+/gi, "_").toLowerCase()}`);
 }
 
+function validatePublicBodyFormatting(body) {
+  const headings = getMarkdownHeadings(body);
+  return headings.length === 0
+    ? []
+    : ["public_body_heading_present"];
+}
+
 function validatePublicSafeText({ title, body, markdown }) {
   const joined = [title, body, markdown].filter(Boolean).join("\n");
   return SECRET_VALUE_PATTERNS
@@ -172,6 +177,7 @@ function classifyDiscordUpdateDraftEvent(result) {
     dimensions: {
       payloadStatus: result.payload.status,
       bodyAnchorStatus: result.bodyAnchors.ok ? "pass" : "fail",
+      bodyFormattingStatus: result.formatting.ok ? "pass" : "fail",
       receiptLinkStatus: result.receiptLinks.ok ? "pass" : "fail",
       publicSafetyStatus: result.publicSafety.ok ? "pass" : "fail",
       reasonCodeCount: result.reasonCodes.length,
@@ -203,14 +209,9 @@ async function buildDiscordUpdateDraftValidation({
     fsImpl,
   });
   const bodyAnchorReasonCodes = validateRequiredBodyAnchors(body);
+  const formattingReasonCodes = validatePublicBodyFormatting(body);
   const durableReceipts = extractDurableReceiptLinks(markdown);
   const receiptReasonCodes = [];
-  if (!hasHeading(markdown, "Durable Receipts")) {
-    receiptReasonCodes.push("missing_durable_receipts_heading");
-  }
-  if (durableReceipts.length === 0) {
-    receiptReasonCodes.push("missing_durable_receipt_links");
-  }
   const publicSafetyReasonCodes = validatePublicSafeText({
     title,
     body,
@@ -219,12 +220,14 @@ async function buildDiscordUpdateDraftValidation({
   const reasonCodes = [
     ...payload.reasonCodes,
     ...bodyAnchorReasonCodes,
+    ...formattingReasonCodes,
     ...receiptReasonCodes,
     ...publicSafetyReasonCodes,
   ];
   const result = {
     ok: payload.ok
       && bodyAnchorReasonCodes.length === 0
+      && formattingReasonCodes.length === 0
       && receiptReasonCodes.length === 0
       && publicSafetyReasonCodes.length === 0,
     destructive: false,
@@ -240,10 +243,16 @@ async function buildDiscordUpdateDraftValidation({
       required: REQUIRED_BODY_ANCHORS,
       reasonCodes: bodyAnchorReasonCodes,
     },
+    formatting: {
+      ok: formattingReasonCodes.length === 0,
+      headingsAllowed: false,
+      reasonCodes: formattingReasonCodes,
+    },
     receiptLinks: {
       ok: receiptReasonCodes.length === 0,
       durableReceipts,
       count: durableReceipts.length,
+      required: false,
       reasonCodes: receiptReasonCodes,
     },
     publicSafety: {
@@ -277,6 +286,7 @@ function renderMarkdown(result) {
     `- payload body chars: \`${result.payload.bodyChars ?? "unknown"}\``,
     `- workflow marker count: \`${result.payload.markerProgress?.summary?.markerCount ?? 0}\``,
     `- body anchors: \`${result.bodyAnchors.ok ? "pass" : "fail"}\``,
+    `- body formatting: \`${result.formatting.ok ? "pass" : "fail"}\``,
     `- durable receipt links: \`${result.receiptLinks.count}\``,
     `- public safety: \`${result.publicSafety.ok ? "pass" : "fail"}\``,
     `- reason codes: \`${result.reasonCodes.join(",") || "none"}\``,
@@ -314,6 +324,7 @@ module.exports = {
     hasHeading,
     extractDurableReceiptLinks,
     validateRequiredBodyAnchors,
+    validatePublicBodyFormatting,
     validatePublicSafeText,
     buildPayloadCheck,
     classifyDiscordUpdateDraftEvent,

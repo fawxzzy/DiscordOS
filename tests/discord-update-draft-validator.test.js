@@ -11,10 +11,6 @@ function validDraftMarkdown() {
   return [
     "# DiscordOS Example Update - 2026-06-13",
     "",
-    "## Status",
-    "",
-    "`DiscordOS Example` is closed at `100%`.",
-    "",
     "## Update Post",
     "",
     "DiscordOS example hardening is now closed at 100%.",
@@ -28,17 +24,14 @@ function validDraftMarkdown() {
     "",
     "- runtime posture: `operational`",
     "- readiness: `100`",
+  ].join("\n");
+}
+
+function draftWithReceiptLinks() {
+  return [
+    validDraftMarkdown(),
     "",
-    "Current production state:",
-    "",
-    "- production alias: `https://fawxzzy-discordos.vercel.app`",
-    "- delivery policy: critical-only",
-    "",
-    "Verification:",
-    "",
-    "- `npm run verify` passes",
-    "",
-    "## Durable Receipts",
+    "## Internal Receipt Links",
     "",
     "- `docs/ops/discordos-example-pass-1-2026-06-13.md`",
   ].join("\n");
@@ -102,7 +95,7 @@ test("discord update draft validator parses title body file section and json", (
 });
 
 test("discord update draft validator extracts durable receipt links", () => {
-  assert.deepEqual(_internals.extractDurableReceiptLinks(validDraftMarkdown()), [
+  assert.deepEqual(_internals.extractDurableReceiptLinks(draftWithReceiptLinks()), [
     "docs/ops/discordos-example-pass-1-2026-06-13.md",
   ]);
 });
@@ -125,7 +118,8 @@ test("discord update draft validator passes a complete update receipt", async ()
   assert.equal(result.payload.status, "valid");
   assert.equal(result.payload.markerProgress.summary.markerCount, 1);
   assert.equal(result.bodyAnchors.ok, true);
-  assert.equal(result.receiptLinks.count, 1);
+  assert.equal(result.formatting.ok, true);
+  assert.equal(result.receiptLinks.count, 0);
   assert.equal(result.publicSafety.ok, true);
   assert.equal(result.event.type, "discordos.updates.draft_ready");
 });
@@ -155,10 +149,21 @@ test("discord update draft validator blocks missing public proof anchors", async
   assert.deepEqual(result.bodyAnchors.reasonCodes, ["missing_public_body_anchor:proof_"]);
 });
 
-test("discord update draft validator blocks missing durable receipt linkage", async () => {
-  const markdown = validDraftMarkdown()
-    .replace("## Durable Receipts", "## Internal Receipts")
-    .replace("- `docs/ops/discordos-example-pass-1-2026-06-13.md`", "- none");
+test("discord update draft validator allows receipts to stay out of the public update", async () => {
+  const result = await _internals.buildDiscordUpdateDraftValidation({
+    title: "DiscordOS Example Closed",
+    bodyFile: "docs/ops/draft.md",
+    cwd: await writeDraft(validDraftMarkdown()),
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.receiptLinks.ok, true);
+  assert.equal(result.receiptLinks.required, false);
+  assert.equal(result.receiptLinks.count, 0);
+});
+
+test("discord update draft validator blocks headings inside the public update body", async () => {
+  const markdown = validDraftMarkdown().replace("What changed:", "### Extra Title\n\nWhat changed:");
   const result = await _internals.buildDiscordUpdateDraftValidation({
     title: "DiscordOS Example Closed",
     bodyFile: "docs/ops/draft.md",
@@ -166,10 +171,7 @@ test("discord update draft validator blocks missing durable receipt linkage", as
   });
 
   assert.equal(result.ok, false);
-  assert.deepEqual(result.receiptLinks.reasonCodes, [
-    "missing_durable_receipts_heading",
-    "missing_durable_receipt_links",
-  ]);
+  assert.deepEqual(result.formatting.reasonCodes, ["public_body_heading_present"]);
 });
 
 test("discord update draft validator blocks secret-like value leakage", async () => {
@@ -186,8 +188,8 @@ test("discord update draft validator blocks secret-like value leakage", async ()
 
 test("discord update draft validator reports payload limit failures", async () => {
   const longBody = validDraftMarkdown().replace(
-    "## Durable Receipts",
-    `${"x".repeat(5000)}\n\n## Durable Receipts`
+    "Proof:",
+    `${"x".repeat(5000)}\n\nProof:`
   );
   const result = await _internals.buildDiscordUpdateDraftValidation({
     title: "DiscordOS Example Closed",
@@ -210,7 +212,8 @@ test("discord update draft validator renders markdown without full body or secre
 
   assert(rendered.includes("# DiscordOS Update Draft Validation"));
   assert(rendered.includes("sends messages: `false`"));
-  assert(rendered.includes("durable receipt links: `1`"));
+  assert(rendered.includes("body formatting: `pass`"));
+  assert(rendered.includes("durable receipt links: `0`"));
   assert(!rendered.includes("added a guarded operator command"));
   assert(!rendered.includes("super-secret-value"));
 });

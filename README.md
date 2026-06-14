@@ -262,7 +262,8 @@ Current governed contract surface:
   - validates marker-enriched workflow progress payloads when `--marker` flags are supplied
 - `scripts/discord-update-draft-validator.js`
   - repo-local no-send validator for drafted `#updates` receipt files
-  - checks embed length, required public proof anchors, durable receipt linkage, and obvious secret-like value leakage
+  - checks embed length, curated public body anchors, single-title body formatting, and obvious secret-like value leakage
+  - keeps durable receipt links optional in source files instead of requiring them in public update text
   - performs no network calls and writes no artifacts
   - validates the same marker-enriched payload shape used by live update and card publication commands
 - `scripts/discord-update-release-check.js`

@@ -25,13 +25,11 @@ Command:
 Default checks:
 
 - validates the title/body against Discord embed limits
-- requires the public update section to include:
+- requires the public update section to include only the user-facing anchors:
   - `What changed:`
   - `Proof:`
-  - `Current production state:`
-  - `Verification:`
-- requires a `Durable Receipts` heading in the source receipt file
-- requires at least one durable `docs/ops/*.md` receipt link in the source receipt file
+- blocks Markdown headings inside the public body so the Discord embed title remains the only title
+- allows durable receipt links in the source receipt file but does not require them in public update text
 - blocks obvious secret-like value leakage patterns such as Discord webhook URLs, `Authorization: Bot ...`, `Authorization: Bearer ...`, and direct secret assignments
 - renders bounded metadata only, not the full update body
 

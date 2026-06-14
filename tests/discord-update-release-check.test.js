@@ -26,18 +26,6 @@ function validDraftMarkdown() {
     "Proof:",
     "",
     "- runtime posture: `operational`",
-    "",
-    "Current production state:",
-    "",
-    "- production alias: `https://fawxzzy-discordos.vercel.app`",
-    "",
-    "Verification:",
-    "",
-    "- `npm run verify` passes",
-    "",
-    "## Durable Receipts",
-    "",
-    "- `docs/ops/discordos-example-pass-1-2026-06-13.md`",
   ].join("\n");
 }
 
