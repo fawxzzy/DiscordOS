@@ -17,6 +17,12 @@ const {
 const {
   _internals: publicationAuditInternals,
 } = require("./discord-publication-audit-rollup");
+const {
+  _internals: atlasHealthStatusInternals,
+} = require("./atlas-health-status");
+const {
+  _internals: atlasHealthInternals,
+} = require("./atlas-health-watch");
 
 function parseArgs(args) {
   const options = {
@@ -29,6 +35,8 @@ function parseArgs(args) {
     keepCount: 50,
     keepDays: 30,
     probeLive: false,
+    atlasConfigPath: atlasHealthInternals.DEFAULT_CONFIG_PATH,
+    atlasTimeoutMs: atlasHealthInternals.DEFAULT_TIMEOUT_MS,
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -86,6 +94,20 @@ function parseArgs(args) {
       index += 1;
     } else if (arg === "--probe-live") {
       options.probeLive = true;
+    } else if (arg === "--atlas-config") {
+      const value = args[index + 1];
+      if (typeof value !== "string" || value.trim().length === 0) {
+        throw new Error("missing_atlas_config_value");
+      }
+      options.atlasConfigPath = path.resolve(value.trim());
+      index += 1;
+    } else if (arg === "--atlas-timeout-ms") {
+      const value = Number.parseInt(args[index + 1], 10);
+      if (!Number.isInteger(value) || value < 100 || value > 60000) {
+        throw new Error("invalid_atlas_timeout_ms");
+      }
+      options.atlasTimeoutMs = value;
+      index += 1;
     } else {
       throw new Error(`unsupported_argument:${arg}`);
     }
@@ -94,7 +116,12 @@ function parseArgs(args) {
   return options;
 }
 
-function determineOperatorNextActions({ runtimeStatus, publicationStatus, publicationAudit }) {
+function determineOperatorNextActions({
+  runtimeStatus,
+  publicationStatus,
+  publicationAudit,
+  atlasHealthStatus = { ok: true, nextActions: [] },
+}) {
   const actions = [];
 
   if (!runtimeStatus.ok) {
@@ -107,6 +134,10 @@ function determineOperatorNextActions({ runtimeStatus, publicationStatus, public
 
   if (!publicationAudit.ok) {
     actions.push("backfill_publication_receipts");
+  }
+
+  if (!atlasHealthStatus.ok) {
+    actions.push(...(atlasHealthStatus.nextActions || []));
   }
 
   if (publicationAudit.counts.draftUpdateReceipts > 0 && publicationAudit.counts.needsBackfill === 0) {
@@ -132,6 +163,7 @@ function classifyOperatorStatusEvent(status) {
       runtimeStatus: status.runtime.ok ? "pass" : "fail",
       publicationStatus: status.publication.ok ? "pass" : "fail",
       publicationAudit: status.publicationAudit.ok ? "pass" : "fail",
+      atlasHealthStatus: status.atlasHealth.ok ? "pass" : "fail",
       nextActionCount: status.nextActions.length,
     },
   };
@@ -146,11 +178,13 @@ async function buildDiscordOSOperatorStatus({
   keepCount = 50,
   keepDays = 30,
   probeLive = false,
+  atlasConfigPath = atlasHealthInternals.DEFAULT_CONFIG_PATH,
+  atlasTimeoutMs = atlasHealthInternals.DEFAULT_TIMEOUT_MS,
   env = process.env,
   fetchImpl = fetch,
   cwd = process.cwd(),
 } = {}) {
-  const [runtimeStatus, publicationStatus, publicationAudit] = await Promise.all([
+  const [runtimeStatus, publicationStatus, publicationAudit, atlasHealthStatus] = await Promise.all([
     runtimeStatusInternals.buildRuntimeHealthStatus({
       baseUrl,
       snapshotDir,
@@ -171,10 +205,16 @@ async function buildDiscordOSOperatorStatus({
       docsDir,
       cwd,
     }),
+    atlasHealthStatusInternals.buildAtlasHealthStatus({
+      configPath: atlasConfigPath,
+      timeoutMs: atlasTimeoutMs,
+      env,
+      fetchImpl,
+    }),
   ]);
 
   const status = {
-    ok: runtimeStatus.ok && publicationStatus.ok && publicationAudit.ok,
+    ok: runtimeStatus.ok && publicationStatus.ok && publicationAudit.ok && atlasHealthStatus.ok,
     destructive: false,
     sendsMessages: false,
     writesArtifacts: false,
@@ -209,12 +249,27 @@ async function buildDiscordOSOperatorStatus({
       needsBackfill: publicationAudit.counts.needsBackfill,
       reasonCodes: publicationAudit.reasonCodes,
     },
+    atlasHealth: {
+      ok: atlasHealthStatus.ok,
+      eventType: atlasHealthStatus.event.type,
+      targetCount: atlasHealthStatus.watch.targetCount,
+      passCount: atlasHealthStatus.watch.passCount,
+      failCount: atlasHealthStatus.watch.failCount,
+      criticalCount: atlasHealthStatus.watch.criticalCount,
+      configuredSchedule: atlasHealthStatus.watch.usageEstimate.configuredSchedule,
+      targetChecksPerMonth: atlasHealthStatus.watch.usageEstimate.targetChecksPerMonth,
+      alertReady: atlasHealthStatus.alertReadiness.ready,
+      alertTargetType: atlasHealthStatus.alertReadiness.targetType,
+      nextActions: atlasHealthStatus.nextActions,
+      reasonCodes: atlasHealthStatus.alertReadiness.reasonCodes,
+    },
   };
 
   const nextActions = determineOperatorNextActions({
     runtimeStatus,
     publicationStatus,
     publicationAudit,
+    atlasHealthStatus,
   });
 
   return {
@@ -272,6 +327,21 @@ function renderMarkdown(status) {
     `- draft update receipts: \`${status.publicationAudit.draftUpdateReceipts}\``,
     `- needs backfill: \`${status.publicationAudit.needsBackfill}\``,
     `- reason codes: \`${status.publicationAudit.reasonCodes.join(",") || "none"}\``,
+    "",
+    "## ATLAS Health",
+    "",
+    `- result: \`${status.atlasHealth.ok ? "pass" : "fail"}\``,
+    `- event type: \`${status.atlasHealth.eventType}\``,
+    `- targets: \`${status.atlasHealth.targetCount}\``,
+    `- passing: \`${status.atlasHealth.passCount}\``,
+    `- failing: \`${status.atlasHealth.failCount}\``,
+    `- critical: \`${status.atlasHealth.criticalCount}\``,
+    `- configured schedule: \`${status.atlasHealth.configuredSchedule || "unknown"}\``,
+    `- target checks per month: \`${status.atlasHealth.targetChecksPerMonth}\``,
+    `- alert ready: \`${status.atlasHealth.alertReady ? "true" : "false"}\``,
+    `- alert target type: \`${status.atlasHealth.alertTargetType}\``,
+    `- next actions: \`${status.atlasHealth.nextActions.join(",")}\``,
+    `- reason codes: \`${status.atlasHealth.reasonCodes.join(",") || "none"}\``,
   ];
 
   return `${lines.join("\n")}\n`;

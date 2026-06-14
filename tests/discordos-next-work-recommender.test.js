@@ -50,6 +50,20 @@ function baseOperatorStatus(overrides = {}) {
       needsBackfill: 0,
       reasonCodes: [],
     },
+    atlasHealth: {
+      ok: true,
+      eventType: "atlas.health_status.ready",
+      targetCount: 5,
+      passCount: 5,
+      failCount: 0,
+      criticalCount: 0,
+      configuredSchedule: "0 16 * * *",
+      targetChecksPerMonth: 150,
+      alertReady: true,
+      alertTargetType: "discord_bot_channel",
+      nextActions: ["continue_atlas_health_monitoring"],
+      reasonCodes: [],
+    },
     ...overrides,
   };
 }
@@ -152,6 +166,22 @@ test("next work recommender recommends live probe and env checks for local-only 
     "refresh-scheduled-cron-proof",
     "verify-alert-target-env-in-operator-shell",
   ]);
+});
+
+test("next work recommender surfaces atlas health blockers explicitly", () => {
+  const recommendations = _internals.recommendNextWork(baseOperatorStatus({
+    ok: false,
+    atlasHealth: {
+      ...baseOperatorStatus().atlasHealth,
+      ok: false,
+      alertReady: false,
+      reasonCodes: ["atlas_health_alert_send_env_disabled"],
+    },
+  }), { max: 3 });
+
+  assert.equal(recommendations[0].id, "repair-atlas-health-status");
+  assert.equal(recommendations[0].category, "atlas-health");
+  assert.deepEqual(recommendations[0].reasonCodes, ["atlas_health_alert_send_env_disabled"]);
 });
 
 test("next work recommender downgrades live env checks after receipt-backed proofs", () => {
@@ -261,7 +291,27 @@ test("next work recommender can build from live-shaped local fixtures", async ()
     limit: 20,
     keepCount: 50,
     keepDays: 30,
-    env: {},
+    env: {
+      DISCORDOS_ATLAS_HEALTH_WATCH_ENABLED: "enabled",
+      DISCORDOS_ATLAS_HEALTH_ALERT_SEND: "enabled",
+      DISCORDOS_ATLAS_HEALTH_ALERT_CHANNEL_ID: "123",
+      DISCORDOS_BOT_TOKEN: "bot-token",
+      DISCORDOS_ATLAS_HEALTH_TARGETS_JSON: JSON.stringify({
+        version: 1,
+        schedule: {
+          cron: "0 16 * * *",
+        },
+        targets: [
+          {
+            id: "atlas-fixture",
+            label: "ATLAS Fixture",
+            owner: "ATLAS",
+            url: "https://example.invalid/atlas-health",
+            kind: "json-ok",
+          },
+        ],
+      }),
+    },
     fetchImpl: async (url) => {
       if (url === "https://example.invalid/api/runtime-health") {
         return {
@@ -283,6 +333,9 @@ test("next work recommender can build from live-shaped local fixtures", async ()
           status: 401,
           json: async () => ({ error: "cron_secret_mismatch" }),
         };
+      }
+      if (url === "https://example.invalid/atlas-health") {
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
       }
       throw new Error(`unexpected_url:${url}`);
     },

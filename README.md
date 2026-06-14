@@ -215,8 +215,8 @@ Current governed contract surface:
   - summarizes published receipts, draft update receipts, proof-only receipts, and receipt-backfill gaps
   - sends no Discord messages and writes no artifacts
 - `scripts/discordos-operator-status.js`
-  - repo-local read-only operator status bundle for DiscordOS runtime, publication, and publication receipts
-  - combines runtime-health status, publication target/toolchain status, and publication receipt audit into one dashboard
+  - repo-local read-only operator status bundle for DiscordOS runtime, publication, publication receipts, and ATLAS health
+  - combines runtime-health status, publication target/toolchain status, publication receipt audit, and ATLAS health readiness into one dashboard
   - sends no Discord messages and writes no artifacts
 - `scripts/discordos-next-work-recommender.js`
   - repo-local read-only recommender for ranking the next DiscordOS runtime/product hardening moves
@@ -357,6 +357,8 @@ Current governed contract surface:
   - owner-side proof that DiscordOS now owns a critical-only ATLAS health watch integrated into the guarded runtime-health cron
 - `docs/ops/discordos-atlas-health-status-rollup-pass-65-2026-06-13.md`
   - owner-side proof that the ATLAS health watch now has a read-only operator status rollup
+- `docs/ops/discordos-operator-status-atlas-health-integration-pass-66-2026-06-13.md`
+  - owner-side proof that the combined DiscordOS operator status now includes ATLAS health readiness
 
 Current repo-local verification surface:
 
@@ -517,7 +519,7 @@ Current repo-local operator surface:
 - `npm run ops:discord:publication-audit:json`
   - emits the publication receipt audit as JSON
 - `npm run ops:discordos:operator-status`
-  - summarizes runtime-health status, publication status, and publication receipt audit in one read-only dashboard
+  - summarizes runtime-health status, publication status, publication receipt audit, and ATLAS health readiness in one read-only dashboard
 - `npm run ops:discordos:operator-status:json`
   - emits the operator status bundle as JSON
 - `npm run ops:discordos:next-work`

@@ -10,6 +10,7 @@ const { _internals: proofInternals } = require("../scripts/runtime-health-proof"
 const { _internals: alertInternals } = require("../scripts/runtime-health-alert");
 const { _internals: auditInternals } = require("../scripts/discord-publication-audit-rollup");
 const { _internals: updatePostInternals } = require("../scripts/discord-update-post");
+const { _internals: atlasHealthInternals } = require("../scripts/atlas-health-watch");
 
 async function writeJson(dir, fileName, payload) {
   await fs.writeFile(path.join(dir, fileName), `${JSON.stringify(payload, null, 2)}\n`, "utf8");
@@ -79,6 +80,8 @@ test("operator status args default to read-only bundle inputs", () => {
     keepCount: 50,
     keepDays: 30,
     probeLive: false,
+    atlasConfigPath: atlasHealthInternals.DEFAULT_CONFIG_PATH,
+    atlasTimeoutMs: atlasHealthInternals.DEFAULT_TIMEOUT_MS,
   });
 });
 
@@ -100,6 +103,10 @@ test("operator status args support json custom paths and live probe", () => {
     "--keep-days",
     "4",
     "--probe-live",
+    "--atlas-config",
+    ".",
+    "--atlas-timeout-ms",
+    "5000",
   ]);
 
   assert.equal(parsed.json, true);
@@ -108,6 +115,7 @@ test("operator status args support json custom paths and live probe", () => {
   assert.equal(parsed.keepCount, 9);
   assert.equal(parsed.keepDays, 4);
   assert.equal(parsed.probeLive, true);
+  assert.equal(parsed.atlasTimeoutMs, 5000);
 });
 
 test("operator status combines runtime, publication, and audit status", async () => {
@@ -127,7 +135,27 @@ test("operator status combines runtime, publication, and audit status", async ()
     keepCount: 50,
     keepDays: 30,
     probeLive: false,
-    env: {},
+    env: {
+      DISCORDOS_ATLAS_HEALTH_WATCH_ENABLED: "enabled",
+      DISCORDOS_ATLAS_HEALTH_ALERT_SEND: "enabled",
+      DISCORDOS_ATLAS_HEALTH_ALERT_CHANNEL_ID: "123",
+      DISCORDOS_BOT_TOKEN: "bot-token",
+      DISCORDOS_ATLAS_HEALTH_TARGETS_JSON: JSON.stringify({
+        version: 1,
+        schedule: {
+          cron: "0 16 * * *",
+        },
+        targets: [
+          {
+            id: "atlas-fixture",
+            label: "ATLAS Fixture",
+            owner: "ATLAS",
+            url: "https://example.invalid/atlas-health",
+            kind: "json-ok",
+          },
+        ],
+      }),
+    },
     fetchImpl: async (url) => {
       if (url === "https://example.invalid/api/runtime-health") {
         return {
@@ -150,6 +178,9 @@ test("operator status combines runtime, publication, and audit status", async ()
           json: async () => ({ error: "cron_secret_mismatch" }),
         };
       }
+      if (url === "https://example.invalid/atlas-health") {
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }
       throw new Error(`unexpected_url:${url}`);
     },
   });
@@ -161,6 +192,9 @@ test("operator status combines runtime, publication, and audit status", async ()
   assert.equal(status.runtime.posture, "operational");
   assert.equal(status.publication.status, "ready");
   assert.equal(status.publicationAudit.publishedReceipts, 1);
+  assert.equal(status.atlasHealth.ok, true);
+  assert.equal(status.atlasHealth.targetCount, 1);
+  assert.equal(status.atlasHealth.alertReady, true);
   assert.equal(status.event.type, "discordos.operator.status_ready");
 });
 
@@ -175,12 +209,36 @@ test("operator status surfaces publication blockers as next actions", () => {
         needsBackfill: 1,
       },
     },
+    atlasHealthStatus: {
+      ok: true,
+      nextActions: ["continue_atlas_health_monitoring"],
+    },
   });
 
   assert.deepEqual(actions, [
     "repair_publication_target_or_channel_separation",
     "backfill_publication_receipts",
   ]);
+});
+
+test("operator status surfaces atlas health blockers as next actions", () => {
+  const actions = _internals.determineOperatorNextActions({
+    runtimeStatus: { ok: true },
+    publicationStatus: { ok: true },
+    publicationAudit: {
+      ok: true,
+      counts: {
+        draftUpdateReceipts: 0,
+        needsBackfill: 0,
+      },
+    },
+    atlasHealthStatus: {
+      ok: false,
+      nextActions: ["enable_discordos_atlas_health_alert_send_env"],
+    },
+  });
+
+  assert.deepEqual(actions, ["enable_discordos_atlas_health_alert_send_env"]);
 });
 
 test("operator status renders markdown without target secret values", () => {
@@ -225,9 +283,24 @@ test("operator status renders markdown without target secret values", () => {
       needsBackfill: 0,
       reasonCodes: [],
     },
+    atlasHealth: {
+      ok: true,
+      eventType: "atlas.health_status.ready",
+      targetCount: 5,
+      passCount: 5,
+      failCount: 0,
+      criticalCount: 0,
+      configuredSchedule: "0 16 * * *",
+      targetChecksPerMonth: 150,
+      alertReady: true,
+      alertTargetType: "discord_bot_channel",
+      nextActions: ["continue_atlas_health_monitoring"],
+      reasonCodes: [],
+    },
   });
 
   assert(rendered.includes("# DiscordOS Operator Status"));
   assert(rendered.includes("Publication Audit"));
+  assert(rendered.includes("ATLAS Health"));
   assert(!rendered.includes("bot-secret"));
 });
