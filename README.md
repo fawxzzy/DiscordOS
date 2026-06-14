@@ -230,6 +230,7 @@ Current governed contract surface:
 - `scripts/discordos-next-work-recommender.js`
   - repo-local read-only recommender for ranking the next DiscordOS runtime/product hardening moves
   - consumes the operator status bundle and emits scored recommendations with reason codes and command hints
+  - uses durable receipts to avoid repeating completed steady-state review recommendations
   - sends no Discord messages and writes no artifacts
 - `scripts/discordos-operator-env-readiness.js`
   - repo-local read-only operator env readiness command for DiscordOS updates, alerts, and bot-token availability
@@ -392,6 +393,8 @@ Current governed contract surface:
   - owner-side proof that runtime alert delivery now has a deterministic no-send critical drill surface
 - `docs/ops/discordos-atlas-health-target-filter-pass-78-2026-06-14.md`
   - owner-side proof that ATLAS health sweeps can be reduced by env allowlist/exclude filters without editing the canonical target config
+- `docs/ops/discordos-next-work-receipt-aware-steady-state-pass-79-2026-06-14.md`
+  - owner-side proof that next-work now advances past completed steady-state review recommendations when matching receipts exist
 - `docs/ops/discordos-next-work-final-followup-state-pass-69-2026-06-13.md`
   - owner-side proof that next-work now reports only the deferred scheduled cron identity proof after the final follow-up post
 

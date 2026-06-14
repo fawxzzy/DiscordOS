@@ -27,6 +27,12 @@ function classifyReceiptState(fileNames = []) {
       fileName.includes("discordos-runtime-product-hardening-followup-live-post-pass")
         || fileName.includes("discordos-runtime-product-hardening-followup-update-post")
     ),
+    runtimeAlertDrillSurfaceProof: fileNames.some((fileName) =>
+      fileName.includes("discordos-runtime-alert-drill-surface-pass")
+    ),
+    atlasHealthTargetFilterProof: fileNames.some((fileName) =>
+      fileName.includes("discordos-atlas-health-target-filter-pass")
+    ),
   };
 }
 

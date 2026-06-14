@@ -73,34 +73,41 @@ function rankRecommendations(recommendations, max = 5) {
     .slice(0, max);
 }
 
-function buildSteadyStateRecommendations(operatorStatus) {
-  return [
-    buildRecommendation({
-      id: "review-runtime-alert-drill-surface",
-      score: 58,
-      category: "runtime-alerts",
-      title: "Review the runtime alert drill surface while production health is green",
-      command: "npm run ops:runtime-health:alert-delivery -- --drill-critical",
-      reasonCodes: ["runtime_health_ready_for_alert_drill_review"],
-      evidence: {
-        posture: operatorStatus.runtime.posture,
-        readinessPercent: operatorStatus.runtime.readinessPercent,
-        alertTargetConfigured: operatorStatus.runtime.alertTargetConfigured,
-      },
-    }),
-    buildRecommendation({
-      id: "review-atlas-health-target-coverage",
-      score: 56,
-      category: "atlas-health",
-      title: "Review ATLAS health target coverage and cadence for missing critical surfaces",
-      command: "npm run ops:atlas-health:status",
-      reasonCodes: ["atlas_health_ready_for_coverage_review"],
-      evidence: {
-        targetCount: operatorStatus.atlasHealth?.targetCount ?? null,
-        criticalCount: operatorStatus.atlasHealth?.criticalCount ?? null,
-        targetChecksPerMonth: operatorStatus.atlasHealth?.targetChecksPerMonth ?? null,
-      },
-    }),
+function buildSteadyStateRecommendations(
+  operatorStatus,
+  { receiptState = receiptStateInternals.classifyReceiptState([]) } = {}
+) {
+  const recommendations = [];
+
+  addIf(!receiptState.runtimeAlertDrillSurfaceProof, recommendations, buildRecommendation({
+    id: "review-runtime-alert-drill-surface",
+    score: 58,
+    category: "runtime-alerts",
+    title: "Review the runtime alert drill surface while production health is green",
+    command: "npm run ops:runtime-health:alert-delivery -- --drill-critical",
+    reasonCodes: ["runtime_health_ready_for_alert_drill_review"],
+    evidence: {
+      posture: operatorStatus.runtime.posture,
+      readinessPercent: operatorStatus.runtime.readinessPercent,
+      alertTargetConfigured: operatorStatus.runtime.alertTargetConfigured,
+    },
+  }));
+
+  addIf(!receiptState.atlasHealthTargetFilterProof, recommendations, buildRecommendation({
+    id: "review-atlas-health-target-coverage",
+    score: 56,
+    category: "atlas-health",
+    title: "Review ATLAS health target coverage and cadence for missing critical surfaces",
+    command: "npm run ops:atlas-health:status",
+    reasonCodes: ["atlas_health_ready_for_coverage_review"],
+    evidence: {
+      targetCount: operatorStatus.atlasHealth?.targetCount ?? null,
+      criticalCount: operatorStatus.atlasHealth?.criticalCount ?? null,
+      targetChecksPerMonth: operatorStatus.atlasHealth?.targetChecksPerMonth ?? null,
+    },
+  }));
+
+  recommendations.push(
     buildRecommendation({
       id: "audit-discord-publication-tooling-gaps",
       score: 54,
@@ -126,8 +133,10 @@ function buildSteadyStateRecommendations(operatorStatus) {
         publicationOk: operatorStatus.publication.ok,
         atlasHealthOk: operatorStatus.atlasHealth?.ok === true,
       },
-    }),
-  ];
+    })
+  );
+
+  return recommendations;
 }
 
 function recommendNextWork(operatorStatus, { max = 5, receiptState = receiptStateInternals.classifyReceiptState([]) } = {}) {
@@ -357,7 +366,7 @@ function recommendNextWork(operatorStatus, { max = 5, receiptState = receiptStat
   }
 
   if (recommendations.length === 0) {
-    recommendations.push(...buildSteadyStateRecommendations(operatorStatus));
+    recommendations.push(...buildSteadyStateRecommendations(operatorStatus, { receiptState }));
   }
 
   return rankRecommendations(recommendations, max);
