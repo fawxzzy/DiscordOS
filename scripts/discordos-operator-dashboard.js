@@ -31,6 +31,88 @@ function buildCommandHint(recommendation) {
   };
 }
 
+function buildHealthTiles(nextWork) {
+  const operator = nextWork.operatorStatus;
+  return [
+    {
+      id: "runtime",
+      label: "Runtime",
+      status: operator.runtimeOk ? "pass" : "fail",
+    },
+    {
+      id: "publication",
+      label: "Publication",
+      status: operator.publicationOk ? "pass" : "fail",
+    },
+    {
+      id: "publication_audit",
+      label: "Publication audit",
+      status: operator.publicationAuditOk ? "pass" : "fail",
+    },
+    {
+      id: "atlas_health",
+      label: "ATLAS health",
+      status: operator.atlasHealthOk ? "pass" : "fail",
+    },
+    {
+      id: "notification_policy",
+      label: "Notification policy",
+      status: operator.notificationPolicyOk ? "pass" : "fail",
+    },
+  ];
+}
+
+function groupRecommendationsByCategory(recommendations) {
+  const groupsByCategory = new Map();
+
+  for (const recommendation of Array.isArray(recommendations) ? recommendations : []) {
+    const category = recommendation.category || "uncategorized";
+    const group = groupsByCategory.get(category) || {
+      category,
+      count: 0,
+      topRecommendationId: null,
+      topScore: null,
+      commands: [],
+    };
+
+    group.count += 1;
+    if (group.topScore === null || recommendation.score > group.topScore) {
+      group.topScore = recommendation.score;
+      group.topRecommendationId = recommendation.id;
+    }
+    if (recommendation.command) {
+      group.commands.push({
+        id: recommendation.id,
+        command: recommendation.command,
+      });
+    }
+    groupsByCategory.set(category, group);
+  }
+
+  return [...groupsByCategory.values()].sort((left, right) => {
+    if ((right.topScore ?? 0) !== (left.topScore ?? 0)) {
+      return (right.topScore ?? 0) - (left.topScore ?? 0);
+    }
+    return left.category.localeCompare(right.category);
+  });
+}
+
+function buildDashboardConsole(nextWork) {
+  const healthTiles = buildHealthTiles(nextWork);
+  const failingTileCount = healthTiles.filter((tile) => tile.status !== "pass").length;
+  const groupedRecommendations = groupRecommendationsByCategory(nextWork.recommendations);
+
+  return {
+    statusLine: failingTileCount === 0
+      ? "ready"
+      : "action_required",
+    healthTiles,
+    failingTileCount,
+    recommendationGroups: groupedRecommendations,
+    primaryCommand: nextWork.topRecommendation?.command || null,
+  };
+}
+
 function classifyDashboardEvent(result) {
   return {
     type: result.operator.ok
@@ -65,6 +147,7 @@ async function buildDiscordOSOperatorDashboard(options = {}) {
     },
     commandHint: buildCommandHint(topRecommendation),
     recommendations: nextWork.recommendations,
+    console: buildDashboardConsole(nextWork),
     receiptState: nextWork.receiptState,
   };
 
@@ -102,7 +185,22 @@ function renderMarkdown(result) {
     `- top recommendation: \`${result.nextWork.topRecommendationId}\``,
     `- reason codes: \`${result.nextWork.reasonCodes.join(",") || "none"}\``,
     `- command: \`${result.commandHint?.command || "none"}\``,
+    "",
+    "## Console",
+    "",
+    `- status line: \`${result.console.statusLine}\``,
+    `- failing tiles: \`${result.console.failingTileCount}\``,
+    `- primary command: \`${result.console.primaryCommand || "none"}\``,
+    `- recommendation groups: \`${result.console.recommendationGroups.length}\``,
   ];
+
+  for (const tile of result.console.healthTiles) {
+    lines.push(`- tile ${tile.id}: \`${tile.status}\``);
+  }
+
+  for (const group of result.console.recommendationGroups) {
+    lines.push(`- group ${group.category}: \`${group.count}\` top \`${group.topRecommendationId || "none"}\``);
+  }
 
   return `${lines.join("\n")}\n`;
 }
@@ -130,6 +228,9 @@ module.exports = {
     parseArgs,
     buildOperatorSummary,
     buildCommandHint,
+    buildHealthTiles,
+    groupRecommendationsByCategory,
+    buildDashboardConsole,
     classifyDashboardEvent,
     buildDiscordOSOperatorDashboard,
     renderMarkdown,

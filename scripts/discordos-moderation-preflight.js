@@ -1,3 +1,5 @@
+const crypto = require("node:crypto");
+
 const ALLOWED_ACTIONS = new Set([
   "note",
   "warn",
@@ -6,6 +8,7 @@ const ALLOWED_ACTIONS = new Set([
   "escalate",
   "close",
 ]);
+const ALLOWED_SEVERITIES = new Set(["low", "medium", "high", "critical"]);
 
 function parseArgs(args) {
   const options = {
@@ -16,6 +19,7 @@ function parseArgs(args) {
     actorDiscordUserId: null,
     reason: null,
     note: null,
+    severity: "medium",
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -39,6 +43,9 @@ function parseArgs(args) {
       index += 1;
     } else if (arg === "--note") {
       options.note = readValue(args, index, "missing_note_value");
+      index += 1;
+    } else if (arg === "--severity") {
+      options.severity = readValue(args, index, "missing_severity_value");
       index += 1;
     } else {
       throw new Error(`unsupported_argument:${arg}`);
@@ -64,10 +71,25 @@ function hasValue(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function normalizeCaseId(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function buildStableFingerprint(value) {
+  if (!isSnowflake(value)) {
+    return null;
+  }
+  return crypto.createHash("sha256").update(value.trim()).digest("hex").slice(0, 12);
+}
+
 function validateModerationPreflightInput(input) {
   const reasonCodes = [];
 
-  if (!hasValue(input.caseId)) {
+  if (!hasValue(input.caseId) || normalizeCaseId(input.caseId).length === 0) {
     reasonCodes.push("case_id_missing");
   }
   if (!hasValue(input.action)) {
@@ -84,6 +106,9 @@ function validateModerationPreflightInput(input) {
   if (!hasValue(input.reason)) {
     reasonCodes.push("reason_missing");
   }
+  if (!ALLOWED_SEVERITIES.has(input.severity || "medium")) {
+    reasonCodes.push("severity_not_admitted");
+  }
   if (hasValue(input.note) && input.note.length > 1000) {
     reasonCodes.push("note_too_long");
   }
@@ -95,11 +120,15 @@ function validateModerationPreflightInput(input) {
 }
 
 function buildModerationActionPreview(input) {
+  const normalizedSeverity = input.severity || "medium";
   return {
-    caseId: input.caseId,
+    caseId: normalizeCaseId(input.caseId),
     actionType: input.action,
+    severity: normalizedSeverity,
     subjectDiscordUserIdShapeValid: isSnowflake(input.subjectDiscordUserId),
     actorDiscordUserIdShapeValid: isSnowflake(input.actorDiscordUserId),
+    subjectFingerprint: buildStableFingerprint(input.subjectDiscordUserId),
+    actorFingerprint: buildStableFingerprint(input.actorDiscordUserId),
     reasonPresent: hasValue(input.reason),
     notePresent: hasValue(input.note),
     proof: {
@@ -108,6 +137,21 @@ function buildModerationActionPreview(input) {
       messageId: null,
       generatedAt: null,
     },
+  };
+}
+
+function buildModerationAuditEnvelope(input) {
+  const preview = buildModerationActionPreview(input);
+  return {
+    type: "discordos.moderation.audit_preview",
+    caseId: preview.caseId,
+    actionType: preview.actionType || null,
+    severity: preview.severity,
+    subjectFingerprint: preview.subjectFingerprint,
+    actorFingerprint: preview.actorFingerprint,
+    reasonPresent: preview.reasonPresent,
+    notePresent: preview.notePresent,
+    liveActionAllowed: false,
   };
 }
 
@@ -138,6 +182,7 @@ function buildDiscordOSModerationPreflight(input = {}) {
     liveActionAllowed: false,
     requiresExplicitLiveLane: true,
     preview: buildModerationActionPreview(input),
+    auditEnvelope: buildModerationAuditEnvelope(input),
     reasonCodes: validation.reasonCodes,
   };
 
@@ -157,11 +202,15 @@ function renderMarkdown(result) {
     `- writes artifacts: \`${result.writesArtifacts ? "true" : "false"}\``,
     `- status: \`${result.status}\``,
     `- event type: \`${result.event.type}\``,
+    `- case id: \`${result.preview.caseId || "unknown"}\``,
     `- action: \`${result.preview.actionType || "unknown"}\``,
+    `- severity: \`${result.preview.severity || "unknown"}\``,
     `- live action allowed: \`${result.liveActionAllowed ? "true" : "false"}\``,
     `- explicit live lane required: \`${result.requiresExplicitLiveLane ? "true" : "false"}\``,
     `- subject id shape valid: \`${result.preview.subjectDiscordUserIdShapeValid ? "true" : "false"}\``,
     `- actor id shape valid: \`${result.preview.actorDiscordUserIdShapeValid ? "true" : "false"}\``,
+    `- subject fingerprint present: \`${result.preview.subjectFingerprint ? "true" : "false"}\``,
+    `- actor fingerprint present: \`${result.preview.actorFingerprint ? "true" : "false"}\``,
     `- reason codes: \`${result.reasonCodes.join(",") || "none"}\``,
     "",
   ].join("\n");
@@ -188,11 +237,15 @@ if (require.main === module) {
 module.exports = {
   _internals: {
     ALLOWED_ACTIONS,
+    ALLOWED_SEVERITIES,
     parseArgs,
     isSnowflake,
     hasValue,
+    normalizeCaseId,
+    buildStableFingerprint,
     validateModerationPreflightInput,
     buildModerationActionPreview,
+    buildModerationAuditEnvelope,
     classifyModerationPreflightEvent,
     buildDiscordOSModerationPreflight,
     renderMarkdown,

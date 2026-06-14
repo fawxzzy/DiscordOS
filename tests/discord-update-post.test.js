@@ -190,7 +190,8 @@ test("discord update post payload appends workflow marker progress", () => {
     },
   });
 
-  assert(payload.embeds[0].description.includes("## Workflow Markers"));
+  assert(payload.embeds[0].description.includes("Workflow markers:"));
+  assert(!payload.embeds[0].description.includes("## Workflow Markers"));
   assert(payload.embeds[0].description.includes("AI Long-Run Batch Orchestration"));
   assert(payload.embeds[0].description.includes("49%"));
 });
@@ -216,7 +217,8 @@ test("discord update post dry-run does not require target env and previews paylo
   assert.equal(result.notificationRoute.routeId, "updates-publication-info");
   assert.equal(result.notificationRoute.target, "updates");
   assert.equal(result.markerProgress.summary.markerCount, 1);
-  assert(result.payloadPreview.embeds[0].description.includes("## Workflow Markers"));
+  assert(result.payloadPreview.embeds[0].description.includes("Workflow markers:"));
+  assert(!result.payloadPreview.embeds[0].description.includes("## Workflow Markers"));
   assert.deepEqual(result.receipt, {
     requested: true,
     written: false,

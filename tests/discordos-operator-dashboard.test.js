@@ -49,6 +49,7 @@ test("operator dashboard args reuse next-work args", () => {
 
 test("operator dashboard summarizes next-work result into command hint", async () => {
   const original = nextWorkResult();
+  const console = _internals.buildDashboardConsole(original);
   const dashboard = {
     ok: original.ok,
     destructive: false,
@@ -64,6 +65,7 @@ test("operator dashboard summarizes next-work result into command hint", async (
     },
     commandHint: _internals.buildCommandHint(original.topRecommendation),
     recommendations: original.recommendations,
+    console,
     receiptState: original.receiptState,
   };
   const event = _internals.classifyDashboardEvent(dashboard);
@@ -72,11 +74,48 @@ test("operator dashboard summarizes next-work result into command hint", async (
   assert.equal(dashboard.operator.notificationPolicyOk, true);
   assert.equal(dashboard.nextWork.recommendationCount, 1);
   assert.equal(dashboard.commandHint.command, "npm run ops:discordos:dashboard:prod");
+  assert.equal(dashboard.console.statusLine, "ready");
+  assert.equal(dashboard.console.failingTileCount, 0);
+  assert.equal(dashboard.console.healthTiles.length, 5);
+  assert.equal(dashboard.console.recommendationGroups[0].category, "operator-env");
   assert.equal(event.type, "discordos.operator.dashboard_ready");
   assert.equal(event.dimensions.topRecommendation, "inspect-operator-command-ergonomics");
 });
 
+test("operator dashboard groups recommendations by category and highest score", () => {
+  const groups = _internals.groupRecommendationsByCategory([
+    {
+      id: "low-runtime",
+      category: "runtime",
+      score: 10,
+      command: "npm run low",
+    },
+    {
+      id: "top-runtime",
+      category: "runtime",
+      score: 90,
+      command: "npm run top",
+    },
+    {
+      id: "publication",
+      category: "publication",
+      score: 50,
+      command: null,
+    },
+  ]);
+
+  assert.equal(groups[0].category, "runtime");
+  assert.equal(groups[0].count, 2);
+  assert.equal(groups[0].topRecommendationId, "top-runtime");
+  assert.deepEqual(groups[0].commands, [
+    { id: "low-runtime", command: "npm run low" },
+    { id: "top-runtime", command: "npm run top" },
+  ]);
+  assert.equal(groups[1].category, "publication");
+});
+
 test("operator dashboard renders compact markdown without target values", () => {
+  const source = nextWorkResult();
   const rendered = _internals.renderMarkdown({
     ok: true,
     destructive: false,
@@ -96,6 +135,7 @@ test("operator dashboard renders compact markdown without target values", () => 
     commandHint: {
       command: "npm run ops:discordos:dashboard:prod",
     },
+    console: _internals.buildDashboardConsole(source),
   });
 
   assert(rendered.includes("# DiscordOS Operator Dashboard"));
@@ -103,5 +143,7 @@ test("operator dashboard renders compact markdown without target values", () => 
   assert(rendered.includes("notification policy: `pass`"));
   assert(rendered.includes("top recommendation: `inspect-operator-command-ergonomics`"));
   assert(rendered.includes("command: `npm run ops:discordos:dashboard:prod`"));
+  assert(rendered.includes("status line: `ready`"));
+  assert(rendered.includes("group operator-env: `1` top `inspect-operator-command-ergonomics`"));
   assert(!rendered.includes("bot-secret"));
 });

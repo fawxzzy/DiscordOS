@@ -176,7 +176,7 @@ function renderWorkflowMarkerMarkdown(progress) {
   }
 
   const lines = [
-    "## Workflow Markers",
+    "Workflow markers:",
     "",
     `- marker source: \`${progress.sourceRef}\``,
     `- marker count: \`${progress.summary.markerCount}\``,

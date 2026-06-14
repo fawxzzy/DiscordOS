@@ -163,7 +163,8 @@ test("forum card lifecycle builds metadata and marker body", () => {
   assert(body.includes("workflow: `DiscordOS`"));
   assert(body.includes("state: `in_progress`"));
   assert(body.includes("Operator-facing body."));
-  assert(body.includes("## Workflow Markers"));
+  assert(body.includes("Workflow markers:"));
+  assert(!body.includes("## Workflow Markers"));
   assert(body.includes("DiscordOS Forum/Card Operations"));
 });
 
@@ -190,7 +191,8 @@ test("forum card lifecycle dry-run routes through attached notification policy",
   assert.equal(result.notificationRoute.target, "updates");
   assert.equal(result.markerProgress.summary.markerCount, 1);
   assert(result.payloadPreview.embeds[0].description.includes("## Card Lifecycle"));
-  assert(result.payloadPreview.embeds[0].description.includes("## Workflow Markers"));
+  assert(result.payloadPreview.embeds[0].description.includes("Workflow markers:"));
+  assert(!result.payloadPreview.embeds[0].description.includes("## Workflow Markers"));
 });
 
 test("forum card lifecycle blocks when notification route is not admitted", async () => {

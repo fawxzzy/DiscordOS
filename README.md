@@ -178,6 +178,10 @@ Current governed contract surface:
   - repo-local read-only status board for runtime-health operations
   - combines live production health, public cron-guard proof, alert target admission, retention/admission state, and next actions
   - sends no Discord messages and writes no runtime artifacts
+- `scripts/runtime-health-recovery-plan.js`
+  - repo-local read-only recovery plan for runtime-health operations
+  - converts current runtime status next actions into priority, command hints, and no-send/no-write recovery steps
+  - sends no Discord messages and writes no runtime artifacts
 - `scripts/runtime-health-cron-production-proof.js`
   - repo-local production proof command for the deployed cron guard
   - checks production runtime health is green and unauthenticated cron access remains locked
@@ -266,6 +270,10 @@ Current governed contract surface:
   - keeps durable receipt links optional in source files instead of requiring them in public update text
   - performs no network calls and writes no artifacts
   - validates the same marker-enriched payload shape used by live update and card publication commands
+- `scripts/discord-update-draft-build.js`
+  - repo-local no-send draft builder for curated `#updates` posts
+  - renders one source title, one `## Update Post` section, and a public body with only `What changed:` plus `Proof:`
+  - performs no network calls and writes no artifacts
 - `scripts/discord-update-release-check.js`
   - repo-local no-send release check for curated `#updates` posts
   - runs draft validation plus live no-send preflight and reports whether the post is ready for guarded apply
@@ -299,6 +307,7 @@ Current governed contract surface:
 - `scripts/discordos-operator-dashboard.js`
   - repo-local read-only operator dashboard that combines status posture with the current top next-work command
   - includes notification policy health in the compact operator summary
+  - includes health tiles, grouped recommendations, a primary command, and a compact status line for daily operator scanning
   - gives operators one compact command for routine DiscordOS status and next-action checks
   - sends no Discord messages and writes no artifacts
 - `scripts/discordos-notification-router.js`
@@ -573,6 +582,8 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local runtime-health operations admission command
 - `npm run verify:runtime-health-status`
   - Node test coverage for the repo-local runtime-health status command
+- `npm run verify:runtime-health-recovery-plan`
+  - Node test coverage for the repo-local runtime-health recovery-plan command
 - `npm run verify:discord-update-post`
   - Node test coverage for the repo-local DiscordOS `#updates` publication command
 - `npm run verify:discord-forum-card-preflight`
@@ -587,6 +598,8 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local DiscordOS `#updates` target admission command
 - `npm run verify:discord-update-preflight`
   - Node test coverage for the repo-local DiscordOS `#updates` no-send preflight command
+- `npm run verify:discord-update-draft`
+  - Node test coverage for the repo-local DiscordOS `#updates` draft builder
 - `npm run verify:discord-update-draft-validator`
   - Node test coverage for the repo-local DiscordOS `#updates` draft receipt validator
 - `npm run verify:discord-update-release-check`
@@ -710,6 +723,10 @@ Current repo-local operator surface:
   - validates a future `#updates` post locally without sending a message
 - `npm run ops:discord:update-preflight -- --title "<title>" --body-file <path> --body-section "<section>" --probe-live`
   - validates payload and target, then checks recent `#updates` messages for duplicate embed titles without sending a message
+- `npm run ops:discord:update-draft -- --title "<title>" --change "<change>" --proof "<proof>"`
+  - builds a curated update receipt body with one source title and a public body containing only `What changed:` and `Proof:`
+- `npm run ops:discord:update-draft:json -- --title "<title>" --change "<change>" --proof "<proof>"`
+  - emits the curated update draft as JSON without sending messages or writing files
 - `npm run ops:discord:update-draft-validator -- --title "<title>" --body-file <path> --body-section "<section>"`
   - validates a drafted update receipt locally before preflight or live apply
 - `npm run ops:discord:update-release-check -- --title "<title>" --body-file <path> --body-section "<section>"`
@@ -771,7 +788,7 @@ Current repo-local operator surface:
 - `npm run ops:discordos:music-sesh-status`
   - checks the Music Sesh workflow v0 contract and type-only source boundary
 - `npm run ops:discordos:moderation-preflight`
-  - validates a future moderation action payload without allowing live moderation behavior
+  - validates a future moderation action payload and emits a sanitized audit preview without allowing live moderation behavior
 - `npm run ops:discordos:board-card-persistence-status`
   - checks the board/card persistence contract while keeping writes and schema migrations blocked
 - `npm run ops:discordos:feature-contract-registry-status`
@@ -804,6 +821,10 @@ Current repo-local operator surface:
   - emits the read-only runtime-health status board and next actions
 - `npm run ops:runtime-health:status:json`
   - emits the runtime-health status board as JSON
+- `npm run ops:runtime-health:recovery-plan`
+  - emits a read-only recovery plan from current runtime-health status
+- `npm run ops:runtime-health:recovery-plan:json`
+  - emits the runtime-health recovery plan as JSON
 - `npm run ops:runtime-health:cron-production-proof`
   - proves the production alias is operational and the cron endpoint is publicly locked
 - `npm run ops:runtime-health:cron-production-proof:json`
