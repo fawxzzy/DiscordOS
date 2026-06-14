@@ -1,0 +1,172 @@
+const assert = require("node:assert/strict");
+const test = require("node:test");
+
+const { _internals } = require("../scripts/atlas-health-status");
+const { _internals: watchInternals } = require("../scripts/atlas-health-watch");
+
+function configEnv(targets) {
+  return {
+    DISCORDOS_ATLAS_HEALTH_TARGETS_JSON: JSON.stringify({
+      version: 1,
+      schedule: {
+        cron: "0 16 * * *",
+      },
+      targets,
+    }),
+  };
+}
+
+test("atlas health status args default to no-send status surface", () => {
+  assert.deepEqual(_internals.parseArgs([]), {
+    json: false,
+    configPath: watchInternals.DEFAULT_CONFIG_PATH,
+    timeoutMs: watchInternals.DEFAULT_TIMEOUT_MS,
+  });
+});
+
+test("atlas health status passes when watch is green and alert path is armed", async () => {
+  const status = await _internals.buildAtlasHealthStatus({
+    env: {
+      ...configEnv([
+        {
+          id: "discordos",
+          label: "DiscordOS",
+          owner: "DiscordOS",
+          url: "https://example.test/api/runtime-health",
+          kind: "json-ok",
+        },
+      ]),
+      DISCORDOS_ATLAS_HEALTH_WATCH_ENABLED: "enabled",
+      DISCORDOS_ATLAS_HEALTH_ALERT_SEND: "enabled",
+      DISCORDOS_ATLAS_HEALTH_ALERT_CHANNEL_ID: "123",
+      DISCORDOS_BOT_TOKEN: "bot-token",
+    },
+    fetchImpl: async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    now: new Date("2026-06-14T16:00:00.000Z"),
+  });
+
+  assert.equal(status.ok, true);
+  assert.equal(status.sendsMessages, false);
+  assert.equal(status.watch.targetCount, 1);
+  assert.equal(status.watch.criticalCount, 0);
+  assert.equal(status.alertReadiness.ready, true);
+  assert.deepEqual(status.nextActions, ["continue_atlas_health_monitoring"]);
+  assert.equal(status.event.type, "atlas.health_status.ready");
+});
+
+test("atlas health status reports missing env flags without failing target health", async () => {
+  const status = await _internals.buildAtlasHealthStatus({
+    env: configEnv([
+      {
+        id: "foundation",
+        label: "Foundation",
+        owner: "Foundation",
+        url: "https://example.test",
+        kind: "http-ok",
+      },
+    ]),
+    fetchImpl: async () => new Response("<html></html>", { status: 200 }),
+  });
+
+  assert.equal(status.watch.ok, true);
+  assert.equal(status.ok, false);
+  assert.deepEqual(status.alertReadiness.reasonCodes, [
+    "atlas_health_watch_env_disabled",
+    "atlas_health_alert_send_env_disabled",
+    "atlas_health_alert_target_missing",
+  ]);
+  assert.deepEqual(status.nextActions, [
+    "enable_discordos_atlas_health_watch_env",
+    "enable_discordos_atlas_health_alert_send_env",
+    "configure_atlas_health_alert_target",
+  ]);
+});
+
+test("atlas health status flags critical targets without sending alerts", async () => {
+  const requests = [];
+  const status = await _internals.buildAtlasHealthStatus({
+    env: {
+      ...configEnv([
+        {
+          id: "trove",
+          label: "Trove",
+          owner: "Trove",
+          url: "https://example.test",
+          kind: "http-ok",
+        },
+      ]),
+      DISCORDOS_ATLAS_HEALTH_WATCH_ENABLED: "enabled",
+      DISCORDOS_ATLAS_HEALTH_ALERT_SEND: "enabled",
+      DISCORDOS_ATLAS_HEALTH_ALERT_CHANNEL_ID: "123",
+      DISCORDOS_BOT_TOKEN: "bot-token",
+    },
+    fetchImpl: async (url) => {
+      requests.push(String(url));
+      return new Response("server error", { status: 500 });
+    },
+  });
+
+  assert.equal(status.ok, false);
+  assert.equal(status.watch.criticalCount, 1);
+  assert.deepEqual(status.nextActions, ["inspect_critical_atlas_health_targets"]);
+  assert.equal(status.watch.alertDeliveryDryRunStatus, "dry_run");
+  assert(!requests.some((url) => url.includes("/channels/123/messages")));
+});
+
+test("atlas health status accepts runtime health alert target fallback", () => {
+  const readiness = _internals.buildAlertReadiness({
+    env: {
+      DISCORDOS_ATLAS_HEALTH_WATCH_ENABLED: "enabled",
+      DISCORDOS_ATLAS_HEALTH_ALERT_SEND: "enabled",
+      DISCORDOS_RUNTIME_HEALTH_ALERT_CHANNEL_ID: "123",
+      DISCORDOS_BOT_TOKEN: "bot-token",
+    },
+  });
+
+  assert.equal(readiness.ready, true);
+  assert.equal(readiness.targetType, "discord_bot_channel");
+  assert.deepEqual(readiness.reasonCodes, []);
+});
+
+test("atlas health status renders markdown without target values", () => {
+  const rendered = _internals.renderMarkdown({
+    ok: true,
+    destructive: false,
+    sendsMessages: false,
+    writesArtifacts: false,
+    event: {
+      type: "atlas.health_status.ready",
+      severity: "info",
+    },
+    nextActions: ["continue_atlas_health_monitoring"],
+    watch: {
+      ok: true,
+      eventType: "atlas.health_watch.pass",
+      targetCount: 1,
+      passCount: 1,
+      failCount: 0,
+      criticalCount: 0,
+      criticalTargets: [],
+      usageEstimate: {
+        configuredSchedule: "0 16 * * *",
+        runsPerMonth: 30,
+        targetChecksPerMonth: 30,
+      },
+      alertDeliveryDryRunStatus: "skipped_clear",
+      alertDeliveryDryRunReasonCodes: ["atlas_health_clear_delivery_not_requested"],
+    },
+    alertReadiness: {
+      ready: true,
+      watchEnabled: true,
+      alertSendEnabled: true,
+      targetConfigured: true,
+      targetType: "discord_bot_channel",
+      reasonCodes: [],
+    },
+  });
+
+  assert(rendered.includes("# ATLAS Health Status"));
+  assert(rendered.includes("Alert Readiness"));
+  assert(!rendered.includes("bot-token"));
+  assert(!rendered.includes("https://"));
+});

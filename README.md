@@ -171,6 +171,9 @@ Current governed contract surface:
   - repo-local ATLAS health watch command for critical-only multi-project availability checks
   - dry-runs by default, sends no routine clear posts, disables mentions, and suppresses identical critical alerts for 24 hours
   - can share the existing `#alerts` target or use dedicated `DISCORDOS_ATLAS_HEALTH_ALERT_*` env values
+- `scripts/atlas-health-status.js`
+  - repo-local read-only status command for ATLAS health watch posture and alert readiness
+  - checks current configured target health, local/process env arming flags, alert target shape, and usage estimate without sending Discord messages
 - `scripts/runtime-health-alert-target-admission.js`
   - repo-local read-only target admission command for runtime-health alert delivery
   - validates webhook and bot-channel target shape without printing target values
@@ -352,6 +355,8 @@ Current governed contract surface:
   - owner-side proof that production `DISCORDOS_BOT_TOKEN` now hydrates through `vercel env pull` for local operator workflows
 - `docs/ops/discordos-atlas-health-watch-pass-64-2026-06-13.md`
   - owner-side proof that DiscordOS now owns a critical-only ATLAS health watch integrated into the guarded runtime-health cron
+- `docs/ops/discordos-atlas-health-status-rollup-pass-65-2026-06-13.md`
+  - owner-side proof that the ATLAS health watch now has a read-only operator status rollup
 
 Current repo-local verification surface:
 
@@ -399,6 +404,8 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local runtime-health alert delivery command
 - `npm run verify:atlas-health-watch`
   - Node test coverage for the repo-local ATLAS health watch command
+- `npm run verify:atlas-health-status`
+  - Node test coverage for the repo-local ATLAS health status command
 - `npm run verify:runtime-health-scheduled-proof`
   - Node test coverage for the repo-local scheduled proof command
 - `npm run verify:runtime-health-rollup`
@@ -477,6 +484,10 @@ Current repo-local operator surface:
   - checks configured ATLAS public health targets and dry-runs any critical-only alert payload
 - `npm run ops:atlas-health:watch:json`
   - emits the ATLAS health watch result as JSON
+- `npm run ops:atlas-health:status`
+  - summarizes ATLAS health target posture, alert arming flags, alert target readiness, and next actions without sending messages
+- `npm run ops:atlas-health:status:json`
+  - emits the ATLAS health status result as JSON
 - `npm run ops:discord:update-post`
   - dry-runs a curated DiscordOS `#updates` post by default
 - `npm run ops:discord:update-post:json`
