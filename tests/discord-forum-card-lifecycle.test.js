@@ -6,6 +6,7 @@ const test = require("node:test");
 
 const { _internals } = require("../scripts/discord-forum-card-lifecycle");
 const { _internals: updatePostInternals } = require("../scripts/discord-update-post");
+const { _internals: markerInternals } = require("../scripts/discordos-workflow-marker-progress");
 
 function markerBoardMarkdown() {
   return [
@@ -66,6 +67,7 @@ test("forum card lifecycle args default to no-send command", () => {
     bodySection: null,
     receiptFile: null,
     markers: [],
+    markerFilePath: markerInternals.DEFAULT_MARKER_FILE_PATH,
     apply: false,
   });
 });
@@ -92,6 +94,8 @@ test("forum card lifecycle args parse card state markers receipt and apply", () 
       "docs/ops/post.md",
       "--marker",
       "DiscordOS Forum/Card Operations",
+      "--marker-file",
+      "docs/ops/markers.md",
       "--apply",
     ]),
     {
@@ -106,6 +110,7 @@ test("forum card lifecycle args parse card state markers receipt and apply", () 
       bodySection: "Update Post",
       receiptFile: "docs/ops/post.md",
       markers: ["DiscordOS Forum/Card Operations"],
+      markerFilePath: "docs/ops/markers.md",
       apply: true,
     }
   );

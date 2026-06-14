@@ -2,10 +2,13 @@ const {
   _internals: lifecycleInternals,
 } = require("./discord-forum-card-lifecycle");
 const {
+  _internals: preflightInternals,
+} = require("./discord-forum-card-preflight");
+const {
   _internals: updatePostInternals,
 } = require("./discord-update-post");
 
-const DEFAULT_LIMIT = updatePostInternals.DEFAULT_PREFLIGHT_LIMIT;
+const DEFAULT_LIMIT = preflightInternals.DEFAULT_LIMIT;
 
 function quoteCliValue(value) {
   return `"${String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
@@ -30,6 +33,7 @@ function parseArgs(args) {
     bodySection: null,
     receiptFile: null,
     markers: [],
+    markerFilePath: undefined,
     limit: DEFAULT_LIMIT,
   };
 
@@ -107,6 +111,13 @@ function parseArgs(args) {
       }
       options.markers.push(value.trim());
       index += 1;
+    } else if (arg === "--marker-file") {
+      const value = args[index + 1];
+      if (!updatePostInternals.hasValue(value)) {
+        throw new Error("missing_marker_file_value");
+      }
+      options.markerFilePath = value.trim();
+      index += 1;
     } else if (arg === "--limit") {
       const value = Number.parseInt(args[index + 1], 10);
       if (!Number.isInteger(value) || value < 1 || value > 100) {
@@ -122,22 +133,6 @@ function parseArgs(args) {
   return options;
 }
 
-function skippedPreflight(reasonCode, reasonCodes = [reasonCode]) {
-  return {
-    ok: false,
-    status: "skipped",
-    destructive: false,
-    sendsMessages: false,
-    reasonCodes,
-    targetAdmission: null,
-    duplicateCheck: {
-      attempted: false,
-      status: "skipped",
-      reasonCodes: [reasonCode],
-    },
-  };
-}
-
 function buildNextCommand({
   workflow,
   cardId,
@@ -149,6 +144,7 @@ function buildNextCommand({
   bodySection,
   receiptFile,
   markers,
+  markerFilePath,
 }) {
   const parts = [
     "npm run ops:discord:forum-card-lifecycle --",
@@ -177,7 +173,10 @@ function buildNextCommand({
   }
 
   const markerArgs = renderRepeatedArgs("--marker", markers);
-  return `${parts.join(" ")}${markerArgs} --apply`;
+  const markerFileArg = updatePostInternals.hasValue(markerFilePath)
+    ? ` --marker-file ${quoteCliValue(markerFilePath)}`
+    : "";
+  return `${parts.join(" ")}${markerArgs}${markerFileArg} --apply`;
 }
 
 function sanitizeRenderedCommand(command) {
@@ -244,22 +243,29 @@ async function buildDiscordForumCardReleaseCheck({
     notificationRouter,
   });
 
-  const preflight = lifecycle.notificationRoute.ok
-    ? await updatePostInternals.runApplyPreflight({
-      payload: lifecycle.payloadPreview,
-      env,
-      fetchImpl,
-      limit,
-    })
-    : skippedPreflight("notification_route_not_admitted", [
-      "notification_route_not_admitted",
-      ...lifecycle.notificationRoute.reasonCodes,
-    ]);
+  const preflight = await preflightInternals.buildDiscordForumCardPreflight({
+    workflow,
+    cardId,
+    state,
+    stateNote,
+    title,
+    body,
+    bodyFile,
+    bodySection,
+    markers,
+    limit,
+    probeLive: true,
+    env,
+    fetchImpl,
+    cwd,
+    markerFilePath,
+    fsImpl,
+    notificationRouter,
+  });
 
-  const reasonCodes = [
-    ...(lifecycle.notificationRoute.ok ? [] : ["notification_route_not_admitted", ...lifecycle.notificationRoute.reasonCodes]),
+  const reasonCodes = [...new Set([
     ...preflight.reasonCodes,
-  ];
+  ])];
   const readyForApply = lifecycle.ok && lifecycle.notificationRoute.ok && preflight.ok;
   const result = {
     ok: readyForApply,
@@ -277,6 +283,7 @@ async function buildDiscordForumCardReleaseCheck({
     bodySection,
     receiptFile,
     markers,
+    markerFilePath,
     limit,
     lifecycle,
     preflight,
@@ -293,6 +300,7 @@ async function buildDiscordForumCardReleaseCheck({
         bodySection,
         receiptFile,
         markers,
+        markerFilePath,
       })
       : null,
   };
@@ -369,7 +377,6 @@ module.exports = {
     quoteCliValue,
     renderRepeatedArgs,
     parseArgs,
-    skippedPreflight,
     buildNextCommand,
     sanitizeRenderedCommand,
     classifyForumCardReleaseCheckEvent,

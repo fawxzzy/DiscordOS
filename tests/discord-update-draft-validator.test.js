@@ -5,6 +5,7 @@ const path = require("node:path");
 const test = require("node:test");
 
 const { _internals } = require("../scripts/discord-update-draft-validator");
+const { _internals: markerInternals } = require("../scripts/discordos-workflow-marker-progress");
 
 function validDraftMarkdown() {
   return [
@@ -70,6 +71,7 @@ test("discord update draft validator args default to update post section", () =>
     bodyFile: null,
     bodySection: _internals.DEFAULT_BODY_SECTION,
     markers: [],
+    markerFilePath: markerInternals.DEFAULT_MARKER_FILE_PATH,
   });
 });
 
@@ -85,6 +87,8 @@ test("discord update draft validator parses title body file section and json", (
       "Update Post",
       "--marker",
       "AI Long-Run Batch Orchestration",
+      "--marker-file",
+      "docs/ops/markers.md",
     ]),
     {
       json: true,
@@ -92,6 +96,7 @@ test("discord update draft validator parses title body file section and json", (
       bodyFile: "docs/ops/draft.md",
       bodySection: "Update Post",
       markers: ["AI Long-Run Batch Orchestration"],
+      markerFilePath: "docs/ops/markers.md",
     }
   );
 });

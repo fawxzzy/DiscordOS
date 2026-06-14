@@ -14,6 +14,12 @@ function renderMarkerArgs(markers) {
     .join("");
 }
 
+function renderMarkerFileArg(markerFilePath) {
+  return draftValidatorInternals.hasValue(markerFilePath)
+    ? ` --marker-file "${String(markerFilePath).replace(/"/g, '\\"')}"`
+    : "";
+}
+
 function parseArgs(args) {
   const options = {
     json: false,
@@ -21,6 +27,7 @@ function parseArgs(args) {
     bodyFile: null,
     bodySection: DEFAULT_BODY_SECTION,
     markers: [],
+    markerFilePath: undefined,
     limit: DEFAULT_LIMIT,
   };
 
@@ -55,6 +62,13 @@ function parseArgs(args) {
         throw new Error("missing_marker_value");
       }
       options.markers.push(value.trim());
+      index += 1;
+    } else if (arg === "--marker-file") {
+      const value = args[index + 1];
+      if (typeof value !== "string" || value.trim().length === 0) {
+        throw new Error("missing_marker_file_value");
+      }
+      options.markerFilePath = value.trim();
       index += 1;
     } else if (arg === "--limit") {
       const value = Number.parseInt(args[index + 1], 10);
@@ -150,12 +164,13 @@ async function buildDiscordUpdateReleaseCheck({
     bodyFile,
     bodySection,
     markers,
+    markerFilePath,
     limit,
     draft,
     preflight,
     reasonCodes,
     nextCommand: draft.ok && preflight.ok
-      ? `npm run ops:discord:update-post -- --title "${title}" --body-file ${bodyFile} --body-section "${bodySection}"${renderMarkerArgs(markers)} --apply`
+      ? `npm run ops:discord:update-post -- --title "${title}" --body-file ${bodyFile} --body-section "${bodySection}"${renderMarkerArgs(markers)}${renderMarkerFileArg(markerFilePath)} --apply`
       : null,
   };
 
@@ -227,6 +242,7 @@ module.exports = {
     DEFAULT_LIMIT,
     DEFAULT_BODY_SECTION,
     renderMarkerArgs,
+    renderMarkerFileArg,
     parseArgs,
     skippedPreflight,
     classifyDiscordUpdateReleaseCheckEvent,

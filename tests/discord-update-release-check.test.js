@@ -110,6 +110,7 @@ test("discord update release check args default to update post release check", (
     bodyFile: null,
     bodySection: _internals.DEFAULT_BODY_SECTION,
     markers: [],
+    markerFilePath: undefined,
     limit: _internals.DEFAULT_LIMIT,
   });
 });
@@ -126,6 +127,8 @@ test("discord update release check parses title body file section limit and json
       "Update Post",
       "--marker",
       "AI Long-Run Batch Orchestration",
+      "--marker-file",
+      "docs/ops/markers.md",
       "--limit",
       "10",
     ]),
@@ -135,6 +138,7 @@ test("discord update release check parses title body file section limit and json
       bodyFile: "docs/ops/draft.md",
       bodySection: "Update Post",
       markers: ["AI Long-Run Batch Orchestration"],
+      markerFilePath: "docs/ops/markers.md",
       limit: 10,
     }
   );
@@ -166,6 +170,7 @@ test("discord update release check passes when draft and live preflight pass", a
   assert.equal(result.event.type, "discordos.updates.release_check_ready");
   assert(result.nextCommand.includes("npm run ops:discord:update-post"));
   assert(result.nextCommand.includes('--marker "AI Long-Run Batch Orchestration"'));
+  assert(result.nextCommand.includes(`--marker-file "${markerFilePath}"`));
 });
 
 test("discord update release check blocks duplicate live title without sending", async () => {

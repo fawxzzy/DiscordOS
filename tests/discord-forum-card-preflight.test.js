@@ -4,7 +4,7 @@ const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 
-const { _internals } = require("../scripts/discord-update-preflight");
+const { _internals } = require("../scripts/discord-forum-card-preflight");
 const {
   _internals: targetAdmissionInternals,
 } = require("../scripts/discord-update-target-admission");
@@ -13,8 +13,8 @@ const { _internals: markerInternals } = require("../scripts/discordos-workflow-m
 function message({
   id = "1516000000000000000",
   channelId = "1504671871512346695",
-  timestamp = "2026-06-13T20:00:00.000000+00:00",
-  title = "DiscordOS Runtime Hardening Closed",
+  timestamp = "2026-06-14T20:00:00.000000+00:00",
+  title = "Feedback Ops Card card-123 Opened",
 } = {}) {
   return {
     id,
@@ -34,22 +34,26 @@ function markerBoardMarkdown() {
     "",
     "## Active Front-Page Marker Table",
     "",
-    "- AI Long-Run Batch Orchestration: `49%`",
+    "- DiscordOS Forum/Card Operations: `52%`",
   ].join("\n");
 }
 
 async function writeMarkerBoard(markdown = markerBoardMarkdown()) {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "discordos-preflight-markers-"));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "discordos-forum-card-preflight-markers-"));
   const markerPath = path.join(dir, "02-lanes-and-markers.md");
   await fs.writeFile(markerPath, markdown, "utf8");
   return markerPath;
 }
 
-test("discord update preflight args default to local no-send validation", () => {
+test("discord forum card preflight args default to local no-send validation", () => {
   assert.deepEqual(_internals.parseArgs([]), {
     json: false,
     probeLive: false,
     expectedName: _internals.DEFAULT_EXPECTED_CHANNEL_NAME,
+    workflow: null,
+    cardId: null,
+    state: null,
+    stateNote: null,
     title: null,
     body: null,
     bodyFile: null,
@@ -60,21 +64,27 @@ test("discord update preflight args default to local no-send validation", () => 
   });
 });
 
-test("discord update preflight parses post body target and lookup options", () => {
+test("discord forum card preflight parses workflow card marker and live options", () => {
   assert.deepEqual(
     _internals.parseArgs([
       "--json",
       "--probe-live",
       "--expected-name",
       "Updates",
-      "--title",
-      "DiscordOS Runtime Hardening Closed",
+      "--workflow",
+      "Feedback Ops",
+      "--card-id",
+      "card-123",
+      "--state",
+      "in-progress",
+      "--state-note",
+      "Preflight proof",
       "--body-file",
       "docs/ops/post.md",
       "--body-section",
-      "Update Post",
+      "Card Update",
       "--marker",
-      "AI Long-Run Batch Orchestration",
+      "DiscordOS Forum/Card Operations",
       "--marker-file",
       "docs/ops/markers.md",
       "--limit",
@@ -84,25 +94,31 @@ test("discord update preflight parses post body target and lookup options", () =
       json: true,
       probeLive: true,
       expectedName: "updates",
-      title: "DiscordOS Runtime Hardening Closed",
+      workflow: "Feedback Ops",
+      cardId: "card-123",
+      state: "in-progress",
+      stateNote: "Preflight proof",
+      title: null,
       body: null,
       bodyFile: "docs/ops/post.md",
-      bodySection: "Update Post",
-      markers: ["AI Long-Run Batch Orchestration"],
+      bodySection: "Card Update",
+      markers: ["DiscordOS Forum/Card Operations"],
       markerFilePath: "docs/ops/markers.md",
       limit: 10,
     }
   );
 });
 
-test("discord update preflight validates limit bounds", () => {
+test("discord forum card preflight validates limit bounds", () => {
   assert.throws(() => _internals.parseArgs(["--limit", "0"]), /invalid_limit/);
   assert.throws(() => _internals.parseArgs(["--limit", "101"]), /invalid_limit/);
 });
 
-test("discord update preflight reports invalid payload without throwing", async () => {
-  const result = await _internals.buildDiscordUpdatePreflight({
-    title: "DiscordOS Runtime Hardening Closed",
+test("discord forum card preflight reports invalid payload without throwing", async () => {
+  const result = await _internals.buildDiscordForumCardPreflight({
+    workflow: "Feedback Ops",
+    cardId: "card-123",
+    state: "opened",
     env: {
       DISCORDOS_UPDATES_CHANNEL_ID: "1504671871512346695",
       DISCORDOS_BOT_TOKEN: "bot-secret",
@@ -120,12 +136,14 @@ test("discord update preflight reports invalid payload without throwing", async 
   assert.equal(result.sendsMessages, false);
 });
 
-test("discord update preflight passes locally and skips live duplicate lookup", async () => {
+test("discord forum card preflight passes locally and skips live duplicate lookup", async () => {
   const markerFilePath = await writeMarkerBoard();
-  const result = await _internals.buildDiscordUpdatePreflight({
-    title: "DiscordOS Runtime Hardening Closed",
-    body: "Runtime hardening is closed.",
-    markers: ["AI Long-Run Batch Orchestration"],
+  const result = await _internals.buildDiscordForumCardPreflight({
+    workflow: "Feedback Ops",
+    cardId: "card-123",
+    state: "opened",
+    body: "Work has started.",
+    markers: ["DiscordOS Forum/Card Operations"],
     markerFilePath,
     env: {
       DISCORDOS_UPDATES_CHANNEL_ID: "1504671871512346695",
@@ -139,20 +157,22 @@ test("discord update preflight passes locally and skips live duplicate lookup", 
   assert.equal(result.ok, true);
   assert.equal(result.status, "ready");
   assert.equal(result.payload.status, "valid");
-  assert(result.payload.bodyChars > "Runtime hardening is closed.".length);
-  assert.equal(result.notificationRoute.routeId, "updates-publication-info");
+  assert(result.payload.bodyChars > "Work has started.".length);
+  assert.equal(result.notificationRoute.routeId, "forum-card-lifecycle-info");
   assert.equal(result.notificationRoute.target, "updates");
   assert.equal(result.payload.markerProgress.summary.markerCount, 1);
   assert.equal(result.targetAdmission.liveProbe.status, "skipped");
   assert.equal(result.duplicateCheck.status, "skipped");
-  assert.equal(result.event.type, "discordos.updates.preflight_ready");
+  assert.equal(result.event.type, "discordos.forum_card.preflight_ready");
 });
 
-test("discord update preflight live probe passes when no duplicate title is found", async () => {
+test("discord forum card preflight live probe passes when no duplicate title is found", async () => {
   const requests = [];
-  const result = await _internals.buildDiscordUpdatePreflight({
-    title: "New DiscordOS Update",
-    body: "Fresh update body.",
+  const result = await _internals.buildDiscordForumCardPreflight({
+    workflow: "Feedback Ops",
+    cardId: "card-123",
+    state: "opened",
+    body: "Fresh forum-card body.",
     probeLive: true,
     env: {
       DISCORDOS_UPDATES_CHANNEL_ID: " 1504671871512346695\n",
@@ -181,7 +201,7 @@ test("discord update preflight live probe passes when no duplicate title is foun
         status: 200,
         json: async () => [
           message({
-            title: "Older Update",
+            title: "Older Card Update",
           }),
         ],
       };
@@ -196,10 +216,12 @@ test("discord update preflight live probe passes when no duplicate title is foun
   assert.equal(result.duplicateCheck.searchedMessages, 1);
 });
 
-test("discord update preflight blocks duplicate live update titles", async () => {
-  const result = await _internals.buildDiscordUpdatePreflight({
-    title: "DiscordOS Runtime Hardening Closed",
-    body: "Runtime hardening is closed.",
+test("discord forum card preflight blocks duplicate live titles", async () => {
+  const result = await _internals.buildDiscordForumCardPreflight({
+    workflow: "Feedback Ops",
+    cardId: "card-123",
+    state: "opened",
+    body: "Work has started.",
     probeLive: true,
     env: {
       DISCORDOS_UPDATES_CHANNEL_ID: "1504671871512346695",
@@ -229,14 +251,16 @@ test("discord update preflight blocks duplicate live update titles", async () =>
   assert.equal(result.duplicateCheck.status, "duplicate_found");
   assert.equal(result.duplicateCheck.duplicate.messageId, "1516000000000000000");
   assert.deepEqual(result.duplicateCheck.reasonCodes, ["updates_duplicate_title_found"]);
-  assert.equal(result.event.type, "discordos.updates.preflight_blocked");
+  assert.equal(result.event.type, "discordos.forum_card.preflight_blocked");
 });
 
-test("discord update preflight blocks target drift before duplicate lookup", async () => {
+test("discord forum card preflight blocks target drift before duplicate lookup", async () => {
   let requestCount = 0;
-  const result = await _internals.buildDiscordUpdatePreflight({
-    title: "New DiscordOS Update",
-    body: "Fresh update body.",
+  const result = await _internals.buildDiscordForumCardPreflight({
+    workflow: "Feedback Ops",
+    cardId: "card-123",
+    state: "opened",
+    body: "Work has started.",
     probeLive: true,
     env: {
       DISCORDOS_UPDATES_CHANNEL_ID: "1504671871512346695",
@@ -262,10 +286,12 @@ test("discord update preflight blocks target drift before duplicate lookup", asy
   assert.deepEqual(result.duplicateCheck.reasonCodes, ["target_not_admitted"]);
 });
 
-test("discord update preflight blocks when notification route is not admitted", async () => {
-  const result = await _internals.buildDiscordUpdatePreflight({
-    title: "New DiscordOS Update",
-    body: "Fresh update body.",
+test("discord forum card preflight blocks when notification route is not admitted", async () => {
+  const result = await _internals.buildDiscordForumCardPreflight({
+    workflow: "Feedback Ops",
+    cardId: "card-123",
+    state: "opened",
+    body: "Work has started.",
     probeLive: true,
     env: {
       DISCORDOS_UPDATES_CHANNEL_ID: "1504671871512346695",
@@ -297,10 +323,12 @@ test("discord update preflight blocks when notification route is not admitted", 
   assert.deepEqual(result.duplicateCheck.reasonCodes, ["notification_route_not_admitted"]);
 });
 
-test("discord update preflight renders markdown without token values or full body", async () => {
-  const body = "Sensitive body should not be rendered wholesale.";
-  const result = await _internals.buildDiscordUpdatePreflight({
-    title: "New DiscordOS Update",
+test("discord forum card preflight renders markdown without token values or full body", async () => {
+  const body = "Sensitive card body should not be rendered wholesale.";
+  const result = await _internals.buildDiscordForumCardPreflight({
+    workflow: "Feedback Ops",
+    cardId: "card-123",
+    state: "opened",
     body,
     env: {
       DISCORDOS_UPDATES_CHANNEL_ID: "1504671871512346695",
@@ -309,11 +337,11 @@ test("discord update preflight renders markdown without token values or full bod
   });
   const rendered = _internals.renderMarkdown(result);
 
-  assert(rendered.includes("# DiscordOS Update Preflight"));
+  assert(rendered.includes("# DiscordOS Forum Card Preflight"));
   assert(rendered.includes("sends messages: `false`"));
-  assert(rendered.includes("payload title: `New DiscordOS Update`"));
-  assert(rendered.includes("notification route: `updates-publication-info`"));
-  assert(rendered.includes(`payload body chars: \`${body.length}\``));
+  assert(rendered.includes("payload title: `Feedback Ops Card card-123 Opened`"));
+  assert(rendered.includes("notification route: `forum-card-lifecycle-info`"));
+  assert(rendered.includes(`payload body chars: \`${result.payload.bodyChars}\``));
   assert(!rendered.includes("bot-secret"));
   assert(!rendered.includes(body));
 });

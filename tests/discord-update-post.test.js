@@ -68,6 +68,7 @@ test("discord update post args default to dry-run publication", () => {
     bodySection: null,
     receiptFile: null,
     markers: [],
+    markerFilePath: markerInternals.DEFAULT_MARKER_FILE_PATH,
     apply: false,
   });
 });
@@ -88,6 +89,8 @@ test("discord update post args parse title body file section receipt and apply",
       "AI Long-Run Batch Orchestration",
       "--marker",
       "Manual Deploy Exception Burn-Down",
+      "--marker-file",
+      "docs/ops/markers.md",
       "--apply",
     ]),
     {
@@ -101,6 +104,7 @@ test("discord update post args parse title body file section receipt and apply",
         "AI Long-Run Batch Orchestration",
         "Manual Deploy Exception Burn-Down",
       ],
+      markerFilePath: "docs/ops/markers.md",
       apply: true,
     }
   );

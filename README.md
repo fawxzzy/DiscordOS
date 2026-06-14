@@ -202,13 +202,17 @@ Current governed contract surface:
   - formats normal updates as green embeds with mentions disabled
   - returns Discord response metadata, including message id, channel id, and timestamp, after successful sends
   - can write a bounded Discord publication block into an existing ops receipt with `--receipt-file`
-  - supports repeatable `--marker "<marker name>"` flags that append workflow completion data from ATLAS marker truth
+  - supports repeatable `--marker "<marker name>"` flags that append workflow completion data from ATLAS marker truth or an explicit `--marker-file <path>`
 - `scripts/discord-forum-card-lifecycle.js`
   - repo-local forum/card lifecycle publication command for governed workflow-card state updates
   - dry-runs by default, requires `--apply` before sending, and uses the shared `updates` target with the `discordos.forum_card.lifecycle` route
   - requires explicit workflow, card id, and lifecycle state metadata
   - formats card lifecycle updates as governed embeds with card metadata, marker completion data, and mentions disabled
-  - supports repeatable `--marker "<marker name>"` flags that append workflow completion data from ATLAS marker truth
+  - supports repeatable `--marker "<marker name>"` flags that append workflow completion data from ATLAS marker truth or an explicit `--marker-file <path>`
+- `scripts/discord-forum-card-preflight.js`
+  - repo-local no-send preflight gate for governed forum/card lifecycle posts
+  - validates lifecycle payload shape, route admission, updates-target admission, and optional live duplicate-title checks without sending a message
+  - renders bounded operator output even when inline `--body` content is used
 - `scripts/discord-update-lookup.js`
   - repo-local read-only lookup command for previously published `#updates` embed posts
   - searches recent messages by embed title and can backfill the Discord publication block into an ops receipt without sending a new post
@@ -239,7 +243,7 @@ Current governed contract surface:
   - sends no Discord messages and writes no artifacts
 - `scripts/discord-publication-status.js`
   - repo-local read-only status command for the DiscordOS publication toolchain
-  - summarizes draft validation, release check, forum/card lifecycle publication, forum/card release check, target admission, lookup, apply guard, and `#updates` / `#alerts` separation
+  - summarizes draft validation, release check, forum/card preflight, forum/card lifecycle publication, forum/card release check, target admission, lookup, apply guard, and `#updates` / `#alerts` separation
   - sends no Discord messages and writes no artifacts
 - `scripts/discord-publication-audit-rollup.js`
   - repo-local read-only audit command for DiscordOS publication receipts under `docs/ops`
@@ -497,6 +501,8 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local runtime-health status command
 - `npm run verify:discord-update-post`
   - Node test coverage for the repo-local DiscordOS `#updates` publication command
+- `npm run verify:discord-forum-card-preflight`
+  - Node test coverage for the repo-local DiscordOS forum/card no-send preflight command
 - `npm run verify:discord-forum-card-lifecycle`
   - Node test coverage for the repo-local DiscordOS forum/card lifecycle publication command
 - `npm run verify:discord-forum-card-release-check`
@@ -589,10 +595,15 @@ Current repo-local operator surface:
   - emits the update publication result as JSON
 - `npm run ops:discord:update-post -- --title "<title>" --body-file <path> --body-section "<section>" --receipt-file <receipt> --apply`
   - runs live preflight, sends only if target admission and duplicate-title checks pass, then writes returned Discord publication metadata into the existing receipt
+  - marker-aware update commands accept repeatable `--marker "<marker>"` flags and optional `--marker-file <path>` to use an explicit marker source instead of the default ATLAS marker board
 - `npm run ops:discord:forum-card-lifecycle -- --workflow "<workflow>" --card-id "<card-id>" --state "<opened|in_progress|blocked|completed|closed>" --body "<body>"`
   - dry-runs a governed forum/card lifecycle update with explicit workflow metadata and optional marker completion data
-- `npm run ops:discord:forum-card-lifecycle -- --workflow "<workflow>" --card-id "<card-id>" --state "<state>" --body-file <path> --body-section "<section>" --marker "<marker>" --apply`
+- `npm run ops:discord:forum-card-lifecycle -- --workflow "<workflow>" --card-id "<card-id>" --state "<state>" --body-file <path> --body-section "<section>" --marker "<marker>" --marker-file <path> --apply`
   - runs live preflight, sends only if route admission and duplicate-title checks pass, and can publish marker-aware lifecycle updates into the shared `#updates` target
+- `npm run ops:discord:forum-card-preflight -- --workflow "<workflow>" --card-id "<card-id>" --state "<state>" --body "<body>"`
+  - validates a governed forum/card update locally without sending a message
+- `npm run ops:discord:forum-card-preflight -- --workflow "<workflow>" --card-id "<card-id>" --state "<state>" --body-file <path> --body-section "<section>" --marker "<marker>" --marker-file <path> --probe-live`
+  - validates payload, route, target, and duplicate-title posture for a governed forum/card update without sending a message
 - `npm run ops:discord:forum-card-release-check -- --workflow "<workflow>" --card-id "<card-id>" --state "<state>" --body "<body>"`
   - runs lifecycle preview plus live no-send preflight in one readiness check before guarded card apply
 - `npm run ops:discord:update-lookup -- --title "<title>" --receipt-file <receipt>`

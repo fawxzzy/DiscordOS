@@ -23,6 +23,7 @@ function parseArgs(args) {
     bodySection: null,
     receiptFile: null,
     markers: [],
+    markerFilePath: markerProgressInternals.DEFAULT_MARKER_FILE_PATH,
     apply: false,
   };
 
@@ -75,6 +76,13 @@ function parseArgs(args) {
         throw new Error("missing_marker_value");
       }
       options.markers.push(value.trim());
+      index += 1;
+    } else if (arg === "--marker-file") {
+      const value = args[index + 1];
+      if (typeof value !== "string" || value.trim().length === 0) {
+        throw new Error("missing_marker_file_value");
+      }
+      options.markerFilePath = value.trim();
       index += 1;
     } else {
       throw new Error(`unsupported_argument:${arg}`);

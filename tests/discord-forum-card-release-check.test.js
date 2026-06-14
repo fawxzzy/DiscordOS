@@ -79,6 +79,7 @@ test("discord forum card release check args default to no-send readiness check",
     bodySection: null,
     receiptFile: null,
     markers: [],
+    markerFilePath: undefined,
     limit: _internals.DEFAULT_LIMIT,
   });
 });
@@ -105,6 +106,8 @@ test("discord forum card release check parses full card metadata", () => {
       "docs/ops/post.md",
       "--marker",
       "DiscordOS Forum/Card Operations",
+      "--marker-file",
+      "docs/ops/markers.md",
       "--limit",
       "10",
     ]),
@@ -120,6 +123,7 @@ test("discord forum card release check parses full card metadata", () => {
       bodySection: "Card Update",
       receiptFile: "docs/ops/post.md",
       markers: ["DiscordOS Forum/Card Operations"],
+      markerFilePath: "docs/ops/markers.md",
       limit: 10,
     }
   );
@@ -152,6 +156,7 @@ test("discord forum card release check passes when lifecycle preview and live pr
   assert.equal(result.event.type, "discordos.forum_card.release_check_ready");
   assert(result.nextCommand.includes("npm run ops:discord:forum-card-lifecycle"));
   assert(result.nextCommand.includes('--marker "DiscordOS Forum/Card Operations"'));
+  assert(result.nextCommand.includes(`--marker-file ${_internals.quoteCliValue(markerFilePath)}`));
 });
 
 test("discord forum card release check blocks duplicate live title without sending", async () => {
@@ -204,11 +209,12 @@ test("discord forum card release check skips live preflight when notification ro
   assert.equal(result.ok, false);
   assert.equal(result.lifecycle.status, "dry_run");
   assert.equal(result.lifecycle.notificationRoute.ok, false);
-  assert.equal(result.preflight.status, "skipped");
+  assert.equal(result.preflight.status, "blocked");
   assert.deepEqual(result.preflight.reasonCodes, [
     "notification_route_not_admitted",
     "notification_route_not_found",
   ]);
+  assert.equal(result.preflight.duplicateCheck.status, "skipped");
   assert(result.reasonCodes.includes("notification_route_not_admitted"));
 });
 

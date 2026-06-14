@@ -26,6 +26,7 @@ function parseArgs(args) {
     bodyFile: null,
     bodySection: DEFAULT_BODY_SECTION,
     markers: [],
+    markerFilePath: markerProgressInternals.DEFAULT_MARKER_FILE_PATH,
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -59,6 +60,13 @@ function parseArgs(args) {
         throw new Error("missing_marker_value");
       }
       options.markers.push(value.trim());
+      index += 1;
+    } else if (arg === "--marker-file") {
+      const value = args[index + 1];
+      if (typeof value !== "string" || value.trim().length === 0) {
+        throw new Error("missing_marker_file_value");
+      }
+      options.markerFilePath = value.trim();
       index += 1;
     } else {
       throw new Error(`unsupported_argument:${arg}`);
