@@ -51,8 +51,8 @@ async function buildBoardFeatureActivationPilot({
   if (!selectedFeature) {
     reasonCodes.push("feature_not_found");
   }
-  if (selectedFeature && selectedFeature.status !== "shadow") {
-    reasonCodes.push("feature_not_in_shadow_pilot");
+  if (selectedFeature && !["shadow", "active"].includes(selectedFeature.status)) {
+    reasonCodes.push("feature_not_in_shadow_or_active_pilot");
   }
   if (selectedFeature?.liveBehaviorAdmitted === true) {
     reasonCodes.push("pilot_cannot_admit_live_behavior");

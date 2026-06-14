@@ -139,6 +139,18 @@ function buildProductRuntimeTiles() {
       status: "available",
       command: "npm run ops:discordos:board-feature-activation-pilot",
     },
+    {
+      id: "board_active_admission_canary",
+      label: "Board active canary",
+      status: "available",
+      command: "npm run ops:discordos:board-active-admission-canary",
+    },
+    {
+      id: "product_workflow_dashboard",
+      label: "Product workflow dashboard",
+      status: "available",
+      command: "npm run ops:discordos:product-workflow-dashboard",
+    },
   ];
 }
 

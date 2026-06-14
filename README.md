@@ -354,6 +354,10 @@ Current governed contract surface:
   - repo-local no-write shadow persistence admission for sanitized moderation audit ledger rows
   - reuses the moderation persistence plan while keeping storage writes, migrations, and live moderation blocked
   - sends no Discord messages and writes no artifacts
+- `scripts/discordos-storage-migration-rls-proof.js`
+  - repo-local static RLS proof command for DiscordOS storage migration drafts
+  - verifies private `discordos` schema table posture, RLS enablement, service-role-only grants, and absence of public policies
+  - sends no Discord messages, writes no artifacts, and does not apply migrations
 - `scripts/discordos-feature-contract-registry-status.js`
   - repo-local read-only status command for the feature contract registry
   - validates registered feature records, docs/source path discipline, status commands, and live-behavior admission flags
@@ -375,8 +379,16 @@ Current governed contract surface:
   - reports activation eligibility, next gates, and impossible live-behavior admissions without mutating the registry
   - sends no Discord messages and writes no artifacts
 - `scripts/discordos-board-feature-activation-pilot.js`
-  - repo-local activation pilot check for the board/card shadow registry posture
-  - confirms the board feature can sit in shadow while live behavior remains below active admission
+  - repo-local activation pilot check for the board/card shadow or active-canary registry posture
+  - confirms the board feature can sit below live-behavior admission while operator proof is gathered
+  - sends no Discord messages and writes no artifacts
+- `scripts/discordos-board-active-admission-canary.js`
+  - repo-local board/card active-admission canary after storage migration RLS proof exists
+  - confirms board registry status is `active` while live behavior and canary writes remain disabled
+  - sends no Discord messages and writes no artifacts
+- `scripts/discordos-product-workflow-dashboard.js`
+  - repo-local board/moderation/Music Sesh workflow dashboard
+  - summarizes registry status, storage proof readiness, command hints, and next gates without writing artifacts
   - sends no Discord messages and writes no artifacts
 - `scripts/discordos-music-sesh-preflight.js`
   - repo-local no-send preflight command for future Music Sesh action payloads
@@ -392,6 +404,12 @@ Current governed contract surface:
 - `supabase/migrations/20260613143000_discordos_runtime_health_cron_runs.sql`
   - private `discordos.runtime_health_cron_runs` table plus service-role-only insert/status RPCs
   - stores sanitized cron execution metadata only
+- `supabase/migrations/20260614231000_discordos_board_cards.sql`
+  - private `discordos.discordos_board_cards` migration draft
+  - enables RLS, revokes public/anon/authenticated access, grants service-role-only access, and defines board/card indexes
+- `supabase/migrations/20260614232000_discordos_moderation_audit_log.sql`
+  - private `discordos.discordos_moderation_audit_log` migration draft
+  - enables RLS, revokes public/anon/authenticated access, grants service-role-only access, and stores sanitized audit fingerprints
 - `supabase/functions/discordos-runtime-health-cron-audit/index.ts`
   - JWT-protected Supabase Edge writer for runtime-health cron receipts
   - keeps the service credential inside the Supabase runtime boundary
@@ -662,6 +680,8 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local DiscordOS board/card shadow persistence command
 - `npm run verify:discordos-moderation-audit-shadow-persistence`
   - Node test coverage for the repo-local DiscordOS moderation audit shadow persistence command
+- `npm run verify:discordos-storage-migration-rls-proof`
+  - Node test coverage for the repo-local DiscordOS storage migration RLS proof command
 - `npm run verify:discordos-feature-contract-registry-status`
   - Node test coverage for the repo-local DiscordOS feature contract registry status command
 - `npm run verify:discordos-board-card-schema-admission-status`
@@ -674,6 +694,10 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local DiscordOS feature activation gates command
 - `npm run verify:discordos-board-feature-activation-pilot`
   - Node test coverage for the repo-local DiscordOS board feature activation pilot command
+- `npm run verify:discordos-board-active-admission-canary`
+  - Node test coverage for the repo-local DiscordOS board active-admission canary command
+- `npm run verify:discordos-product-workflow-dashboard`
+  - Node test coverage for the repo-local DiscordOS product workflow dashboard command
 - `npm run verify:discordos-music-sesh-preflight`
   - Node test coverage for the repo-local DiscordOS Music Sesh preflight command
 - `npm run verify`
@@ -835,6 +859,10 @@ Current repo-local operator surface:
   - previews board/card shadow persistence rows and idempotency without storage writes or Discord sends
 - `npm run ops:discordos:moderation-audit-shadow-persistence`
   - previews sanitized moderation audit shadow persistence admission without storage writes or live moderation
+- `npm run ops:discordos:board-card-storage-migration-rls-proof`
+  - verifies the board/card storage migration draft keeps RLS and service-role-only posture without applying it
+- `npm run ops:discordos:moderation-storage-migration-rls-proof`
+  - verifies the moderation audit storage migration draft keeps RLS and service-role-only posture without applying it
 - `npm run ops:discordos:feature-contract-registry-status`
   - checks the feature contract registry and live-behavior admission flags
 - `npm run ops:discordos:board-card-schema-admission-status`
@@ -846,7 +874,11 @@ Current repo-local operator surface:
 - `npm run ops:discordos:feature-activation-gates`
   - reports per-feature activation gates and blocked reasons without changing registry admission
 - `npm run ops:discordos:board-feature-activation-pilot`
-  - confirms the board/card feature is in shadow pilot posture with live behavior still disabled
+  - confirms the board/card feature is in shadow or active-canary posture with live behavior still disabled
+- `npm run ops:discordos:board-active-admission-canary`
+  - checks board/card active registry posture after storage RLS proof while keeping canary writes and live behavior disabled
+- `npm run ops:discordos:product-workflow-dashboard`
+  - summarizes board, moderation, and Music Sesh workflow posture, storage proof state, command hints, and next gates
 - `npm run ops:discordos:music-sesh-preflight`
   - validates a future Music Sesh action payload without provider calls, playback, persistence, or Discord sends
 - `npm run ops:runtime-health:scheduled-proof`

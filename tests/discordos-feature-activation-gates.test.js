@@ -87,7 +87,11 @@ test("feature activation gates build current registry read model", async () => {
   assert.equal(result.featureCount, 3);
   assert.equal(result.activationAllowedCount, 0);
   assert.equal(result.blockedFeatureCount, 3);
-  assert.equal(result.features.find((candidate) => candidate.id === "board").status, "shadow");
+  assert.equal(result.features.find((candidate) => candidate.id === "board").status, "active");
+  assert.equal(
+    result.features.find((candidate) => candidate.id === "board").nextGate,
+    "live_behavior_admission_required"
+  );
   assert.equal(result.event.type, "discordos.feature_activation.gates_ready");
 });
 
@@ -97,6 +101,6 @@ test("feature activation gates render bounded markdown", async () => {
 
   assert(rendered.includes("# DiscordOS Feature Activation Gates"));
   assert(rendered.includes("activation allowed: `0`"));
-  assert(rendered.includes("board: status `shadow`"));
+  assert(rendered.includes("board: status `active`"));
   assert(!rendered.includes("bot-secret"));
 });

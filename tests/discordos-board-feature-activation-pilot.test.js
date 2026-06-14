@@ -44,10 +44,10 @@ test("board feature activation pilot passes current shadow registry posture", as
   assert.equal(result.writesArtifacts, false);
   assert.equal(result.status, "pilot_ready");
   assert.equal(result.feature, "board");
-  assert.equal(result.pilotStatus, "shadow");
+  assert.equal(result.pilotStatus, "active");
   assert.equal(result.activationAllowed, false);
   assert.equal(result.liveBehaviorAdmitted, false);
-  assert.equal(result.nextGate, "active_admission_required");
+  assert.equal(result.nextGate, "live_behavior_admission_required");
   assert.equal(result.registryMutated, false);
   assert.equal(result.liveBehaviorChanges, false);
   assert.equal(result.event.type, "discordos.board_feature.activation_pilot_ready");
@@ -63,7 +63,7 @@ test("board feature activation pilot blocks non-shadow board status", async () =
   const result = await _internals.buildBoardFeatureActivationPilot({ registryPath });
 
   assert.equal(result.ok, false);
-  assert(result.reasonCodes.includes("feature_not_in_shadow_pilot"));
+  assert(result.reasonCodes.includes("feature_not_in_shadow_or_active_pilot"));
 });
 
 test("board feature activation pilot blocks live behavior admission", async () => {
@@ -85,7 +85,7 @@ test("board feature activation pilot renders bounded markdown", async () => {
   const rendered = _internals.renderMarkdown(result);
 
   assert(rendered.includes("# DiscordOS Board Feature Activation Pilot"));
-  assert(rendered.includes("pilot status: `shadow`"));
+  assert(rendered.includes("pilot status: `active`"));
   assert(rendered.includes("live behavior admitted: `false`"));
   assert(!rendered.includes("DISCORDOS_BOT_TOKEN="));
 });
