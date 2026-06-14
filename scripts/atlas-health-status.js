@@ -88,6 +88,26 @@ function determineNextActions({ watch, alertReadiness }) {
   return actions;
 }
 
+function summarizeWatchCadence(watch) {
+  const runDays = Array.isArray(watch.usageEstimate?.runDays)
+    ? watch.usageEstimate.runDays
+    : [];
+  const timezone = watch.usageEstimate?.timezone || "unknown";
+  const configuredSchedule = watch.usageEstimate?.configuredSchedule || "unknown";
+  const cadenceStatus = watch.skipped === true && watch.skipReason === "atlas_health_schedule_not_due"
+    ? "schedule_not_due"
+    : "checked";
+
+  return {
+    status: cadenceStatus,
+    configuredSchedule,
+    runDays,
+    timezone,
+    skipped: watch.skipped === true,
+    skipReason: watch.skipReason || null,
+  };
+}
+
 function classifyAtlasHealthStatusEvent(status) {
   return {
     type: status.ok ? "atlas.health_status.ready" : "atlas.health_status.action_required",
@@ -96,6 +116,8 @@ function classifyAtlasHealthStatusEvent(status) {
     status: status.ok ? "pass" : "fail",
     dimensions: {
       healthWatchStatus: status.watch.ok ? "pass" : "fail",
+      cadenceStatus: status.watch.cadenceStatus,
+      skipped: status.watch.skipped === true,
       targetCount: status.watch.targetCount,
       criticalCount: status.watch.criticalCount,
       alertReady: status.alertReadiness.ready,
@@ -123,6 +145,7 @@ async function buildAtlasHealthStatus({
   });
   const alertReadiness = buildAlertReadiness({ env });
   const nextActions = determineNextActions({ watch, alertReadiness });
+  const cadence = summarizeWatchCadence(watch);
   const status = {
     ok: watch.ok && alertReadiness.ready,
     destructive: false,
@@ -132,8 +155,9 @@ async function buildAtlasHealthStatus({
     watch: {
       ok: watch.ok,
       eventType: watch.event.type,
-      skipped: watch.skipped === true,
-      skipReason: watch.skipReason || null,
+      skipped: cadence.skipped,
+      skipReason: cadence.skipReason,
+      cadenceStatus: cadence.status,
       targetCount: watch.targetCount,
       passCount: watch.passCount,
       failCount: watch.failCount,
@@ -144,6 +168,9 @@ async function buildAtlasHealthStatus({
         reasonCodes: target.reasonCodes,
       })),
       usageEstimate: watch.usageEstimate,
+      configuredSchedule: cadence.configuredSchedule,
+      runDays: cadence.runDays,
+      timezone: cadence.timezone,
       alertDeliveryDryRunStatus: watch.alertDelivery.status,
       alertDeliveryDryRunReasonCodes: watch.alertDelivery.reasonCodes,
     },
@@ -173,13 +200,16 @@ function renderMarkdown(status) {
     "",
     `- result: \`${status.watch.ok ? "pass" : "fail"}\``,
     `- event type: \`${status.watch.eventType}\``,
+    `- cadence status: \`${status.watch.cadenceStatus}\``,
     `- skipped: \`${status.watch.skipped ? "true" : "false"}\``,
     `- skip reason: \`${status.watch.skipReason || "none"}\``,
     `- targets: \`${status.watch.targetCount}\``,
     `- passing: \`${status.watch.passCount}\``,
     `- failing: \`${status.watch.failCount}\``,
     `- critical: \`${status.watch.criticalCount}\``,
-    `- configured schedule: \`${status.watch.usageEstimate.configuredSchedule || "unknown"}\``,
+    `- configured schedule: \`${status.watch.configuredSchedule}\``,
+    `- run days: \`${Array.isArray(status.watch.runDays) ? status.watch.runDays.join(",") || "all" : "all"}\``,
+    `- timezone: \`${status.watch.timezone || "unknown"}\``,
     `- runs per month: \`${status.watch.usageEstimate.runsPerMonth}\``,
     `- target checks per month: \`${status.watch.usageEstimate.targetChecksPerMonth}\``,
     `- dry-run delivery status: \`${status.watch.alertDeliveryDryRunStatus}\``,
@@ -226,6 +256,7 @@ module.exports = {
     flagEnabled,
     buildAlertReadiness,
     determineNextActions,
+    summarizeWatchCadence,
     classifyAtlasHealthStatusEvent,
     buildAtlasHealthStatus,
     renderMarkdown,

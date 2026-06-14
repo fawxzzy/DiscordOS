@@ -4,13 +4,11 @@ const test = require("node:test");
 const { _internals } = require("../scripts/atlas-health-status");
 const { _internals: watchInternals } = require("../scripts/atlas-health-watch");
 
-function configEnv(targets) {
+function configEnv(targets, schedule = { cron: "0 16 * * *" }) {
   return {
     DISCORDOS_ATLAS_HEALTH_TARGETS_JSON: JSON.stringify({
       version: 1,
-      schedule: {
-        cron: "0 16 * * *",
-      },
+      schedule,
       targets,
     }),
   };
@@ -49,9 +47,65 @@ test("atlas health status passes when watch is green and alert path is armed", a
   assert.equal(status.sendsMessages, false);
   assert.equal(status.watch.targetCount, 1);
   assert.equal(status.watch.criticalCount, 0);
+  assert.equal(status.watch.cadenceStatus, "checked");
+  assert.equal(status.watch.skipped, false);
+  assert.deepEqual(status.watch.runDays, []);
+  assert.equal(status.watch.timezone, "UTC");
   assert.equal(status.alertReadiness.ready, true);
   assert.deepEqual(status.nextActions, ["continue_atlas_health_monitoring"]);
   assert.equal(status.event.type, "atlas.health_status.ready");
+  assert.equal(status.event.dimensions.cadenceStatus, "checked");
+  assert.equal(status.event.dimensions.skipped, false);
+});
+
+test("atlas health status explains when weekday schedule is not due", async () => {
+  const status = await _internals.buildAtlasHealthStatus({
+    env: {
+      ...configEnv(
+        [
+          {
+            id: "discordos",
+            label: "DiscordOS",
+            owner: "DiscordOS",
+            url: "https://example.test/api/runtime-health",
+            kind: "json-ok",
+          },
+        ],
+        {
+          cron: "0 16 * * 1-5",
+          timezone: "UTC",
+        }
+      ),
+      DISCORDOS_ATLAS_HEALTH_WATCH_ENABLED: "enabled",
+      DISCORDOS_ATLAS_HEALTH_ALERT_SEND: "enabled",
+      DISCORDOS_ATLAS_HEALTH_ALERT_CHANNEL_ID: "123",
+      DISCORDOS_BOT_TOKEN: "bot-token",
+    },
+    fetchImpl: async () => {
+      throw new Error("weekday-scheduled status should not fetch targets on saturday");
+    },
+    now: new Date("2026-06-13T16:00:00.000Z"),
+  });
+
+  assert.equal(status.ok, true);
+  assert.equal(status.watch.ok, true);
+  assert.equal(status.watch.cadenceStatus, "schedule_not_due");
+  assert.equal(status.watch.skipped, true);
+  assert.equal(status.watch.skipReason, "atlas_health_schedule_not_due");
+  assert.deepEqual(status.watch.runDays, [
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+  ]);
+  assert.equal(status.watch.targetCount, 1);
+  assert.equal(status.watch.passCount, 0);
+  assert.equal(status.watch.failCount, 0);
+  assert.equal(status.watch.usageEstimate.targetChecksPerMonth, 21);
+  assert.deepEqual(status.nextActions, ["continue_atlas_health_monitoring"]);
+  assert.equal(status.event.dimensions.cadenceStatus, "schedule_not_due");
+  assert.equal(status.event.dimensions.skipped, true);
 });
 
 test("atlas health status reports missing env flags without failing target health", async () => {
@@ -142,11 +196,17 @@ test("atlas health status renders markdown without target values", () => {
     watch: {
       ok: true,
       eventType: "atlas.health_watch.pass",
+      cadenceStatus: "checked",
+      skipped: false,
+      skipReason: null,
       targetCount: 1,
       passCount: 1,
       failCount: 0,
       criticalCount: 0,
       criticalTargets: [],
+      configuredSchedule: "0 16 * * *",
+      runDays: [],
+      timezone: "UTC",
       usageEstimate: {
         configuredSchedule: "0 16 * * *",
         runsPerMonth: 30,

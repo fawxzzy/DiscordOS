@@ -194,6 +194,10 @@ test("operator status combines runtime, publication, and audit status", async ()
   assert.equal(status.publicationAudit.publishedReceipts, 1);
   assert.equal(status.atlasHealth.ok, true);
   assert.equal(status.atlasHealth.targetCount, 1);
+  assert.equal(status.atlasHealth.cadenceStatus, "checked");
+  assert.equal(status.atlasHealth.skipped, false);
+  assert.deepEqual(status.atlasHealth.runDays, []);
+  assert.equal(status.atlasHealth.timezone, "UTC");
   assert.equal(status.atlasHealth.alertReady, true);
   assert.equal(status.event.type, "discordos.operator.status_ready");
 });
@@ -286,11 +290,16 @@ test("operator status renders markdown without target secret values", () => {
     atlasHealth: {
       ok: true,
       eventType: "atlas.health_status.ready",
+      cadenceStatus: "checked",
+      skipped: false,
+      skipReason: null,
       targetCount: 5,
       passCount: 5,
       failCount: 0,
       criticalCount: 0,
       configuredSchedule: "0 16 * * *",
+      runDays: [],
+      timezone: "UTC",
       targetChecksPerMonth: 150,
       alertReady: true,
       alertTargetType: "discord_bot_channel",

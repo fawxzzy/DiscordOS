@@ -381,6 +381,8 @@ Current governed contract surface:
   - owner-side proof that the 10:00 PM EDT scheduled runtime-health cron wrote a fresh private Supabase audit row
 - `docs/ops/discordos-runtime-status-scheduled-proof-closure-pass-74-2026-06-14.md`
   - owner-side proof that runtime/operator status now treats scheduled cron audit proof as closure instead of an open capture action
+- `docs/ops/discordos-atlas-health-cadence-status-pass-75-2026-06-14.md`
+  - owner-side proof that ATLAS health/operator status now explains weekday scheduled-skip cadence explicitly
 - `docs/ops/discordos-next-work-final-followup-state-pass-69-2026-06-13.md`
   - owner-side proof that next-work now reports only the deferred scheduled cron identity proof after the final follow-up post
 
@@ -617,6 +619,7 @@ Current scheduled runtime surface:
   - runtime/operator status treats `discordos-runtime-health-scheduled-audit-proof-pass-*` receipts as scheduled proof closure and reports `continue_runtime_monitoring` after closure
   - writes sanitized private Supabase cron receipt rows only when `DISCORDOS_RUNTIME_HEALTH_CRON_AUDIT_WRITE=enabled`
   - can run the ATLAS health watch when `DISCORDOS_ATLAS_HEALTH_WATCH_ENABLED=enabled`; the default ATLAS sweep schedule is weekday-only `0 16 * * 1-5`, currently estimated at `105` target checks/month across 5 targets
+  - ATLAS health/operator status reports weekday off-days as `cadenceStatus: schedule_not_due` with explicit run days and timezone instead of ambiguous `0` pass/fail counts
   - delivers only critical runtime-health alerts when `DISCORDOS_RUNTIME_HEALTH_ALERT_SEND=enabled`
   - delivers only critical ATLAS health alerts when `DISCORDOS_ATLAS_HEALTH_ALERT_SEND=enabled`
 
