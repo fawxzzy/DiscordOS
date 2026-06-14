@@ -80,7 +80,7 @@ function buildSteadyStateRecommendations(operatorStatus) {
       score: 58,
       category: "runtime-alerts",
       title: "Review the runtime alert drill surface while production health is green",
-      command: "npm run ops:runtime-health:alert-delivery",
+      command: "npm run ops:runtime-health:alert-delivery -- --drill-critical",
       reasonCodes: ["runtime_health_ready_for_alert_drill_review"],
       evidence: {
         posture: operatorStatus.runtime.posture,

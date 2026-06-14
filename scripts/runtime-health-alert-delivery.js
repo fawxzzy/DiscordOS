@@ -21,6 +21,7 @@ function parseArgs(args) {
     cooldownHours: 24,
     suppressRepeats: true,
     includeClear: false,
+    drillCritical: false,
     send: false,
   };
 
@@ -30,6 +31,8 @@ function parseArgs(args) {
       options.json = true;
     } else if (arg === "--include-clear") {
       options.includeClear = true;
+    } else if (arg === "--drill-critical") {
+      options.drillCritical = true;
     } else if (arg === "--send") {
       options.send = true;
     } else if (arg === "--no-repeat-suppression") {
@@ -93,6 +96,10 @@ function parseArgs(args) {
     } else {
       throw new Error(`unsupported_argument:${arg}`);
     }
+  }
+
+  if (options.drillCritical && options.send) {
+    throw new Error("drill_critical_is_no_send_only");
   }
 
   return options;
@@ -307,6 +314,27 @@ function buildDiscordAlertPayload(alert) {
   };
 }
 
+function buildCriticalDrillAlert({ now = new Date() } = {}) {
+  return {
+    ok: false,
+    severity: "critical",
+    event: {
+      type: "discordos.runtime_health.alert_triggered",
+      status: "active",
+      reasonCodes: ["runtime_health_alert_drill"],
+    },
+    summary: {
+      generatedAt: now.toISOString(),
+      latest: {
+        posture: "action_required",
+        readinessPercent: 83,
+        fresh: true,
+        blockedReasons: ["runtime_health_alert_drill"],
+      },
+    },
+  };
+}
+
 async function sendDiscordWebhook({ webhookUrl, payload, fetchImpl = fetch }) {
   const response = await fetchImpl(webhookUrl, {
     method: "POST",
@@ -489,6 +517,7 @@ function classifyAlertDeliveryEvent(result) {
     dimensions: {
       alertSeverity: result.alert.severity,
       alertStatus: result.alert.status,
+      drillCritical: result.drillCritical === true,
       deliveryStatus: result.delivery.status,
       targetType: result.delivery.targetType,
       sent: result.delivery.sent,
@@ -505,6 +534,7 @@ async function buildRuntimeHealthAlertDelivery({
   staleSeverity,
   includeClear,
   send,
+  drillCritical = false,
   minDeliverySeverity = "critical",
   suppressRepeats = true,
   suppressionDir = DEFAULT_SUPPRESSION_DIR,
@@ -513,14 +543,20 @@ async function buildRuntimeHealthAlertDelivery({
   fetchImpl = fetch,
   now,
 }) {
-  const alert = await alertInternals.buildRuntimeHealthAlert({
-    snapshotDir,
-    limit,
-    maxSnapshotAgeHours,
-    minReadinessPercent,
-    staleSeverity,
-    now,
-  });
+  if (drillCritical && send) {
+    throw new Error("drill_critical_is_no_send_only");
+  }
+
+  const alert = drillCritical
+    ? buildCriticalDrillAlert({ now: now || new Date() })
+    : await alertInternals.buildRuntimeHealthAlert({
+        snapshotDir,
+        limit,
+        maxSnapshotAgeHours,
+        minReadinessPercent,
+        staleSeverity,
+        now,
+      });
   const target = getAlertDeliveryTarget(env);
   const delivery = await deliverAlert({
     alert,
@@ -540,6 +576,7 @@ async function buildRuntimeHealthAlertDelivery({
     destructive: false,
     alertDelivered: delivery.sent,
     sendRequested: send,
+    drillCritical,
     includeClear,
     minDeliverySeverity,
     suppressRepeats,
@@ -573,6 +610,7 @@ function renderMarkdown(result) {
     `- result: \`${result.ok ? "pass" : "fail"}\``,
     `- destructive: \`${result.destructive ? "true" : "false"}\``,
     `- send requested: \`${result.sendRequested ? "true" : "false"}\``,
+    `- drill critical: \`${result.drillCritical ? "true" : "false"}\``,
     `- alert delivered: \`${result.alertDelivered ? "true" : "false"}\``,
     `- min delivery severity: \`${result.minDeliverySeverity}\``,
     `- repeat suppression: \`${result.suppressRepeats ? "true" : "false"}\``,
@@ -626,6 +664,7 @@ module.exports = {
     evaluateSuppression,
     writeSuppressionRecord,
     buildDiscordAlertPayload,
+    buildCriticalDrillAlert,
     sendDiscordWebhook,
     sendDiscordBotChannel,
     deliverAlert,

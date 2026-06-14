@@ -45,8 +45,20 @@ test("alert delivery args default to no-send runtime alert surface", () => {
     cooldownHours: 24,
     suppressRepeats: true,
     includeClear: false,
+    drillCritical: false,
     send: false,
   });
+});
+
+test("alert delivery drill-critical is explicitly no-send", () => {
+  const parsed = _internals.parseArgs(["--drill-critical"]);
+
+  assert.equal(parsed.drillCritical, true);
+  assert.equal(parsed.send, false);
+  assert.throws(
+    () => _internals.parseArgs(["--drill-critical", "--send"]),
+    /drill_critical_is_no_send_only/
+  );
 });
 
 test("alert delivery target detects webhook and bot-channel without returning secret values", () => {
@@ -162,6 +174,38 @@ test("alert delivery dry-runs configured targets unless send is requested", asyn
   assert.equal(delivery.payloadPreview.embeds[0].title, "DiscordOS Runtime Critical Alert");
   assert.equal(delivery.payloadPreview.embeds[0].color, _internals.CRITICAL_EMBED_COLOR);
   assert.equal(delivery.suppression.suppressed, false);
+});
+
+test("alert delivery can drill a synthetic critical payload without sending", async () => {
+  const result = await _internals.buildRuntimeHealthAlertDelivery({
+    drillCritical: true,
+    includeClear: false,
+    send: false,
+    minDeliverySeverity: "critical",
+    suppressRepeats: true,
+    cooldownHours: 24,
+    env: {
+      DISCORDOS_RUNTIME_HEALTH_ALERT_CHANNEL_ID: "123",
+      DISCORDOS_BOT_TOKEN: "bot-secret",
+    },
+    fetchImpl: async () => {
+      throw new Error("drill_should_not_send_network_request");
+    },
+    now: new Date("2026-06-14T04:00:00.000Z"),
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.drillCritical, true);
+  assert.equal(result.sendRequested, false);
+  assert.equal(result.alertDelivered, false);
+  assert.equal(result.alert.severity, "critical");
+  assert.equal(result.alert.status, "active");
+  assert.deepEqual(result.alert.reasonCodes, ["runtime_health_alert_drill"]);
+  assert.equal(result.delivery.status, "dry_run");
+  assert.equal(result.delivery.targetType, "discord_bot_channel");
+  assert.equal(result.delivery.sent, false);
+  assert.equal(result.delivery.payloadPreview.embeds[0].title, "DiscordOS Runtime Critical Alert");
+  assert.equal(result.event.dimensions.drillCritical, true);
 });
 
 test("alert delivery skips warning alerts by default", async () => {
@@ -535,6 +579,7 @@ test("alert delivery renders markdown without target values", () => {
     ok: false,
     destructive: false,
     sendRequested: true,
+    drillCritical: false,
     alertDelivered: false,
     minDeliverySeverity: "critical",
     suppressRepeats: true,

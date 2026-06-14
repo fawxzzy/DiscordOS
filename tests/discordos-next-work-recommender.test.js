@@ -409,7 +409,7 @@ test("next work recommender gives concrete steady-state hardening categories", (
     "recommended",
   ]);
   assert.deepEqual(recommendations.map((recommendation) => recommendation.command), [
-    "npm run ops:runtime-health:alert-delivery",
+    "npm run ops:runtime-health:alert-delivery -- --drill-critical",
     "npm run ops:atlas-health:status",
     "npm run ops:discord:publication-audit",
   ]);

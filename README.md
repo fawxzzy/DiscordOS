@@ -166,6 +166,7 @@ Current governed contract surface:
   - repo-local alert delivery command for runtime-health alert decisions
   - supports Discord webhook and Discord bot-channel targets when explicitly configured
   - skips clear alerts by default, skips warning alerts by default, and requires `--send` before network delivery
+  - supports a no-send `--drill-critical` mode for reviewing the critical alert payload and suppression fingerprint without a real outage
   - formats send-eligible critical alerts as a red Discord embed with mentions disabled
   - suppresses repeated sends for the same critical fingerprint for 24 hours by default
 - `config/atlas-health-targets.json`
@@ -385,6 +386,8 @@ Current governed contract surface:
   - owner-side proof that ATLAS health/operator status now explains weekday scheduled-skip cadence explicitly
 - `docs/ops/discordos-next-work-steady-state-recommendations-pass-76-2026-06-14.md`
   - owner-side proof that next-work now emits concrete ranked runtime/product hardening recommendations in green steady state
+- `docs/ops/discordos-runtime-alert-drill-surface-pass-77-2026-06-14.md`
+  - owner-side proof that runtime alert delivery now has a deterministic no-send critical drill surface
 - `docs/ops/discordos-next-work-final-followup-state-pass-69-2026-06-13.md`
   - owner-side proof that next-work now reports only the deferred scheduled cron identity proof after the final follow-up post
 
@@ -506,6 +509,8 @@ Current repo-local operator surface:
   - writes the alert-decision snapshot and emits the decision as JSON
 - `npm run ops:runtime-health:alert-delivery`
   - evaluates runtime-health alert delivery with no-send defaults
+- `npm run ops:runtime-health:alert-delivery -- --drill-critical`
+  - dry-runs a synthetic critical runtime alert payload without sending Discord messages
 - `npm run ops:runtime-health:alert-delivery:json`
   - emits the alert delivery decision as JSON
 - `npm run ops:runtime-health:alert-target-admission`
