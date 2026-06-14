@@ -23,6 +23,9 @@ const {
 const {
   _internals: atlasHealthInternals,
 } = require("./atlas-health-watch");
+const {
+  _internals: notificationPolicyInternals,
+} = require("./discordos-notification-policy-status");
 
 function parseArgs(args) {
   const options = {
@@ -121,6 +124,7 @@ function determineOperatorNextActions({
   publicationStatus,
   publicationAudit,
   atlasHealthStatus = { ok: true, nextActions: [] },
+  notificationPolicyStatus = { ok: true },
 }) {
   const actions = [];
 
@@ -138,6 +142,10 @@ function determineOperatorNextActions({
 
   if (!atlasHealthStatus.ok) {
     actions.push(...(atlasHealthStatus.nextActions || []));
+  }
+
+  if (!notificationPolicyStatus.ok) {
+    actions.push("repair_notification_policy_routes");
   }
 
   if (publicationAudit.counts.draftUpdateReceipts > 0 && publicationAudit.counts.needsBackfill === 0) {
@@ -168,6 +176,7 @@ function classifyOperatorStatusEvent(status) {
       publicationStatus: status.publication.ok ? "pass" : "fail",
       publicationAudit: status.publicationAudit.ok ? "pass" : "fail",
       atlasHealthStatus: status.atlasHealth.ok ? "pass" : "fail",
+      notificationPolicyStatus: status.notificationPolicy.ok ? "pass" : "fail",
       nextActionCount: status.nextActions.length,
     },
   };
@@ -188,7 +197,7 @@ async function buildDiscordOSOperatorStatus({
   fetchImpl = fetch,
   cwd = process.cwd(),
 } = {}) {
-  const [runtimeStatus, publicationStatus, publicationAudit, atlasHealthStatus] = await Promise.all([
+  const [runtimeStatus, publicationStatus, publicationAudit, atlasHealthStatus, notificationPolicyStatus] = await Promise.all([
     runtimeStatusInternals.buildRuntimeHealthStatus({
       baseUrl,
       snapshotDir,
@@ -216,10 +225,11 @@ async function buildDiscordOSOperatorStatus({
       env,
       fetchImpl,
     }),
+    notificationPolicyInternals.buildNotificationPolicyStatus(),
   ]);
 
   const status = {
-    ok: runtimeStatus.ok && publicationStatus.ok && publicationAudit.ok && atlasHealthStatus.ok,
+    ok: runtimeStatus.ok && publicationStatus.ok && publicationAudit.ok && atlasHealthStatus.ok && notificationPolicyStatus.ok,
     destructive: false,
     sendsMessages: false,
     writesArtifacts: false,
@@ -274,6 +284,19 @@ async function buildDiscordOSOperatorStatus({
       nextActions: atlasHealthStatus.nextActions,
       reasonCodes: atlasHealthStatus.alertReadiness.reasonCodes,
     },
+    notificationPolicy: {
+      ok: notificationPolicyStatus.ok,
+      eventType: notificationPolicyStatus.event.type,
+      status: notificationPolicyStatus.status,
+      routeCount: notificationPolicyStatus.routeCount,
+      enabledRouteCount: notificationPolicyStatus.enabledRouteCount,
+      alertsRouteCount: notificationPolicyStatus.alertsRouteCount,
+      updatesRouteCount: notificationPolicyStatus.updatesRouteCount,
+      attachedProducerCount: notificationPolicyStatus.attachedProducerCount,
+      readyAttachedProducerCount: notificationPolicyStatus.readyAttachedProducerCount,
+      reservedProducerCount: notificationPolicyStatus.reservedProducerCount,
+      reasonCodes: notificationPolicyStatus.reasonCodes,
+    },
   };
 
   const nextActions = determineOperatorNextActions({
@@ -281,6 +304,7 @@ async function buildDiscordOSOperatorStatus({
     publicationStatus,
     publicationAudit,
     atlasHealthStatus,
+    notificationPolicyStatus,
   });
 
   return {
@@ -359,6 +383,19 @@ function renderMarkdown(status) {
     `- alert target type: \`${status.atlasHealth.alertTargetType}\``,
     `- next actions: \`${status.atlasHealth.nextActions.join(",")}\``,
     `- reason codes: \`${status.atlasHealth.reasonCodes.join(",") || "none"}\``,
+    "",
+    "## Notification Policy",
+    "",
+    `- result: \`${status.notificationPolicy.ok ? "pass" : "fail"}\``,
+    `- event type: \`${status.notificationPolicy.eventType}\``,
+    `- status: \`${status.notificationPolicy.status}\``,
+    `- routes: \`${status.notificationPolicy.routeCount}\``,
+    `- enabled routes: \`${status.notificationPolicy.enabledRouteCount}\``,
+    `- alert routes: \`${status.notificationPolicy.alertsRouteCount}\``,
+    `- update routes: \`${status.notificationPolicy.updatesRouteCount}\``,
+    `- attached producers: \`${status.notificationPolicy.readyAttachedProducerCount}/${status.notificationPolicy.attachedProducerCount}\``,
+    `- reserved producers: \`${status.notificationPolicy.reservedProducerCount}\``,
+    `- reason codes: \`${status.notificationPolicy.reasonCodes.join(",") || "none"}\``,
   ];
 
   return `${lines.join("\n")}\n`;

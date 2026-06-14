@@ -14,6 +14,7 @@ function nextWorkResult(overrides = {}) {
       publicationOk: true,
       publicationAuditOk: true,
       atlasHealthOk: true,
+      notificationPolicyOk: true,
     },
     status: "ready",
     reasonCodes: ["operator_status_ready_for_command_ergonomics"],
@@ -68,6 +69,7 @@ test("operator dashboard summarizes next-work result into command hint", async (
   const event = _internals.classifyDashboardEvent(dashboard);
 
   assert.equal(dashboard.operator.runtimeOk, true);
+  assert.equal(dashboard.operator.notificationPolicyOk, true);
   assert.equal(dashboard.nextWork.recommendationCount, 1);
   assert.equal(dashboard.commandHint.command, "npm run ops:discordos:dashboard:prod");
   assert.equal(event.type, "discordos.operator.dashboard_ready");
@@ -98,6 +100,7 @@ test("operator dashboard renders compact markdown without target values", () => 
 
   assert(rendered.includes("# DiscordOS Operator Dashboard"));
   assert(rendered.includes("runtime: `pass`"));
+  assert(rendered.includes("notification policy: `pass`"));
   assert(rendered.includes("top recommendation: `inspect-operator-command-ergonomics`"));
   assert(rendered.includes("command: `npm run ops:discordos:dashboard:prod`"));
   assert(!rendered.includes("bot-secret"));

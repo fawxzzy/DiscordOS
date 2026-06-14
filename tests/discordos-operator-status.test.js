@@ -200,6 +200,9 @@ test("operator status combines runtime, publication, and audit status", async ()
   assert.deepEqual(status.atlasHealth.runDays, []);
   assert.equal(status.atlasHealth.timezone, "UTC");
   assert.equal(status.atlasHealth.alertReady, true);
+  assert.equal(status.notificationPolicy.ok, true);
+  assert.equal(status.notificationPolicy.routeCount, 4);
+  assert.equal(status.notificationPolicy.readyAttachedProducerCount, 4);
   assert.equal(status.event.type, "discordos.operator.status_ready");
 });
 
@@ -267,6 +270,30 @@ test("operator status surfaces untracked publication receipts as next actions", 
   assert.deepEqual(actions, ["review_untracked_publication_receipts"]);
 });
 
+test("operator status surfaces notification policy blockers as next actions", () => {
+  const actions = _internals.determineOperatorNextActions({
+    runtimeStatus: { ok: true },
+    publicationStatus: { ok: true },
+    publicationAudit: {
+      ok: true,
+      counts: {
+        draftUpdateReceipts: 0,
+        needsBackfill: 0,
+        untrackedPublicationReceipts: 0,
+      },
+    },
+    atlasHealthStatus: {
+      ok: true,
+      nextActions: ["continue_atlas_health_monitoring"],
+    },
+    notificationPolicyStatus: {
+      ok: false,
+    },
+  });
+
+  assert.deepEqual(actions, ["repair_notification_policy_routes"]);
+});
+
 test("operator status renders markdown without target secret values", () => {
   const rendered = _internals.renderMarkdown({
     ok: true,
@@ -329,11 +356,26 @@ test("operator status renders markdown without target secret values", () => {
       nextActions: ["continue_atlas_health_monitoring"],
       reasonCodes: [],
     },
+    notificationPolicy: {
+      ok: true,
+      eventType: "discordos.notification.policy_ready",
+      status: "ready",
+      routeCount: 4,
+      enabledRouteCount: 4,
+      alertsRouteCount: 2,
+      updatesRouteCount: 2,
+      attachedProducerCount: 4,
+      readyAttachedProducerCount: 4,
+      reservedProducerCount: 1,
+      reasonCodes: [],
+    },
   });
 
   assert(rendered.includes("# DiscordOS Operator Status"));
   assert(rendered.includes("Publication Audit"));
   assert(rendered.includes("untracked publication receipts: `1`"));
   assert(rendered.includes("ATLAS Health"));
+  assert(rendered.includes("Notification Policy"));
+  assert(rendered.includes("attached producers: `4/4`"));
   assert(!rendered.includes("bot-secret"));
 });

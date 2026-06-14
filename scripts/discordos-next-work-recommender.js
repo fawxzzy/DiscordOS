@@ -133,6 +133,7 @@ function buildSteadyStateRecommendations(
         runtimeOk: operatorStatus.runtime.ok,
         publicationOk: operatorStatus.publication.ok,
         atlasHealthOk: operatorStatus.atlasHealth?.ok === true,
+        notificationPolicyOk: operatorStatus.notificationPolicy?.ok === true,
       },
   }));
 
@@ -199,6 +200,22 @@ function recommendNextWork(operatorStatus, { max = 5, receiptState = receiptStat
       targetCount: operatorStatus.atlasHealth?.targetCount ?? null,
       criticalCount: operatorStatus.atlasHealth?.criticalCount ?? null,
       alertReady: operatorStatus.atlasHealth?.alertReady === true,
+    },
+  }));
+
+  addIf(operatorStatus.notificationPolicy && !operatorStatus.notificationPolicy.ok, recommendations, buildRecommendation({
+    id: "repair-notification-policy-routes",
+    score: 87,
+    category: "notification-policy",
+    title: "Repair DiscordOS notification route policy before live alert or update work",
+    command: "npm run ops:discordos:notification-policy-status",
+    reasonCodes: operatorStatus.notificationPolicy.reasonCodes.length
+      ? operatorStatus.notificationPolicy.reasonCodes
+      : ["notification_policy_status_not_ready"],
+    evidence: {
+      routeCount: operatorStatus.notificationPolicy.routeCount,
+      readyAttachedProducerCount: operatorStatus.notificationPolicy.readyAttachedProducerCount,
+      attachedProducerCount: operatorStatus.notificationPolicy.attachedProducerCount,
     },
   }));
 
@@ -409,6 +426,7 @@ async function buildDiscordOSNextWorkRecommendations({
       publicationOk: operatorStatus.publication.ok,
       publicationAuditOk: operatorStatus.publicationAudit.ok,
       atlasHealthOk: operatorStatus.atlasHealth?.ok === true,
+      notificationPolicyOk: operatorStatus.notificationPolicy?.ok === true,
     },
     receiptState,
     recommendations,

@@ -15,6 +15,7 @@ function buildOperatorSummary(nextWork) {
     publicationOk: nextWork.operatorStatus.publicationOk,
     publicationAuditOk: nextWork.operatorStatus.publicationAuditOk,
     atlasHealthOk: nextWork.operatorStatus.atlasHealthOk,
+    notificationPolicyOk: nextWork.operatorStatus.notificationPolicyOk,
   };
 }
 
@@ -93,6 +94,7 @@ function renderMarkdown(result) {
     `- publication: \`${result.operator.publicationOk ? "pass" : "fail"}\``,
     `- publication audit: \`${result.operator.publicationAuditOk ? "pass" : "fail"}\``,
     `- ATLAS health: \`${result.operator.atlasHealthOk ? "pass" : "fail"}\``,
+    `- notification policy: \`${result.operator.notificationPolicyOk ? "pass" : "fail"}\``,
     "",
     "## Next Work",
     "",

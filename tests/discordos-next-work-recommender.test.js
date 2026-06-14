@@ -64,6 +64,15 @@ function baseOperatorStatus(overrides = {}) {
       nextActions: ["continue_atlas_health_monitoring"],
       reasonCodes: [],
     },
+    notificationPolicy: {
+      ok: true,
+      eventType: "discordos.notification.policy_ready",
+      status: "ready",
+      routeCount: 4,
+      attachedProducerCount: 4,
+      readyAttachedProducerCount: 4,
+      reasonCodes: [],
+    },
     ...overrides,
   };
 }
@@ -182,6 +191,21 @@ test("next work recommender surfaces atlas health blockers explicitly", () => {
   assert.equal(recommendations[0].id, "repair-atlas-health-status");
   assert.equal(recommendations[0].category, "atlas-health");
   assert.deepEqual(recommendations[0].reasonCodes, ["atlas_health_alert_send_env_disabled"]);
+});
+
+test("next work recommender surfaces notification policy blockers explicitly", () => {
+  const recommendations = _internals.recommendNextWork(baseOperatorStatus({
+    ok: false,
+    notificationPolicy: {
+      ...baseOperatorStatus().notificationPolicy,
+      ok: false,
+      reasonCodes: ["notification_route_keys_not_unique"],
+    },
+  }), { max: 3 });
+
+  assert.equal(recommendations[0].id, "repair-notification-policy-routes");
+  assert.equal(recommendations[0].category, "notification-policy");
+  assert.deepEqual(recommendations[0].reasonCodes, ["notification_route_keys_not_unique"]);
 });
 
 test("next work recommender downgrades live env checks after receipt-backed proofs", () => {

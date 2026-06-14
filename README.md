@@ -233,7 +233,7 @@ Current governed contract surface:
   - sends no Discord messages and writes no artifacts
 - `scripts/discordos-operator-status.js`
   - repo-local read-only operator status bundle for DiscordOS runtime, publication, publication receipts, and ATLAS health
-  - combines runtime-health status, publication target/toolchain status, publication receipt audit, and ATLAS health readiness into one dashboard
+  - combines runtime-health status, publication target/toolchain status, publication receipt audit, ATLAS health readiness, and notification policy status into one dashboard
   - sends no Discord messages and writes no artifacts
 - `scripts/discordos-next-work-recommender.js`
   - repo-local read-only recommender for ranking the next DiscordOS runtime/product hardening moves
@@ -242,6 +242,7 @@ Current governed contract surface:
   - sends no Discord messages and writes no artifacts
 - `scripts/discordos-operator-dashboard.js`
   - repo-local read-only operator dashboard that combines status posture with the current top next-work command
+  - includes notification policy health in the compact operator summary
   - gives operators one compact command for routine DiscordOS status and next-action checks
   - sends no Discord messages and writes no artifacts
 - `scripts/discordos-notification-router.js`
