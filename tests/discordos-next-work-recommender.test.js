@@ -195,6 +195,7 @@ test("next work recommender surfaces atlas health alert readiness blockers expli
 
   assert.equal(recommendations[0].id, "configure-atlas-health-alert-readiness");
   assert.equal(recommendations[0].category, "atlas-health");
+  assert.equal(recommendations[0].command, "npm run ops:atlas-health:status:prod");
   assert.deepEqual(recommendations[0].reasonCodes, ["atlas_health_alert_send_env_disabled"]);
 });
 

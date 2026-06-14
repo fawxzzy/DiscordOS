@@ -215,7 +215,7 @@ function recommendNextWork(operatorStatus, { max = 5, receiptState = receiptStat
       score: 88,
       category: "atlas-health",
       title: "Configure ATLAS health alert readiness for the operator shell",
-      command: "npm run ops:atlas-health:status",
+      command: "npm run ops:atlas-health:status:prod",
       reasonCodes: operatorStatus.atlasHealth?.reasonCodes?.length
         ? operatorStatus.atlasHealth.reasonCodes
         : ["atlas_health_alert_readiness_not_ready"],

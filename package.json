@@ -46,6 +46,8 @@
     "ops:atlas-health:watch:json": "node scripts/atlas-health-watch.js --json",
     "ops:atlas-health:status": "node scripts/atlas-health-status.js",
     "ops:atlas-health:status:json": "node scripts/atlas-health-status.js --json",
+    "ops:atlas-health:status:prod": "npm run ops:production-env:run -- npm run ops:atlas-health:status",
+    "ops:atlas-health:status:prod:json": "npm run ops:production-env:run -- npm run ops:atlas-health:status:json",
     "ops:runtime-health:alert-delivery": "node scripts/runtime-health-alert-delivery.js",
     "ops:runtime-health:alert-delivery:json": "node scripts/runtime-health-alert-delivery.js --json",
     "ops:discord:update-post": "node scripts/discord-update-post.js",
