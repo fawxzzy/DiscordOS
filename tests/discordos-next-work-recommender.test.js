@@ -206,6 +206,7 @@ test("next work recommender downgrades live env checks after receipt-backed proo
     finalFollowupUpdateProof: false,
     runtimeAlertDrillSurfaceProof: false,
     atlasHealthTargetFilterProof: false,
+    publicationAuditGitDurabilityProof: false,
   });
   assert.equal(recommendations[0].id, "refresh-scheduled-cron-proof");
   assert(!ids.includes("run-live-operator-status-probe"));
@@ -240,6 +241,7 @@ test("next work recommender surfaces operations admission when only deferred wor
     finalFollowupUpdateProof: false,
     runtimeAlertDrillSurfaceProof: false,
     atlasHealthTargetFilterProof: false,
+    publicationAuditGitDurabilityProof: false,
   });
   assert.equal(recommendations[0].id, "inspect-runtime-operations-admission");
   assert.equal(recommendations[0].status, "recommended");
@@ -278,6 +280,7 @@ test("next work recommender summarizes exhausted non-waiting work after operatio
     finalFollowupUpdateProof: false,
     runtimeAlertDrillSurfaceProof: false,
     atlasHealthTargetFilterProof: false,
+    publicationAuditGitDurabilityProof: false,
   });
   assert.equal(recommendations[0].id, "summarize-deferred-work-before-final-update");
   assert.equal(recommendations[0].status, "recommended");
@@ -329,6 +332,7 @@ test("next work recommender leaves only scheduled cron proof deferred after fina
     finalFollowupUpdateProof: true,
     runtimeAlertDrillSurfaceProof: false,
     atlasHealthTargetFilterProof: false,
+    publicationAuditGitDurabilityProof: false,
   });
   assert.deepEqual(ids, ["refresh-scheduled-cron-proof"]);
   assert.equal(recommendations[0].status, "deferred");
@@ -418,6 +422,43 @@ test("next work recommender advances past completed steady-state review receipts
   assert(!recommendations.some((recommendation) =>
     recommendation.id === "review-atlas-health-target-coverage"
   ));
+});
+
+test("next work recommender advances past completed publication audit receipt", () => {
+  const readyStatus = baseOperatorStatus({
+    runtime: {
+      ...baseOperatorStatus().runtime,
+      alertTargetConfigured: true,
+      nextActions: ["continue_runtime_monitoring"],
+    },
+    publication: {
+      ...baseOperatorStatus().publication,
+      updatesTargetConfigured: true,
+      alertsTargetConfigured: true,
+    },
+    publicationAudit: {
+      ...baseOperatorStatus().publicationAudit,
+      publishedReceipts: 4,
+      draftUpdateReceipts: 0,
+      needsBackfill: 0,
+      untrackedPublicationReceipts: 1,
+    },
+  });
+  const recommendations = _internals.recommendNextWork(readyStatus, {
+    max: 4,
+    receiptState: _internals.classifyReceiptState([
+      "discordos-operator-live-status-proof-pass-50-2026-06-13.md",
+      "discordos-live-target-admission-proof-pass-52-2026-06-13.md",
+      "discordos-runtime-health-scheduled-audit-proof-pass-73-2026-06-14.md",
+      "discordos-runtime-alert-drill-surface-pass-77-2026-06-14.md",
+      "discordos-atlas-health-target-filter-pass-78-2026-06-14.md",
+      "discordos-publication-audit-git-durability-pass-80-2026-06-14.md",
+    ]),
+  });
+
+  assert.deepEqual(recommendations.map((recommendation) => recommendation.id), [
+    "inspect-operator-command-ergonomics",
+  ]);
 });
 
 test("next work recommender gives concrete steady-state hardening categories", () => {

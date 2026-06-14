@@ -1,21 +1,27 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
+const { execFile } = require("node:child_process");
+const { promisify } = require("node:util");
 const {
   _internals: updatePostInternals,
 } = require("./discord-update-post");
 
 const DEFAULT_DOCS_DIR = path.resolve(process.cwd(), "docs", "ops");
+const execFileAsync = promisify(execFile);
 
 function parseArgs(args) {
   const options = {
     json: false,
     docsDir: DEFAULT_DOCS_DIR,
+    gitStatus: true,
   };
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (arg === "--json") {
       options.json = true;
+    } else if (arg === "--no-git-status") {
+      options.gitStatus = false;
     } else if (arg === "--docs-dir") {
       const value = args[index + 1];
       if (typeof value !== "string" || value.trim().length === 0) {
@@ -53,6 +59,21 @@ async function listMarkdownFiles(dir) {
 
 function toDisplayPath(filePath, cwd = process.cwd()) {
   return path.relative(cwd, filePath).replace(/\\/g, "/");
+}
+
+async function readGitTrackedFiles({ docsDir, cwd = process.cwd(), execFileImpl = execFileAsync } = {}) {
+  const docsArg = toDisplayPath(path.resolve(docsDir), cwd) || ".";
+  try {
+    const { stdout } = await execFileImpl("git", ["ls-files", "--", docsArg], { cwd });
+    return new Set(
+      String(stdout || "")
+        .split(/\r?\n/)
+        .map((entry) => entry.trim().replace(/\\/g, "/"))
+        .filter(Boolean)
+    );
+  } catch (_error) {
+    return null;
+  }
 }
 
 function extractFirstHeading(markdown) {
@@ -242,36 +263,65 @@ function classifyPublicationAuditEvent(result) {
       draftUpdateReceipts: result.counts.draftUpdateReceipts,
       publicationProofOnly: result.counts.publicationProofOnly,
       needsBackfill: result.counts.needsBackfill,
+      untrackedPublicationReceipts: result.counts.untrackedPublicationReceipts,
     },
   };
 }
 
-function summarizePublicationAudit({ docsDir, cwd = process.cwd(), records }) {
-  const published = records.filter((record) => record.category === "published");
-  const drafts = records.filter((record) => record.category === "draft_update_receipt");
-  const proofOnly = records.filter((record) => record.category === "publication_proof_only");
-  const needsBackfill = records.filter((record) => record.category === "needs_backfill");
-  const auditedRecords = records.filter((record) => record.category !== "ignored");
-  const reasonCodes = [...new Set(needsBackfill.flatMap((record) => record.reasonCodes))];
+function applyGitTrackedState(records, trackedFiles) {
+  if (!trackedFiles) {
+    return records.map((record) => ({
+      ...record,
+      gitTracked: null,
+    }));
+  }
+
+  return records.map((record) => ({
+    ...record,
+    gitTracked: record.category === "ignored" ? null : trackedFiles.has(record.path),
+  }));
+}
+
+function summarizePublicationAudit({ docsDir, cwd = process.cwd(), records, trackedFiles = null }) {
+  const annotatedRecords = applyGitTrackedState(records, trackedFiles);
+  const published = annotatedRecords.filter((record) => record.category === "published");
+  const drafts = annotatedRecords.filter((record) => record.category === "draft_update_receipt");
+  const proofOnly = annotatedRecords.filter((record) => record.category === "publication_proof_only");
+  const needsBackfill = annotatedRecords.filter((record) => record.category === "needs_backfill");
+  const auditedRecords = annotatedRecords.filter((record) => record.category !== "ignored");
+  const untrackedPublicationReceipts = auditedRecords.filter((record) => record.gitTracked === false);
+  const reasonCodes = [
+    ...new Set([
+      ...needsBackfill.flatMap((record) => record.reasonCodes),
+      ...(untrackedPublicationReceipts.length > 0 ? ["publication_receipt_untracked"] : []),
+    ]),
+  ];
+  const status = needsBackfill.length > 0
+    ? "backfill_needed"
+    : untrackedPublicationReceipts.length > 0
+      ? "ready_with_untracked_receipts"
+      : "ready";
   const result = {
     ok: needsBackfill.length === 0,
     destructive: false,
     sendsMessages: false,
     writesArtifacts: false,
     docsDir: toDisplayPath(docsDir, cwd),
-    status: needsBackfill.length === 0 ? "ready" : "backfill_needed",
+    status,
     counts: {
-      scannedFiles: records.length,
+      scannedFiles: annotatedRecords.length,
       auditedFiles: auditedRecords.length,
       publishedReceipts: published.length,
       draftUpdateReceipts: drafts.length,
       publicationProofOnly: proofOnly.length,
       needsBackfill: needsBackfill.length,
+      untrackedPublicationReceipts: untrackedPublicationReceipts.length,
     },
     published,
     drafts,
     proofOnly,
     needsBackfill,
+    untrackedPublicationReceipts,
     reasonCodes,
   };
 
@@ -284,6 +334,7 @@ function summarizePublicationAudit({ docsDir, cwd = process.cwd(), records }) {
 async function buildDiscordPublicationAuditRollup({
   docsDir = DEFAULT_DOCS_DIR,
   cwd = process.cwd(),
+  gitStatus = true,
 } = {}) {
   const resolvedDocsDir = path.resolve(docsDir);
   const files = await listMarkdownFiles(resolvedDocsDir);
@@ -297,11 +348,15 @@ async function buildDiscordPublicationAuditRollup({
       cwd,
     }));
   }
+  const trackedFiles = gitStatus
+    ? await readGitTrackedFiles({ docsDir: resolvedDocsDir, cwd })
+    : null;
 
   return summarizePublicationAudit({
     docsDir: resolvedDocsDir,
     cwd,
     records,
+    trackedFiles,
   });
 }
 
@@ -337,6 +392,7 @@ function renderMarkdown(result) {
     `- draft update receipts: \`${result.counts.draftUpdateReceipts}\``,
     `- publication proof only: \`${result.counts.publicationProofOnly}\``,
     `- needs backfill: \`${result.counts.needsBackfill}\``,
+    `- untracked publication receipts: \`${result.counts.untrackedPublicationReceipts}\``,
     `- reason codes: \`${result.reasonCodes.join(",") || "none"}\``,
     `- event type: \`${result.event.type}\``,
     "",
@@ -351,6 +407,10 @@ function renderMarkdown(result) {
     "## Needs Backfill",
     "",
     ...renderRecordList(result.needsBackfill, "none"),
+    "",
+    "## Untracked Publication Receipts",
+    "",
+    ...renderRecordList(result.untrackedPublicationReceipts, "none"),
   ];
 
   return `${lines.join("\n")}\n`;
@@ -381,6 +441,7 @@ module.exports = {
     normalizeMarkdown,
     listMarkdownFiles,
     toDisplayPath,
+    readGitTrackedFiles,
     extractFirstHeading,
     hasHeading,
     extractReceiptBlock,
@@ -391,6 +452,7 @@ module.exports = {
     missingDurablePublicationMetadata,
     classifyPublicationReceipt,
     classifyPublicationAuditEvent,
+    applyGitTrackedState,
     summarizePublicationAudit,
     buildDiscordPublicationAuditRollup,
     renderMarkdown,

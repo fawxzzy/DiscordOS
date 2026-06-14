@@ -192,6 +192,7 @@ test("operator status combines runtime, publication, and audit status", async ()
   assert.equal(status.runtime.posture, "operational");
   assert.equal(status.publication.status, "ready");
   assert.equal(status.publicationAudit.publishedReceipts, 1);
+  assert.equal(status.publicationAudit.untrackedPublicationReceipts, 0);
   assert.equal(status.atlasHealth.ok, true);
   assert.equal(status.atlasHealth.targetCount, 1);
   assert.equal(status.atlasHealth.cadenceStatus, "checked");
@@ -245,6 +246,27 @@ test("operator status surfaces atlas health blockers as next actions", () => {
   assert.deepEqual(actions, ["enable_discordos_atlas_health_alert_send_env"]);
 });
 
+test("operator status surfaces untracked publication receipts as next actions", () => {
+  const actions = _internals.determineOperatorNextActions({
+    runtimeStatus: { ok: true },
+    publicationStatus: { ok: true },
+    publicationAudit: {
+      ok: true,
+      counts: {
+        draftUpdateReceipts: 0,
+        needsBackfill: 0,
+        untrackedPublicationReceipts: 1,
+      },
+    },
+    atlasHealthStatus: {
+      ok: true,
+      nextActions: ["continue_atlas_health_monitoring"],
+    },
+  });
+
+  assert.deepEqual(actions, ["review_untracked_publication_receipts"]);
+});
+
 test("operator status renders markdown without target secret values", () => {
   const rendered = _internals.renderMarkdown({
     ok: true,
@@ -285,6 +307,7 @@ test("operator status renders markdown without target secret values", () => {
       publishedReceipts: 1,
       draftUpdateReceipts: 0,
       needsBackfill: 0,
+      untrackedPublicationReceipts: 1,
       reasonCodes: [],
     },
     atlasHealth: {
@@ -310,6 +333,7 @@ test("operator status renders markdown without target secret values", () => {
 
   assert(rendered.includes("# DiscordOS Operator Status"));
   assert(rendered.includes("Publication Audit"));
+  assert(rendered.includes("untracked publication receipts: `1`"));
   assert(rendered.includes("ATLAS Health"));
   assert(!rendered.includes("bot-secret"));
 });

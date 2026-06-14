@@ -144,6 +144,10 @@ function determineOperatorNextActions({
     actions.push("keep_update_drafts_until_next_public_post");
   }
 
+  if (publicationAudit.counts.untrackedPublicationReceipts > 0) {
+    actions.push("review_untracked_publication_receipts");
+  }
+
   if (actions.length === 0) {
     actions.push("continue_discordos_runtime_product_hardening");
   }
@@ -248,6 +252,7 @@ async function buildDiscordOSOperatorStatus({
       publishedReceipts: publicationAudit.counts.publishedReceipts,
       draftUpdateReceipts: publicationAudit.counts.draftUpdateReceipts,
       needsBackfill: publicationAudit.counts.needsBackfill,
+      untrackedPublicationReceipts: publicationAudit.counts.untrackedPublicationReceipts,
       reasonCodes: publicationAudit.reasonCodes,
     },
     atlasHealth: {
@@ -332,6 +337,7 @@ function renderMarkdown(status) {
     `- published receipts: \`${status.publicationAudit.publishedReceipts}\``,
     `- draft update receipts: \`${status.publicationAudit.draftUpdateReceipts}\``,
     `- needs backfill: \`${status.publicationAudit.needsBackfill}\``,
+    `- untracked publication receipts: \`${status.publicationAudit.untrackedPublicationReceipts}\``,
     `- reason codes: \`${status.publicationAudit.reasonCodes.join(",") || "none"}\``,
     "",
     "## ATLAS Health",

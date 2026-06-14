@@ -107,20 +107,22 @@ function buildSteadyStateRecommendations(
     },
   }));
 
+  addIf(!receiptState.publicationAuditGitDurabilityProof, recommendations, buildRecommendation({
+    id: "audit-discord-publication-tooling-gaps",
+    score: 54,
+    category: "publication",
+    title: "Audit Discord publication tooling for the next command or post-format gap",
+    command: "npm run ops:discord:publication-audit",
+    reasonCodes: ["publication_ready_for_tooling_gap_review"],
+    evidence: {
+      publishedReceipts: operatorStatus.publicationAudit.publishedReceipts,
+      draftUpdateReceipts: operatorStatus.publicationAudit.draftUpdateReceipts,
+      needsBackfill: operatorStatus.publicationAudit.needsBackfill,
+      untrackedPublicationReceipts: operatorStatus.publicationAudit.untrackedPublicationReceipts ?? null,
+    },
+  }));
+
   recommendations.push(
-    buildRecommendation({
-      id: "audit-discord-publication-tooling-gaps",
-      score: 54,
-      category: "publication",
-      title: "Audit Discord publication tooling for the next command or post-format gap",
-      command: "npm run ops:discord:publication-audit",
-      reasonCodes: ["publication_ready_for_tooling_gap_review"],
-      evidence: {
-        publishedReceipts: operatorStatus.publicationAudit.publishedReceipts,
-        draftUpdateReceipts: operatorStatus.publicationAudit.draftUpdateReceipts,
-        needsBackfill: operatorStatus.publicationAudit.needsBackfill,
-      },
-    }),
     buildRecommendation({
       id: "inspect-operator-command-ergonomics",
       score: 52,

@@ -221,7 +221,7 @@ Current governed contract surface:
   - sends no Discord messages and writes no artifacts
 - `scripts/discord-publication-audit-rollup.js`
   - repo-local read-only audit command for DiscordOS publication receipts under `docs/ops`
-  - summarizes published receipts, draft update receipts, proof-only receipts, and receipt-backfill gaps
+  - summarizes published receipts, draft update receipts, proof-only receipts, receipt-backfill gaps, and Git-tracked durability warnings
   - sends no Discord messages and writes no artifacts
 - `scripts/discordos-operator-status.js`
   - repo-local read-only operator status bundle for DiscordOS runtime, publication, publication receipts, and ATLAS health
@@ -395,6 +395,8 @@ Current governed contract surface:
   - owner-side proof that ATLAS health sweeps can be reduced by env allowlist/exclude filters without editing the canonical target config
 - `docs/ops/discordos-next-work-receipt-aware-steady-state-pass-79-2026-06-14.md`
   - owner-side proof that next-work now advances past completed steady-state review recommendations when matching receipts exist
+- `docs/ops/discordos-publication-audit-git-durability-pass-80-2026-06-14.md`
+  - owner-side proof that publication audit now reports untracked receipt files instead of silently treating disk-only receipts as durable
 - `docs/ops/discordos-next-work-final-followup-state-pass-69-2026-06-13.md`
   - owner-side proof that next-work now reports only the deferred scheduled cron identity proof after the final follow-up post
 

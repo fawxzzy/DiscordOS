@@ -38,10 +38,12 @@ test("publication audit args default to docs ops read-only rollup", () => {
   assert.deepEqual(_internals.parseArgs([]), {
     json: false,
     docsDir: _internals.DEFAULT_DOCS_DIR,
+    gitStatus: true,
   });
-  assert.deepEqual(_internals.parseArgs(["--json", "--docs-dir", "tmp/docs"]), {
+  assert.deepEqual(_internals.parseArgs(["--json", "--no-git-status", "--docs-dir", "tmp/docs"]), {
     json: true,
     docsDir: path.resolve("tmp/docs"),
+    gitStatus: false,
   });
 });
 
@@ -102,7 +104,40 @@ test("publication audit classifies published, draft, proof-only, and backfill re
   assert.equal(result.counts.draftUpdateReceipts, 1);
   assert.equal(result.counts.publicationProofOnly, 1);
   assert.equal(result.counts.needsBackfill, 1);
+  assert.equal(result.counts.untrackedPublicationReceipts, 0);
   assert.deepEqual(result.reasonCodes, ["publication_receipt_backfill_needed"]);
+});
+
+test("publication audit reports untracked audited receipts without requiring backfill", () => {
+  const trackedFiles = new Set(["docs/ops/published.md"]);
+  const result = _internals.summarizePublicationAudit({
+    docsDir: path.resolve("docs/ops"),
+    trackedFiles,
+    records: [
+      _internals.classifyPublicationReceipt({
+        filePath: path.resolve("docs/ops/published.md"),
+        markdown: `# Published\n\n${receiptBlock()}`,
+      }),
+      _internals.classifyPublicationReceipt({
+        filePath: path.resolve("docs/ops/draft-update-post.md"),
+        markdown: [
+          "# Draft",
+          "",
+          "## Update Post",
+          "",
+          "Draft body.",
+        ].join("\n"),
+      }),
+    ],
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.status, "ready_with_untracked_receipts");
+  assert.equal(result.counts.untrackedPublicationReceipts, 1);
+  assert.deepEqual(result.reasonCodes, ["publication_receipt_untracked"]);
+  assert.equal(result.published[0].gitTracked, true);
+  assert.equal(result.drafts[0].gitTracked, false);
+  assert.equal(result.event.dimensions.untrackedPublicationReceipts, 1);
 });
 
 test("publication audit flags malformed and incomplete bounded receipts", () => {
@@ -142,6 +177,7 @@ test("publication audit renders markdown without secret-like target values", () 
   assert(rendered.includes("# DiscordOS Publication Audit Rollup"));
   assert(rendered.includes("result: `pass`"));
   assert(rendered.includes("published receipts: `1`"));
+  assert(rendered.includes("untracked publication receipts: `0`"));
   assert(rendered.includes("message id `1515396583846445097`"));
   assert(!rendered.includes("bot-secret"));
 });
