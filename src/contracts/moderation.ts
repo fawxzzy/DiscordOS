@@ -53,5 +53,26 @@ export interface DiscordOSModerationContract {
   forbiddenBehaviors: string[];
 }
 
+export type DiscordOSModerationAuditLogSchemaAdmissionStatus =
+  | "planning_ready"
+  | "migration_drafted"
+  | "migration_applied";
+
+export interface DiscordOSModerationAuditLogSchemaAdmissionPlan {
+  contract: DiscordOSDataContractIdentity & {
+    domain: "moderation";
+    storageSurface: "discordos_supabase";
+  };
+  status: DiscordOSModerationAuditLogSchemaAdmissionStatus;
+  tableName: "discordos_moderation_audit_log";
+  requiredColumns: string[];
+  requiredIndexes: string[];
+  idempotencyKeyField: "caseId";
+  migrationAllowed: false;
+  storageWritesAllowed: false;
+  proof: DiscordOSDataProofContract;
+  forbiddenBehaviors: string[];
+}
+
 export type DiscordOSModerationEventEnvelope =
   DiscordOSDataEventEnvelope<DiscordOSModerationAction>;

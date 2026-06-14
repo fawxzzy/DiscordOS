@@ -30,8 +30,11 @@ Current governed contract surface:
 - `docs/contracts/discordos-moderation-workflow-v0.md`
   - contract-only moderation workflow v0 boundary
   - defines case identity, case state, action contract, event envelope, and forbidden live behaviors
+- `docs/contracts/discordos-moderation-audit-log-schema-admission-v0.md`
+  - planning-only moderation audit-log schema admission boundary
+  - defines table shape, indexes, idempotency, and migration boundary without creating storage
 - `src/contracts/moderation.ts`
-  - code-facing moderation case/action/event-envelope types only
+  - code-facing moderation case/action/audit-log schema admission/event-envelope types only
   - no Discord API calls, permission grants, persistence, or env coupling
 - `docs/contracts/discordos-board-card-workflow-v0.md`
   - contract-only board/card workflow v0 boundary
@@ -39,8 +42,11 @@ Current governed contract surface:
 - `docs/contracts/discordos-board-card-persistence-v0.md`
   - contract-only board/card persistence boundary
   - defines storage admission posture, idempotency key, retention class, and forbidden live writes
+- `docs/contracts/discordos-board-card-schema-admission-v0.md`
+  - planning-only board/card schema admission boundary
+  - defines table shape, indexes, idempotency, and migration boundary without creating storage
 - `src/contracts/board.ts`
-  - code-facing board/card identity, state, transition, persistence, and event-envelope types only
+  - code-facing board/card identity, state, transition, persistence, schema admission, and event-envelope types only
   - no persistent board storage, Discord sends, or env coupling
 - `docs/contracts/discordos-music-sesh-workflow-v0.md`
   - contract-only Music Sesh workflow v0 boundary
@@ -326,6 +332,22 @@ Current governed contract surface:
   - repo-local read-only status command for the feature contract registry
   - validates registered feature records, docs/source path discipline, status commands, and live-behavior admission flags
   - sends no Discord messages and writes no artifacts
+- `scripts/discordos-board-card-schema-admission-status.js`
+  - repo-local read-only status command for board/card schema admission planning
+  - confirms migration and storage writes remain blocked while table shape and indexes are planned
+  - sends no Discord messages and writes no artifacts
+- `scripts/discordos-moderation-audit-log-schema-admission-status.js`
+  - repo-local read-only status command for moderation audit-log schema admission planning
+  - confirms migration, audit-row writes, and live moderation behavior remain blocked
+  - sends no Discord messages and writes no artifacts
+- `scripts/discordos-feature-contract-registry-dashboard.js`
+  - repo-local read-only dashboard for the feature contract registry
+  - summarizes feature statuses, live-behavior flags, and blocked feature counts without writing artifacts
+  - sends no Discord messages and writes no artifacts
+- `scripts/discordos-music-sesh-preflight.js`
+  - repo-local no-send preflight command for future Music Sesh action payloads
+  - validates session/action shape while keeping provider calls, playback, persistence, and live behavior blocked
+  - sends no Discord messages and writes no artifacts
 - `api/cron/runtime-health.js`
   - Vercel Cron guarded runtime-health proof endpoint
   - requires `Authorization: Bearer $CRON_SECRET`
@@ -596,6 +618,14 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local DiscordOS board/card persistence status command
 - `npm run verify:discordos-feature-contract-registry-status`
   - Node test coverage for the repo-local DiscordOS feature contract registry status command
+- `npm run verify:discordos-board-card-schema-admission-status`
+  - Node test coverage for the repo-local DiscordOS board/card schema admission status command
+- `npm run verify:discordos-moderation-audit-log-schema-admission-status`
+  - Node test coverage for the repo-local DiscordOS moderation audit-log schema admission status command
+- `npm run verify:discordos-feature-contract-registry-dashboard`
+  - Node test coverage for the repo-local DiscordOS feature contract registry dashboard command
+- `npm run verify:discordos-music-sesh-preflight`
+  - Node test coverage for the repo-local DiscordOS Music Sesh preflight command
 - `npm run verify`
   - runs the full repo-local verification surface, then prunes repo-local `.vercel` and `node_modules` residue before exit
 
@@ -745,6 +775,14 @@ Current repo-local operator surface:
   - checks the board/card persistence contract while keeping writes and schema migrations blocked
 - `npm run ops:discordos:feature-contract-registry-status`
   - checks the feature contract registry and live-behavior admission flags
+- `npm run ops:discordos:board-card-schema-admission-status`
+  - checks board/card schema admission planning while migrations and storage writes remain blocked
+- `npm run ops:discordos:moderation-audit-log-schema-admission-status`
+  - checks moderation audit-log schema admission planning while migrations, audit writes, and live moderation remain blocked
+- `npm run ops:discordos:feature-contract-registry-dashboard`
+  - summarizes feature contract registry readiness, status counts, and live-behavior flags
+- `npm run ops:discordos:music-sesh-preflight`
+  - validates a future Music Sesh action payload without provider calls, playback, persistence, or Discord sends
 - `npm run ops:runtime-health:scheduled-proof`
   - runs the full cron-ready proof loop: live health capture, fresh summary check, durable alert decision, fail-closed exit
 - `npm run ops:runtime-health:scheduled-proof:json`

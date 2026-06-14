@@ -67,5 +67,26 @@ export interface DiscordOSBoardCardPersistenceContract {
   forbiddenBehaviors: string[];
 }
 
+export type DiscordOSBoardCardSchemaAdmissionStatus =
+  | "planning_ready"
+  | "migration_drafted"
+  | "migration_applied";
+
+export interface DiscordOSBoardCardSchemaAdmissionPlan {
+  contract: DiscordOSDataContractIdentity & {
+    domain: "board";
+    storageSurface: "discordos_supabase";
+  };
+  status: DiscordOSBoardCardSchemaAdmissionStatus;
+  tableName: "discordos_board_cards";
+  requiredColumns: string[];
+  requiredIndexes: string[];
+  idempotencyKeyField: "cardId";
+  migrationAllowed: false;
+  storageWritesAllowed: false;
+  proof: DiscordOSDataProofContract;
+  forbiddenBehaviors: string[];
+}
+
 export type DiscordOSBoardCardEventEnvelope =
   DiscordOSDataEventEnvelope<DiscordOSBoardCardTransition>;
