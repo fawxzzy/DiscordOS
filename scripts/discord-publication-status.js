@@ -11,6 +11,7 @@ const TOOLCHAIN_COMMANDS = [
   "ops:discord:update-preflight",
   "ops:discord:update-post",
   "ops:discord:forum-card-lifecycle",
+  "ops:discord:forum-card-release-check",
   "ops:discord:update-lookup",
   "ops:discord:update-target-admission",
   "ops:runtime-health:alert-target-admission",
@@ -50,6 +51,7 @@ function classifyToolchain() {
     noSendPreflight: "available",
     applyGuard: "enforced",
     forumCardLifecycle: "available",
+    forumCardReleaseCheck: "available",
     lookupBackfill: "available",
     reasonCodes: [],
   };
@@ -168,6 +170,7 @@ function renderMarkdown(result) {
     `- no-send preflight: \`${result.toolchain.noSendPreflight}\``,
     `- apply guard: \`${result.toolchain.applyGuard}\``,
     `- forum/card lifecycle: \`${result.toolchain.forumCardLifecycle}\``,
+    `- forum/card release check: \`${result.toolchain.forumCardReleaseCheck}\``,
     `- lookup backfill: \`${result.toolchain.lookupBackfill}\``,
     `- updates target configured: \`${result.updatesTarget.target.configured ? "true" : "false"}\``,
     `- updates target live status: \`${result.updatesTarget.liveProbe.status}\``,

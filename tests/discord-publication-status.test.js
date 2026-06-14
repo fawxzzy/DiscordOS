@@ -29,6 +29,8 @@ test("discord publication status classifies command toolchain", () => {
   assert(toolchain.commands.includes("ops:discord:update-post"));
   assert.equal(toolchain.forumCardLifecycle, "available");
   assert(toolchain.commands.includes("ops:discord:forum-card-lifecycle"));
+  assert.equal(toolchain.forumCardReleaseCheck, "available");
+  assert(toolchain.commands.includes("ops:discord:forum-card-release-check"));
 });
 
 test("discord publication status classifies updates and alerts separation", () => {
