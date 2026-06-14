@@ -15,7 +15,7 @@
       "id": "board",
       "label": "DiscordOS Board Card Workflow v0",
       "domain": "board",
-      "status": "contract_only",
+      "status": "shadow",
       "docsPath": "docs/contracts/discordos-board-card-workflow-v0.md",
       "sourcePath": "src/contracts/board.ts",
       "statusCommand": "npm run ops:discordos:board-card-status",

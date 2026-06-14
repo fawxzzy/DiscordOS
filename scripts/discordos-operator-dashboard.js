@@ -113,6 +113,45 @@ function buildDashboardConsole(nextWork) {
   };
 }
 
+function buildProductRuntimeTiles() {
+  return [
+    {
+      id: "board_task_runtime",
+      label: "Board task runtime",
+      status: "available",
+      command: "npm run ops:discordos:board-task-runtime",
+    },
+    {
+      id: "board_shadow_persistence",
+      label: "Board shadow persistence",
+      status: "available",
+      command: "npm run ops:discordos:board-card-shadow-persistence",
+    },
+    {
+      id: "moderation_audit_shadow_persistence",
+      label: "Moderation audit shadow persistence",
+      status: "available",
+      command: "npm run ops:discordos:moderation-audit-shadow-persistence",
+    },
+    {
+      id: "board_feature_activation_pilot",
+      label: "Board activation pilot",
+      status: "available",
+      command: "npm run ops:discordos:board-feature-activation-pilot",
+    },
+  ];
+}
+
+function buildProductRuntimePanel() {
+  const tiles = buildProductRuntimeTiles();
+
+  return {
+    surfaceCount: tiles.length,
+    availableCount: tiles.filter((tile) => tile.status === "available").length,
+    tiles,
+  };
+}
+
 function classifyDashboardEvent(result) {
   return {
     type: result.operator.ok
@@ -148,6 +187,7 @@ async function buildDiscordOSOperatorDashboard(options = {}) {
     commandHint: buildCommandHint(topRecommendation),
     recommendations: nextWork.recommendations,
     console: buildDashboardConsole(nextWork),
+    productRuntime: buildProductRuntimePanel(),
     receiptState: nextWork.receiptState,
   };
 
@@ -202,6 +242,18 @@ function renderMarkdown(result) {
     lines.push(`- group ${group.category}: \`${group.count}\` top \`${group.topRecommendationId || "none"}\``);
   }
 
+  lines.push(
+    "",
+    "## Product Runtime",
+    "",
+    `- surfaces: \`${result.productRuntime.surfaceCount}\``,
+    `- available: \`${result.productRuntime.availableCount}\``
+  );
+
+  for (const tile of result.productRuntime.tiles) {
+    lines.push(`- surface ${tile.id}: \`${tile.status}\` command \`${tile.command}\``);
+  }
+
   return `${lines.join("\n")}\n`;
 }
 
@@ -231,6 +283,8 @@ module.exports = {
     buildHealthTiles,
     groupRecommendationsByCategory,
     buildDashboardConsole,
+    buildProductRuntimeTiles,
+    buildProductRuntimePanel,
     classifyDashboardEvent,
     buildDiscordOSOperatorDashboard,
     renderMarkdown,

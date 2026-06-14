@@ -88,5 +88,21 @@ export interface DiscordOSBoardCardSchemaAdmissionPlan {
   forbiddenBehaviors: string[];
 }
 
+export interface DiscordOSBoardCardShadowPersistencePlan {
+  contract: DiscordOSDataContractIdentity & {
+    domain: "board";
+    storageSurface: "discordos_supabase";
+  };
+  status: "shadow_ready";
+  tableName: "discordos_board_cards";
+  idempotencyKeyField: "cardId";
+  retentionClass: "product_state";
+  storageWritesAllowed: false;
+  schemaMigrationAllowed: false;
+  liveBehaviorAllowed: false;
+  proof: DiscordOSDataProofContract;
+  forbiddenBehaviors: string[];
+}
+
 export type DiscordOSBoardCardEventEnvelope =
   DiscordOSDataEventEnvelope<DiscordOSBoardCardTransition>;

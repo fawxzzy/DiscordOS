@@ -66,6 +66,7 @@ test("operator dashboard summarizes next-work result into command hint", async (
     commandHint: _internals.buildCommandHint(original.topRecommendation),
     recommendations: original.recommendations,
     console,
+    productRuntime: _internals.buildProductRuntimePanel(),
     receiptState: original.receiptState,
   };
   const event = _internals.classifyDashboardEvent(dashboard);
@@ -77,9 +78,19 @@ test("operator dashboard summarizes next-work result into command hint", async (
   assert.equal(dashboard.console.statusLine, "ready");
   assert.equal(dashboard.console.failingTileCount, 0);
   assert.equal(dashboard.console.healthTiles.length, 5);
+  assert.equal(dashboard.productRuntime.surfaceCount, 4);
+  assert.equal(dashboard.productRuntime.availableCount, 4);
   assert.equal(dashboard.console.recommendationGroups[0].category, "operator-env");
   assert.equal(event.type, "discordos.operator.dashboard_ready");
   assert.equal(event.dimensions.topRecommendation, "inspect-operator-command-ergonomics");
+});
+
+test("operator dashboard exposes product runtime command tiles", () => {
+  const panel = _internals.buildProductRuntimePanel();
+
+  assert.equal(panel.surfaceCount, 4);
+  assert(panel.tiles.some((tile) => tile.id === "board_shadow_persistence"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:board-feature-activation-pilot"));
 });
 
 test("operator dashboard groups recommendations by category and highest score", () => {
@@ -136,6 +147,7 @@ test("operator dashboard renders compact markdown without target values", () => 
       command: "npm run ops:discordos:dashboard:prod",
     },
     console: _internals.buildDashboardConsole(source),
+    productRuntime: _internals.buildProductRuntimePanel(),
   });
 
   assert(rendered.includes("# DiscordOS Operator Dashboard"));
@@ -145,5 +157,7 @@ test("operator dashboard renders compact markdown without target values", () => 
   assert(rendered.includes("command: `npm run ops:discordos:dashboard:prod`"));
   assert(rendered.includes("status line: `ready`"));
   assert(rendered.includes("group operator-env: `1` top `inspect-operator-command-ergonomics`"));
+  assert(rendered.includes("surface board_shadow_persistence: `available`"));
+  assert(rendered.includes("surface board_feature_activation_pilot: `available`"));
   assert(!rendered.includes("bot-secret"));
 });

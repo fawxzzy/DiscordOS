@@ -74,5 +74,20 @@ export interface DiscordOSModerationAuditLogSchemaAdmissionPlan {
   forbiddenBehaviors: string[];
 }
 
+export interface DiscordOSModerationAuditShadowPersistenceAdmission {
+  contract: DiscordOSDataContractIdentity & {
+    domain: "moderation";
+    storageSurface: "discordos_supabase";
+  };
+  status: "shadow_ready";
+  tableName: "discordos_moderation_audit_log";
+  idempotencyKeyField: "caseId";
+  storageWritesAllowed: false;
+  schemaMigrationAllowed: false;
+  liveModerationAllowed: false;
+  proof: DiscordOSDataProofContract;
+  forbiddenBehaviors: string[];
+}
+
 export type DiscordOSModerationEventEnvelope =
   DiscordOSDataEventEnvelope<DiscordOSModerationAction>;

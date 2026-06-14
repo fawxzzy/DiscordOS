@@ -346,6 +346,14 @@ Current governed contract surface:
   - repo-local read-only status command for the board/card persistence contract boundary
   - confirms the surface remains contract-only with storage writes and schema migrations blocked
   - sends no Discord messages and writes no artifacts
+- `scripts/discordos-board-card-shadow-persistence.js`
+  - repo-local no-write shadow persistence preview for board/card row shape and idempotency
+  - reuses the board/task runtime preview and schema admission status while keeping live behavior blocked
+  - sends no Discord messages and writes no artifacts
+- `scripts/discordos-moderation-audit-shadow-persistence.js`
+  - repo-local no-write shadow persistence admission for sanitized moderation audit ledger rows
+  - reuses the moderation persistence plan while keeping storage writes, migrations, and live moderation blocked
+  - sends no Discord messages and writes no artifacts
 - `scripts/discordos-feature-contract-registry-status.js`
   - repo-local read-only status command for the feature contract registry
   - validates registered feature records, docs/source path discipline, status commands, and live-behavior admission flags
@@ -365,6 +373,10 @@ Current governed contract surface:
 - `scripts/discordos-feature-activation-gates.js`
   - repo-local no-change feature activation gate read model
   - reports activation eligibility, next gates, and impossible live-behavior admissions without mutating the registry
+  - sends no Discord messages and writes no artifacts
+- `scripts/discordos-board-feature-activation-pilot.js`
+  - repo-local activation pilot check for the board/card shadow registry posture
+  - confirms the board feature can sit in shadow while live behavior remains below active admission
   - sends no Discord messages and writes no artifacts
 - `scripts/discordos-music-sesh-preflight.js`
   - repo-local no-send preflight command for future Music Sesh action payloads
@@ -646,6 +658,10 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local DiscordOS board/task runtime preview command
 - `npm run verify:discordos-board-card-persistence-status`
   - Node test coverage for the repo-local DiscordOS board/card persistence status command
+- `npm run verify:discordos-board-card-shadow-persistence`
+  - Node test coverage for the repo-local DiscordOS board/card shadow persistence command
+- `npm run verify:discordos-moderation-audit-shadow-persistence`
+  - Node test coverage for the repo-local DiscordOS moderation audit shadow persistence command
 - `npm run verify:discordos-feature-contract-registry-status`
   - Node test coverage for the repo-local DiscordOS feature contract registry status command
 - `npm run verify:discordos-board-card-schema-admission-status`
@@ -656,6 +672,8 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local DiscordOS feature contract registry dashboard command
 - `npm run verify:discordos-feature-activation-gates`
   - Node test coverage for the repo-local DiscordOS feature activation gates command
+- `npm run verify:discordos-board-feature-activation-pilot`
+  - Node test coverage for the repo-local DiscordOS board feature activation pilot command
 - `npm run verify:discordos-music-sesh-preflight`
   - Node test coverage for the repo-local DiscordOS Music Sesh preflight command
 - `npm run verify`
@@ -813,6 +831,10 @@ Current repo-local operator surface:
   - previews a board/task card state and the governed forum/card lifecycle command path without sending
 - `npm run ops:discordos:board-card-persistence-status`
   - checks the board/card persistence contract while keeping writes and schema migrations blocked
+- `npm run ops:discordos:board-card-shadow-persistence`
+  - previews board/card shadow persistence rows and idempotency without storage writes or Discord sends
+- `npm run ops:discordos:moderation-audit-shadow-persistence`
+  - previews sanitized moderation audit shadow persistence admission without storage writes or live moderation
 - `npm run ops:discordos:feature-contract-registry-status`
   - checks the feature contract registry and live-behavior admission flags
 - `npm run ops:discordos:board-card-schema-admission-status`
@@ -823,6 +845,8 @@ Current repo-local operator surface:
   - summarizes feature contract registry readiness, status counts, and live-behavior flags
 - `npm run ops:discordos:feature-activation-gates`
   - reports per-feature activation gates and blocked reasons without changing registry admission
+- `npm run ops:discordos:board-feature-activation-pilot`
+  - confirms the board/card feature is in shadow pilot posture with live behavior still disabled
 - `npm run ops:discordos:music-sesh-preflight`
   - validates a future Music Sesh action payload without provider calls, playback, persistence, or Discord sends
 - `npm run ops:runtime-health:scheduled-proof`

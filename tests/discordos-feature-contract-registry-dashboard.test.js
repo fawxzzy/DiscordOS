@@ -21,6 +21,7 @@ test("feature registry dashboard passes current committed registry", async () =>
   assert.equal(result.featureCount, 3);
   assert.equal(result.blockedFeatureCount, 0);
   assert.equal(result.liveBehaviorAdmittedCount, 0);
+  assert.equal(result.statusCounts.shadow, 1);
   assert.equal(result.event.type, "discordos.feature_contract.registry_dashboard_ready");
 });
 
