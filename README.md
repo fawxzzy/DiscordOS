@@ -102,6 +102,10 @@ Current governed contract surface:
   - repo-local live proof command for production `/api/runtime-health`
   - emits Markdown by default and JSON with `--json`
   - fails closed unless the runtime-health contract is operational by default
+- `scripts/repo-hygiene.js`
+  - repo-local generated-state and operator wrapper utility
+  - can materialize disposable Vercel project metadata for one command
+  - can pull production Vercel env into a temp file for one child command, overlay it in-process, then remove the temp env file and `.vercel`
 - `docs/ops/discordos-runtime-health-proof-command-pass-3-2026-06-13.md`
   - owner-side proof that live runtime-health checks are now repeatable from a repo command
 - `docs/ops/discordos-runtime-health-event-classification-pass-4-2026-06-13.md`
@@ -369,6 +373,8 @@ Current governed contract surface:
   - owner-side proof that the final follow-up update was published to `#updates`
 - `docs/ops/discordos-atlas-health-weekday-cadence-pass-70-2026-06-14.md`
   - owner-side proof that ATLAS cross-project health sweeps now skip weekends while DiscordOS runtime health remains daily
+- `docs/ops/discordos-production-env-operator-wrapper-pass-71-2026-06-14.md`
+  - owner-side proof that production-env operator status and next-work checks now run through a reusable secret-safe wrapper
 - `docs/ops/discordos-next-work-final-followup-state-pass-69-2026-06-13.md`
   - owner-side proof that next-work now reports only the deferred scheduled cron identity proof after the final follow-up post
 
@@ -461,6 +467,8 @@ Current repo-local operator surface:
   - removes repo-local generated-state residue under `.vercel` and `node_modules`
 - `npm run ops:vercel:run -- <command> [args...]`
   - materializes `.vercel/project.json` from committed non-secret config, runs one local command inside the repo root, then prunes `.vercel` before exit
+- `npm run ops:production-env:run -- <command> [args...]`
+  - materializes `.vercel/project.json`, pulls production Vercel env to a temp file, overlays it only for the child command, then removes the temp env file and `.vercel`
 - `npm run ops:runtime-health:proof`
   - checks production `/api/runtime-health` and emits a Markdown proof with event type and severity
 - `npm run ops:runtime-health:proof:json`
@@ -534,10 +542,18 @@ Current repo-local operator surface:
   - summarizes runtime-health status, publication status, publication receipt audit, and ATLAS health readiness in one read-only dashboard
 - `npm run ops:discordos:operator-status:json`
   - emits the operator status bundle as JSON
+- `npm run ops:discordos:operator-status:prod`
+  - runs operator status with production Vercel env overlaid through the temp env wrapper
+- `npm run ops:discordos:operator-status:prod:json`
+  - emits production-env operator status as JSON
 - `npm run ops:discordos:next-work`
   - ranks the next DiscordOS runtime/product hardening moves from current status signals
 - `npm run ops:discordos:next-work:json`
   - emits scored next-work recommendations as JSON
+- `npm run ops:discordos:next-work:prod`
+  - runs next-work ranking with production Vercel env overlaid through the temp env wrapper
+- `npm run ops:discordos:next-work:prod:json`
+  - emits production-env next-work ranking as JSON
 - `npm run ops:discordos:env-readiness`
   - checks current process env readiness for updates, alerts, and bot-token-backed live probes without printing values
 - `npm run ops:discordos:env-readiness:json`

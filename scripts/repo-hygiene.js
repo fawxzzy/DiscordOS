@@ -4,6 +4,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const process = require("node:process");
 const { spawn } = require("node:child_process");
+const os = require("node:os");
 
 const REPO_ROOT = path.resolve(__dirname, "..");
 const GENERATED_STATE_DIRS = [".vercel", "node_modules"];
@@ -121,6 +122,39 @@ async function runCommand({
   });
 }
 
+function parseEnvFile(text) {
+  const values = {};
+  for (const rawLine of String(text || "").split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) {
+      continue;
+    }
+
+    const normalized = line.startsWith("export ") ? line.slice("export ".length).trim() : line;
+    const separatorIndex = normalized.indexOf("=");
+    if (separatorIndex <= 0) {
+      continue;
+    }
+
+    const name = normalized.slice(0, separatorIndex).trim();
+    let value = normalized.slice(separatorIndex + 1).trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+      continue;
+    }
+
+    const quote = value[0];
+    if ((quote === "\"" || quote === "'") && value.endsWith(quote)) {
+      value = value.slice(1, -1);
+    }
+
+    values[name] = value
+      .replace(/\\r/g, "\r")
+      .replace(/\\n/g, "\n");
+  }
+
+  return values;
+}
+
 async function runVerifyWorkflow(dependencies = {}) {
   const { repoRoot = REPO_ROOT } = dependencies;
   const executeCommand = dependencies.runCommand || runCommand;
@@ -150,6 +184,78 @@ async function runVerifyWorkflow(dependencies = {}) {
   }
 
   return verifyExitCode;
+}
+
+async function runWithProductionEnv(commandArgs, dependencies = {}) {
+  if (commandArgs.length === 0) {
+    throw new Error("with-production-env requires one command after the wrapper.");
+  }
+
+  const {
+    repoRoot = REPO_ROOT,
+    fsImpl = fs,
+    tmpDir = os.tmpdir()
+  } = dependencies;
+  const executeCommand = dependencies.runCommand || runCommand;
+  await pruneGeneratedState({
+    ...dependencies,
+    repoRoot,
+    generatedStateDirs: [".vercel"]
+  });
+
+  let commandExitCode = 1;
+  let cleanupError = null;
+  let tempDir = null;
+
+  try {
+    await materializeVercelLink({ ...dependencies, repoRoot });
+    tempDir = await fsImpl.mkdtemp(path.join(tmpDir, "discordos-production-env-"));
+    const envFilePath = path.join(tempDir, ".env.production.local");
+    const pullExitCode = await executeCommand({
+      ...dependencies,
+      command: "vercel",
+      args: ["env", "pull", envFilePath, "--environment=production", "--yes"],
+      cwd: repoRoot,
+      runCommand: undefined
+    });
+
+    if (pullExitCode !== 0) {
+      return pullExitCode;
+    }
+
+    const envValues = parseEnvFile(await fsImpl.readFile(envFilePath, "utf8"));
+    const [command, ...args] = commandArgs;
+    commandExitCode = await executeCommand({
+      ...dependencies,
+      command,
+      args,
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        ...envValues
+      },
+      runCommand: undefined
+    });
+  } finally {
+    try {
+      if (tempDir) {
+        await fsImpl.rm(tempDir, { recursive: true, force: true });
+      }
+      await pruneGeneratedState({
+        ...dependencies,
+        repoRoot,
+        generatedStateDirs: [".vercel"]
+      });
+    } catch (error) {
+      cleanupError = error;
+    }
+  }
+
+  if (cleanupError) {
+    throw cleanupError;
+  }
+
+  return commandExitCode;
 }
 
 async function runWithVercelLink(commandArgs, dependencies = {}) {
@@ -224,7 +330,11 @@ async function main(argv) {
     return await runWithVercelLink(stripCommandSeparator(rest));
   }
 
-  throw new Error("Supported repo-hygiene commands: cleanup, verify, with-vercel-link.");
+  if (subcommand === "with-production-env") {
+    return await runWithProductionEnv(stripCommandSeparator(rest));
+  }
+
+  throw new Error("Supported repo-hygiene commands: cleanup, verify, with-vercel-link, with-production-env.");
 }
 
 const _internals = {
@@ -237,8 +347,10 @@ const _internals = {
   loadVercelLinkConfig,
   materializeVercelLink,
   runCommand,
+  parseEnvFile,
   runVerifyWorkflow,
   runWithVercelLink,
+  runWithProductionEnv,
   stripCommandSeparator
 };
 
@@ -248,7 +360,8 @@ module.exports = {
   loadVercelLinkConfig,
   materializeVercelLink,
   runVerifyWorkflow,
-  runWithVercelLink
+  runWithVercelLink,
+  runWithProductionEnv
 };
 
 if (require.main === module) {

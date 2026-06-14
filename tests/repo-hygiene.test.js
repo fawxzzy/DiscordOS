@@ -93,3 +93,90 @@ test("runWithVercelLink still cleans .vercel when the wrapped command fails", as
     await assert.rejects(fs.access(path.join(repoRoot, ".vercel")));
   });
 });
+
+test("parseEnvFile reads simple dotenv values without exposing comments", () => {
+  assert.deepEqual(_internals.parseEnvFile([
+    "# ignored",
+    "PLAIN=value",
+    "QUOTED=\"quoted value\"",
+    "export ESCAPED=\"line\\nbreak\"",
+    "INVALID-NAME=skip",
+    "",
+  ].join("\n")), {
+    PLAIN: "value",
+    QUOTED: "quoted value",
+    ESCAPED: "line\nbreak",
+  });
+});
+
+test("runWithProductionEnv pulls env into a temp file and cleans it afterward", async () => {
+  await withTempRepo(async (repoRoot) => {
+    let sawProjectJson = false;
+    let sawSecret = false;
+    let envFilePath = null;
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "discordos-prod-env-test-"));
+
+    try {
+      const exitCode = await _internals.runWithProductionEnv(
+        ["node", "-e", "process.exit(0)"],
+        {
+          repoRoot,
+          tmpDir: tempRoot,
+          runCommand: async ({ command, args, cwd, env }) => {
+            if (command === "vercel") {
+              const projectJsonPath = path.join(cwd, ".vercel", "project.json");
+              const projectJson = JSON.parse(await fs.readFile(projectJsonPath, "utf8"));
+              sawProjectJson = projectJson.projectId === "prj_fixture";
+              envFilePath = args[2];
+              await fs.writeFile(envFilePath, "DISCORDOS_TEST_SECRET=present\n", "utf8");
+              return 0;
+            }
+
+            sawSecret = env.DISCORDOS_TEST_SECRET === "present";
+            return 0;
+          },
+        }
+      );
+
+      assert.equal(exitCode, 0);
+      assert.equal(sawProjectJson, true);
+      assert.equal(sawSecret, true);
+      await assert.rejects(fs.access(path.join(repoRoot, ".vercel")));
+      await assert.rejects(fs.access(envFilePath));
+    } finally {
+      await fs.rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+});
+
+test("runWithProductionEnv cleans temp state when the wrapped command fails", async () => {
+  await withTempRepo(async (repoRoot) => {
+    let envFilePath = null;
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "discordos-prod-env-test-"));
+
+    try {
+      const exitCode = await _internals.runWithProductionEnv(
+        ["node", "-e", "process.exit(9)"],
+        {
+          repoRoot,
+          tmpDir: tempRoot,
+          runCommand: async ({ command, args }) => {
+            if (command === "vercel") {
+              envFilePath = args[2];
+              await fs.writeFile(envFilePath, "DISCORDOS_TEST_SECRET=present\n", "utf8");
+              return 0;
+            }
+
+            return 9;
+          },
+        }
+      );
+
+      assert.equal(exitCode, 9);
+      await assert.rejects(fs.access(path.join(repoRoot, ".vercel")));
+      await assert.rejects(fs.access(envFilePath));
+    } finally {
+      await fs.rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+});
