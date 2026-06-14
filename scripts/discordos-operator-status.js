@@ -179,7 +179,13 @@ function determineOperatorNextActions({
     actions.push("repair_publication_target_or_channel_separation");
   }
 
-  if (!publicationAudit.ok) {
+  const publicationAuditReasons = new Set(publicationAudit.reasonCodes || []);
+
+  if (publicationAuditReasons.has("publication_receipt_pass_number_collision")) {
+    actions.push("reconcile_publication_receipt_pass_numbers");
+  }
+
+  if (!publicationAudit.ok && (publicationAudit.counts?.needsBackfill ?? 0) > 0) {
     actions.push("backfill_publication_receipts");
   }
 
@@ -320,6 +326,7 @@ async function buildDiscordOSOperatorStatus({
       draftUpdateReceipts: publicationAudit.counts.draftUpdateReceipts,
       needsBackfill: publicationAudit.counts.needsBackfill,
       untrackedPublicationReceipts: publicationAudit.counts.untrackedPublicationReceipts,
+      passNumberCollisions: publicationAudit.counts.passNumberCollisions,
       gitDurabilityProof: receiptState.publicationAuditGitDurabilityProof,
       reasonCodes: publicationAudit.reasonCodes,
     },
@@ -425,6 +432,7 @@ function renderMarkdown(status) {
     `- draft update receipts: \`${status.publicationAudit.draftUpdateReceipts}\``,
     `- needs backfill: \`${status.publicationAudit.needsBackfill}\``,
     `- untracked publication receipts: \`${status.publicationAudit.untrackedPublicationReceipts}\``,
+    `- pass number collisions: \`${status.publicationAudit.passNumberCollisions}\``,
     `- reason codes: \`${status.publicationAudit.reasonCodes.join(",") || "none"}\``,
     `- git durability proof: \`${status.publicationAudit.gitDurabilityProof ? "true" : "false"}\``,
     "",

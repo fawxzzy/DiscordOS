@@ -61,6 +61,18 @@ test("publication audit extracts bounded publication metadata", () => {
   });
 });
 
+test("publication audit extracts pass numbers from receipt-like paths", () => {
+  assert.equal(
+    _internals.extractPassNumberFromPath("docs/ops/discordos-updates-publication-live-post-pass-35.md"),
+    35
+  );
+  assert.equal(
+    _internals.extractPassNumberFromPath("docs/ops/discordos-forum-card-preflight-convergence-pass-98-2026-06-14.md"),
+    98
+  );
+  assert.equal(_internals.extractPassNumberFromPath("docs/ops/no-pass-here.md"), null);
+});
+
 test("publication audit classifies published, draft, proof-only, and backfill records", async () => {
   const docsDir = await fs.mkdtemp(path.join(os.tmpdir(), "discordos-publication-audit-"));
   await writeFile(docsDir, "discordos-updates-publication-live-post-pass-35.md", [
@@ -105,7 +117,38 @@ test("publication audit classifies published, draft, proof-only, and backfill re
   assert.equal(result.counts.publicationProofOnly, 1);
   assert.equal(result.counts.needsBackfill, 1);
   assert.equal(result.counts.untrackedPublicationReceipts, 0);
+  assert.equal(result.counts.passNumberCollisions, 0);
   assert.deepEqual(result.reasonCodes, ["publication_receipt_backfill_needed"]);
+});
+
+test("publication audit flags duplicate pass numbers across audited receipts", () => {
+  const result = _internals.summarizePublicationAudit({
+    docsDir: path.resolve("docs/ops"),
+    records: [
+      _internals.classifyPublicationReceipt({
+        filePath: path.resolve("docs/ops/discordos-first-surface-pass-98-2026-06-14.md"),
+        markdown: `# First\n\n${receiptBlock()}`,
+      }),
+      _internals.classifyPublicationReceipt({
+        filePath: path.resolve("docs/ops/discordos-second-publication-surface-pass-98-2026-06-14.md"),
+        markdown: "# Second\n\nPublication proof without send evidence.",
+      }),
+    ],
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "pass_number_collision");
+  assert.equal(result.counts.passNumberCollisions, 1);
+  assert.deepEqual(result.reasonCodes, ["publication_receipt_pass_number_collision"]);
+  assert.deepEqual(result.passNumberCollisions, [
+    {
+      passNumber: 98,
+      paths: [
+        "docs/ops/discordos-first-surface-pass-98-2026-06-14.md",
+        "docs/ops/discordos-second-publication-surface-pass-98-2026-06-14.md",
+      ],
+    },
+  ]);
 });
 
 test("publication audit reports untracked audited receipts without requiring backfill", () => {
@@ -178,6 +221,7 @@ test("publication audit renders markdown without secret-like target values", () 
   assert(rendered.includes("result: `pass`"));
   assert(rendered.includes("published receipts: `1`"));
   assert(rendered.includes("untracked publication receipts: `0`"));
+  assert(rendered.includes("pass number collisions: `0`"));
   assert(rendered.includes("message id `1515396583846445097`"));
   assert(!rendered.includes("bot-secret"));
 });

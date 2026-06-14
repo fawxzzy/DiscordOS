@@ -216,7 +216,27 @@ function recommendNextWork(operatorStatus, { max = 5, receiptState = receiptStat
     },
   }));
 
-  addIf(!operatorStatus.publicationAudit.ok, recommendations, buildRecommendation({
+  addIf(
+    operatorStatus.publicationAudit.reasonCodes.includes("publication_receipt_pass_number_collision"),
+    recommendations,
+    buildRecommendation({
+      id: "reconcile-publication-receipt-pass-numbers",
+      score: 97,
+      category: "publication",
+      title: "Reconcile duplicate publication receipt pass numbers before opening new receipt work",
+      command: "npm run ops:discord:publication-audit",
+      reasonCodes: ["publication_receipt_pass_number_collision"],
+      evidence: {
+        passNumberCollisions: operatorStatus.publicationAudit.passNumberCollisions ?? 0,
+        auditedFiles: operatorStatus.publicationAudit.auditedFiles,
+      },
+    })
+  );
+
+  addIf(
+    !operatorStatus.publicationAudit.ok && (operatorStatus.publicationAudit.needsBackfill ?? 0) > 0,
+    recommendations,
+    buildRecommendation({
     id: "backfill-publication-receipts",
     score: 95,
     category: "publication",

@@ -193,6 +193,7 @@ test("operator status combines runtime, publication, and audit status", async ()
   assert.equal(status.publication.status, "ready");
   assert.equal(status.publicationAudit.publishedReceipts, 1);
   assert.equal(status.publicationAudit.untrackedPublicationReceipts, 0);
+  assert.equal(status.publicationAudit.passNumberCollisions, 0);
   assert.equal(status.atlasHealth.ok, true);
   assert.equal(status.atlasHealth.status, "ready");
   assert.equal(status.atlasHealth.watchStatus, "healthy");
@@ -215,9 +216,11 @@ test("operator status surfaces publication blockers as next actions", () => {
     publicationStatus: { ok: false },
     publicationAudit: {
       ok: false,
+      reasonCodes: ["publication_receipt_backfill_needed"],
       counts: {
         draftUpdateReceipts: 0,
         needsBackfill: 1,
+        passNumberCollisions: 0,
       },
     },
     atlasHealthStatus: {
@@ -230,6 +233,28 @@ test("operator status surfaces publication blockers as next actions", () => {
     "repair_publication_target_or_channel_separation",
     "backfill_publication_receipts",
   ]);
+});
+
+test("operator status surfaces receipt pass number collisions as next actions", () => {
+  const actions = _internals.determineOperatorNextActions({
+    runtimeStatus: { ok: true },
+    publicationStatus: { ok: true },
+    publicationAudit: {
+      ok: false,
+      reasonCodes: ["publication_receipt_pass_number_collision"],
+      counts: {
+        draftUpdateReceipts: 0,
+        needsBackfill: 0,
+        passNumberCollisions: 1,
+      },
+    },
+    atlasHealthStatus: {
+      ok: true,
+      nextActions: ["continue_atlas_health_monitoring"],
+    },
+  });
+
+  assert.deepEqual(actions, ["reconcile_publication_receipt_pass_numbers"]);
 });
 
 test("operator status surfaces atlas health blockers as next actions", () => {
@@ -385,6 +410,7 @@ test("operator status renders markdown without target secret values", () => {
       draftUpdateReceipts: 0,
       needsBackfill: 0,
       untrackedPublicationReceipts: 1,
+      passNumberCollisions: 0,
       gitDurabilityProof: true,
       reasonCodes: [],
     },

@@ -48,6 +48,7 @@ function baseOperatorStatus(overrides = {}) {
       publishedReceipts: 1,
       draftUpdateReceipts: 1,
       needsBackfill: 0,
+      passNumberCollisions: 0,
       reasonCodes: [],
     },
     atlasHealth: {
@@ -166,6 +167,24 @@ test("next work recommender ranks blocker repairs above routine probes", () => {
 
   assert.equal(recommendations[0].id, "repair-runtime-or-cron-status");
   assert.equal(recommendations[1].id, "backfill-publication-receipts");
+});
+
+test("next work recommender prioritizes receipt pass number collisions above backfill-free publication work", () => {
+  const recommendations = _internals.recommendNextWork(baseOperatorStatus({
+    ok: false,
+    publicationAudit: {
+      ...baseOperatorStatus().publicationAudit,
+      ok: false,
+      status: "pass_number_collision",
+      passNumberCollisions: 1,
+      reasonCodes: ["publication_receipt_pass_number_collision"],
+    },
+  }), { max: 3 });
+
+  assert.equal(recommendations[0].id, "reconcile-publication-receipt-pass-numbers");
+  assert.equal(recommendations[0].score, 97);
+  assert.deepEqual(recommendations[0].reasonCodes, ["publication_receipt_pass_number_collision"]);
+  assert(!recommendations.some((recommendation) => recommendation.id === "backfill-publication-receipts"));
 });
 
 test("next work recommender recommends live probe and env checks for local-only ready status", () => {

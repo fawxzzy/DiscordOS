@@ -61,6 +61,16 @@ function toDisplayPath(filePath, cwd = process.cwd()) {
   return path.relative(cwd, filePath).replace(/\\/g, "/");
 }
 
+function extractPassNumberFromPath(filePath) {
+  const match = /-pass-(\d+)(?:-|\.)/i.exec(path.basename(String(filePath || "")));
+  if (!match) {
+    return null;
+  }
+
+  const value = Number.parseInt(match[1], 10);
+  return Number.isInteger(value) ? value : null;
+}
+
 async function readGitTrackedFiles({ docsDir, cwd = process.cwd(), execFileImpl = execFileAsync } = {}) {
   const docsArg = toDisplayPath(path.resolve(docsDir), cwd) || ".";
   try {
@@ -182,12 +192,14 @@ function classifyPublicationReceipt({ filePath, markdown, cwd = process.cwd() })
   const receiptBlock = extractReceiptBlock(normalized);
   const hasUpdatePost = hasHeading(normalized, "Update Post");
   const publicationRelated = isKnownPublicationReceipt(normalized, fileName);
+  const passNumber = extractPassNumberFromPath(filePath);
 
   if (!publicationRelated) {
     return {
       category: "ignored",
       path: displayPath,
       title: firstHeading,
+      passNumber,
       reasonCodes: [],
     };
   }
@@ -197,6 +209,7 @@ function classifyPublicationReceipt({ filePath, markdown, cwd = process.cwd() })
       category: "needs_backfill",
       path: displayPath,
       title: firstHeading,
+      passNumber,
       reasonCodes: receiptBlock.reasonCodes,
     };
   }
@@ -209,6 +222,7 @@ function classifyPublicationReceipt({ filePath, markdown, cwd = process.cwd() })
         category: "publication_proof_only",
         path: displayPath,
         title: firstHeading,
+        passNumber,
         reasonCodes: [],
       };
     }
@@ -218,6 +232,7 @@ function classifyPublicationReceipt({ filePath, markdown, cwd = process.cwd() })
       category: missing.length === 0 ? "published" : "needs_backfill",
       path: displayPath,
       title: firstHeading,
+      passNumber,
       metadata,
       reasonCodes: missing,
     };
@@ -228,6 +243,7 @@ function classifyPublicationReceipt({ filePath, markdown, cwd = process.cwd() })
       category: "needs_backfill",
       path: displayPath,
       title: firstHeading,
+      passNumber,
       reasonCodes: ["publication_receipt_backfill_needed"],
     };
   }
@@ -237,6 +253,7 @@ function classifyPublicationReceipt({ filePath, markdown, cwd = process.cwd() })
       category: "draft_update_receipt",
       path: displayPath,
       title: firstHeading,
+      passNumber,
       reasonCodes: ["update_post_section_without_publication_receipt"],
     };
   }
@@ -245,15 +262,19 @@ function classifyPublicationReceipt({ filePath, markdown, cwd = process.cwd() })
     category: "publication_proof_only",
     path: displayPath,
     title: firstHeading,
+    passNumber,
     reasonCodes: [],
   };
 }
 
 function classifyPublicationAuditEvent(result) {
+  const hasBackfillGaps = result.counts.needsBackfill > 0;
   return {
     type: result.ok
       ? "discordos.publication.audit_ready"
-      : "discordos.publication.audit_backfill_needed",
+      : hasBackfillGaps
+        ? "discordos.publication.audit_backfill_needed"
+        : "discordos.publication.audit_action_required",
     severity: result.ok ? "info" : "warning",
     subject: "discordos.publication.audit",
     status: result.ok ? "pass" : "fail",
@@ -264,6 +285,7 @@ function classifyPublicationAuditEvent(result) {
       publicationProofOnly: result.counts.publicationProofOnly,
       needsBackfill: result.counts.needsBackfill,
       untrackedPublicationReceipts: result.counts.untrackedPublicationReceipts,
+      passNumberCollisions: result.counts.passNumberCollisions,
     },
   };
 }
@@ -282,6 +304,30 @@ function applyGitTrackedState(records, trackedFiles) {
   }));
 }
 
+function detectPassNumberCollisions(records) {
+  const buckets = new Map();
+
+  for (const record of records) {
+    if (record.category === "ignored" || !Number.isInteger(record.passNumber)) {
+      continue;
+    }
+
+    const current = buckets.get(record.passNumber) || [];
+    current.push(record);
+    buckets.set(record.passNumber, current);
+  }
+
+  return Array.from(buckets.entries())
+    .filter(([, bucket]) => bucket.length > 1)
+    .sort((left, right) => left[0] - right[0])
+    .map(([passNumber, bucket]) => ({
+      passNumber,
+      paths: bucket
+        .map((record) => record.path)
+        .sort(),
+    }));
+}
+
 function summarizePublicationAudit({ docsDir, cwd = process.cwd(), records, trackedFiles = null }) {
   const annotatedRecords = applyGitTrackedState(records, trackedFiles);
   const published = annotatedRecords.filter((record) => record.category === "published");
@@ -290,19 +336,23 @@ function summarizePublicationAudit({ docsDir, cwd = process.cwd(), records, trac
   const needsBackfill = annotatedRecords.filter((record) => record.category === "needs_backfill");
   const auditedRecords = annotatedRecords.filter((record) => record.category !== "ignored");
   const untrackedPublicationReceipts = auditedRecords.filter((record) => record.gitTracked === false);
+  const passNumberCollisions = detectPassNumberCollisions(annotatedRecords);
   const reasonCodes = [
     ...new Set([
       ...needsBackfill.flatMap((record) => record.reasonCodes),
+      ...(passNumberCollisions.length > 0 ? ["publication_receipt_pass_number_collision"] : []),
       ...(untrackedPublicationReceipts.length > 0 ? ["publication_receipt_untracked"] : []),
     ]),
   ];
   const status = needsBackfill.length > 0
     ? "backfill_needed"
+    : passNumberCollisions.length > 0
+      ? "pass_number_collision"
     : untrackedPublicationReceipts.length > 0
       ? "ready_with_untracked_receipts"
       : "ready";
   const result = {
-    ok: needsBackfill.length === 0,
+    ok: needsBackfill.length === 0 && passNumberCollisions.length === 0,
     destructive: false,
     sendsMessages: false,
     writesArtifacts: false,
@@ -316,12 +366,14 @@ function summarizePublicationAudit({ docsDir, cwd = process.cwd(), records, trac
       publicationProofOnly: proofOnly.length,
       needsBackfill: needsBackfill.length,
       untrackedPublicationReceipts: untrackedPublicationReceipts.length,
+      passNumberCollisions: passNumberCollisions.length,
     },
     published,
     drafts,
     proofOnly,
     needsBackfill,
     untrackedPublicationReceipts,
+    passNumberCollisions,
     reasonCodes,
   };
 
@@ -393,6 +445,7 @@ function renderMarkdown(result) {
     `- publication proof only: \`${result.counts.publicationProofOnly}\``,
     `- needs backfill: \`${result.counts.needsBackfill}\``,
     `- untracked publication receipts: \`${result.counts.untrackedPublicationReceipts}\``,
+    `- pass number collisions: \`${result.counts.passNumberCollisions}\``,
     `- reason codes: \`${result.reasonCodes.join(",") || "none"}\``,
     `- event type: \`${result.event.type}\``,
     "",
@@ -407,6 +460,14 @@ function renderMarkdown(result) {
     "## Needs Backfill",
     "",
     ...renderRecordList(result.needsBackfill, "none"),
+    "",
+    "## Pass Number Collisions",
+    "",
+    ...(result.passNumberCollisions.length === 0
+      ? ["- none"]
+      : result.passNumberCollisions.map((collision) =>
+        `- pass \`${collision.passNumber}\`: \`${collision.paths.join("`, `")}\``
+      )),
     "",
     "## Untracked Publication Receipts",
     "",
@@ -441,6 +502,7 @@ module.exports = {
     normalizeMarkdown,
     listMarkdownFiles,
     toDisplayPath,
+    extractPassNumberFromPath,
     readGitTrackedFiles,
     extractFirstHeading,
     hasHeading,
@@ -453,6 +515,7 @@ module.exports = {
     classifyPublicationReceipt,
     classifyPublicationAuditEvent,
     applyGitTrackedState,
+    detectPassNumberCollisions,
     summarizePublicationAudit,
     buildDiscordPublicationAuditRollup,
     renderMarkdown,
