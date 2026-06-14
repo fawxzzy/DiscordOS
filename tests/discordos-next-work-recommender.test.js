@@ -534,6 +534,39 @@ test("next work recommender defers local atlas health env warnings after prod pr
   assert.deepEqual(recommendations, []);
 });
 
+test("next work recommender suppresses deferred env reload after dashboard ergonomics proof", () => {
+  const readyButEnvlessStatus = baseOperatorStatus({
+    runtime: {
+      ...baseOperatorStatus().runtime,
+      alertTargetConfigured: false,
+      nextActions: ["continue_runtime_monitoring"],
+    },
+    publication: {
+      ...baseOperatorStatus().publication,
+      updatesTargetConfigured: false,
+      alertsTargetConfigured: false,
+    },
+    publicationAudit: {
+      ...baseOperatorStatus().publicationAudit,
+      draftUpdateReceipts: 0,
+    },
+  });
+  const recommendations = _internals.recommendNextWork(readyButEnvlessStatus, {
+    max: 5,
+    receiptState: _internals.classifyReceiptState([
+      "discordos-operator-live-status-proof-pass-50-2026-06-13.md",
+      "discordos-live-target-admission-proof-pass-52-2026-06-13.md",
+      "discordos-runtime-health-scheduled-audit-proof-pass-73-2026-06-14.md",
+      "discordos-runtime-alert-drill-surface-pass-77-2026-06-14.md",
+      "discordos-atlas-health-target-filter-pass-78-2026-06-14.md",
+      "discordos-publication-audit-git-durability-pass-80-2026-06-14.md",
+      "discordos-operator-dashboard-ergonomics-pass-81-2026-06-14.md",
+    ]),
+  });
+
+  assert.deepEqual(recommendations, []);
+});
+
 test("next work recommender advances past completed steady-state review receipts", () => {
   const readyStatus = baseOperatorStatus({
     runtime: {
