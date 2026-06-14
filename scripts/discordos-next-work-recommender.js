@@ -1,7 +1,9 @@
 const {
   _internals: operatorStatusInternals,
 } = require("./discordos-operator-status");
-const fs = require("node:fs/promises");
+const {
+  _internals: receiptStateInternals,
+} = require("./discordos-receipt-state");
 
 function parseArgs(args) {
   let max = 5;
@@ -71,42 +73,7 @@ function rankRecommendations(recommendations, max = 5) {
     .slice(0, max);
 }
 
-function classifyReceiptState(fileNames = []) {
-  return {
-    liveOperatorStatusProof: fileNames.some((fileName) =>
-      fileName.includes("discordos-operator-live-status-proof-pass")
-    ),
-    liveTargetAdmissionProof: fileNames.some((fileName) =>
-      fileName.includes("discordos-live-target-admission-proof-pass")
-    ),
-    authorizedCronProof: fileNames.some((fileName) =>
-      fileName.includes("discordos-runtime-health-authorized-cron-proof-pass")
-    ),
-    scheduledCronIdentityGuard: fileNames.some((fileName) =>
-      fileName.includes("discordos-scheduled-cron-log-identity-guard-pass")
-    ),
-    scheduledCronAuditProof: fileNames.some((fileName) =>
-      fileName.includes("discordos-runtime-health-scheduled-audit-proof-pass")
-    ),
-    runtimeOperationsAdmissionProof: fileNames.some((fileName) =>
-      fileName.includes("discordos-next-work-wait-state-ranking-pass")
-    ),
-    finalFollowupUpdateProof: fileNames.some((fileName) =>
-      fileName.includes("discordos-runtime-product-hardening-followup-live-post-pass")
-        || fileName.includes("discordos-runtime-product-hardening-followup-update-post")
-    ),
-  };
-}
-
-async function readReceiptState(docsDir) {
-  try {
-    return classifyReceiptState(await fs.readdir(docsDir));
-  } catch {
-    return classifyReceiptState([]);
-  }
-}
-
-function recommendNextWork(operatorStatus, { max = 5, receiptState = classifyReceiptState([]) } = {}) {
+function recommendNextWork(operatorStatus, { max = 5, receiptState = receiptStateInternals.classifyReceiptState([]) } = {}) {
   const recommendations = [];
 
   addIf(!operatorStatus.runtime.ok, recommendations, buildRecommendation({
@@ -370,7 +337,7 @@ async function buildDiscordOSNextWorkRecommendations({
   ...operatorOptions
 } = {}) {
   const operatorStatus = await operatorStatusInternals.buildDiscordOSOperatorStatus(operatorOptions);
-  const receiptState = await readReceiptState(operatorOptions.docsDir);
+  const receiptState = await receiptStateInternals.readReceiptState(operatorOptions.docsDir);
   const recommendations = recommendNextWork(operatorStatus, { max, receiptState });
   const result = {
     ok: true,
@@ -457,8 +424,8 @@ module.exports = {
     parseArgs,
     buildRecommendation,
     rankRecommendations,
-    classifyReceiptState,
-    readReceiptState,
+    classifyReceiptState: receiptStateInternals.classifyReceiptState,
+    readReceiptState: receiptStateInternals.readReceiptState,
     recommendNextWork,
     classifyNextWorkEvent,
     buildDiscordOSNextWorkRecommendations,

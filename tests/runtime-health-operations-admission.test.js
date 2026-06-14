@@ -7,6 +7,7 @@ const test = require("node:test");
 const { _internals } = require("../scripts/runtime-health-operations-admission");
 const { _internals: proofInternals } = require("../scripts/runtime-health-proof");
 const { _internals: alertInternals } = require("../scripts/runtime-health-alert");
+const { _internals: receiptStateInternals } = require("../scripts/discordos-receipt-state");
 
 function rollup({ ok = true } = {}) {
   return {
@@ -85,7 +86,14 @@ test("operations admission args default to read-only runtime surfaces", () => {
     limit: 20,
     keepCount: 50,
     keepDays: 30,
+    docsDir: receiptStateInternals.DEFAULT_RECEIPT_DIR,
   });
+});
+
+test("operations admission args support docs dir", () => {
+  const parsed = _internals.parseArgs(["--docs-dir", "."]);
+
+  assert.equal(parsed.docsDir, path.resolve("."));
 });
 
 test("operations admission classifies alert delivery target without exposing it", () => {
@@ -114,6 +122,25 @@ test("operations admission allows scheduled proof when latest runtime state is g
     status: "admissible",
     reasonCodes: ["latest_runtime_health_green", "latest_alert_clear"],
   });
+});
+
+test("operations admission satisfies scheduled proof after audit receipt", () => {
+  assert.deepEqual(
+    _internals.decideScheduledProof(
+      rollup(),
+      receiptStateInternals.classifyReceiptState([
+        "discordos-runtime-health-scheduled-audit-proof-pass-73-2026-06-14.md",
+      ])
+    ),
+    {
+      status: "satisfied",
+      reasonCodes: [
+        "scheduled_cron_audit_proof_receipt_present",
+        "latest_runtime_health_green",
+        "latest_alert_clear",
+      ],
+    }
+  );
 });
 
 test("operations admission blocks alert delivery when no delivery target is configured", () => {
@@ -161,18 +188,26 @@ test("operations admission builds a no-side-effect decision plan", () => {
   assert.equal(plan.alertDelivered, false);
   assert.equal(plan.decisions.retentionEnforcement.status, "not_needed");
   assert.equal(plan.decisions.scheduledProof.status, "admissible");
+  assert.equal(plan.receiptState.scheduledCronAuditProof, false);
   assert.equal(plan.decisions.alertDelivery.status, "blocked");
 });
 
 test("operations admission reads live-shaped artifact directories", async () => {
   const snapshotDir = await fs.mkdtemp(path.join(os.tmpdir(), "discordos-admission-health-"));
   const alertDir = await fs.mkdtemp(path.join(os.tmpdir(), "discordos-admission-alert-"));
+  const docsDir = await fs.mkdtemp(path.join(os.tmpdir(), "discordos-admission-docs-"));
   await writeJson(snapshotDir, "2026-06-13T03-00-00-000Z-pass.json", healthSnapshot());
   await writeJson(alertDir, "2026-06-13T03-00-00-000Z-ok.json", alertDecision());
+  await fs.writeFile(
+    path.join(docsDir, "discordos-runtime-health-scheduled-audit-proof-pass-73-2026-06-14.md"),
+    "# Scheduled audit proof\n",
+    "utf8"
+  );
 
   const plan = await _internals.buildRuntimeHealthOperationsAdmission({
     snapshotDir,
     alertDir,
+    docsDir,
     limit: 20,
     keepCount: 50,
     keepDays: 30,
@@ -182,7 +217,8 @@ test("operations admission reads live-shaped artifact directories", async () => 
   assert.equal(plan.ok, true);
   assert.equal(plan.rollup.latestHealthPosture, "operational");
   assert.equal(plan.retention.artifacts, 2);
-  assert.equal(plan.decisions.scheduledProof.status, "admissible");
+  assert.equal(plan.decisions.scheduledProof.status, "satisfied");
+  assert.equal(plan.receiptState.scheduledCronAuditProof, true);
 });
 
 test("operations admission renders markdown without secret target values", () => {
@@ -200,5 +236,6 @@ test("operations admission renders markdown without secret target values", () =>
   assert(rendered.includes("# DiscordOS Runtime Health Operations Admission"));
   assert(rendered.includes("destructive: `false`"));
   assert(rendered.includes("alert delivery: `admissible`"));
+  assert(rendered.includes("scheduled cron audit proof receipt: `false`"));
   assert(!rendered.includes("webhook-secret"));
 });

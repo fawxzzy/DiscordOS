@@ -189,6 +189,7 @@ async function buildDiscordOSOperatorStatus({
       baseUrl,
       snapshotDir,
       alertDir,
+      docsDir,
       limit,
       keepCount,
       keepDays,

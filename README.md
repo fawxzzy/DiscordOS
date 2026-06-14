@@ -379,6 +379,8 @@ Current governed contract surface:
   - owner-side proof that the runtime-health Vercel Cron was moved to 10:00 PM EDT for the next scheduled identity capture
 - `docs/ops/discordos-runtime-health-scheduled-audit-proof-pass-73-2026-06-14.md`
   - owner-side proof that the 10:00 PM EDT scheduled runtime-health cron wrote a fresh private Supabase audit row
+- `docs/ops/discordos-runtime-status-scheduled-proof-closure-pass-74-2026-06-14.md`
+  - owner-side proof that runtime/operator status now treats scheduled cron audit proof as closure instead of an open capture action
 - `docs/ops/discordos-next-work-final-followup-state-pass-69-2026-06-13.md`
   - owner-side proof that next-work now reports only the deferred scheduled cron identity proof after the final follow-up post
 
@@ -612,6 +614,7 @@ Current scheduled runtime surface:
   - 2026-06-13 11:15 AM EDT proof window did not produce a scheduled invocation or private cron audit row
   - 2026-06-13 11:45 AM EDT proof window produced Vercel `200` scheduled invocation proof and private Supabase audit row `runtime-health-cron-vercel-daily-runtime-health-20260613T155511740Z`
   - 2026-06-13 10:29 PM EDT proof window produced Vercel `200` cron-path traffic and private Supabase audit row `runtime-health-cron-vercel-daily-runtime-health-20260614T022928673Z`; Vercel JSON logs did not expose cron user-agent identity, so the database row is the durable scheduled-run proof
+  - runtime/operator status treats `discordos-runtime-health-scheduled-audit-proof-pass-*` receipts as scheduled proof closure and reports `continue_runtime_monitoring` after closure
   - writes sanitized private Supabase cron receipt rows only when `DISCORDOS_RUNTIME_HEALTH_CRON_AUDIT_WRITE=enabled`
   - can run the ATLAS health watch when `DISCORDOS_ATLAS_HEALTH_WATCH_ENABLED=enabled`; the default ATLAS sweep schedule is weekday-only `0 16 * * 1-5`, currently estimated at `105` target checks/month across 5 targets
   - delivers only critical runtime-health alerts when `DISCORDOS_RUNTIME_HEALTH_ALERT_SEND=enabled`

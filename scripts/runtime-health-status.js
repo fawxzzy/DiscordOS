@@ -4,6 +4,7 @@ const { _internals: alertInternals } = require("./runtime-health-alert");
 const { _internals: cronInternals } = require("./runtime-health-cron-production-proof");
 const { _internals: admissionInternals } = require("./runtime-health-operations-admission");
 const { _internals: targetAdmissionInternals } = require("./runtime-health-alert-target-admission");
+const { _internals: receiptStateInternals } = require("./discordos-receipt-state");
 
 function parseArgs(args) {
   const options = {
@@ -14,6 +15,7 @@ function parseArgs(args) {
     limit: 20,
     keepCount: 50,
     keepDays: 30,
+    docsDir: receiptStateInternals.DEFAULT_RECEIPT_DIR,
     probeLive: false,
   };
 
@@ -62,6 +64,13 @@ function parseArgs(args) {
         throw new Error("invalid_keep_days");
       }
       options.keepDays = value;
+      index += 1;
+    } else if (arg === "--docs-dir") {
+      const value = args[index + 1];
+      if (typeof value !== "string" || value.trim().length === 0) {
+        throw new Error("missing_docs_dir_value");
+      }
+      options.docsDir = path.resolve(value.trim());
       index += 1;
     } else if (arg === "--probe-live") {
       options.probeLive = true;
@@ -128,6 +137,7 @@ async function buildRuntimeHealthStatus({
   limit,
   keepCount,
   keepDays,
+  docsDir,
   probeLive,
   env = process.env,
   fetchImpl = fetch,
@@ -143,6 +153,7 @@ async function buildRuntimeHealthStatus({
       limit,
       keepCount,
       keepDays,
+      docsDir,
       env,
     }),
     targetAdmissionInternals.buildRuntimeHealthAlertTargetAdmission({
@@ -188,6 +199,8 @@ async function buildRuntimeHealthStatus({
     operations: {
       retentionEnforcement: operationsAdmission.decisions.retentionEnforcement.status,
       scheduledProof: operationsAdmission.decisions.scheduledProof.status,
+      scheduledProofReasons: operationsAdmission.decisions.scheduledProof.reasonCodes,
+      scheduledCronAuditProof: operationsAdmission.receiptState.scheduledCronAuditProof,
       alertDelivery: operationsAdmission.decisions.alertDelivery.status,
       alertDeliveryReasons: operationsAdmission.decisions.alertDelivery.reasonCodes,
       retentionEligibleForReview: operationsAdmission.retention.eligibleForReview,
@@ -227,7 +240,9 @@ function renderMarkdown(status) {
     `- alert target live probe status: \`${status.alertTarget.liveProbeStatus}\``,
     `- alert target reasons: \`${status.alertTarget.reasonCodes.join(",") || "none"}\``,
     `- retention enforcement: \`${status.operations.retentionEnforcement}\``,
+    `- scheduled cron audit proof receipt: \`${status.operations.scheduledCronAuditProof ? "true" : "false"}\``,
     `- scheduled proof: \`${status.operations.scheduledProof}\``,
+    `- scheduled proof reasons: \`${status.operations.scheduledProofReasons.join(",") || "none"}\``,
     `- alert delivery: \`${status.operations.alertDelivery}\``,
     `- next actions: \`${status.nextActions.join(",")}\``,
   ];

@@ -4,6 +4,7 @@ const { _internals: alertInternals } = require("./runtime-health-alert");
 const { _internals: rollupInternals } = require("./runtime-health-artifact-rollup");
 const { _internals: retentionInternals } = require("./runtime-health-retention-plan");
 const { _internals: targetAdmissionInternals } = require("./runtime-health-alert-target-admission");
+const { _internals: receiptStateInternals } = require("./discordos-receipt-state");
 
 function parseArgs(args) {
   const options = {
@@ -13,6 +14,7 @@ function parseArgs(args) {
     limit: 20,
     keepCount: 50,
     keepDays: 30,
+    docsDir: receiptStateInternals.DEFAULT_RECEIPT_DIR,
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -54,6 +56,13 @@ function parseArgs(args) {
       }
       options.keepDays = value;
       index += 1;
+    } else if (arg === "--docs-dir") {
+      const value = args[index + 1];
+      if (typeof value !== "string" || value.trim().length === 0) {
+        throw new Error("missing_docs_dir_value");
+      }
+      options.docsDir = path.resolve(value.trim());
+      index += 1;
     } else {
       throw new Error(`unsupported_argument:${arg}`);
     }
@@ -88,11 +97,22 @@ function decideRetentionEnforcement(retentionPlan) {
   };
 }
 
-function decideScheduledProof(rollup) {
+function decideScheduledProof(rollup, receiptState = receiptStateInternals.classifyReceiptState([])) {
   if (!rollup.ok) {
     return {
       status: "blocked",
       reasonCodes: ["latest_runtime_health_not_green"],
+    };
+  }
+
+  if (receiptState.scheduledCronAuditProof) {
+    return {
+      status: "satisfied",
+      reasonCodes: [
+        "scheduled_cron_audit_proof_receipt_present",
+        "latest_runtime_health_green",
+        "latest_alert_clear",
+      ],
     };
   }
 
@@ -126,10 +146,15 @@ function decideAlertDelivery({ rollup, env }) {
   };
 }
 
-function buildAdmissionPlan({ rollup, retentionPlan, env = process.env }) {
+function buildAdmissionPlan({
+  rollup,
+  retentionPlan,
+  env = process.env,
+  receiptState = receiptStateInternals.classifyReceiptState([]),
+}) {
   const decisions = {
     retentionEnforcement: decideRetentionEnforcement(retentionPlan),
-    scheduledProof: decideScheduledProof(rollup),
+    scheduledProof: decideScheduledProof(rollup, receiptState),
     alertDelivery: decideAlertDelivery({ rollup, env }),
   };
 
@@ -153,12 +178,15 @@ function buildAdmissionPlan({ rollup, retentionPlan, env = process.env }) {
       keepCount: retentionPlan.policy.keepCount,
       keepDays: retentionPlan.policy.keepDays,
     },
+    receiptState: {
+      scheduledCronAuditProof: receiptState.scheduledCronAuditProof === true,
+    },
     decisions,
   };
 }
 
 async function buildRuntimeHealthOperationsAdmission(options) {
-  const [rollup, retentionPlan] = await Promise.all([
+  const [rollup, retentionPlan, receiptState] = await Promise.all([
     rollupInternals.buildRuntimeHealthArtifactRollup({
       snapshotDir: options.snapshotDir,
       alertDir: options.alertDir,
@@ -170,12 +198,14 @@ async function buildRuntimeHealthOperationsAdmission(options) {
       keepCount: options.keepCount,
       keepDays: options.keepDays,
     }),
+    receiptStateInternals.readReceiptState(options.docsDir),
   ]);
 
   return buildAdmissionPlan({
     rollup,
     retentionPlan,
     env: options.env || process.env,
+    receiptState,
   });
 }
 
@@ -193,8 +223,10 @@ function renderMarkdown(plan) {
     `- latest alert event type: \`${plan.rollup.latestAlertEventType || "unknown"}\``,
     `- retention policy action: \`${plan.retention.policyAction}\``,
     `- retention eligible for review: \`${plan.retention.eligibleForReview}\``,
+    `- scheduled cron audit proof receipt: \`${plan.receiptState.scheduledCronAuditProof ? "true" : "false"}\``,
     `- retention enforcement: \`${plan.decisions.retentionEnforcement.status}\``,
     `- scheduled proof: \`${plan.decisions.scheduledProof.status}\``,
+    `- scheduled proof reasons: \`${plan.decisions.scheduledProof.reasonCodes.join(",") || "none"}\``,
     `- alert delivery: \`${plan.decisions.alertDelivery.status}\``,
     `- alert delivery target type: \`${plan.decisions.alertDelivery.targetType || "unknown"}\``,
     `- alert delivery reasons: \`${plan.decisions.alertDelivery.reasonCodes.join(",") || "none"}\``,
