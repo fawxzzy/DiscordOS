@@ -232,6 +232,10 @@ Current governed contract surface:
   - consumes the operator status bundle and emits scored recommendations with reason codes and command hints
   - uses durable receipts to avoid repeating completed steady-state review recommendations
   - sends no Discord messages and writes no artifacts
+- `scripts/discordos-operator-dashboard.js`
+  - repo-local read-only operator dashboard that combines status posture with the current top next-work command
+  - gives operators one compact command for routine DiscordOS status and next-action checks
+  - sends no Discord messages and writes no artifacts
 - `scripts/discordos-operator-env-readiness.js`
   - repo-local read-only operator env readiness command for DiscordOS updates, alerts, and bot-token availability
   - reports target readiness booleans and reason codes without printing target ids, webhook URLs, or token values
@@ -397,6 +401,8 @@ Current governed contract surface:
   - owner-side proof that next-work now advances past completed steady-state review recommendations when matching receipts exist
 - `docs/ops/discordos-publication-audit-git-durability-pass-80-2026-06-14.md`
   - owner-side proof that publication audit now reports untracked receipt files instead of silently treating disk-only receipts as durable
+- `docs/ops/discordos-operator-dashboard-ergonomics-pass-81-2026-06-14.md`
+  - owner-side proof that routine operator checks now have a compact dashboard command and production-env wrapper
 - `docs/ops/discordos-next-work-final-followup-state-pass-69-2026-06-13.md`
   - owner-side proof that next-work now reports only the deferred scheduled cron identity proof after the final follow-up post
 
@@ -478,6 +484,8 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local DiscordOS operator status bundle command
 - `npm run verify:discordos-next-work`
   - Node test coverage for the repo-local DiscordOS next-work recommender command
+- `npm run verify:discordos-dashboard`
+  - Node test coverage for the repo-local DiscordOS operator dashboard command
 - `npm run verify:discordos-env-readiness`
   - Node test coverage for the repo-local DiscordOS operator env readiness command
 - `npm run verify`
@@ -580,6 +588,14 @@ Current repo-local operator surface:
   - runs next-work ranking with production Vercel env overlaid through the temp env wrapper
 - `npm run ops:discordos:next-work:prod:json`
   - emits production-env next-work ranking as JSON
+- `npm run ops:discordos:dashboard`
+  - emits one compact read-only dashboard with operator status, top next-work recommendation, and command hint
+- `npm run ops:discordos:dashboard:json`
+  - emits the compact operator dashboard as JSON
+- `npm run ops:discordos:dashboard:prod`
+  - runs the compact operator dashboard with production Vercel env overlaid through the temp env wrapper
+- `npm run ops:discordos:dashboard:prod:json`
+  - emits the production-env compact operator dashboard as JSON
 - `npm run ops:discordos:env-readiness`
   - checks current process env readiness for updates, alerts, and bot-token-backed live probes without printing values
 - `npm run ops:discordos:env-readiness:json`

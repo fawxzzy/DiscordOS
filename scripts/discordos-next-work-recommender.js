@@ -122,21 +122,19 @@ function buildSteadyStateRecommendations(
     },
   }));
 
-  recommendations.push(
-    buildRecommendation({
+  addIf(!receiptState.operatorDashboardErgonomicsProof, recommendations, buildRecommendation({
       id: "inspect-operator-command-ergonomics",
       score: 52,
       category: "operator-env",
       title: "Inspect operator command ergonomics for the next low-friction workflow improvement",
-      command: "npm run ops:discordos:operator-status",
+      command: "npm run ops:discordos:dashboard:prod",
       reasonCodes: ["operator_status_ready_for_command_ergonomics"],
       evidence: {
         runtimeOk: operatorStatus.runtime.ok,
         publicationOk: operatorStatus.publication.ok,
         atlasHealthOk: operatorStatus.atlasHealth?.ok === true,
       },
-    })
-  );
+  }));
 
   return recommendations;
 }

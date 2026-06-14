@@ -36,6 +36,9 @@ function classifyReceiptState(fileNames = []) {
     publicationAuditGitDurabilityProof: fileNames.some((fileName) =>
       fileName.includes("discordos-publication-audit-git-durability-pass")
     ),
+    operatorDashboardErgonomicsProof: fileNames.some((fileName) =>
+      fileName.includes("discordos-operator-dashboard-ergonomics-pass")
+    ),
   };
 }
 
