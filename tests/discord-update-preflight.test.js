@@ -108,6 +108,8 @@ test("discord update preflight passes locally and skips live duplicate lookup", 
   assert.equal(result.status, "ready");
   assert.equal(result.payload.status, "valid");
   assert.equal(result.payload.bodyChars, "Runtime hardening is closed.".length);
+  assert.equal(result.notificationRoute.routeId, "updates-publication-info");
+  assert.equal(result.notificationRoute.target, "updates");
   assert.equal(result.targetAdmission.liveProbe.status, "skipped");
   assert.equal(result.duplicateCheck.status, "skipped");
   assert.equal(result.event.type, "discordos.updates.preflight_ready");
@@ -155,6 +157,7 @@ test("discord update preflight live probe passes when no duplicate title is foun
 
   assert.equal(result.ok, true);
   assert.equal(requests.length, 2);
+  assert.equal(result.notificationRoute.targetEnv, "DISCORDOS_UPDATES_CHANNEL_ID");
   assert.equal(result.targetAdmission.liveProbe.httpStatus, 200);
   assert.equal(result.duplicateCheck.status, "not_found");
   assert.equal(result.duplicateCheck.searchedMessages, 1);
@@ -226,6 +229,41 @@ test("discord update preflight blocks target drift before duplicate lookup", asy
   assert.deepEqual(result.duplicateCheck.reasonCodes, ["target_not_admitted"]);
 });
 
+test("discord update preflight blocks when notification route is not admitted", async () => {
+  const result = await _internals.buildDiscordUpdatePreflight({
+    title: "New DiscordOS Update",
+    body: "Fresh update body.",
+    probeLive: true,
+    env: {
+      DISCORDOS_UPDATES_CHANNEL_ID: "1504671871512346695",
+      DISCORDOS_BOT_TOKEN: "bot-secret",
+    },
+    notificationRouter: {
+      buildNotificationRouteDecision: async () => ({
+        ok: false,
+        route: null,
+        routeDecision: {
+          status: "blocked",
+        },
+        reasonCodes: ["notification_route_not_found"],
+      }),
+    },
+    fetchImpl: async () => {
+      throw new Error("fetch_should_not_run");
+    },
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "blocked");
+  assert.equal(result.notificationRoute.ok, false);
+  assert.deepEqual(result.reasonCodes, [
+    "notification_route_not_admitted",
+    "notification_route_not_found",
+  ]);
+  assert.equal(result.duplicateCheck.status, "skipped");
+  assert.deepEqual(result.duplicateCheck.reasonCodes, ["notification_route_not_admitted"]);
+});
+
 test("discord update preflight renders markdown without token values or full body", async () => {
   const body = "Sensitive body should not be rendered wholesale.";
   const result = await _internals.buildDiscordUpdatePreflight({
@@ -241,6 +279,7 @@ test("discord update preflight renders markdown without token values or full bod
   assert(rendered.includes("# DiscordOS Update Preflight"));
   assert(rendered.includes("sends messages: `false`"));
   assert(rendered.includes("payload title: `New DiscordOS Update`"));
+  assert(rendered.includes("notification route: `updates-publication-info`"));
   assert(rendered.includes(`payload body chars: \`${body.length}\``));
   assert(!rendered.includes("bot-secret"));
   assert(!rendered.includes(body));

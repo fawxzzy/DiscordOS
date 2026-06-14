@@ -7,6 +7,7 @@ const {
 const {
   _internals: targetAdmissionInternals,
 } = require("./discord-update-target-admission");
+const { _internals: notificationRouterInternals } = require("./discordos-notification-router");
 
 const DEFAULT_LIMIT = updateLookupInternals.DEFAULT_LIMIT;
 const DEFAULT_EXPECTED_CHANNEL_NAME = targetAdmissionInternals.DEFAULT_EXPECTED_CHANNEL_NAME;
@@ -131,8 +132,55 @@ function skippedDuplicateCheck(reasonCode) {
   };
 }
 
+async function buildUpdateNotificationRoute({
+  notificationRouter = notificationRouterInternals,
+} = {}) {
+  const routeDecision = await notificationRouter.buildNotificationRouteDecision({
+    source: "updates",
+    type: "discordos.updates.publication",
+    severity: "info",
+  });
+
+  return {
+    ok: routeDecision.ok,
+    status: routeDecision.routeDecision.status,
+    routeId: routeDecision.route?.id || null,
+    target: routeDecision.route?.target || null,
+    targetEnv: routeDecision.route?.targetEnv || null,
+    fallbackTargetEnv: routeDecision.route?.fallbackTargetEnv || null,
+    reasonCodes: routeDecision.reasonCodes,
+  };
+}
+
+function buildNotificationRouteBlockedTargetAdmission({ env, probeLive, expectedName }) {
+  const target = targetAdmissionInternals.getConfiguredTarget(env);
+  const liveProbe = {
+    attempted: false,
+    ok: true,
+    status: "skipped",
+    reasonCodes: ["notification_route_not_admitted"],
+  };
+  const result = {
+    ok: false,
+    destructive: false,
+    sendsMessages: false,
+    writesArtifacts: false,
+    probeLive,
+    expectedName,
+    target,
+    liveProbe,
+    reasonCodes: ["notification_route_not_admitted"],
+  };
+
+  return {
+    ...result,
+    event: targetAdmissionInternals.classifyUpdateTargetAdmissionEvent(result),
+  };
+}
+
 async function buildDuplicateCheck({
   payloadCheck,
+  notificationRoute,
   targetAdmission,
   probeLive,
   title,
@@ -142,6 +190,9 @@ async function buildDuplicateCheck({
 }) {
   if (!payloadCheck.ok) {
     return skippedDuplicateCheck("payload_invalid");
+  }
+  if (!notificationRoute.ok) {
+    return skippedDuplicateCheck("notification_route_not_admitted");
   }
   if (!targetAdmission.ok) {
     return skippedDuplicateCheck("target_not_admitted");
@@ -224,6 +275,7 @@ async function buildDiscordUpdatePreflight({
   env = process.env,
   fetchImpl = fetch,
   cwd = process.cwd(),
+  notificationRouter = notificationRouterInternals,
 } = {}) {
   const payload = await buildPayloadCheck({
     title,
@@ -232,14 +284,22 @@ async function buildDiscordUpdatePreflight({
     bodySection,
     cwd,
   });
-  const targetAdmission = await targetAdmissionInternals.buildDiscordUpdateTargetAdmission({
-    env,
-    probeLive,
-    expectedName,
-    fetchImpl,
-  });
+  const notificationRoute = await buildUpdateNotificationRoute({ notificationRouter });
+  const targetAdmission = notificationRoute.ok
+    ? await targetAdmissionInternals.buildDiscordUpdateTargetAdmission({
+      env,
+      probeLive,
+      expectedName,
+      fetchImpl,
+    })
+    : buildNotificationRouteBlockedTargetAdmission({
+      env,
+      probeLive,
+      expectedName,
+    });
   const duplicateCheck = await buildDuplicateCheck({
     payloadCheck: payload,
+    notificationRoute,
     targetAdmission,
     probeLive,
     title: payload.title || title,
@@ -248,21 +308,23 @@ async function buildDiscordUpdatePreflight({
     fetchImpl,
   });
 
-  const reasonCodes = [
+  const reasonCodes = [...new Set([
     ...payload.reasonCodes,
+    ...(notificationRoute.ok ? [] : ["notification_route_not_admitted", ...notificationRoute.reasonCodes]),
     ...targetAdmission.reasonCodes,
     ...duplicateCheck.reasonCodes,
-  ].filter((reasonCode) => reasonCode !== "probe_live_flag_not_set");
+  ])].filter((reasonCode) => reasonCode !== "probe_live_flag_not_set");
   const result = {
-    ok: payload.ok && targetAdmission.ok && duplicateCheck.ok,
+    ok: payload.ok && notificationRoute.ok && targetAdmission.ok && duplicateCheck.ok,
     destructive: false,
     sendsMessages: false,
     writesArtifacts: false,
     probeLive,
     expectedName,
     limit,
-    status: payload.ok && targetAdmission.ok && duplicateCheck.ok ? "ready" : "blocked",
+    status: payload.ok && notificationRoute.ok && targetAdmission.ok && duplicateCheck.ok ? "ready" : "blocked",
     payload,
+    notificationRoute,
     targetAdmission,
     duplicateCheck,
     reasonCodes,
@@ -288,6 +350,8 @@ function renderMarkdown(result) {
     `- event type: \`${result.event.type}\``,
     `- event severity: \`${result.event.severity}\``,
     `- reason codes: \`${result.reasonCodes.join(",") || "none"}\``,
+    `- notification route: \`${result.notificationRoute.routeId || "none"}\``,
+    `- notification route target: \`${result.notificationRoute.target || "none"}\``,
     `- payload status: \`${result.payload.status}\``,
     `- payload title: \`${result.payload.title || "unknown"}\``,
     `- payload body chars: \`${result.payload.bodyChars ?? "unknown"}\``,
@@ -346,6 +410,8 @@ module.exports = {
     parseArgs,
     normalizeReason,
     buildPayloadCheck,
+    buildUpdateNotificationRoute,
+    buildNotificationRouteBlockedTargetAdmission,
     skippedDuplicateCheck,
     buildDuplicateCheck,
     classifyDiscordUpdatePreflightEvent,

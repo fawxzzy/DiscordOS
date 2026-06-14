@@ -197,6 +197,7 @@ Current governed contract surface:
 - `scripts/discord-update-post.js`
   - repo-local `#updates` publication command for curated DiscordOS release/status posts
   - dry-runs by default, requires `--apply` before sending, and uses only `DISCORDOS_UPDATES_CHANNEL_ID` plus `DISCORDOS_BOT_TOKEN`
+  - consults the shared DiscordOS notification route policy before dry-run or apply publication paths proceed
   - `--apply` now runs live target admission and duplicate-title preflight before sending
   - formats normal updates as green embeds with mentions disabled
   - returns Discord response metadata, including message id, channel id, and timestamp, after successful sends
@@ -211,6 +212,7 @@ Current governed contract surface:
   - normalizes BOM and escaped line-break residue from pulled env values before validation or probing
 - `scripts/discord-update-preflight.js`
   - repo-local no-send preflight gate for curated `#updates` posts
+  - consults the shared DiscordOS notification route policy before live target probes or duplicate lookup proceed
   - validates embed payload limits, admits the configured `#updates` target, and can live-check recent messages for duplicate embed titles
   - sends no Discord messages, writes no artifacts, and renders only bounded payload metadata
 - `scripts/discord-update-draft-validator.js`

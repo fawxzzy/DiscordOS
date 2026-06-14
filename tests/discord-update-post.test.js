@@ -124,6 +124,8 @@ test("discord update post dry-run does not require target env and previews paylo
   assert.equal(result.status, "dry_run");
   assert.equal(result.sendsMessages, false);
   assert.equal(result.target.type, "none");
+  assert.equal(result.notificationRoute.routeId, "updates-publication-info");
+  assert.equal(result.notificationRoute.target, "updates");
   assert.deepEqual(result.receipt, {
     requested: true,
     written: false,
@@ -146,7 +148,42 @@ test("discord update post apply blocks without DiscordOS target env", async () =
   assert.equal(result.ok, false);
   assert.equal(result.status, "blocked");
   assert.equal(result.sendsMessages, false);
+  assert.equal(result.notificationRoute.routeId, "updates-publication-info");
   assert.deepEqual(result.reasonCodes, ["updates_target_missing"]);
+});
+
+test("discord update post apply blocks when notification route is not admitted", async () => {
+  const result = await _internals.buildDiscordUpdatePost({
+    title: "Runtime hardening closed",
+    body: "DiscordOS runtime hardening is closed.",
+    apply: true,
+    env: {
+      DISCORDOS_UPDATES_CHANNEL_ID: UPDATES_CHANNEL_ID,
+      DISCORDOS_BOT_TOKEN: "bot-secret",
+    },
+    notificationRouter: {
+      buildNotificationRouteDecision: async () => ({
+        ok: false,
+        route: null,
+        routeDecision: {
+          status: "blocked",
+        },
+        reasonCodes: ["notification_route_not_found"],
+      }),
+    },
+    fetchImpl: async () => {
+      throw new Error("fetch_should_not_run");
+    },
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "blocked");
+  assert.equal(result.sendsMessages, false);
+  assert.deepEqual(result.reasonCodes, [
+    "notification_route_not_admitted",
+    "notification_route_not_found",
+  ]);
+  assert.equal(result.notificationRoute.ok, false);
 });
 
 test("discord update post sends bot-channel payload with DiscordOS env only", async () => {
@@ -211,6 +248,8 @@ test("discord update post sends bot-channel payload with DiscordOS env only", as
   assert.equal(result.messageId, "1516000000000000000");
   assert.equal(result.channelId, UPDATES_CHANNEL_ID);
   assert.equal(result.timestamp, "2026-06-13T20:00:00.000000+00:00");
+  assert.equal(result.notificationRoute.routeId, "updates-publication-info");
+  assert.equal(result.notificationRoute.targetEnv, "DISCORDOS_UPDATES_CHANNEL_ID");
   assert.equal(result.preflight.status, "ready");
   assert.equal(result.preflight.duplicateCheck.status, "not_found");
   assert.equal(requests.length, 3);

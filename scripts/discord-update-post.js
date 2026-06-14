@@ -3,6 +3,7 @@ const path = require("node:path");
 const {
   _internals: targetAdmissionInternals,
 } = require("./discord-update-target-admission");
+const { _internals: notificationRouterInternals } = require("./discordos-notification-router");
 
 const DISCORD_API_BASE = "https://discord.com/api/v10";
 const UPDATE_EMBED_COLOR = 5763719;
@@ -201,6 +202,26 @@ function getUpdateTarget(env = process.env) {
   return {
     configured: false,
     type: "none",
+  };
+}
+
+async function buildUpdateNotificationRoute({
+  notificationRouter = notificationRouterInternals,
+} = {}) {
+  const routeDecision = await notificationRouter.buildNotificationRouteDecision({
+    source: "updates",
+    type: "discordos.updates.publication",
+    severity: "info",
+  });
+
+  return {
+    ok: routeDecision.ok,
+    status: routeDecision.routeDecision.status,
+    routeId: routeDecision.route?.id || null,
+    target: routeDecision.route?.target || null,
+    targetEnv: routeDecision.route?.targetEnv || null,
+    fallbackTargetEnv: routeDecision.route?.fallbackTargetEnv || null,
+    reasonCodes: routeDecision.reasonCodes,
   };
 }
 
@@ -428,6 +449,7 @@ async function buildDiscordUpdatePost({
   env = process.env,
   fetchImpl = fetch,
   cwd = process.cwd(),
+  notificationRouter = notificationRouterInternals,
 }) {
   const resolvedBody = await resolveBody({
     body,
@@ -440,6 +462,7 @@ async function buildDiscordUpdatePost({
     body: resolvedBody,
   });
   const target = getUpdateTarget(env);
+  const notificationRoute = await buildUpdateNotificationRoute({ notificationRouter });
 
   if (!apply) {
     return {
@@ -448,7 +471,26 @@ async function buildDiscordUpdatePost({
       sendsMessages: false,
       status: "dry_run",
       target,
+      notificationRoute,
       reasonCodes: ["apply_flag_not_set"],
+      receipt: {
+        requested: hasValue(receiptFile),
+        written: false,
+        path: receiptFile || null,
+      },
+      payloadPreview: payload,
+    };
+  }
+
+  if (!notificationRoute.ok) {
+    return {
+      ok: false,
+      destructive: false,
+      sendsMessages: false,
+      status: "blocked",
+      target,
+      notificationRoute,
+      reasonCodes: ["notification_route_not_admitted", ...notificationRoute.reasonCodes],
       receipt: {
         requested: hasValue(receiptFile),
         written: false,
@@ -465,6 +507,7 @@ async function buildDiscordUpdatePost({
       sendsMessages: false,
       status: "blocked",
       target,
+      notificationRoute,
       reasonCodes: ["updates_target_missing"],
       receipt: {
         requested: hasValue(receiptFile),
@@ -488,6 +531,7 @@ async function buildDiscordUpdatePost({
       sendsMessages: false,
       status: "preflight_blocked",
       target,
+      notificationRoute,
       reasonCodes: preflight.reasonCodes,
       receipt: {
         requested: hasValue(receiptFile),
@@ -512,6 +556,7 @@ async function buildDiscordUpdatePost({
     sendsMessages: result.ok,
     status: result.ok ? "sent" : "failed",
     target,
+    notificationRoute,
     httpStatus: result.status,
     messageId: result.messageId,
     channelId: result.channelId,
@@ -566,6 +611,8 @@ function renderMarkdown(result) {
     `- status: \`${result.status}\``,
     `- target type: \`${result.target.type}\``,
     `- target configured: \`${result.target.configured ? "true" : "false"}\``,
+    `- notification route: \`${result.notificationRoute?.routeId || "none"}\``,
+    `- notification route target: \`${result.notificationRoute?.target || "none"}\``,
     `- reason codes: \`${result.reasonCodes.join(",") || "none"}\``,
   ];
 
@@ -637,6 +684,7 @@ module.exports = {
     validatePayloadInputs,
     buildDiscordUpdatePayload,
     getUpdateTarget,
+    buildUpdateNotificationRoute,
     sendDiscordBotChannel,
     fetchRecentDiscordMessages,
     getMessageEmbedTitle,
