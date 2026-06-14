@@ -50,12 +50,26 @@ async function writeDraft(markdown) {
   return dir;
 }
 
+async function writeMarkerBoard(markdown = [
+  "# Lanes And Markers",
+  "",
+  "## Active Front-Page Marker Table",
+  "",
+  "- AI Long-Run Batch Orchestration: `49%`",
+].join("\n")) {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "discordos-draft-markers-"));
+  const markerPath = path.join(dir, "02-lanes-and-markers.md");
+  await fs.writeFile(markerPath, markdown, "utf8");
+  return markerPath;
+}
+
 test("discord update draft validator args default to update post section", () => {
   assert.deepEqual(_internals.parseArgs([]), {
     json: false,
     title: null,
     bodyFile: null,
     bodySection: _internals.DEFAULT_BODY_SECTION,
+    markers: [],
   });
 });
 
@@ -69,12 +83,15 @@ test("discord update draft validator parses title body file section and json", (
       "docs/ops/draft.md",
       "--body-section",
       "Update Post",
+      "--marker",
+      "AI Long-Run Batch Orchestration",
     ]),
     {
       json: true,
       title: "DiscordOS Example Closed",
       bodyFile: "docs/ops/draft.md",
       bodySection: "Update Post",
+      markers: ["AI Long-Run Batch Orchestration"],
     }
   );
 });
@@ -86,9 +103,12 @@ test("discord update draft validator extracts durable receipt links", () => {
 });
 
 test("discord update draft validator passes a complete update receipt", async () => {
+  const markerFilePath = await writeMarkerBoard();
   const result = await _internals.buildDiscordUpdateDraftValidation({
     title: "DiscordOS Example Closed",
     bodyFile: "docs/ops/draft.md",
+    markers: ["AI Long-Run Batch Orchestration"],
+    markerFilePath,
     cwd: await writeDraft(validDraftMarkdown()),
   });
 
@@ -98,6 +118,7 @@ test("discord update draft validator passes a complete update receipt", async ()
   assert.equal(result.sendsMessages, false);
   assert.equal(result.writesArtifacts, false);
   assert.equal(result.payload.status, "valid");
+  assert.equal(result.payload.markerProgress.summary.markerCount, 1);
   assert.equal(result.bodyAnchors.ok, true);
   assert.equal(result.receiptLinks.count, 1);
   assert.equal(result.publicSafety.ok, true);

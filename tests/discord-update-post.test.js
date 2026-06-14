@@ -5,6 +5,7 @@ const path = require("node:path");
 const test = require("node:test");
 
 const { _internals } = require("../scripts/discord-update-post");
+const { _internals: markerInternals } = require("../scripts/discordos-workflow-marker-progress");
 
 const UPDATES_CHANNEL_ID = "1504671871512346695";
 
@@ -33,6 +34,31 @@ function message({
   };
 }
 
+function markerBoardMarkdown() {
+  return [
+    "# Lanes And Markers",
+    "",
+    "## Active Front-Page Marker Table",
+    "",
+    "- AI Long-Run Batch Orchestration: `49%`",
+    "",
+    "## Supporting Open Markers",
+    "",
+    "- Manual Deploy Exception Burn-Down: `84%`",
+    "",
+    "## Closed / Locked Ratchets",
+    "",
+    "- Duplicate Surface Decommission: `100%`",
+  ].join("\n");
+}
+
+async function writeMarkerBoard(markdown = markerBoardMarkdown()) {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "discordos-marker-board-"));
+  const markerPath = path.join(dir, "02-lanes-and-markers.md");
+  await fs.writeFile(markerPath, markdown, "utf8");
+  return markerPath;
+}
+
 test("discord update post args default to dry-run publication", () => {
   assert.deepEqual(_internals.parseArgs([]), {
     json: false,
@@ -41,6 +67,7 @@ test("discord update post args default to dry-run publication", () => {
     bodyFile: null,
     bodySection: null,
     receiptFile: null,
+    markers: [],
     apply: false,
   });
 });
@@ -57,6 +84,10 @@ test("discord update post args parse title body file section receipt and apply",
       "Update Post",
       "--receipt-file",
       "docs/ops/receipt.md",
+      "--marker",
+      "AI Long-Run Batch Orchestration",
+      "--marker",
+      "Manual Deploy Exception Burn-Down",
       "--apply",
     ]),
     {
@@ -66,9 +97,32 @@ test("discord update post args parse title body file section receipt and apply",
       bodyFile: "docs/ops/post.md",
       bodySection: "Update Post",
       receiptFile: "docs/ops/receipt.md",
+      markers: [
+        "AI Long-Run Batch Orchestration",
+        "Manual Deploy Exception Burn-Down",
+      ],
       apply: true,
     }
   );
+});
+
+test("workflow marker progress resolves open and closed marker snapshots", async () => {
+  const progress = await markerInternals.resolveWorkflowMarkerProgress({
+    markers: [
+      "AI Long-Run Batch Orchestration",
+      "Duplicate Surface Decommission",
+    ],
+    markerFilePath: await writeMarkerBoard(),
+  });
+
+  assert(progress.sourceRef.endsWith("02-lanes-and-markers.md"));
+  assert.equal(progress.summary.markerCount, 2);
+  assert.equal(progress.summary.openMarkerCount, 1);
+  assert.equal(progress.summary.closedMarkerCount, 1);
+  assert.equal(progress.summary.lowestCompletionPercent, 49);
+  assert.equal(progress.summary.highestCompletionPercent, 100);
+  assert.deepEqual(progress.markers[0].sectionLabels, ["active front-page"]);
+  assert.deepEqual(progress.markers[1].sectionLabels, ["closed / locked"]);
 });
 
 test("discord update post extracts a named markdown section", () => {
@@ -109,12 +163,43 @@ test("discord update post payload is green embed with mentions disabled", () => 
   assert.deepEqual(payload.allowed_mentions, { parse: [] });
 });
 
+test("discord update post payload appends workflow marker progress", () => {
+  const payload = _internals.buildDiscordUpdatePayload({
+    title: "Runtime hardening closed",
+    body: "DiscordOS runtime hardening is closed.",
+    markerProgress: {
+      sourceRef: "docs/atlas-book/02-lanes-and-markers.md",
+      markers: [
+        {
+          name: "AI Long-Run Batch Orchestration",
+          completionPercent: 49,
+          sectionLabels: ["active front-page"],
+        },
+      ],
+      summary: {
+        markerCount: 1,
+        openMarkerCount: 1,
+        closedMarkerCount: 0,
+        lowestCompletionPercent: 49,
+        highestCompletionPercent: 49,
+      },
+    },
+  });
+
+  assert(payload.embeds[0].description.includes("## Workflow Markers"));
+  assert(payload.embeds[0].description.includes("AI Long-Run Batch Orchestration"));
+  assert(payload.embeds[0].description.includes("49%"));
+});
+
 test("discord update post dry-run does not require target env and previews payload", async () => {
+  const markerFilePath = await writeMarkerBoard();
   const result = await _internals.buildDiscordUpdatePost({
     title: "Runtime hardening closed",
     body: "DiscordOS runtime hardening is closed.",
+    markers: ["AI Long-Run Batch Orchestration"],
     env: {},
     receiptFile: "docs/ops/receipt.md",
+    markerFilePath,
     fetchImpl: async () => {
       throw new Error("fetch_should_not_run");
     },
@@ -126,6 +211,8 @@ test("discord update post dry-run does not require target env and previews paylo
   assert.equal(result.target.type, "none");
   assert.equal(result.notificationRoute.routeId, "updates-publication-info");
   assert.equal(result.notificationRoute.target, "updates");
+  assert.equal(result.markerProgress.summary.markerCount, 1);
+  assert(result.payloadPreview.embeds[0].description.includes("## Workflow Markers"));
   assert.deepEqual(result.receipt, {
     requested: true,
     written: false,
@@ -354,12 +441,25 @@ test("discord update post builds bounded receipt block from sent result", () => 
     channelId: "123",
     messageId: "1516000000000000000",
     timestamp: "2026-06-13T20:00:00.000000+00:00",
+    markerProgress: {
+      markers: [
+        {
+          name: "AI Long-Run Batch Orchestration",
+          completionPercent: 49,
+          sectionLabels: ["active front-page"],
+        },
+      ],
+      summary: {
+        markerCount: 1,
+      },
+    },
   });
 
   assert(block.includes(_internals.RECEIPT_BLOCK_START));
   assert(block.includes("## Discord Publication"));
   assert(block.includes("message id: `1516000000000000000`"));
   assert(block.includes("mentions disabled: `true`"));
+  assert(block.includes("workflow marker: `AI Long-Run Batch Orchestration` `49%` `active front-page`"));
   assert(block.includes(_internals.RECEIPT_BLOCK_END));
 });
 
@@ -526,6 +626,20 @@ test("discord update post renders markdown without target values", () => {
       written: true,
       path: "docs/ops/receipt.md",
     },
+    markerProgress: {
+      markers: [
+        {
+          name: "AI Long-Run Batch Orchestration",
+          completionPercent: 49,
+          sectionLabels: ["active front-page"],
+        },
+      ],
+      summary: {
+        markerCount: 1,
+        lowestCompletionPercent: 49,
+        highestCompletionPercent: 49,
+      },
+    },
     payloadPreview: {
       embeds: [
         {
@@ -542,5 +656,6 @@ test("discord update post renders markdown without target values", () => {
   assert(rendered.includes("timestamp: `2026-06-13T20:00:00.000000+00:00`"));
   assert(rendered.includes("receipt file: `docs/ops/receipt.md`"));
   assert(rendered.includes("receipt written: `true`"));
+  assert(rendered.includes("workflow marker count: `1`"));
   assert(!rendered.includes("bot-secret"));
 });

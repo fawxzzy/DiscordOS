@@ -8,6 +8,7 @@ const {
   _internals: targetAdmissionInternals,
 } = require("./discord-update-target-admission");
 const { _internals: notificationRouterInternals } = require("./discordos-notification-router");
+const { _internals: markerProgressInternals } = require("./discordos-workflow-marker-progress");
 
 const DEFAULT_LIMIT = updateLookupInternals.DEFAULT_LIMIT;
 const DEFAULT_EXPECTED_CHANNEL_NAME = targetAdmissionInternals.DEFAULT_EXPECTED_CHANNEL_NAME;
@@ -21,6 +22,7 @@ function parseArgs(args) {
     body: null,
     bodyFile: null,
     bodySection: null,
+    markers: [],
     limit: DEFAULT_LIMIT,
   };
 
@@ -65,6 +67,13 @@ function parseArgs(args) {
       }
       options.bodySection = value.trim();
       index += 1;
+    } else if (arg === "--marker") {
+      const value = args[index + 1];
+      if (typeof value !== "string" || value.trim().length === 0) {
+        throw new Error("missing_marker_value");
+      }
+      options.markers.push(value.trim());
+      index += 1;
     } else if (arg === "--limit") {
       const value = Number.parseInt(args[index + 1], 10);
       if (!Number.isInteger(value) || value < 1 || value > 100) {
@@ -84,7 +93,16 @@ function normalizeReason(error) {
   return error instanceof Error ? error.message : String(error);
 }
 
-async function buildPayloadCheck({ title, body, bodyFile, bodySection, cwd }) {
+async function buildPayloadCheck({
+  title,
+  body,
+  bodyFile,
+  bodySection,
+  markers = [],
+  cwd,
+  markerFilePath = markerProgressInternals.DEFAULT_MARKER_FILE_PATH,
+  fsImpl,
+}) {
   try {
     const resolvedBody = await updatePostInternals.resolveBody({
       body,
@@ -92,9 +110,15 @@ async function buildPayloadCheck({ title, body, bodyFile, bodySection, cwd }) {
       bodySection,
       cwd,
     });
+    const markerProgress = await markerProgressInternals.resolveWorkflowMarkerProgress({
+      markers,
+      markerFilePath,
+      fsImpl,
+    });
     const payload = updatePostInternals.buildDiscordUpdatePayload({
       title,
       body: resolvedBody,
+      markerProgress,
     });
 
     return {
@@ -104,6 +128,7 @@ async function buildPayloadCheck({ title, body, bodyFile, bodySection, cwd }) {
       title: payload.embeds[0].title,
       bodyChars: payload.embeds[0].description.length,
       embedColor: payload.embeds[0].color,
+      markerProgress,
       mentionsDisabled: Array.isArray(payload.allowed_mentions?.parse)
         && payload.allowed_mentions.parse.length === 0,
     };
@@ -115,6 +140,7 @@ async function buildPayloadCheck({ title, body, bodyFile, bodySection, cwd }) {
       title: updatePostInternals.hasValue(title) ? String(title).trim() : null,
       bodyChars: null,
       embedColor: updatePostInternals.UPDATE_EMBED_COLOR,
+      markerProgress: null,
       mentionsDisabled: true,
     };
   }
@@ -269,12 +295,15 @@ async function buildDiscordUpdatePreflight({
   body,
   bodyFile,
   bodySection,
+  markers = [],
   limit = DEFAULT_LIMIT,
   probeLive = false,
   expectedName = DEFAULT_EXPECTED_CHANNEL_NAME,
   env = process.env,
   fetchImpl = fetch,
   cwd = process.cwd(),
+  markerFilePath = markerProgressInternals.DEFAULT_MARKER_FILE_PATH,
+  fsImpl,
   notificationRouter = notificationRouterInternals,
 } = {}) {
   const payload = await buildPayloadCheck({
@@ -282,7 +311,10 @@ async function buildDiscordUpdatePreflight({
     body,
     bodyFile,
     bodySection,
+    markers,
     cwd,
+    markerFilePath,
+    fsImpl,
   });
   const notificationRoute = await buildUpdateNotificationRoute({ notificationRouter });
   const targetAdmission = notificationRoute.ok
@@ -355,6 +387,7 @@ function renderMarkdown(result) {
     `- payload status: \`${result.payload.status}\``,
     `- payload title: \`${result.payload.title || "unknown"}\``,
     `- payload body chars: \`${result.payload.bodyChars ?? "unknown"}\``,
+    `- workflow marker count: \`${result.payload.markerProgress?.summary?.markerCount ?? 0}\``,
     `- mentions disabled: \`${result.payload.mentionsDisabled ? "true" : "false"}\``,
     `- target admitted: \`${result.targetAdmission.ok ? "true" : "false"}\``,
     `- target type: \`${result.targetAdmission.target.type}\``,

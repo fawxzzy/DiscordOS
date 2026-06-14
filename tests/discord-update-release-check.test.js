@@ -64,6 +64,19 @@ async function writeDraft(markdown) {
   return dir;
 }
 
+async function writeMarkerBoard(markdown = [
+  "# Lanes And Markers",
+  "",
+  "## Active Front-Page Marker Table",
+  "",
+  "- AI Long-Run Batch Orchestration: `49%`",
+].join("\n")) {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "discordos-release-markers-"));
+  const markerPath = path.join(dir, "02-lanes-and-markers.md");
+  await fs.writeFile(markerPath, markdown, "utf8");
+  return markerPath;
+}
+
 function liveFetch({ duplicate = false } = {}) {
   return async (url, init) => {
     assert.equal(init.method, "GET");
@@ -96,6 +109,7 @@ test("discord update release check args default to update post release check", (
     title: null,
     bodyFile: null,
     bodySection: _internals.DEFAULT_BODY_SECTION,
+    markers: [],
     limit: _internals.DEFAULT_LIMIT,
   });
 });
@@ -110,6 +124,8 @@ test("discord update release check parses title body file section limit and json
       "docs/ops/draft.md",
       "--body-section",
       "Update Post",
+      "--marker",
+      "AI Long-Run Batch Orchestration",
       "--limit",
       "10",
     ]),
@@ -118,15 +134,19 @@ test("discord update release check parses title body file section limit and json
       title: "DiscordOS Example Ready",
       bodyFile: "docs/ops/draft.md",
       bodySection: "Update Post",
+      markers: ["AI Long-Run Batch Orchestration"],
       limit: 10,
     }
   );
 });
 
 test("discord update release check passes when draft and live preflight pass", async () => {
+  const markerFilePath = await writeMarkerBoard();
   const result = await _internals.buildDiscordUpdateReleaseCheck({
     title: "DiscordOS Example Ready",
     bodyFile: "docs/ops/draft.md",
+    markers: ["AI Long-Run Batch Orchestration"],
+    markerFilePath,
     cwd: await writeDraft(validDraftMarkdown()),
     env: {
       DISCORDOS_UPDATES_CHANNEL_ID: UPDATES_CHANNEL_ID,
@@ -145,6 +165,7 @@ test("discord update release check passes when draft and live preflight pass", a
   assert.equal(result.preflight.duplicateCheck.status, "not_found");
   assert.equal(result.event.type, "discordos.updates.release_check_ready");
   assert(result.nextCommand.includes("npm run ops:discord:update-post"));
+  assert(result.nextCommand.includes('--marker "AI Long-Run Batch Orchestration"'));
 });
 
 test("discord update release check blocks duplicate live title without sending", async () => {

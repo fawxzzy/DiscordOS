@@ -1,4 +1,7 @@
 const assert = require("node:assert/strict");
+const fs = require("node:fs/promises");
+const os = require("node:os");
+const path = require("node:path");
 const test = require("node:test");
 
 const { _internals } = require("../scripts/discord-update-preflight");
@@ -24,6 +27,23 @@ function message({
   };
 }
 
+function markerBoardMarkdown() {
+  return [
+    "# Lanes And Markers",
+    "",
+    "## Active Front-Page Marker Table",
+    "",
+    "- AI Long-Run Batch Orchestration: `49%`",
+  ].join("\n");
+}
+
+async function writeMarkerBoard(markdown = markerBoardMarkdown()) {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "discordos-preflight-markers-"));
+  const markerPath = path.join(dir, "02-lanes-and-markers.md");
+  await fs.writeFile(markerPath, markdown, "utf8");
+  return markerPath;
+}
+
 test("discord update preflight args default to local no-send validation", () => {
   assert.deepEqual(_internals.parseArgs([]), {
     json: false,
@@ -33,6 +53,7 @@ test("discord update preflight args default to local no-send validation", () => 
     body: null,
     bodyFile: null,
     bodySection: null,
+    markers: [],
     limit: _internals.DEFAULT_LIMIT,
   });
 });
@@ -50,6 +71,8 @@ test("discord update preflight parses post body target and lookup options", () =
       "docs/ops/post.md",
       "--body-section",
       "Update Post",
+      "--marker",
+      "AI Long-Run Batch Orchestration",
       "--limit",
       "10",
     ]),
@@ -61,6 +84,7 @@ test("discord update preflight parses post body target and lookup options", () =
       body: null,
       bodyFile: "docs/ops/post.md",
       bodySection: "Update Post",
+      markers: ["AI Long-Run Batch Orchestration"],
       limit: 10,
     }
   );
@@ -92,9 +116,12 @@ test("discord update preflight reports invalid payload without throwing", async 
 });
 
 test("discord update preflight passes locally and skips live duplicate lookup", async () => {
+  const markerFilePath = await writeMarkerBoard();
   const result = await _internals.buildDiscordUpdatePreflight({
     title: "DiscordOS Runtime Hardening Closed",
     body: "Runtime hardening is closed.",
+    markers: ["AI Long-Run Batch Orchestration"],
+    markerFilePath,
     env: {
       DISCORDOS_UPDATES_CHANNEL_ID: "1504671871512346695",
       DISCORDOS_BOT_TOKEN: "bot-secret",
@@ -107,9 +134,10 @@ test("discord update preflight passes locally and skips live duplicate lookup", 
   assert.equal(result.ok, true);
   assert.equal(result.status, "ready");
   assert.equal(result.payload.status, "valid");
-  assert.equal(result.payload.bodyChars, "Runtime hardening is closed.".length);
+  assert(result.payload.bodyChars > "Runtime hardening is closed.".length);
   assert.equal(result.notificationRoute.routeId, "updates-publication-info");
   assert.equal(result.notificationRoute.target, "updates");
+  assert.equal(result.payload.markerProgress.summary.markerCount, 1);
   assert.equal(result.targetAdmission.liveProbe.status, "skipped");
   assert.equal(result.duplicateCheck.status, "skipped");
   assert.equal(result.event.type, "discordos.updates.preflight_ready");

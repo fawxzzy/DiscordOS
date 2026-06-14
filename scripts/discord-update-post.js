@@ -4,6 +4,7 @@ const {
   _internals: targetAdmissionInternals,
 } = require("./discord-update-target-admission");
 const { _internals: notificationRouterInternals } = require("./discordos-notification-router");
+const { _internals: markerProgressInternals } = require("./discordos-workflow-marker-progress");
 
 const DISCORD_API_BASE = "https://discord.com/api/v10";
 const UPDATE_EMBED_COLOR = 5763719;
@@ -21,6 +22,7 @@ function parseArgs(args) {
     bodyFile: null,
     bodySection: null,
     receiptFile: null,
+    markers: [],
     apply: false,
   };
 
@@ -67,6 +69,13 @@ function parseArgs(args) {
       }
       options.receiptFile = value.trim();
       index += 1;
+    } else if (arg === "--marker") {
+      const value = args[index + 1];
+      if (typeof value !== "string" || value.trim().length === 0) {
+        throw new Error("missing_marker_value");
+      }
+      options.markers.push(value.trim());
+      index += 1;
     } else {
       throw new Error(`unsupported_argument:${arg}`);
     }
@@ -88,6 +97,13 @@ function normalizeMarkdownBody(value) {
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n")
     .trim();
+}
+
+function buildDiscordUpdateBody({ body, markerProgress }) {
+  return markerProgressInternals.appendWorkflowMarkerMarkdown(
+    normalizeMarkdownBody(body),
+    markerProgress
+  );
 }
 
 function extractMarkdownSection(markdown, sectionName) {
@@ -170,9 +186,12 @@ function validatePayloadInputs({ title, body }) {
   }
 }
 
-function buildDiscordUpdatePayload({ title, body }) {
+function buildDiscordUpdatePayload({ title, body, markerProgress = null }) {
   const normalizedTitle = String(title || "").trim();
-  const normalizedBody = normalizeMarkdownBody(body);
+  const normalizedBody = buildDiscordUpdateBody({
+    body,
+    markerProgress,
+  });
   validatePayloadInputs({
     title: normalizedTitle,
     body: normalizedBody,
@@ -389,7 +408,7 @@ function buildDiscordPublicationReceiptBlock(result) {
     throw new Error("receipt_requires_sent_update");
   }
 
-  return [
+  const lines = [
     RECEIPT_BLOCK_START,
     "## Discord Publication",
     "",
@@ -400,8 +419,19 @@ function buildDiscordPublicationReceiptBlock(result) {
     `- message id: \`${result.messageId || "unknown"}\``,
     `- timestamp: \`${result.timestamp || "unknown"}\``,
     "- mentions disabled: `true`",
-    RECEIPT_BLOCK_END,
-  ].join("\n");
+  ];
+
+  if (result.markerProgress?.summary?.markerCount) {
+    lines.push(`- workflow marker count: \`${result.markerProgress.summary.markerCount}\``);
+    for (const marker of result.markerProgress.markers) {
+      lines.push(
+        `- workflow marker: \`${marker.name}\` \`${marker.completionPercent}%\` \`${marker.sectionLabels.join(",")}\``
+      );
+    }
+  }
+
+  lines.push(RECEIPT_BLOCK_END);
+  return lines.join("\n");
 }
 
 function upsertDiscordPublicationReceiptBlock(markdown, receiptBlock) {
@@ -445,10 +475,13 @@ async function buildDiscordUpdatePost({
   bodyFile,
   bodySection,
   receiptFile,
+  markers = [],
   apply = false,
   env = process.env,
   fetchImpl = fetch,
   cwd = process.cwd(),
+  markerFilePath = markerProgressInternals.DEFAULT_MARKER_FILE_PATH,
+  fsImpl = fs,
   notificationRouter = notificationRouterInternals,
 }) {
   const resolvedBody = await resolveBody({
@@ -457,9 +490,15 @@ async function buildDiscordUpdatePost({
     bodySection,
     cwd,
   });
+  const markerProgress = await markerProgressInternals.resolveWorkflowMarkerProgress({
+    markers,
+    markerFilePath,
+    fsImpl,
+  });
   const payload = buildDiscordUpdatePayload({
     title,
     body: resolvedBody,
+    markerProgress,
   });
   const target = getUpdateTarget(env);
   const notificationRoute = await buildUpdateNotificationRoute({ notificationRouter });
@@ -473,6 +512,7 @@ async function buildDiscordUpdatePost({
       target,
       notificationRoute,
       reasonCodes: ["apply_flag_not_set"],
+      markerProgress,
       receipt: {
         requested: hasValue(receiptFile),
         written: false,
@@ -491,6 +531,7 @@ async function buildDiscordUpdatePost({
       target,
       notificationRoute,
       reasonCodes: ["notification_route_not_admitted", ...notificationRoute.reasonCodes],
+      markerProgress,
       receipt: {
         requested: hasValue(receiptFile),
         written: false,
@@ -509,6 +550,7 @@ async function buildDiscordUpdatePost({
       target,
       notificationRoute,
       reasonCodes: ["updates_target_missing"],
+      markerProgress,
       receipt: {
         requested: hasValue(receiptFile),
         written: false,
@@ -533,6 +575,7 @@ async function buildDiscordUpdatePost({
       target,
       notificationRoute,
       reasonCodes: preflight.reasonCodes,
+      markerProgress,
       receipt: {
         requested: hasValue(receiptFile),
         written: false,
@@ -562,6 +605,7 @@ async function buildDiscordUpdatePost({
     channelId: result.channelId,
     timestamp: result.timestamp,
     reasonCodes: result.ok ? [] : ["updates_post_request_failed"],
+    markerProgress,
     preflight,
   };
 
@@ -636,6 +680,17 @@ function renderMarkdown(result) {
     lines.push(`- payload title: \`${result.payloadPreview.embeds[0].title}\``);
     lines.push(`- payload body chars: \`${result.payloadPreview.embeds[0].description.length}\``);
   }
+  if (result.markerProgress?.summary?.markerCount) {
+    lines.push(`- workflow marker count: \`${result.markerProgress.summary.markerCount}\``);
+    lines.push(
+      `- workflow marker completion range: \`${result.markerProgress.summary.lowestCompletionPercent}-${result.markerProgress.summary.highestCompletionPercent}%\``
+    );
+    for (const marker of result.markerProgress.markers) {
+      lines.push(
+        `- workflow marker: \`${marker.name}\` \`${marker.completionPercent}%\` sections=\`${marker.sectionLabels.join(",")}\``
+      );
+    }
+  }
   if (result.preflight) {
     lines.push(`- preflight status: \`${result.preflight.status}\``);
     lines.push(`- preflight target admitted: \`${result.preflight.targetAdmission.ok ? "true" : "false"}\``);
@@ -679,6 +734,7 @@ module.exports = {
     hasValue,
     resolveRepoPath,
     normalizeMarkdownBody,
+    buildDiscordUpdateBody,
     extractMarkdownSection,
     resolveBody,
     validatePayloadInputs,

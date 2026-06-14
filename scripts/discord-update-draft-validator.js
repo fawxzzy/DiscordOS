@@ -2,6 +2,7 @@ const fs = require("node:fs/promises");
 const {
   _internals: updatePostInternals,
 } = require("./discord-update-post");
+const { _internals: markerProgressInternals } = require("./discordos-workflow-marker-progress");
 
 const DEFAULT_BODY_SECTION = "Update Post";
 const REQUIRED_BODY_ANCHORS = [
@@ -24,6 +25,7 @@ function parseArgs(args) {
     title: null,
     bodyFile: null,
     bodySection: DEFAULT_BODY_SECTION,
+    markers: [],
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -50,6 +52,13 @@ function parseArgs(args) {
         throw new Error("missing_body_section_value");
       }
       options.bodySection = value.trim();
+      index += 1;
+    } else if (arg === "--marker") {
+      const value = args[index + 1];
+      if (typeof value !== "string" || value.trim().length === 0) {
+        throw new Error("missing_marker_value");
+      }
+      options.markers.push(value.trim());
       index += 1;
     } else {
       throw new Error(`unsupported_argument:${arg}`);
@@ -99,11 +108,23 @@ function validatePublicSafeText({ title, body, markdown }) {
     .map(({ code }) => code);
 }
 
-async function buildPayloadCheck({ title, body }) {
+async function buildPayloadCheck({
+  title,
+  body,
+  markers = [],
+  markerFilePath = markerProgressInternals.DEFAULT_MARKER_FILE_PATH,
+  fsImpl = fs,
+}) {
   try {
+    const markerProgress = await markerProgressInternals.resolveWorkflowMarkerProgress({
+      markers,
+      markerFilePath,
+      fsImpl,
+    });
     const payload = updatePostInternals.buildDiscordUpdatePayload({
       title,
       body,
+      markerProgress,
     });
     return {
       ok: true,
@@ -113,6 +134,7 @@ async function buildPayloadCheck({ title, body }) {
       bodyChars: payload.embeds[0].description.length,
       maxTitleChars: updatePostInternals.MAX_EMBED_TITLE_LENGTH,
       maxBodyChars: updatePostInternals.MAX_EMBED_DESCRIPTION_LENGTH,
+      markerProgress,
       mentionsDisabled: Array.isArray(payload.allowed_mentions?.parse)
         && payload.allowed_mentions.parse.length === 0,
     };
@@ -125,6 +147,7 @@ async function buildPayloadCheck({ title, body }) {
       bodyChars: hasValue(body) ? body.length : null,
       maxTitleChars: updatePostInternals.MAX_EMBED_TITLE_LENGTH,
       maxBodyChars: updatePostInternals.MAX_EMBED_DESCRIPTION_LENGTH,
+      markerProgress: null,
       mentionsDisabled: true,
     };
   }
@@ -152,16 +175,25 @@ async function buildDiscordUpdateDraftValidation({
   title,
   bodyFile,
   bodySection = DEFAULT_BODY_SECTION,
+  markers = [],
   cwd = process.cwd(),
+  markerFilePath = markerProgressInternals.DEFAULT_MARKER_FILE_PATH,
+  fsImpl = fs,
 } = {}) {
   if (!hasValue(bodyFile)) {
     throw new Error("missing_body_file");
   }
 
   const resolvedBodyFile = updatePostInternals.resolveRepoPath(bodyFile, cwd);
-  const markdown = await fs.readFile(resolvedBodyFile, "utf8");
+  const markdown = await fsImpl.readFile(resolvedBodyFile, "utf8");
   const body = updatePostInternals.extractMarkdownSection(markdown, bodySection);
-  const payload = await buildPayloadCheck({ title, body });
+  const payload = await buildPayloadCheck({
+    title,
+    body,
+    markers,
+    markerFilePath,
+    fsImpl,
+  });
   const bodyAnchorReasonCodes = validateRequiredBodyAnchors(body);
   const durableReceipts = extractDurableReceiptLinks(markdown);
   const receiptReasonCodes = [];
@@ -193,6 +225,7 @@ async function buildDiscordUpdateDraftValidation({
     status: reasonCodes.length === 0 ? "ready" : "blocked",
     bodyFile,
     bodySection,
+    markers,
     payload,
     bodyAnchors: {
       ok: bodyAnchorReasonCodes.length === 0,
@@ -234,6 +267,7 @@ function renderMarkdown(result) {
     `- payload status: \`${result.payload.status}\``,
     `- payload title: \`${result.payload.title || "unknown"}\``,
     `- payload body chars: \`${result.payload.bodyChars ?? "unknown"}\``,
+    `- workflow marker count: \`${result.payload.markerProgress?.summary?.markerCount ?? 0}\``,
     `- body anchors: \`${result.bodyAnchors.ok ? "pass" : "fail"}\``,
     `- durable receipt links: \`${result.receiptLinks.count}\``,
     `- public safety: \`${result.publicSafety.ok ? "pass" : "fail"}\``,

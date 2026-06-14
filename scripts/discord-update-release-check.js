@@ -8,12 +8,19 @@ const {
 const DEFAULT_LIMIT = preflightInternals.DEFAULT_LIMIT;
 const DEFAULT_BODY_SECTION = draftValidatorInternals.DEFAULT_BODY_SECTION;
 
+function renderMarkerArgs(markers) {
+  return (Array.isArray(markers) ? markers : [])
+    .map((marker) => ` --marker "${String(marker).replace(/"/g, '\\"')}"`)
+    .join("");
+}
+
 function parseArgs(args) {
   const options = {
     json: false,
     title: null,
     bodyFile: null,
     bodySection: DEFAULT_BODY_SECTION,
+    markers: [],
     limit: DEFAULT_LIMIT,
   };
 
@@ -41,6 +48,13 @@ function parseArgs(args) {
         throw new Error("missing_body_section_value");
       }
       options.bodySection = value.trim();
+      index += 1;
+    } else if (arg === "--marker") {
+      const value = args[index + 1];
+      if (typeof value !== "string" || value.trim().length === 0) {
+        throw new Error("missing_marker_value");
+      }
+      options.markers.push(value.trim());
       index += 1;
     } else if (arg === "--limit") {
       const value = Number.parseInt(args[index + 1], 10);
@@ -89,27 +103,36 @@ async function buildDiscordUpdateReleaseCheck({
   title,
   bodyFile,
   bodySection = DEFAULT_BODY_SECTION,
+  markers = [],
   limit = DEFAULT_LIMIT,
   env = process.env,
   fetchImpl = fetch,
   cwd = process.cwd(),
+  markerFilePath,
+  fsImpl,
 } = {}) {
   const draft = await draftValidatorInternals.buildDiscordUpdateDraftValidation({
     title,
     bodyFile,
     bodySection,
+    markers,
     cwd,
+    markerFilePath,
+    fsImpl,
   });
   const preflight = draft.ok
     ? await preflightInternals.buildDiscordUpdatePreflight({
       title,
       bodyFile,
       bodySection,
+      markers,
       limit,
       probeLive: true,
       env,
       fetchImpl,
       cwd,
+      markerFilePath,
+      fsImpl,
     })
     : skippedPreflight("draft_validation_failed");
   const reasonCodes = [
@@ -126,12 +149,13 @@ async function buildDiscordUpdateReleaseCheck({
     title,
     bodyFile,
     bodySection,
+    markers,
     limit,
     draft,
     preflight,
     reasonCodes,
     nextCommand: draft.ok && preflight.ok
-      ? `npm run ops:discord:update-post -- --title "${title}" --body-file ${bodyFile} --body-section "${bodySection}" --apply`
+      ? `npm run ops:discord:update-post -- --title "${title}" --body-file ${bodyFile} --body-section "${bodySection}"${renderMarkerArgs(markers)} --apply`
       : null,
   };
 
@@ -202,6 +226,7 @@ module.exports = {
   _internals: {
     DEFAULT_LIMIT,
     DEFAULT_BODY_SECTION,
+    renderMarkerArgs,
     parseArgs,
     skippedPreflight,
     classifyDiscordUpdateReleaseCheckEvent,
