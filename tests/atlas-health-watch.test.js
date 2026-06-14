@@ -87,6 +87,79 @@ test("atlas health watch estimates monthly checks from configured schedule", () 
   ]);
 });
 
+test("atlas health watch can reduce configured target coverage by env allowlist", async () => {
+  const requests = [];
+  const result = await _internals.buildAtlasHealthWatch({
+    env: {
+      ...configEnv([
+        {
+          id: "runtime",
+          label: "Runtime",
+          owner: "DiscordOS",
+          url: "https://example.test/api/runtime-health",
+          kind: "json-ok",
+        },
+        {
+          id: "fitness",
+          label: "Fitness",
+          owner: "Fitness",
+          url: "https://fitness.example.test",
+          kind: "http-ok",
+        },
+        {
+          id: "trove",
+          label: "Trove",
+          owner: "Trove",
+          url: "https://trove.example.test",
+          kind: "http-ok",
+        },
+      ]),
+      DISCORDOS_ATLAS_HEALTH_TARGET_ALLOWLIST: "runtime,fitness",
+    },
+    fetchImpl: async (url) => {
+      requests.push(String(url));
+      if (String(url).endsWith("/api/runtime-health")) {
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }
+      return new Response("<html></html>", { status: 200 });
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.targetCount, 2);
+  assert.equal(result.targetFilter.active, true);
+  assert.equal(result.targetFilter.originalTargetCount, 3);
+  assert.deepEqual(result.targetFilter.allowlistIds, ["runtime", "fitness"]);
+  assert.equal(result.usageEstimate.originalTargetCount, 3);
+  assert.equal(result.usageEstimate.targetFilterActive, true);
+  assert.equal(result.usageEstimate.targetChecksPerMonth, 60);
+  assert.deepEqual(requests.sort(), [
+    "https://example.test/api/runtime-health",
+    "https://fitness.example.test",
+  ]);
+});
+
+test("atlas health watch rejects unknown target filter ids", async () => {
+  await assert.rejects(
+    () => _internals.buildAtlasHealthWatch({
+      env: {
+        ...configEnv([
+          {
+            id: "runtime",
+            label: "Runtime",
+            owner: "DiscordOS",
+            url: "https://example.test/api/runtime-health",
+            kind: "json-ok",
+          },
+        ]),
+        DISCORDOS_ATLAS_HEALTH_TARGET_ALLOWLIST: "runtime,missing",
+      },
+      fetchImpl: async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    }),
+    /unknown_atlas_health_target_allowlist_id:missing/
+  );
+});
+
 test("atlas health watch skips target checks when configured schedule is not due", async () => {
   const result = await _internals.buildAtlasHealthWatch({
     env: configEnv([

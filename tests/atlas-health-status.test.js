@@ -167,6 +167,59 @@ test("atlas health status flags critical targets without sending alerts", async 
   assert(!requests.some((url) => url.includes("/channels/123/messages")));
 });
 
+test("atlas health status reports active target filters and reduced usage", async () => {
+  const status = await _internals.buildAtlasHealthStatus({
+    env: {
+      ...configEnv([
+        {
+          id: "discordos",
+          label: "DiscordOS",
+          owner: "DiscordOS",
+          url: "https://example.test/api/runtime-health",
+          kind: "json-ok",
+        },
+        {
+          id: "fitness",
+          label: "Fitness",
+          owner: "Fitness",
+          url: "https://fitness.example.test",
+          kind: "http-ok",
+        },
+        {
+          id: "trove",
+          label: "Trove",
+          owner: "Trove",
+          url: "https://trove.example.test",
+          kind: "http-ok",
+        },
+      ], {
+        cron: "0 16 * * 1-5",
+        timezone: "UTC",
+      }),
+      DISCORDOS_ATLAS_HEALTH_TARGET_ALLOWLIST: "discordos,fitness",
+      DISCORDOS_ATLAS_HEALTH_WATCH_ENABLED: "enabled",
+      DISCORDOS_ATLAS_HEALTH_ALERT_SEND: "enabled",
+      DISCORDOS_ATLAS_HEALTH_ALERT_CHANNEL_ID: "123",
+      DISCORDOS_BOT_TOKEN: "bot-token",
+    },
+    fetchImpl: async (url) => {
+      if (String(url).endsWith("/api/runtime-health")) {
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }
+      return new Response("<html></html>", { status: 200 });
+    },
+    now: new Date("2026-06-15T16:00:00.000Z"),
+  });
+
+  assert.equal(status.ok, true);
+  assert.equal(status.watch.targetCount, 2);
+  assert.equal(status.watch.targetFilter.active, true);
+  assert.equal(status.watch.targetFilter.originalTargetCount, 3);
+  assert.deepEqual(status.watch.targetFilter.allowlistIds, ["discordos", "fitness"]);
+  assert.equal(status.watch.usageEstimate.runsPerMonth, 21);
+  assert.equal(status.watch.usageEstimate.targetChecksPerMonth, 42);
+});
+
 test("atlas health status accepts runtime health alert target fallback", () => {
   const readiness = _internals.buildAlertReadiness({
     env: {
@@ -204,6 +257,14 @@ test("atlas health status renders markdown without target values", () => {
       failCount: 0,
       criticalCount: 0,
       criticalTargets: [],
+      targetFilter: {
+        active: true,
+        originalTargetCount: 3,
+        targetCount: 1,
+        allowlistIds: ["discordos"],
+        excludeIds: [],
+        reasonCodes: ["atlas_health_target_filter_active"],
+      },
       configuredSchedule: "0 16 * * *",
       runDays: [],
       timezone: "UTC",
@@ -227,6 +288,8 @@ test("atlas health status renders markdown without target values", () => {
 
   assert(rendered.includes("# ATLAS Health Status"));
   assert(rendered.includes("Alert Readiness"));
+  assert(rendered.includes("target filter active: `true`"));
+  assert(rendered.includes("allowlist targets: `discordos`"));
   assert(!rendered.includes("bot-token"));
   assert(!rendered.includes("https://"));
 });

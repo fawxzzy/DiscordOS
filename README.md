@@ -172,15 +172,17 @@ Current governed contract surface:
 - `config/atlas-health-targets.json`
   - bounded public ATLAS health watch target list for DiscordOS, Foundation, Fitness, Trove, and Mazer
   - defaults to public HTTP/JSON availability checks only; deeper project checks can be supplied through `DISCORDOS_ATLAS_HEALTH_TARGETS_JSON`
+  - target sweeps can be reduced at runtime with `DISCORDOS_ATLAS_HEALTH_TARGET_ALLOWLIST` or `DISCORDOS_ATLAS_HEALTH_TARGET_EXCLUDE`
   - defaults ATLAS cross-project sweeps to weekdays at `0 16 * * 1-5`, while the DiscordOS runtime cron remains daily
 - `scripts/atlas-health-watch.js`
   - repo-local ATLAS health watch command for critical-only multi-project availability checks
   - dry-runs by default, sends no routine clear posts, disables mentions, and suppresses identical critical alerts for 24 hours
   - can share the existing `#alerts` target or use dedicated `DISCORDOS_ATLAS_HEALTH_ALERT_*` env values
   - skips target fetches when the configured ATLAS sweep schedule is not due
+  - reports active target filters and estimates monthly checks from the filtered target count
 - `scripts/atlas-health-status.js`
   - repo-local read-only status command for ATLAS health watch posture and alert readiness
-  - checks current configured target health, local/process env arming flags, alert target shape, and usage estimate without sending Discord messages
+  - checks current configured target health, local/process env arming flags, alert target shape, active target filters, and usage estimate without sending Discord messages
 - `scripts/runtime-health-alert-target-admission.js`
   - repo-local read-only target admission command for runtime-health alert delivery
   - validates webhook and bot-channel target shape without printing target values
@@ -388,6 +390,8 @@ Current governed contract surface:
   - owner-side proof that next-work now emits concrete ranked runtime/product hardening recommendations in green steady state
 - `docs/ops/discordos-runtime-alert-drill-surface-pass-77-2026-06-14.md`
   - owner-side proof that runtime alert delivery now has a deterministic no-send critical drill surface
+- `docs/ops/discordos-atlas-health-target-filter-pass-78-2026-06-14.md`
+  - owner-side proof that ATLAS health sweeps can be reduced by env allowlist/exclude filters without editing the canonical target config
 - `docs/ops/discordos-next-work-final-followup-state-pass-69-2026-06-13.md`
   - owner-side proof that next-work now reports only the deferred scheduled cron identity proof after the final follow-up post
 
@@ -525,6 +529,8 @@ Current repo-local operator surface:
   - summarizes ATLAS health target posture, alert arming flags, alert target readiness, and next actions without sending messages
 - `npm run ops:atlas-health:status:json`
   - emits the ATLAS health status result as JSON
+- `DISCORDOS_ATLAS_HEALTH_TARGET_ALLOWLIST=discordos-runtime,fitness-web npm run ops:atlas-health:status`
+  - example of reducing the active ATLAS sweep target set without changing committed target config
 - `npm run ops:discord:update-post`
   - dry-runs a curated DiscordOS `#updates` post by default
 - `npm run ops:discord:update-post:json`
@@ -626,6 +632,7 @@ Current scheduled runtime surface:
   - runtime/operator status treats `discordos-runtime-health-scheduled-audit-proof-pass-*` receipts as scheduled proof closure and reports `continue_runtime_monitoring` after closure
   - writes sanitized private Supabase cron receipt rows only when `DISCORDOS_RUNTIME_HEALTH_CRON_AUDIT_WRITE=enabled`
   - can run the ATLAS health watch when `DISCORDOS_ATLAS_HEALTH_WATCH_ENABLED=enabled`; the default ATLAS sweep schedule is weekday-only `0 16 * * 1-5`, currently estimated at `105` target checks/month across 5 targets
+  - can reduce ATLAS target checks at runtime with `DISCORDOS_ATLAS_HEALTH_TARGET_ALLOWLIST` or `DISCORDOS_ATLAS_HEALTH_TARGET_EXCLUDE`; status reports the original target count, active target count, and filtered monthly estimate
   - ATLAS health/operator status reports weekday off-days as `cadenceStatus: schedule_not_due` with explicit run days and timezone instead of ambiguous `0` pass/fail counts
   - delivers only critical runtime-health alerts when `DISCORDOS_RUNTIME_HEALTH_ALERT_SEND=enabled`
   - delivers only critical ATLAS health alerts when `DISCORDOS_ATLAS_HEALTH_ALERT_SEND=enabled`

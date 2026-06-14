@@ -47,6 +47,17 @@ function cleanEnvValue(value) {
     .trim();
 }
 
+function parseTargetIdList(value) {
+  if (!hasValue(value)) {
+    return [];
+  }
+
+  return [...new Set(String(value)
+    .split(/[,\s]+/)
+    .map((entry) => entry.trim())
+    .filter(Boolean))];
+}
+
 function parseArgs(args) {
   const options = {
     json: false,
@@ -222,13 +233,58 @@ function normalizeConfig(config) {
   };
 }
 
-async function loadConfig({ configPath = DEFAULT_CONFIG_PATH, env = process.env, fsImpl = fs } = {}) {
-  if (hasValue(env.DISCORDOS_ATLAS_HEALTH_TARGETS_JSON)) {
-    return normalizeConfig(JSON.parse(env.DISCORDOS_ATLAS_HEALTH_TARGETS_JSON));
+function applyTargetFilters(config, env = process.env) {
+  const allowlistIds = parseTargetIdList(env.DISCORDOS_ATLAS_HEALTH_TARGET_ALLOWLIST);
+  const excludeIds = parseTargetIdList(env.DISCORDOS_ATLAS_HEALTH_TARGET_EXCLUDE);
+  const active = allowlistIds.length > 0 || excludeIds.length > 0;
+  const availableIds = new Set(config.targets.map((target) => target.id));
+  const unknownAllowlistIds = allowlistIds.filter((id) => !availableIds.has(id));
+  const unknownExcludeIds = excludeIds.filter((id) => !availableIds.has(id));
+
+  if (unknownAllowlistIds.length > 0) {
+    throw new Error(`unknown_atlas_health_target_allowlist_id:${unknownAllowlistIds.join(",")}`);
+  }
+  if (unknownExcludeIds.length > 0) {
+    throw new Error(`unknown_atlas_health_target_exclude_id:${unknownExcludeIds.join(",")}`);
   }
 
-  const raw = await fsImpl.readFile(configPath, "utf8");
-  return normalizeConfig(JSON.parse(raw));
+  const allowlist = new Set(allowlistIds);
+  const exclude = new Set(excludeIds);
+  const targets = config.targets.filter((target) => {
+    if (allowlist.size > 0 && !allowlist.has(target.id)) {
+      return false;
+    }
+    return !exclude.has(target.id);
+  });
+
+  if (targets.length === 0) {
+    throw new Error("atlas_health_targets_empty_after_filter");
+  }
+
+  return {
+    ...config,
+    targets,
+    targetFilter: {
+      active,
+      originalTargetCount: config.targets.length,
+      targetCount: targets.length,
+      allowlistIds,
+      excludeIds,
+      reasonCodes: active ? ["atlas_health_target_filter_active"] : [],
+    },
+  };
+}
+
+async function loadConfig({ configPath = DEFAULT_CONFIG_PATH, env = process.env, fsImpl = fs } = {}) {
+  let config;
+  if (hasValue(env.DISCORDOS_ATLAS_HEALTH_TARGETS_JSON)) {
+    config = normalizeConfig(JSON.parse(env.DISCORDOS_ATLAS_HEALTH_TARGETS_JSON));
+  } else {
+    const raw = await fsImpl.readFile(configPath, "utf8");
+    config = normalizeConfig(JSON.parse(raw));
+  }
+
+  return applyTargetFilters(config, env);
 }
 
 function getAlertTarget(env = process.env) {
@@ -489,6 +545,8 @@ function buildUsageEstimate(config, targetCount) {
     timezone: config.schedule?.timezone || null,
     runsPerMonth,
     targetChecksPerMonth: targetCount * runsPerMonth,
+    targetFilterActive: config.targetFilter?.active === true,
+    originalTargetCount: config.targetFilter?.originalTargetCount ?? targetCount,
     discordPosts: "0 unless a critical target fails",
   };
 }
@@ -703,6 +761,7 @@ async function buildAtlasHealthWatch({
       criticalCount: 0,
       criticalTargets: [],
       checks: [],
+      targetFilter: config.targetFilter,
       usageEstimate,
     };
 
@@ -736,6 +795,7 @@ async function buildAtlasHealthWatch({
     criticalCount: criticalTargets.length,
     criticalTargets,
     checks,
+    targetFilter: config.targetFilter,
     usageEstimate: {
       ...usageEstimate,
       discordPosts: criticalTargets.length === 0 ? "0 unless a critical target fails" : "bounded by repeat suppression",
@@ -773,6 +833,8 @@ function renderMarkdown(result) {
     `- event type: \`${result.event.type}\``,
     `- event severity: \`${result.event.severity}\``,
     `- targets: \`${result.targetCount}\``,
+    `- target filter active: \`${result.targetFilter?.active === true ? "true" : "false"}\``,
+    `- original targets: \`${result.targetFilter?.originalTargetCount ?? result.targetCount}\``,
     `- passing: \`${result.passCount}\``,
     `- failing: \`${result.failCount}\``,
     `- critical: \`${result.criticalCount}\``,
@@ -814,11 +876,13 @@ module.exports = {
     DEFAULT_SUPPRESSION_DIR,
     DEFAULT_TIMEOUT_MS,
     parseArgs,
+    parseTargetIdList,
     normalizeTarget,
     normalizeDayToken,
     runDaysFromCron,
     normalizeSchedule,
     normalizeConfig,
+    applyTargetFilters,
     loadConfig,
     getAlertTarget,
     safeUrlLabel,
