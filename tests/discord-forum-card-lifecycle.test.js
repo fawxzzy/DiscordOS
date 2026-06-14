@@ -5,6 +5,7 @@ const path = require("node:path");
 const test = require("node:test");
 
 const { _internals } = require("../scripts/discord-forum-card-lifecycle");
+const { _internals: updatePostInternals } = require("../scripts/discord-update-post");
 
 function markerBoardMarkdown() {
   return [
@@ -25,6 +26,31 @@ async function writeMarkerBoard(markdown = markerBoardMarkdown()) {
   const markerPath = path.join(dir, "02-lanes-and-markers.md");
   await fs.writeFile(markerPath, markdown, "utf8");
   return markerPath;
+}
+
+function channelProbeBody(name = "updates") {
+  return {
+    name,
+    type: 5,
+  };
+}
+
+function message({
+  id = "1516000000000000000",
+  channelId = "1504671871512346695",
+  timestamp = "2026-06-14T12:00:00.000000+00:00",
+  title = "Older Card",
+} = {}) {
+  return {
+    id,
+    channel_id: channelId,
+    timestamp,
+    embeds: [
+      {
+        title,
+      },
+    ],
+  };
 }
 
 test("forum card lifecycle args default to no-send command", () => {
@@ -136,7 +162,7 @@ test("forum card lifecycle builds metadata and marker body", () => {
   assert(body.includes("DiscordOS Forum/Card Operations"));
 });
 
-test("forum card lifecycle dry-run routes through reserved notification policy", async () => {
+test("forum card lifecycle dry-run routes through attached notification policy", async () => {
   const markerFilePath = await writeMarkerBoard();
   const result = await _internals.buildDiscordForumCardLifecycle({
     workflow: "DiscordOS",
@@ -162,6 +188,40 @@ test("forum card lifecycle dry-run routes through reserved notification policy",
   assert(result.payloadPreview.embeds[0].description.includes("## Workflow Markers"));
 });
 
+test("forum card lifecycle blocks when notification route is not admitted", async () => {
+  const result = await _internals.buildDiscordForumCardLifecycle({
+    workflow: "DiscordOS",
+    cardId: "card-123",
+    state: "opened",
+    body: "Route blocked proof.",
+    apply: true,
+    env: {
+      DISCORDOS_UPDATES_CHANNEL_ID: "1504671871512346695",
+      DISCORDOS_BOT_TOKEN: "bot-secret",
+    },
+    notificationRouter: {
+      buildNotificationRouteDecision: async () => ({
+        ok: false,
+        route: null,
+        routeDecision: {
+          status: "blocked",
+        },
+        reasonCodes: ["notification_route_not_found"],
+      }),
+    },
+    fetchImpl: async () => {
+      throw new Error("blocked route should not fetch");
+    },
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "blocked");
+  assert.deepEqual(result.reasonCodes, [
+    "notification_route_not_admitted",
+    "notification_route_not_found",
+  ]);
+});
+
 test("forum card lifecycle apply blocks without updates target", async () => {
   const result = await _internals.buildDiscordForumCardLifecycle({
     workflow: "DiscordOS",
@@ -179,6 +239,62 @@ test("forum card lifecycle apply blocks without updates target", async () => {
   assert.equal(result.status, "blocked");
   assert.equal(result.sendsMessages, false);
   assert.deepEqual(result.reasonCodes, ["updates_target_missing"]);
+});
+
+test("forum card lifecycle sends bot-channel payload after shared preflight passes", async () => {
+  const markerFilePath = await writeMarkerBoard();
+  const requests = [];
+  const result = await _internals.buildDiscordForumCardLifecycle({
+    workflow: "DiscordOS",
+    cardId: "card-123",
+    state: "completed",
+    body: "Lifecycle send proof.",
+    markers: ["DiscordOS Update-Post Workflow v2"],
+    markerFilePath,
+    apply: true,
+    env: {
+      DISCORDOS_UPDATES_CHANNEL_ID: "1504671871512346695",
+      DISCORDOS_BOT_TOKEN: "bot-secret",
+    },
+    fetchImpl: async (url, init) => {
+      requests.push({ url, init });
+      assert.equal(init.headers.Authorization, "Bot bot-secret");
+      if (url === `${updatePostInternals.DISCORD_API_BASE}/channels/1504671871512346695`) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => channelProbeBody(),
+        };
+      }
+      if (url === `${updatePostInternals.DISCORD_API_BASE}/channels/1504671871512346695/messages?limit=${updatePostInternals.DEFAULT_PREFLIGHT_LIMIT}`) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => [message()],
+        };
+      }
+      const payload = JSON.parse(init.body);
+      assert.equal(payload.embeds[0].title, "DiscordOS Card card-123 Completed");
+      assert(payload.embeds[0].description.includes("state: `completed`"));
+      assert(payload.embeds[0].description.includes("DiscordOS Update-Post Workflow v2"));
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          id: "1517000000000000000",
+          channel_id: "1504671871512346695",
+          timestamp: "2026-06-14T12:00:00.000000+00:00",
+        }),
+      };
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.status, "sent");
+  assert.equal(result.sendsMessages, true);
+  assert.equal(result.preflight.status, "ready");
+  assert.equal(result.notificationRoute.routeId, "forum-card-lifecycle-info");
+  assert.equal(requests.length, 3);
 });
 
 test("forum card lifecycle renders markdown without token values", () => {
