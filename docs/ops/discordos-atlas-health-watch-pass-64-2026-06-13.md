@@ -26,7 +26,8 @@ This pass added a low-noise ATLAS health watch that checks public critical surfa
 - Added `scripts/atlas-health-watch.js` and `npm run ops:atlas-health:watch`.
 - Added `tests/atlas-health-watch.test.js` and `npm run verify:atlas-health-watch`.
 - Integrated the watcher into `api/cron/runtime-health.js` behind `DISCORDOS_ATLAS_HEALTH_WATCH_ENABLED=enabled`.
-- Updated `vercel.json` to run `/api/cron/runtime-health` at `0 4,16 * * *`, matching 12:00 AM and 12:00 PM Eastern while New York observes daylight time.
+- Updated `vercel.json` to run `/api/cron/runtime-health` at `0 16 * * *`, matching 12:00 PM Eastern while New York observes daylight time.
+- Attempted the requested twice-daily `0 4,16 * * *` schedule first; Vercel rejected it because the project is on a Hobby account, which allows daily cron jobs only.
 - Updated README operator docs and cron schedule tests.
 
 ## Live Dry-Run Proof
@@ -46,7 +47,7 @@ Current result:
 - critical: `0`
 - sends messages: `false`
 - Discord posts: `0 unless a critical target fails`
-- twice-daily usage estimate: `60` runs/month, `300` target checks/month
+- daily usage estimate: `30` runs/month, `150` target checks/month
 
 Checked targets:
 
@@ -89,4 +90,4 @@ Result: pass.
 
 - The watcher can use dedicated `DISCORDOS_ATLAS_HEALTH_ALERT_*` env values, but production currently falls back to the existing runtime-health alert target.
 - Fitness' documented `/api/health` route currently redirects to login from the public production alias, so the default Fitness target is public web availability until the owner repo exposes a public machine-readable health endpoint again.
-- The `0 4,16 * * *` cadence requires a Vercel plan that allows more than once-daily cron execution. If Vercel rejects the production deployment on plan limits, the fallback is to keep the same watcher and set the schedule back to once daily.
+- The requested `0 4,16 * * *` cadence requires a Vercel plan that allows more than once-daily cron execution. Current production uses the same watcher at the Hobby-compatible `0 16 * * *` daily cadence.

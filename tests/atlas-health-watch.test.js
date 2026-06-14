@@ -69,7 +69,12 @@ test("atlas health watch passes when all targets are healthy", async () => {
   assert.equal(result.targetCount, 2);
   assert.equal(result.passCount, 2);
   assert.equal(result.alertDelivery.status, "skipped_clear");
-  assert.equal(result.usageEstimate.targetChecksPerMonthAtTwiceDaily, 120);
+  assert.equal(result.usageEstimate.targetChecksPerMonth, 60);
+});
+
+test("atlas health watch estimates monthly checks from configured schedule", () => {
+  assert.equal(_internals.estimateRunsPerMonthFromCron("0 16 * * *"), 30);
+  assert.equal(_internals.estimateRunsPerMonthFromCron("0 4,16 * * *"), 60);
 });
 
 test("atlas health watch marks json ok false as critical without sending in dry run", async () => {

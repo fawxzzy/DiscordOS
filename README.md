@@ -238,7 +238,8 @@ Current governed contract surface:
   - keeps the service credential inside the Supabase runtime boundary
   - writes no Discord messages and returns no secret values
 - `vercel.json`
-  - schedules `/api/cron/runtime-health` at `0 4,16 * * *` for 12:00 AM and 12:00 PM Eastern while New York observes daylight time
+  - schedules `/api/cron/runtime-health` at `0 16 * * *` for 12:00 PM Eastern while New York observes daylight time
+  - preserves a Hobby-compatible daily cadence; twice-daily 12:00 AM and 12:00 PM requires a Vercel plan above Hobby
 - `docs/ops/discordos-runtime-health-summary-command-pass-6-2026-06-13.md`
   - owner-side proof that runtime-health history can be summarized from ATLAS `runtime/`
 - `docs/ops/discordos-runtime-health-freshness-guard-pass-7-2026-06-13.md`
@@ -561,7 +562,7 @@ Current scheduled runtime surface:
 
 - `/api/cron/runtime-health`
   - guarded by `CRON_SECRET`
-  - configured in `vercel.json` for production invocation at `0 4,16 * * *`
+  - configured in `vercel.json` for production invocation at `0 16 * * *`
   - latest production deployment `dpl_HUWifJFefawJbMzJ2tgG7reTzunW`
   - 2026-06-13 11:15 AM EDT proof window did not produce a scheduled invocation or private cron audit row
   - 2026-06-13 11:45 AM EDT proof window produced Vercel `200` scheduled invocation proof and private Supabase audit row `runtime-health-cron-vercel-daily-runtime-health-20260613T155511740Z`

@@ -334,6 +334,20 @@ function classifyAtlasHealthEvent(result) {
   };
 }
 
+function estimateRunsPerMonthFromCron(cron) {
+  const parts = String(cron || "").trim().split(/\s+/);
+  if (parts.length !== 5) {
+    return 30;
+  }
+
+  const hours = parts[1]
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const dailyRuns = Math.max(1, hours.length);
+  return dailyRuns * 30;
+}
+
 function buildDiscordAlertPayload(result) {
   const failed = result.criticalTargets.slice(0, 8);
   const fields = failed.map((target) => ({
@@ -545,8 +559,9 @@ async function buildAtlasHealthWatch({
     criticalTargets,
     checks,
     usageEstimate: {
-      runsPerMonthAtTwiceDaily: 60,
-      targetChecksPerMonthAtTwiceDaily: checks.length * 60,
+      configuredSchedule: config.schedule?.cron || null,
+      runsPerMonth: estimateRunsPerMonthFromCron(config.schedule?.cron),
+      targetChecksPerMonth: checks.length * estimateRunsPerMonthFromCron(config.schedule?.cron),
       discordPosts: criticalTargets.length === 0 ? "0 unless a critical target fails" : "bounded by repeat suppression",
     },
   };
@@ -637,6 +652,7 @@ module.exports = {
     evaluateSuppressionRecord,
     writeSuppressionRecord,
     classifyAtlasHealthEvent,
+    estimateRunsPerMonthFromCron,
     buildDiscordAlertPayload,
     sendDiscordWebhook,
     sendDiscordBotChannel,

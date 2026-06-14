@@ -59,7 +59,7 @@ test("cron schedule proof reads expected schedule from vercel config", () => {
         crons: [
           {
             path: "/api/cron/runtime-health",
-            schedule: "0 4,16 * * *",
+            schedule: "0 16 * * *",
           },
         ],
       });
@@ -72,19 +72,19 @@ test("cron schedule proof reads expected schedule from vercel config", () => {
       expectedPath: "/api/cron/runtime-health",
       fsImpl,
     }),
-    "0 4,16 * * *"
+    "0 16 * * *"
   );
 });
 
 test("cron schedule proof passes on exact deployed schedule", () => {
   const proof = _internals.summarizeCronScheduleProof({
     expectedPath: "/api/cron/runtime-health",
-    expectedSchedule: "0 4,16 * * *",
+    expectedSchedule: "0 16 * * *",
     registry: {
       crons: [
         {
           path: "/api/cron/runtime-health",
-          schedule: "0 4,16 * * *",
+          schedule: "0 16 * * *",
           host: "fawxzzy-discordos.vercel.app",
         },
       ],
@@ -106,7 +106,7 @@ test("cron schedule proof passes on exact deployed schedule", () => {
 test("cron schedule proof fails on schedule drift", () => {
   const proof = _internals.summarizeCronScheduleProof({
     expectedPath: "/api/cron/runtime-health",
-    expectedSchedule: "0 4,16 * * *",
+    expectedSchedule: "0 16 * * *",
     registry: {
       crons: [
         {
@@ -129,7 +129,7 @@ test("cron schedule proof fails on schedule drift", () => {
 test("cron schedule proof fails on disabled or modified registry", () => {
   const proof = _internals.summarizeCronScheduleProof({
     expectedPath: "/api/cron/runtime-health",
-    expectedSchedule: "0 4,16 * * *",
+    expectedSchedule: "0 16 * * *",
     registry: {
       crons: [],
       undeployed: [{ path: "/api/cron/runtime-health" }],
@@ -151,7 +151,7 @@ test("cron schedule proof invokes Vercel and summarizes output", async () => {
   const proof = await _internals.buildRuntimeHealthCronScheduleProof({
     vercelConfigPath: "vercel.json",
     expectedPath: "/api/cron/runtime-health",
-    expectedSchedule: "0 4,16 * * *",
+    expectedSchedule: "0 16 * * *",
     execFileImpl: async (executable, args) => {
       assert.equal(executable, _internals.getVercelExecutable());
       assert.deepEqual(args, ["crons", "ls", "--format", "json"]);
@@ -160,7 +160,7 @@ test("cron schedule proof invokes Vercel and summarizes output", async () => {
           crons: [
             {
               path: "/api/cron/runtime-health",
-              schedule: "0 4,16 * * *",
+              schedule: "0 16 * * *",
               host: "fawxzzy-discordos.vercel.app",
             },
           ],
@@ -188,7 +188,7 @@ test("cron schedule proof renders markdown", () => {
       severity: "info",
     },
     expectedPath: "/api/cron/runtime-health",
-    expectedSchedule: "0 4,16 * * *",
+    expectedSchedule: "0 16 * * *",
     enabled: true,
     deployedCronCount: 1,
     matchingCronCount: 1,
@@ -203,5 +203,5 @@ test("cron schedule proof renders markdown", () => {
 
   assert(rendered.includes("# DiscordOS Runtime Health Cron Schedule Proof"));
   assert(rendered.includes("result: `pass`"));
-  assert(rendered.includes("expected schedule: `0 4,16 * * *`"));
+  assert(rendered.includes("expected schedule: `0 16 * * *`"));
 });
