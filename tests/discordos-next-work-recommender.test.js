@@ -201,6 +201,7 @@ test("next work recommender downgrades live env checks after receipt-backed proo
     liveTargetAdmissionProof: true,
     authorizedCronProof: true,
     scheduledCronIdentityGuard: false,
+    scheduledCronAuditProof: false,
     runtimeOperationsAdmissionProof: false,
     finalFollowupUpdateProof: false,
   });
@@ -232,6 +233,7 @@ test("next work recommender surfaces operations admission when only deferred wor
     liveTargetAdmissionProof: true,
     authorizedCronProof: true,
     scheduledCronIdentityGuard: true,
+    scheduledCronAuditProof: false,
     runtimeOperationsAdmissionProof: false,
     finalFollowupUpdateProof: false,
   });
@@ -267,6 +269,7 @@ test("next work recommender summarizes exhausted non-waiting work after operatio
     liveTargetAdmissionProof: true,
     authorizedCronProof: true,
     scheduledCronIdentityGuard: true,
+    scheduledCronAuditProof: false,
     runtimeOperationsAdmissionProof: true,
     finalFollowupUpdateProof: false,
   });
@@ -315,12 +318,51 @@ test("next work recommender leaves only scheduled cron proof deferred after fina
     liveTargetAdmissionProof: true,
     authorizedCronProof: true,
     scheduledCronIdentityGuard: true,
+    scheduledCronAuditProof: false,
     runtimeOperationsAdmissionProof: true,
     finalFollowupUpdateProof: true,
   });
   assert.deepEqual(ids, ["refresh-scheduled-cron-proof"]);
   assert.equal(recommendations[0].status, "deferred");
   assert.deepEqual(recommendations[0].reasonCodes, ["scheduled_cron_proof_waiting_for_identity"]);
+});
+
+test("next work recommender stops waiting after scheduled cron audit proof receipt", () => {
+  const readyStatus = baseOperatorStatus({
+    runtime: {
+      ...baseOperatorStatus().runtime,
+      alertTargetConfigured: true,
+    },
+    publication: {
+      ...baseOperatorStatus().publication,
+      updatesTargetConfigured: true,
+      alertsTargetConfigured: true,
+    },
+    publicationAudit: {
+      ...baseOperatorStatus().publicationAudit,
+      publishedReceipts: 4,
+      draftUpdateReceipts: 0,
+      needsBackfill: 0,
+    },
+  });
+  const receiptState = _internals.classifyReceiptState([
+    "discordos-operator-live-status-proof-pass-50-2026-06-13.md",
+    "discordos-live-target-admission-proof-pass-52-2026-06-13.md",
+    "discordos-runtime-health-authorized-cron-proof-pass-53-2026-06-13.md",
+    "discordos-scheduled-cron-log-identity-guard-pass-58-2026-06-13.md",
+    "discordos-next-work-wait-state-ranking-pass-59-2026-06-13.md",
+    "discordos-runtime-product-hardening-followup-live-post-pass-68-2026-06-13.md",
+    "discordos-runtime-health-scheduled-audit-proof-pass-73-2026-06-14.md",
+  ]);
+  const recommendations = _internals.recommendNextWork(readyStatus, {
+    max: 5,
+    receiptState,
+  });
+
+  assert.equal(receiptState.scheduledCronAuditProof, true);
+  assert.deepEqual(recommendations.map((recommendation) => recommendation.id), [
+    "continue-discordos-runtime-product-hardening",
+  ]);
 });
 
 test("next work recommender can build from live-shaped local fixtures", async () => {

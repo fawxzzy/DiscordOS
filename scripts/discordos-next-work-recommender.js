@@ -85,6 +85,9 @@ function classifyReceiptState(fileNames = []) {
     scheduledCronIdentityGuard: fileNames.some((fileName) =>
       fileName.includes("discordos-scheduled-cron-log-identity-guard-pass")
     ),
+    scheduledCronAuditProof: fileNames.some((fileName) =>
+      fileName.includes("discordos-runtime-health-scheduled-audit-proof-pass")
+    ),
     runtimeOperationsAdmissionProof: fileNames.some((fileName) =>
       fileName.includes("discordos-next-work-wait-state-ranking-pass")
     ),
@@ -214,7 +217,11 @@ function recommendNextWork(operatorStatus, { max = 5, receiptState = classifyRec
     },
   }));
 
-  addIf(operatorStatus.runtime.nextActions.includes("capture_first_real_scheduled_cron_run_after_schedule"), recommendations, buildRecommendation({
+  addIf(
+    operatorStatus.runtime.nextActions.includes("capture_first_real_scheduled_cron_run_after_schedule")
+      && !receiptState.scheduledCronAuditProof,
+    recommendations,
+    buildRecommendation({
     id: "refresh-scheduled-cron-proof",
     score: receiptState.scheduledCronIdentityGuard ? 20 : 70,
     status: receiptState.scheduledCronIdentityGuard ? "deferred" : "recommended",
