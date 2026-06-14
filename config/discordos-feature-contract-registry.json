@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "features": [
+    {
+      "id": "moderation",
+      "label": "DiscordOS Moderation Workflow v0",
+      "domain": "moderation",
+      "status": "contract_only",
+      "docsPath": "docs/contracts/discordos-moderation-workflow-v0.md",
+      "sourcePath": "src/contracts/moderation.ts",
+      "statusCommand": "npm run ops:discordos:moderation-status",
+      "liveBehaviorAdmitted": false
+    },
+    {
+      "id": "board",
+      "label": "DiscordOS Board Card Workflow v0",
+      "domain": "board",
+      "status": "contract_only",
+      "docsPath": "docs/contracts/discordos-board-card-workflow-v0.md",
+      "sourcePath": "src/contracts/board.ts",
+      "statusCommand": "npm run ops:discordos:board-card-status",
+      "liveBehaviorAdmitted": false
+    },
+    {
+      "id": "music_sesh",
+      "label": "DiscordOS Music Sesh Workflow v0",
+      "domain": "music_sesh",
+      "status": "contract_only",
+      "docsPath": "docs/contracts/discordos-music-sesh-workflow-v0.md",
+      "sourcePath": "src/contracts/music-sesh.ts",
+      "statusCommand": "npm run ops:discordos:music-sesh-status",
+      "liveBehaviorAdmitted": false
+    }
+  ]
+}

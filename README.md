@@ -36,9 +36,18 @@ Current governed contract surface:
 - `docs/contracts/discordos-board-card-workflow-v0.md`
   - contract-only board/card workflow v0 boundary
   - defines card identity, state transitions, publication boundary, and forbidden live behaviors
+- `docs/contracts/discordos-board-card-persistence-v0.md`
+  - contract-only board/card persistence boundary
+  - defines storage admission posture, idempotency key, retention class, and forbidden live writes
 - `src/contracts/board.ts`
-  - code-facing board/card identity, state, transition, and event-envelope types only
+  - code-facing board/card identity, state, transition, persistence, and event-envelope types only
   - no persistent board storage, Discord sends, or env coupling
+- `docs/contracts/discordos-music-sesh-workflow-v0.md`
+  - contract-only Music Sesh workflow v0 boundary
+  - defines session identity, queue item, vote contract, event envelope, and forbidden live behaviors
+- `src/contracts/music-sesh.ts`
+  - code-facing Music Sesh session, queue, vote, and event-envelope types only
+  - no playback, external music API calls, persistence, Discord sends, or env coupling
 - `src/adapters/feedback/index.ts`
   - adapter slot and bundle types only
   - still no implementation, runtime behavior, or service clients
@@ -303,7 +312,19 @@ Current governed contract surface:
   - sends no Discord messages and writes no artifacts
 - `scripts/discordos-feature-contract-status.js`
   - repo-local read-only status command for feature-specific contract v0 surfaces
-  - verifies moderation and board/card contract docs, source exports, required package scripts, and runtime-free source boundaries
+  - verifies moderation, board/card, and Music Sesh contract docs, source exports, required package scripts, and runtime-free source boundaries
+  - sends no Discord messages and writes no artifacts
+- `scripts/discordos-moderation-preflight.js`
+  - repo-local no-send preflight command for future moderation action payloads
+  - validates action names and Discord snowflake shapes while keeping live moderation behavior blocked
+  - sends no Discord messages and writes no artifacts
+- `scripts/discordos-board-card-persistence-status.js`
+  - repo-local read-only status command for the board/card persistence contract boundary
+  - confirms the surface remains contract-only with storage writes and schema migrations blocked
+  - sends no Discord messages and writes no artifacts
+- `scripts/discordos-feature-contract-registry-status.js`
+  - repo-local read-only status command for the feature contract registry
+  - validates registered feature records, docs/source path discipline, status commands, and live-behavior admission flags
   - sends no Discord messages and writes no artifacts
 - `api/cron/runtime-health.js`
   - Vercel Cron guarded runtime-health proof endpoint
@@ -569,6 +590,12 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local DiscordOS data contract status command
 - `npm run verify:discordos-feature-contract-status`
   - Node test coverage for the repo-local DiscordOS feature contract status command
+- `npm run verify:discordos-moderation-preflight`
+  - Node test coverage for the repo-local DiscordOS moderation preflight command
+- `npm run verify:discordos-board-card-persistence-status`
+  - Node test coverage for the repo-local DiscordOS board/card persistence status command
+- `npm run verify:discordos-feature-contract-registry-status`
+  - Node test coverage for the repo-local DiscordOS feature contract registry status command
 - `npm run verify`
   - runs the full repo-local verification surface, then prunes repo-local `.vercel` and `node_modules` residue before exit
 
@@ -710,6 +737,14 @@ Current repo-local operator surface:
   - checks the moderation workflow v0 contract and type-only source boundary
 - `npm run ops:discordos:board-card-status`
   - checks the board/card workflow v0 contract, type-only source boundary, and required forum/card package scripts
+- `npm run ops:discordos:music-sesh-status`
+  - checks the Music Sesh workflow v0 contract and type-only source boundary
+- `npm run ops:discordos:moderation-preflight`
+  - validates a future moderation action payload without allowing live moderation behavior
+- `npm run ops:discordos:board-card-persistence-status`
+  - checks the board/card persistence contract while keeping writes and schema migrations blocked
+- `npm run ops:discordos:feature-contract-registry-status`
+  - checks the feature contract registry and live-behavior admission flags
 - `npm run ops:runtime-health:scheduled-proof`
   - runs the full cron-ready proof loop: live health capture, fresh summary check, durable alert decision, fail-closed exit
 - `npm run ops:runtime-health:scheduled-proof:json`

@@ -11,7 +11,7 @@ Current status:
 - generic runtime-health snapshots now have repo-local summary, freshness, stale-history audit, one-command live check, alert-threshold decision, durable alert-decision snapshot, cron-ready scheduled proof, artifact-rollup, non-destructive retention-plan, operations-admission commands, a guarded Vercel Cron runtime-health endpoint with gated critical-alert delivery, repeatable production cron guard proof, scheduled cron log proof, authorized cron proof with delivery-gate validation, read-only alert target admission, read-only status board, and critical-only alert delivery commands with repeat suppression
 - curated `#updates` publication now has a DiscordOS-owned dry-run-first command with green embed formatting, disabled mentions, guarded apply checks, status inspection, receipt audit rollups, a combined operator status bundle, a next-work recommender, pulled-env normalization for Discord target values, and no-secret operator env readiness checks
 - shared DiscordOS data contract docs and type-only source now exist for feedback, publication, moderation, Music Sesh, board, and operator domains without opening those feature lanes
-- moderation workflow v0 and board/card workflow v0 now have contract-only docs plus type-only source seams, still below live feature behavior
+- moderation workflow v0, board/card workflow v0, board/card persistence v0, and Music Sesh workflow v0 now have contract-only docs plus type-only source seams, still below live feature behavior
 
 Current governed docs surface:
 
@@ -27,5 +27,11 @@ Current governed docs surface:
 - `contracts/discordos-board-card-workflow-v0.md`
   - contract-only board/card workflow boundary
   - keeps card transitions tied to existing no-send-first publication guardrails
+- `contracts/discordos-board-card-persistence-v0.md`
+  - contract-only board/card persistence boundary
+  - keeps storage writes and schema migrations blocked until an explicit schema lane opens
+- `contracts/discordos-music-sesh-workflow-v0.md`
+  - contract-only Music Sesh workflow boundary
+  - keeps queue/session/vote state typed without playback, provider API calls, persistence, or Discord sends
 - `ops/`
   - DiscordOS runtime setup, readiness, cutover, and proof receipts

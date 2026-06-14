@@ -59,6 +59,33 @@ const FEATURE_CONFIG = {
       "DiscordOSDataProofContract",
     ],
   },
+  music_sesh: {
+    label: "DiscordOS Music Sesh Workflow v0",
+    docsFile: path.resolve(process.cwd(), "docs", "contracts", "discordos-music-sesh-workflow-v0.md"),
+    sourceFile: path.resolve(process.cwd(), "src", "contracts", "music-sesh.ts"),
+    packageScripts: [],
+    docsAnchors: [
+      "## Scope",
+      "## Session Identity",
+      "## Queue Item",
+      "## Vote Contract",
+      "## Event Envelope",
+      "## Forbidden Behaviors",
+    ],
+    sourceExports: [
+      "DiscordOSMusicSeshSessionStatus",
+      "DiscordOSMusicSeshQueueItemStatus",
+      "DiscordOSMusicSeshSessionIdentity",
+      "DiscordOSMusicSeshQueueItem",
+      "DiscordOSMusicSeshVote",
+      "DiscordOSMusicSeshContract",
+      "DiscordOSMusicSeshEventEnvelope",
+    ],
+    sourceTokens: [
+      "domain: \"music_sesh\"",
+      "DiscordOSDataProofContract",
+    ],
+  },
 };
 
 const BANNED_RUNTIME_TOKENS = [

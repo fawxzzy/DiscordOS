@@ -27,6 +27,13 @@ test("feature contract status supports board feature", () => {
   assert.equal(parsed.feature, "board");
 });
 
+test("feature contract status supports music sesh feature", () => {
+  const parsed = _internals.parseArgs(["--json", "--feature", "music_sesh"]);
+
+  assert.equal(parsed.json, true);
+  assert.equal(parsed.feature, "music_sesh");
+});
+
 test("feature contract status passes for moderation fixture", async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "discordos-feature-moderation-"));
   const config = _internals.FEATURE_CONFIG.moderation;
@@ -90,6 +97,38 @@ test("feature contract status requires board publication scripts", async () => {
     assert.equal(result.ok, false);
     assert(result.reasonCodes.includes("feature_contract_package_script_missing"));
     assert(result.packageScripts.missing.includes("ops:discord:forum-card-preflight"));
+  } finally {
+    config.docsFile = originalDocs;
+    config.sourceFile = originalSource;
+  }
+});
+
+test("feature contract status passes for music sesh fixture", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "discordos-feature-music-sesh-"));
+  const config = _internals.FEATURE_CONFIG.music_sesh;
+  await writeFile(dir, "docs/contracts/discordos-music-sesh-workflow-v0.md", config.docsAnchors.join("\n"));
+  await writeFile(
+    dir,
+    "src/contracts/music-sesh.ts",
+    [
+      ...config.sourceExports.map((name) => `export interface ${name} { value: string; }`),
+      ...config.sourceTokens,
+    ].join("\n")
+  );
+  const packageJsonPath = await writeFile(dir, "package.json", JSON.stringify({ scripts: {} }));
+
+  const originalDocs = config.docsFile;
+  const originalSource = config.sourceFile;
+  config.docsFile = path.join(dir, "docs/contracts/discordos-music-sesh-workflow-v0.md");
+  config.sourceFile = path.join(dir, "src/contracts/music-sesh.ts");
+  try {
+    const result = await _internals.buildDiscordOSFeatureContractStatus({
+      feature: "music_sesh",
+      packageJsonPath,
+    });
+
+    assert.equal(result.ok, true);
+    assert.equal(result.event.type, "discordos.feature_contract.ready");
   } finally {
     config.docsFile = originalDocs;
     config.sourceFile = originalSource;

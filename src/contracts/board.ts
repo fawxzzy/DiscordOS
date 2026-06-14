@@ -47,5 +47,25 @@ export interface DiscordOSBoardCardContract {
   forbiddenBehaviors: string[];
 }
 
+export type DiscordOSBoardCardPersistenceStatus =
+  | "contract_only"
+  | "admitted_for_schema"
+  | "shadow_storage"
+  | "active_storage";
+
+export interface DiscordOSBoardCardPersistenceContract {
+  contract: DiscordOSDataContractIdentity & {
+    domain: "board";
+    storageSurface: "discordos_supabase" | "none";
+  };
+  status: DiscordOSBoardCardPersistenceStatus;
+  tableName: string | null;
+  idempotencyKeyField: "cardId";
+  requiredIndexes: string[];
+  retentionClass: "product_state";
+  proof: DiscordOSDataProofContract;
+  forbiddenBehaviors: string[];
+}
+
 export type DiscordOSBoardCardEventEnvelope =
   DiscordOSDataEventEnvelope<DiscordOSBoardCardTransition>;
