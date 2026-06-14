@@ -164,6 +164,7 @@ Current governed contract surface:
   - validates the production cron proof and alert-delivery gate without printing or persisting the secret
 - `scripts/runtime-health-alert-delivery.js`
   - repo-local alert delivery command for runtime-health alert decisions
+  - consults the shared DiscordOS notification route policy before any active alert can be delivered
   - supports Discord webhook and Discord bot-channel targets when explicitly configured
   - skips clear alerts by default, skips warning alerts by default, and requires `--send` before network delivery
   - supports a no-send `--drill-critical` mode for reviewing the critical alert payload and suppression fingerprint without a real outage
@@ -180,6 +181,7 @@ Current governed contract surface:
   - stores only target environment variable names, never channel ids, webhook URLs, or bot tokens
 - `scripts/atlas-health-watch.js`
   - repo-local ATLAS health watch command for critical-only multi-project availability checks
+  - consults the shared DiscordOS notification route policy before any ATLAS critical alert can be delivered
   - dry-runs by default, sends no routine clear posts, disables mentions, and suppresses identical critical alerts for 24 hours
   - can share the existing `#alerts` target or use dedicated `DISCORDOS_ATLAS_HEALTH_ALERT_*` env values
   - skips target fetches when the configured ATLAS sweep schedule is not due

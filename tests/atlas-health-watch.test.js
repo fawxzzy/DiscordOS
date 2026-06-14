@@ -210,6 +210,8 @@ test("atlas health watch marks json ok false as critical without sending in dry 
   assert.deepEqual(result.criticalTargets[0].reasonCodes, ["json_ok_not_true"]);
   assert.equal(result.alertDelivery.status, "dry_run");
   assert.equal(result.alertDelivery.sent, false);
+  assert.equal(result.alertDelivery.notificationRoute.routeId, "atlas-health-critical-alert");
+  assert.equal(result.alertDelivery.notificationRoute.target, "alerts");
   assert.equal(result.alertDelivery.payloadPreview.embeds[0].title, "ATLAS Critical Health Alert");
 });
 
@@ -243,9 +245,46 @@ test("atlas health watch sends critical alert to bot channel when requested", as
   assert.equal(result.ok, false);
   assert.equal(result.alertDelivery.status, "sent");
   assert.equal(result.alertDelivery.sent, true);
+  assert.equal(result.alertDelivery.notificationRoute.routeId, "atlas-health-critical-alert");
+  assert.equal(result.alertDelivery.notificationRoute.targetEnv, "DISCORDOS_ATLAS_HEALTH_ALERT_CHANNEL_ID");
   const discordRequest = requests.find((request) => request.url.includes("/channels/123/messages"));
   assert.ok(discordRequest);
   assert.equal(JSON.parse(discordRequest.options.body).allowed_mentions.parse.length, 0);
+});
+
+test("atlas health watch blocks delivery when notification routing is not admitted", async () => {
+  const result = await _internals.buildAtlasHealthWatch({
+    env: configEnv([
+      {
+        id: "web",
+        label: "Web",
+        owner: "Trove",
+        url: "https://example.test",
+        kind: "http-ok",
+      },
+    ]),
+    send: false,
+    notificationRouter: {
+      buildNotificationRouteDecision: async () => ({
+        ok: false,
+        route: null,
+        routeDecision: {
+          status: "blocked",
+        },
+        reasonCodes: ["notification_route_not_found"],
+      }),
+    },
+    fetchImpl: async () => new Response("server error", { status: 500 }),
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.alertDelivery.ok, false);
+  assert.equal(result.alertDelivery.status, "blocked");
+  assert.equal(result.alertDelivery.sent, false);
+  assert.deepEqual(result.alertDelivery.reasonCodes, [
+    "notification_route_not_admitted",
+    "notification_route_not_found",
+  ]);
 });
 
 test("atlas health watch suppresses repeated critical fingerprint", async () => {

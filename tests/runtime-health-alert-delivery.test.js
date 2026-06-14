@@ -140,6 +140,8 @@ test("alert delivery blocks active alerts without a configured target", async ()
 
   assert.equal(delivery.ok, false);
   assert.equal(delivery.status, "blocked");
+  assert.equal(delivery.notificationRoute.routeId, "runtime-health-critical-alert");
+  assert.equal(delivery.notificationRoute.target, "alerts");
   assert.deepEqual(delivery.reasonCodes, ["alert_delivery_target_missing"]);
 });
 
@@ -174,6 +176,8 @@ test("alert delivery dry-runs configured targets unless send is requested", asyn
   assert.equal(delivery.payloadPreview.embeds[0].title, "DiscordOS Runtime Critical Alert");
   assert.equal(delivery.payloadPreview.embeds[0].color, _internals.CRITICAL_EMBED_COLOR);
   assert.equal(delivery.suppression.suppressed, false);
+  assert.equal(delivery.notificationRoute.routeId, "runtime-health-critical-alert");
+  assert.equal(delivery.notificationRoute.targetEnv, "DISCORDOS_RUNTIME_HEALTH_ALERT_CHANNEL_ID");
 });
 
 test("alert delivery can drill a synthetic critical payload without sending", async () => {
@@ -205,6 +209,7 @@ test("alert delivery can drill a synthetic critical payload without sending", as
   assert.equal(result.delivery.targetType, "discord_bot_channel");
   assert.equal(result.delivery.sent, false);
   assert.equal(result.delivery.payloadPreview.embeds[0].title, "DiscordOS Runtime Critical Alert");
+  assert.equal(result.delivery.notificationRoute.routeId, "runtime-health-critical-alert");
   assert.equal(result.event.dimensions.drillCritical, true);
 });
 
@@ -241,7 +246,7 @@ test("alert delivery skips warning alerts by default", async () => {
   assert.deepEqual(delivery.reasonCodes, ["alert_below_delivery_threshold"]);
 });
 
-test("alert delivery can dry-run warnings when threshold is explicitly lowered", async () => {
+test("alert delivery blocks warning alerts even when delivery threshold is explicitly lowered", async () => {
   const delivery = await _internals.deliverAlert({
     alert: {
       ok: false,
@@ -266,9 +271,14 @@ test("alert delivery can dry-run warnings when threshold is explicitly lowered",
     send: false,
   });
 
-  assert.equal(delivery.ok, true);
-  assert.equal(delivery.status, "dry_run");
+  assert.equal(delivery.ok, false);
+  assert.equal(delivery.status, "blocked");
   assert.equal(delivery.sent, false);
+  assert.deepEqual(delivery.reasonCodes, [
+    "notification_route_not_admitted",
+    "notification_severity_below_route_minimum",
+  ]);
+  assert.deepEqual(delivery.notificationRoute.reasonCodes, ["notification_severity_below_route_minimum"]);
 });
 
 test("alert delivery sends webhook embed payload with mentions disabled", async () => {

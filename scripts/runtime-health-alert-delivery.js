@@ -1,5 +1,6 @@
 const { _internals: proofInternals } = require("./runtime-health-proof");
 const { _internals: alertInternals } = require("./runtime-health-alert");
+const { _internals: notificationRouterInternals } = require("./discordos-notification-router");
 const crypto = require("node:crypto");
 const fs = require("node:fs/promises");
 const path = require("node:path");
@@ -167,6 +168,15 @@ function severityRank(severity) {
 
 function isSeverityDeliverable(alertSeverity, minDeliverySeverity) {
   return severityRank(alertSeverity) >= severityRank(minDeliverySeverity);
+}
+
+function runtimeAlertEventType(alert) {
+  if (typeof alert?.event?.type === "string" && alert.event.type.trim()) {
+    return alert.event.type;
+  }
+  return alert?.ok === true
+    ? "discordos.runtime_health.alert_clear"
+    : "discordos.runtime_health.alert_triggered";
 }
 
 function sortedStrings(values) {
@@ -376,6 +386,7 @@ async function deliverAlert({
   cooldownHours = 24,
   fetchImpl = fetch,
   now = new Date(),
+  notificationRouter = notificationRouterInternals,
 }) {
   if (alert.ok && !includeClear) {
     return {
@@ -398,12 +409,39 @@ async function deliverAlert({
     };
   }
 
+  const routeDecision = await notificationRouter.buildNotificationRouteDecision({
+    source: "runtime-health",
+    type: runtimeAlertEventType(alert),
+    severity: alert.severity,
+  });
+  const notificationRoute = {
+    ok: routeDecision.ok,
+    status: routeDecision.routeDecision.status,
+    routeId: routeDecision.route?.id || null,
+    target: routeDecision.route?.target || null,
+    targetEnv: routeDecision.route?.targetEnv || null,
+    fallbackTargetEnv: routeDecision.route?.fallbackTargetEnv || null,
+    reasonCodes: routeDecision.reasonCodes,
+  };
+
+  if (!routeDecision.ok) {
+    return {
+      ok: false,
+      status: "blocked",
+      targetType: target.type,
+      sent: false,
+      notificationRoute,
+      reasonCodes: ["notification_route_not_admitted", ...routeDecision.reasonCodes],
+    };
+  }
+
   if (!target.configured) {
     return {
       ok: false,
       status: "blocked",
       targetType: "none",
       sent: false,
+      notificationRoute,
       reasonCodes: ["alert_delivery_target_missing"],
     };
   }
@@ -427,6 +465,7 @@ async function deliverAlert({
       suppressRepeats,
       cooldownHours,
       suppression,
+      notificationRoute,
       reasonCodes: suppression.reasonCodes,
     };
   }
@@ -442,6 +481,7 @@ async function deliverAlert({
       suppressRepeats,
       cooldownHours,
       suppression,
+      notificationRoute,
       messagePreview: buildAlertMessage(alert),
       payloadPreview: payload,
     };
@@ -483,6 +523,7 @@ async function deliverAlert({
           ...suppression,
           recordWritten: false,
         },
+        notificationRoute,
         reasonCodes: ["alert_suppression_record_failed"],
       };
     }
@@ -502,6 +543,7 @@ async function deliverAlert({
       recordWritten: Boolean(suppressionRecord),
       lastSentAt: suppressionRecord?.lastSentAt || suppression.lastSentAt,
     },
+    notificationRoute,
     reasonCodes: result.ok ? [] : ["alert_delivery_request_failed"],
   };
 }
@@ -542,6 +584,7 @@ async function buildRuntimeHealthAlertDelivery({
   env = process.env,
   fetchImpl = fetch,
   now,
+  notificationRouter = notificationRouterInternals,
 }) {
   if (drillCritical && send) {
     throw new Error("drill_critical_is_no_send_only");
@@ -570,6 +613,7 @@ async function buildRuntimeHealthAlertDelivery({
     cooldownHours,
     fetchImpl,
     now: now || new Date(),
+    notificationRouter,
   });
   const result = {
     ok: delivery.ok,
@@ -622,6 +666,8 @@ function renderMarkdown(result) {
     `- alert reason codes: \`${result.alert.reasonCodes.join(",") || "none"}\``,
     `- delivery status: \`${result.delivery.status}\``,
     `- delivery target type: \`${result.delivery.targetType}\``,
+    `- notification route: \`${result.delivery.notificationRoute?.routeId || "none"}\``,
+    `- notification route target: \`${result.delivery.notificationRoute?.target || "none"}\``,
     `- delivery reason codes: \`${result.delivery.reasonCodes.join(",") || "none"}\``,
   ];
 
@@ -656,6 +702,7 @@ module.exports = {
     buildAlertMessage,
     severityRank,
     isSeverityDeliverable,
+    runtimeAlertEventType,
     buildSuppressionFingerprint,
     buildSuppressionKey,
     suppressionPath,

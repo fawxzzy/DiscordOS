@@ -2,6 +2,7 @@ const crypto = require("node:crypto");
 const fs = require("node:fs/promises");
 const os = require("node:os");
 const path = require("node:path");
+const { _internals: notificationRouterInternals } = require("./discordos-notification-router");
 
 const DISCORD_API_BASE = "https://discord.com/api/v10";
 const CRITICAL_EMBED_COLOR = 14233637;
@@ -500,6 +501,13 @@ function classifyAtlasHealthEvent(result) {
   };
 }
 
+function atlasHealthEventType(result) {
+  if (typeof result?.event?.type === "string" && result.event.type.trim()) {
+    return result.event.type;
+  }
+  return classifyAtlasHealthEvent(result).type;
+}
+
 function getScheduleDayName(schedule, now = new Date()) {
   const timezone = schedule?.timezone || "UTC";
   try {
@@ -622,6 +630,7 @@ async function deliverAtlasHealthAlert({
   fetchImpl = fetch,
   now = new Date(),
   fsImpl = fs,
+  notificationRouter = notificationRouterInternals,
 }) {
   if (result.ok) {
     return {
@@ -631,6 +640,33 @@ async function deliverAtlasHealthAlert({
       targetType: target.type,
       sent: false,
       reasonCodes: ["atlas_health_clear_delivery_not_requested"],
+    };
+  }
+
+  const routeDecision = await notificationRouter.buildNotificationRouteDecision({
+    source: "atlas-health",
+    type: atlasHealthEventType(result),
+    severity: "critical",
+  });
+  const notificationRoute = {
+    ok: routeDecision.ok,
+    status: routeDecision.routeDecision.status,
+    routeId: routeDecision.route?.id || null,
+    target: routeDecision.route?.target || null,
+    targetEnv: routeDecision.route?.targetEnv || null,
+    fallbackTargetEnv: routeDecision.route?.fallbackTargetEnv || null,
+    reasonCodes: routeDecision.reasonCodes,
+  };
+
+  if (!routeDecision.ok) {
+    return {
+      ok: false,
+      enabled: send,
+      status: "blocked",
+      targetType: target.type,
+      sent: false,
+      notificationRoute,
+      reasonCodes: ["notification_route_not_admitted", ...routeDecision.reasonCodes],
     };
   }
 
@@ -649,6 +685,7 @@ async function deliverAtlasHealthAlert({
         suppressed: false,
         reasonCodes: [],
       },
+      notificationRoute,
       payloadPreview: payload,
       reasonCodes: ["send_flag_not_set"],
     };
@@ -661,6 +698,7 @@ async function deliverAtlasHealthAlert({
       status: "blocked",
       targetType: "none",
       sent: false,
+      notificationRoute,
       reasonCodes: ["atlas_health_alert_target_missing"],
     };
   }
@@ -690,6 +728,7 @@ async function deliverAtlasHealthAlert({
       suppressRepeats,
       cooldownHours,
       suppression,
+      notificationRoute,
       reasonCodes: suppression.reasonCodes,
     };
   }
@@ -728,6 +767,7 @@ async function deliverAtlasHealthAlert({
       recordWritten: Boolean(suppressionRecord),
       lastSentAt: suppressionRecord?.lastSentAt || suppression.lastSentAt,
     },
+    notificationRoute,
     reasonCodes: sent.ok ? [] : ["atlas_health_alert_request_failed"],
   };
 }
@@ -743,6 +783,7 @@ async function buildAtlasHealthWatch({
   cooldownHours = 24,
   suppressRepeats = true,
   suppressionDir = DEFAULT_SUPPRESSION_DIR,
+  notificationRouter = notificationRouterInternals,
 } = {}) {
   const config = await loadConfig({ configPath, env, fsImpl });
   const usageEstimate = buildUsageEstimate(config, config.targets.length);
@@ -813,6 +854,7 @@ async function buildAtlasHealthWatch({
     fetchImpl,
     now,
     fsImpl,
+    notificationRouter,
   });
 
   return {
@@ -840,6 +882,8 @@ function renderMarkdown(result) {
     `- critical: \`${result.criticalCount}\``,
     `- delivery status: \`${result.alertDelivery.status}\``,
     `- delivery target type: \`${result.alertDelivery.targetType}\``,
+    `- notification route: \`${result.alertDelivery.notificationRoute?.routeId || "none"}\``,
+    `- notification route target: \`${result.alertDelivery.notificationRoute?.target || "none"}\``,
     `- delivery reason codes: \`${result.alertDelivery.reasonCodes.join(",") || "none"}\``,
   ];
 
@@ -895,6 +939,7 @@ module.exports = {
     evaluateSuppressionRecord,
     writeSuppressionRecord,
     classifyAtlasHealthEvent,
+    atlasHealthEventType,
     isScheduleDue,
     estimateRunsPerMonthFromCron,
     buildUsageEstimate,
