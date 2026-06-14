@@ -88,6 +88,10 @@ function classifyReceiptState(fileNames = []) {
     runtimeOperationsAdmissionProof: fileNames.some((fileName) =>
       fileName.includes("discordos-next-work-wait-state-ranking-pass")
     ),
+    finalFollowupUpdateProof: fileNames.some((fileName) =>
+      fileName.includes("discordos-runtime-product-hardening-followup-live-post-pass")
+        || fileName.includes("discordos-runtime-product-hardening-followup-update-post")
+    ),
   };
 }
 
@@ -305,7 +309,7 @@ function recommendNextWork(operatorStatus, { max = 5, receiptState = classifyRec
           deferredRecommendationIds: recommendations.map((recommendation) => recommendation.id),
         },
       }));
-    } else {
+    } else if (!receiptState.finalFollowupUpdateProof) {
       recommendations.push(buildRecommendation({
         id: "summarize-deferred-work-before-final-update",
         score: 45,

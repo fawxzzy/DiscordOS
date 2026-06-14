@@ -359,6 +359,14 @@ Current governed contract surface:
   - owner-side proof that the ATLAS health watch now has a read-only operator status rollup
 - `docs/ops/discordos-operator-status-atlas-health-integration-pass-66-2026-06-13.md`
   - owner-side proof that the combined DiscordOS operator status now includes ATLAS health readiness
+- `docs/ops/discordos-runtime-product-hardening-followup-exhaustion-pass-67-2026-06-13.md`
+  - owner-side proof that no non-waiting DiscordOS runtime/product hardening moves remain after the ATLAS health integration
+- `docs/ops/discordos-runtime-product-hardening-followup-update-post-2026-06-13.md`
+  - final follow-up `#updates` post draft and publication receipt for passes 63 through 67
+- `docs/ops/discordos-runtime-product-hardening-followup-live-post-pass-68-2026-06-13.md`
+  - owner-side proof that the final follow-up update was published to `#updates`
+- `docs/ops/discordos-next-work-final-followup-state-pass-69-2026-06-13.md`
+  - owner-side proof that next-work now reports only the deferred scheduled cron identity proof after the final follow-up post
 
 Current repo-local verification surface:
 
