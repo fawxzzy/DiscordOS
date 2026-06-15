@@ -43,6 +43,38 @@ test("music sesh control post publish blocks partial guard", async () => {
 
   assert.equal(result.ok, false);
   assert(result.reasonCodes.includes("control_post_double_guard_missing"));
+  assert(result.reasonCodes.includes("target_not_configured"));
+  assert.equal(result.target.fallbackToUpdates, false);
+});
+
+test("music sesh control post publish refuses updates fallback for live tests", async () => {
+  const result = await _internals.buildMusicSeshControlPostPublish({
+    allowPublish: true,
+    apply: true,
+    env: {
+      DISCORDOS_MUSIC_SESH_CONTROL_POST: "enabled",
+      DISCORDOS_BOT_TOKEN: "bot-token",
+      DISCORDOS_UPDATES_CHANNEL_ID: "1504671871512346695",
+    },
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.target.configured, false);
+  assert.equal(result.target.fallbackToUpdates, false);
+  assert(result.reasonCodes.includes("target_not_configured"));
+});
+
+test("music sesh control post publish can target testing channel fallback", async () => {
+  const target = _internals.resolveTarget({
+    DISCORDOS_BOT_TOKEN: "bot-token",
+    DISCORDOS_TESTING_CHANNEL_ID: "1504671871512346695",
+    DISCORDOS_UPDATES_CHANNEL_ID: "1504000000000000000",
+  });
+
+  assert.equal(target.configured, true);
+  assert.equal(target.channelId, "1504671871512346695");
+  assert.equal(target.fallbackToTesting, true);
+  assert.equal(target.fallbackToUpdates, false);
 });
 
 test("music sesh control post publish sends only after duplicate check passes", async () => {

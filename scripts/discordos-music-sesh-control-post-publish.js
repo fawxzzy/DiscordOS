@@ -62,18 +62,19 @@ function hasValue(value) {
 function resolveTarget(env = process.env) {
   const channelId = hasValue(env.DISCORDOS_MUSIC_SESH_CHANNEL_ID)
     ? env.DISCORDOS_MUSIC_SESH_CHANNEL_ID.trim()
-    : hasValue(env.DISCORDOS_UPDATES_CHANNEL_ID)
-      ? env.DISCORDOS_UPDATES_CHANNEL_ID.trim()
+    : hasValue(env.DISCORDOS_TESTING_CHANNEL_ID)
+      ? env.DISCORDOS_TESTING_CHANNEL_ID.trim()
       : null;
-  const fallbackToUpdates = !hasValue(env.DISCORDOS_MUSIC_SESH_CHANNEL_ID)
-    && hasValue(env.DISCORDOS_UPDATES_CHANNEL_ID);
+  const fallbackToTesting = !hasValue(env.DISCORDOS_MUSIC_SESH_CHANNEL_ID)
+    && hasValue(env.DISCORDOS_TESTING_CHANNEL_ID);
 
   return {
     configured: hasValue(channelId) && hasValue(env.DISCORDOS_BOT_TOKEN),
     type: channelId ? "discord_bot_channel" : "none",
     channelId,
     tokenPresent: hasValue(env.DISCORDOS_BOT_TOKEN),
-    fallbackToUpdates,
+    fallbackToTesting,
+    fallbackToUpdates: false,
   };
 }
 
@@ -265,7 +266,7 @@ async function buildMusicSeshControlPostPublish({
       status: result.ok ? "pass" : "fail",
       dimensions: {
         sendsMessages: result.sendsMessages,
-        fallbackToUpdates: target.fallbackToUpdates,
+        fallbackToTesting: target.fallbackToTesting,
         reasonCodeCount: reasonCodes.length,
       },
     },
@@ -282,6 +283,7 @@ function renderMarkdown(result) {
     `- slash commands admitted: \`${result.slashCommandsAdmitted ? "true" : "false"}\``,
     `- status: \`${result.status}\``,
     `- target configured: \`${result.target.configured ? "true" : "false"}\``,
+    `- fallback to testing: \`${result.target.fallbackToTesting ? "true" : "false"}\``,
     `- fallback to updates: \`${result.target.fallbackToUpdates ? "true" : "false"}\``,
     `- duplicate status: \`${result.duplicateCheck.status}\``,
     `- message id: \`${result.sendResult.messageId || "none"}\``,
