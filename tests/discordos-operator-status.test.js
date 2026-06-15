@@ -205,8 +205,8 @@ test("operator status combines runtime, publication, and audit status", async ()
   assert.equal(status.atlasHealth.alertReady, true);
   assert.equal(status.atlasHealth.alertReadinessStatus, "ready");
   assert.equal(status.notificationPolicy.ok, true);
-  assert.equal(status.notificationPolicy.routeCount, 5);
-  assert.equal(status.notificationPolicy.readyAttachedProducerCount, 5);
+  assert.equal(status.notificationPolicy.routeCount, 6);
+  assert.equal(status.notificationPolicy.readyAttachedProducerCount, 6);
   assert.equal(status.event.type, "discordos.operator.status_ready");
 });
 
@@ -441,12 +441,12 @@ test("operator status renders markdown without target secret values", () => {
       ok: true,
       eventType: "discordos.notification.policy_ready",
       status: "ready",
-      routeCount: 4,
-      enabledRouteCount: 4,
-      alertsRouteCount: 2,
+      routeCount: 6,
+      enabledRouteCount: 6,
+      alertsRouteCount: 4,
       updatesRouteCount: 2,
-      attachedProducerCount: 5,
-      readyAttachedProducerCount: 5,
+      attachedProducerCount: 6,
+      readyAttachedProducerCount: 6,
       reservedProducerCount: 0,
       reasonCodes: [],
     },
@@ -457,6 +457,6 @@ test("operator status renders markdown without target secret values", () => {
   assert(rendered.includes("untracked publication receipts: `1`"));
   assert(rendered.includes("ATLAS Health"));
   assert(rendered.includes("Notification Policy"));
-  assert(rendered.includes("attached producers: `5/5`"));
+  assert(rendered.includes("attached producers: `6/6`"));
   assert(!rendered.includes("bot-secret"));
 });

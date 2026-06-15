@@ -48,6 +48,16 @@
       "targetEnv": "DISCORDOS_RUNTIME_HEALTH_ALERT_CHANNEL_ID",
       "fallbackTargetEnv": "DISCORDOS_ATLAS_HEALTH_ALERT_CHANNEL_ID",
       "enabled": true
+    },
+    {
+      "id": "board-reaction-drift-critical-alert",
+      "source": "board-reaction",
+      "type": "discordos.board_reaction.drift_detected",
+      "minSeverity": "critical",
+      "target": "alerts",
+      "targetEnv": "DISCORDOS_RUNTIME_HEALTH_ALERT_CHANNEL_ID",
+      "fallbackTargetEnv": "DISCORDOS_ATLAS_HEALTH_ALERT_CHANNEL_ID",
+      "enabled": true
     }
   ]
 }

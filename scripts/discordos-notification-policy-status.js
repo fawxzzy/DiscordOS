@@ -49,6 +49,15 @@ const PRODUCER_SURFACES = [
     state: "attached",
     command: "npm run ops:discord:forum-card-lifecycle",
   },
+  {
+    id: "board-reaction-drift-alerting",
+    source: "board-reaction",
+    type: "discordos.board_reaction.drift_detected",
+    severity: "critical",
+    expectedTarget: "alerts",
+    state: "attached",
+    command: "npm run ops:discordos:board-reaction-drift-alerting",
+  },
 ];
 
 function parseArgs(args) {
