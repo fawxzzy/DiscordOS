@@ -200,6 +200,18 @@ function buildProductRuntimeTiles() {
       command: "npm run ops:discordos:music-sesh-control-post",
     },
     {
+      id: "music_sesh_control_post_publish",
+      label: "Music Sesh control post publish",
+      status: "available",
+      command: "npm run ops:discordos:music-sesh-control-post-publish",
+    },
+    {
+      id: "music_sesh_button_router",
+      label: "Music Sesh button router",
+      status: "available",
+      command: "npm run ops:discordos:music-sesh-button-router",
+    },
+    {
       id: "board_lifecycle_event_ingest",
       label: "Board event ingest",
       status: "available",
@@ -210,6 +222,12 @@ function buildProductRuntimeTiles() {
       label: "Chat command intake",
       status: "available",
       command: "npm run ops:discordos:chat-command-intake",
+    },
+    {
+      id: "chat_message_listener",
+      label: "Chat message listener",
+      status: "available",
+      command: "npm run ops:discordos:chat-message-listener",
     },
     {
       id: "product_workflow_monitor",
@@ -276,6 +294,18 @@ function buildProductRuntimeTiles() {
       label: "Music Sesh live readback",
       status: "available",
       command: "npm run ops:discordos:music-sesh-live-readback",
+    },
+    {
+      id: "music_sesh_button_chat_live_canary",
+      label: "Music Sesh button/chat live canary",
+      status: "available",
+      command: "npm run ops:discordos:music-sesh-button-chat-live-canary",
+    },
+    {
+      id: "no_slash_workflow_surfaces",
+      label: "No-slash workflow surfaces",
+      status: "available",
+      command: "npm run ops:discordos:no-slash-workflow-surfaces",
     },
     {
       id: "signed_button_interaction_smoke",

@@ -29,7 +29,11 @@ function parseArgs(args) {
 }
 
 function includesSlashSurface(tile) {
-  return /slash/i.test(`${tile.id} ${tile.label} ${tile.command}`);
+  const text = `${tile.id} ${tile.label} ${tile.command}`;
+  if (/(^|[\s_-])no[\s_-]?slash/i.test(text)) {
+    return false;
+  }
+  return /slash/i.test(text);
 }
 
 function buildInteractionDoctrineStatus() {

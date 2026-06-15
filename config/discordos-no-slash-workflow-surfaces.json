@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "slashCommandsAllowed": false,
+  "allowedInteractionTypes": [
+    "MESSAGE_COMPONENT",
+    "MESSAGE_CREATE"
+  ],
+  "surfaces": [
+    {
+      "id": "music_sesh",
+      "label": "Music Sesh",
+      "postButtonSurface": "npm run ops:discordos:music-sesh-control-post-publish",
+      "chatMessageSurface": "npm run ops:discordos:chat-message-listener",
+      "slashCommandSurface": null
+    },
+    {
+      "id": "board",
+      "label": "Board",
+      "postButtonSurface": "npm run ops:discordos:board-lifecycle-sync",
+      "chatMessageSurface": "npm run ops:discordos:board-lifecycle-event-ingest",
+      "slashCommandSurface": null
+    },
+    {
+      "id": "moderation",
+      "label": "Moderation",
+      "postButtonSurface": "npm run ops:discordos:moderation-audit-dashboard",
+      "chatMessageSurface": "npm run ops:discordos:moderation-audit-review-search",
+      "slashCommandSurface": null
+    }
+  ]
+}

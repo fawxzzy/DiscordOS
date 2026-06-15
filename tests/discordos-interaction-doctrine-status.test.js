@@ -25,6 +25,11 @@ test("interaction doctrine status detects slash tile text", () => {
     label: "Slash command adapter",
     command: "npm run ops:discordos:slash-command-adapter",
   }), true);
+  assert.equal(_internals.includesSlashSurface({
+    id: "no_slash_workflow_surfaces",
+    label: "No-slash workflow surfaces",
+    command: "npm run ops:discordos:no-slash-workflow-surfaces",
+  }), false);
 });
 
 test("interaction doctrine status renders bounded markdown", () => {
