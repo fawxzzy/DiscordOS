@@ -146,6 +146,24 @@ function buildProductRuntimeTiles() {
       command: "npm run ops:discordos:board-active-admission-canary",
     },
     {
+      id: "board_active_write_adapter_guard",
+      label: "Board write adapter guard",
+      status: "available",
+      command: "npm run ops:discordos:board-active-write-adapter-guard",
+    },
+    {
+      id: "moderation_audit_write_adapter_guard",
+      label: "Moderation audit write adapter guard",
+      status: "available",
+      command: "npm run ops:discordos:moderation-audit-write-adapter-guard",
+    },
+    {
+      id: "supabase_apply_readback_proof",
+      label: "Supabase apply readback proof",
+      status: "available",
+      command: "npm run ops:discordos:supabase-apply-readback-proof",
+    },
+    {
       id: "product_workflow_dashboard",
       label: "Product workflow dashboard",
       status: "available",

@@ -29,21 +29,27 @@ test("product workflow dashboard builds board, moderation, and music rows", asyn
 
   assert.equal(board.registryStatus, "active");
   assert.equal(board.persistenceStatus, "storage_migration_rls_ready");
-  assert.equal(board.nextGate, "explicit_live_behavior_admission");
+  assert.equal(board.nextGate, "guarded_storage_write_adapter");
   assert.equal(moderation.registryStatus, "shadow");
   assert.equal(moderation.persistenceStatus, "storage_migration_rls_ready");
+  assert.equal(moderation.nextGate, "guarded_moderation_audit_adapter");
   assert.equal(music.registryStatus, "preflight_only");
   assert.equal(music.persistenceStatus, "preflight_only");
+  assert.equal(result.releaseSummary.status, "operator_ready");
+  assert.equal(result.releaseSummary.storageBackedWorkflowCount, 2);
+  assert.equal(result.releaseSummary.guardedAdapterWorkflowCount, 2);
+  assert.equal(result.releaseSummary.nextReleaseGate, "guarded_write_adapter_review");
+  assert.equal(result.operatorSummary.proofCommand, "npm run ops:discordos:supabase-apply-readback-proof");
 });
 
 test("product workflow dashboard command helpers are stable", () => {
   assert.equal(
     _internals.commandForFeature("board"),
-    "npm run ops:discordos:board-active-admission-canary"
+    "npm run ops:discordos:board-active-write-adapter-guard"
   );
   assert.equal(
     _internals.commandForFeature("moderation"),
-    "npm run ops:discordos:moderation-storage-migration-rls-proof"
+    "npm run ops:discordos:moderation-audit-write-adapter-guard"
   );
   assert.equal(
     _internals.commandForFeature("music_sesh"),
@@ -56,6 +62,8 @@ test("product workflow dashboard renders bounded markdown", async () => {
   const rendered = _internals.renderMarkdown(result);
 
   assert(rendered.includes("# DiscordOS Product Workflow Dashboard"));
+  assert(rendered.includes("next release gate: `guarded_write_adapter_review`"));
+  assert(rendered.includes("proof command: `npm run ops:discordos:supabase-apply-readback-proof`"));
   assert(rendered.includes("board: registry `active`"));
   assert(rendered.includes("moderation: registry `shadow`"));
   assert(rendered.includes("music_sesh: registry `preflight_only`"));

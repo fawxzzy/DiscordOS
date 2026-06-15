@@ -37,10 +37,10 @@ function buildWorkflowRows(registryDashboard, storageProofs) {
 
 function commandForFeature(featureId) {
   if (featureId === "board") {
-    return "npm run ops:discordos:board-active-admission-canary";
+    return "npm run ops:discordos:board-active-write-adapter-guard";
   }
   if (featureId === "moderation") {
-    return "npm run ops:discordos:moderation-storage-migration-rls-proof";
+    return "npm run ops:discordos:moderation-audit-write-adapter-guard";
   }
   if (featureId === "music_sesh") {
     return "npm run ops:discordos:music-sesh-preflight";
@@ -50,7 +50,10 @@ function commandForFeature(featureId) {
 
 function nextGateForFeature(feature, storageProof) {
   if (feature.id === "board" && feature.status === "active" && feature.liveBehaviorAdmitted === false) {
-    return "explicit_live_behavior_admission";
+    return "guarded_storage_write_adapter";
+  }
+  if (feature.id === "moderation" && storageProof?.ok && feature.liveBehaviorAdmitted === false) {
+    return "guarded_moderation_audit_adapter";
   }
   if (storageProof?.ok && feature.status === "contract_only") {
     return "shadow_registry_admission";
@@ -59,6 +62,37 @@ function nextGateForFeature(feature, storageProof) {
     return "runtime_or_shadow_storage_lane";
   }
   return "continue_governed_verification";
+}
+
+function buildReleaseSummary(workflows) {
+  const storageBackedWorkflows = workflows.filter((workflow) => workflow.storageProofReady);
+  const liveBehaviorAdmittedWorkflows = workflows.filter((workflow) => workflow.liveBehaviorAdmitted);
+  const guardedAdapterWorkflows = workflows.filter((workflow) =>
+    workflow.nextGate === "guarded_storage_write_adapter" ||
+    workflow.nextGate === "guarded_moderation_audit_adapter"
+  );
+
+  return {
+    status: "operator_ready",
+    workflowCount: workflows.length,
+    storageBackedWorkflowCount: storageBackedWorkflows.length,
+    liveBehaviorAdmittedCount: liveBehaviorAdmittedWorkflows.length,
+    guardedAdapterWorkflowCount: guardedAdapterWorkflows.length,
+    storageApplyReadbackCommand: "npm run ops:discordos:supabase-apply-readback-proof",
+    nextReleaseGate: guardedAdapterWorkflows.length > 0
+      ? "guarded_write_adapter_review"
+      : "music_sesh_runtime_queue",
+  };
+}
+
+function buildOperatorSummary(workflows) {
+  return {
+    boardCommand: workflows.find((workflow) => workflow.id === "board")?.workflowCommand || null,
+    moderationCommand: workflows.find((workflow) => workflow.id === "moderation")?.workflowCommand || null,
+    musicCommand: workflows.find((workflow) => workflow.id === "music_sesh")?.workflowCommand || null,
+    proofCommand: "npm run ops:discordos:supabase-apply-readback-proof",
+    dashboardCommand: "npm run ops:discordos:product-workflow-dashboard",
+  };
 }
 
 function classifyProductWorkflowDashboardEvent(result) {
@@ -111,6 +145,8 @@ async function buildDiscordOSProductWorkflowDashboard({
     workflowCount: workflows.length,
     storageProofReadyCount: workflows.filter((workflow) => workflow.storageProofReady).length,
     liveBehaviorAdmittedCount: workflows.filter((workflow) => workflow.liveBehaviorAdmitted).length,
+    releaseSummary: buildReleaseSummary(workflows),
+    operatorSummary: buildOperatorSummary(workflows),
     workflows,
     reasonCodes,
   };
@@ -134,7 +170,17 @@ function renderMarkdown(result) {
     `- workflows: \`${result.workflowCount}\``,
     `- storage proofs ready: \`${result.storageProofReadyCount}\``,
     `- live behavior admitted: \`${result.liveBehaviorAdmittedCount}\``,
+    `- release status: \`${result.releaseSummary.status}\``,
+    `- next release gate: \`${result.releaseSummary.nextReleaseGate}\``,
     `- reason codes: \`${result.reasonCodes.join(",") || "none"}\``,
+    "",
+    "## Operator Summary",
+    "",
+    `- board command: \`${result.operatorSummary.boardCommand || "none"}\``,
+    `- moderation command: \`${result.operatorSummary.moderationCommand || "none"}\``,
+    `- music command: \`${result.operatorSummary.musicCommand || "none"}\``,
+    `- proof command: \`${result.operatorSummary.proofCommand}\``,
+    `- dashboard command: \`${result.operatorSummary.dashboardCommand}\``,
     "",
     "## Workflows",
     "",
@@ -173,6 +219,8 @@ module.exports = {
     buildWorkflowRows,
     commandForFeature,
     nextGateForFeature,
+    buildReleaseSummary,
+    buildOperatorSummary,
     classifyProductWorkflowDashboardEvent,
     buildDiscordOSProductWorkflowDashboard,
     renderMarkdown,

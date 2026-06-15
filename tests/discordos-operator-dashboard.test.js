@@ -78,8 +78,8 @@ test("operator dashboard summarizes next-work result into command hint", async (
   assert.equal(dashboard.console.statusLine, "ready");
   assert.equal(dashboard.console.failingTileCount, 0);
   assert.equal(dashboard.console.healthTiles.length, 5);
-  assert.equal(dashboard.productRuntime.surfaceCount, 6);
-  assert.equal(dashboard.productRuntime.availableCount, 6);
+  assert.equal(dashboard.productRuntime.surfaceCount, 9);
+  assert.equal(dashboard.productRuntime.availableCount, 9);
   assert.equal(dashboard.console.recommendationGroups[0].category, "operator-env");
   assert.equal(event.type, "discordos.operator.dashboard_ready");
   assert.equal(event.dimensions.topRecommendation, "inspect-operator-command-ergonomics");
@@ -88,10 +88,13 @@ test("operator dashboard summarizes next-work result into command hint", async (
 test("operator dashboard exposes product runtime command tiles", () => {
   const panel = _internals.buildProductRuntimePanel();
 
-  assert.equal(panel.surfaceCount, 6);
+  assert.equal(panel.surfaceCount, 9);
   assert(panel.tiles.some((tile) => tile.id === "board_shadow_persistence"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:board-feature-activation-pilot"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:board-active-admission-canary"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:board-active-write-adapter-guard"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:moderation-audit-write-adapter-guard"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:supabase-apply-readback-proof"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:product-workflow-dashboard"));
 });
 
@@ -162,6 +165,9 @@ test("operator dashboard renders compact markdown without target values", () => 
   assert(rendered.includes("surface board_shadow_persistence: `available`"));
   assert(rendered.includes("surface board_feature_activation_pilot: `available`"));
   assert(rendered.includes("surface board_active_admission_canary: `available`"));
+  assert(rendered.includes("surface board_active_write_adapter_guard: `available`"));
+  assert(rendered.includes("surface moderation_audit_write_adapter_guard: `available`"));
+  assert(rendered.includes("surface supabase_apply_readback_proof: `available`"));
   assert(rendered.includes("surface product_workflow_dashboard: `available`"));
   assert(!rendered.includes("bot-secret"));
 });
