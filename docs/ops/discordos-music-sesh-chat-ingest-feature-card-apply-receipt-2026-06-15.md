@@ -17,14 +17,21 @@ Date: 2026-06-15
 - no test/control message is sent
 - no slash command behavior is admitted
 
+## Correction
+
+- misplaced updates message `1515947107486404698` was deleted
+- card was recreated in the `music-sesh` forum channel
+
 <!-- discordos-update-post-receipt:start -->
 ## Discord Publication
 
 - status: `sent`
 - sends messages: `true`
-- Discord HTTP status: `200`
-- channel id: `1504671871512346695`
-- message id: `1515947107486404698`
-- timestamp: `2026-06-15T05:12:35.360000+00:00`
+- Discord HTTP status: `201`
+- channel id: `1508139160853286942`
+- channel name: `music-sesh`
+- thread id: `1515961747050201168`
+- message id: `1515961747050201168`
+- timestamp: `2026-06-15T06:10:45.704000+00:00`
 - mentions disabled: `true`
 <!-- discordos-update-post-receipt:end -->
