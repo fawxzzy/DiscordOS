@@ -54,10 +54,10 @@ test("music sesh feedback board reads committed cards", async () => {
 
   assert.equal(result.ok, true);
   assert.equal(result.sendsMessages, false);
-  assert.equal(result.cardCount, 110);
+  assert.equal(result.cardCount, 115);
   assert.equal(result.readyCardCount, 0);
-  assert.equal(result.completedCardCount, 110);
-  assert.equal(result.reactionReadyCardCount, 110);
+  assert.equal(result.completedCardCount, 115);
+  assert.equal(result.reactionReadyCardCount, 115);
   assert.equal(result.nextCard, null);
 });
 

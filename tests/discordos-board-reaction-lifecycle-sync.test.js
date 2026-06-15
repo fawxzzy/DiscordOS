@@ -47,7 +47,7 @@ test("board reaction lifecycle sync reads committed board", async () => {
   assert.equal(result.callsDiscordApi, false);
   assert.equal(result.slashCommandsAdmitted, false);
   assert.equal(result.status, "reaction_lifecycle_synced");
-  assert.equal(result.board.cardCount, 110);
+  assert.equal(result.board.cardCount, 115);
   assert.equal(result.mismatchCount, 0);
 });
 
