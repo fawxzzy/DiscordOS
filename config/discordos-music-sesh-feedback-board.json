@@ -526,6 +526,71 @@
       "reactionStatus": "success",
       "reactionEmojiName": "success",
       "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "music-sesh-queue-conflict-host-controls",
+      "title": "Music Sesh queue conflict and host controls",
+      "state": "completed",
+      "priority": "high",
+      "category": "session_lifecycle",
+      "nextCommand": "npm run ops:discordos:music-sesh-queue-conflict-host-controls",
+      "liveThreadId": "1516124805529866334",
+      "liveMessageId": "1516124805529866334",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "music-provider-metadata-live-canary",
+      "title": "Music provider metadata live canary",
+      "state": "completed",
+      "priority": "high",
+      "category": "provider_metadata",
+      "nextCommand": "npm run ops:discordos:music-provider-metadata-live-canary",
+      "liveThreadId": "1516124810143338557",
+      "liveMessageId": "1516124810143338557",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "button-route-audit-live-readback",
+      "title": "Button route audit live readback",
+      "state": "completed",
+      "priority": "high",
+      "category": "button_audit",
+      "nextCommand": "npm run ops:discordos:button-route-audit-live-readback",
+      "liveThreadId": "1516124818213306570",
+      "liveMessageId": "1516124818213306570",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "music-sesh-user-response-delivery-guard",
+      "title": "Music Sesh user response delivery guard",
+      "state": "completed",
+      "priority": "high",
+      "category": "chat_status",
+      "nextCommand": "npm run ops:discordos:music-sesh-user-response-delivery-guard",
+      "liveThreadId": "1516124824311824645",
+      "liveMessageId": "1516124824311824645",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "board-lifecycle-reaction-drift-monitor",
+      "title": "Board lifecycle reaction drift monitor",
+      "state": "completed",
+      "priority": "high",
+      "category": "feedback_board",
+      "nextCommand": "npm run ops:discordos:board-lifecycle-reaction-drift-monitor",
+      "liveThreadId": "1516124828904587389",
+      "liveMessageId": "1516124828904587389",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
     }
   ]
 }
