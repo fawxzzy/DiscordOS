@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "board": {
+    "id": "music-sesh-feedback",
+    "label": "Music Sesh Feedback",
+    "source": "discordos-feedback-board",
+    "sendsMessages": false
+  },
+  "cards": [
+    {
+      "id": "music-sesh-storage-contract",
+      "title": "Music Sesh guarded persistence and readback",
+      "state": "ready",
+      "priority": "high",
+      "category": "music_sesh",
+      "nextCommand": "npm run ops:discordos:music-sesh-storage-contract"
+    },
+    {
+      "id": "slash-command-registration-preflight",
+      "title": "Slash command registration and permission preflight",
+      "state": "ready",
+      "priority": "high",
+      "category": "slash_commands",
+      "nextCommand": "npm run ops:discordos:slash-command-registration-preflight"
+    },
+    {
+      "id": "discord-interaction-signature-preflight",
+      "title": "Discord interaction signature verification path",
+      "state": "ready",
+      "priority": "high",
+      "category": "discord_interactions",
+      "nextCommand": "npm run ops:discordos:discord-interaction-signature-preflight"
+    },
+    {
+      "id": "moderation-audit-dashboard",
+      "title": "Moderation audit dashboard summaries",
+      "state": "ready",
+      "priority": "medium",
+      "category": "moderation",
+      "nextCommand": "npm run ops:discordos:moderation-audit-dashboard"
+    },
+    {
+      "id": "product-workflow-alert-drill",
+      "title": "Product workflow anomaly alert drill",
+      "state": "ready",
+      "priority": "medium",
+      "category": "monitoring",
+      "nextCommand": "npm run ops:discordos:product-workflow-alert-drill"
+    },
+    {
+      "id": "music-sesh-runtime-registry-ratchet",
+      "title": "Music Sesh runtime readiness registry ratchet",
+      "state": "ready",
+      "priority": "medium",
+      "category": "activation",
+      "nextCommand": "npm run ops:discordos:music-sesh-feature-activation-ratchet"
+    },
+    {
+      "id": "music-sesh-feedback-board-read-model",
+      "title": "Music Sesh feedback board and feature-card read model",
+      "state": "ready",
+      "priority": "medium",
+      "category": "feedback_board",
+      "nextCommand": "npm run ops:discordos:music-sesh-feedback-board"
+    }
+  ]
+}

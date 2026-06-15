@@ -223,6 +223,48 @@ function buildProductRuntimeTiles() {
       status: "available",
       command: "npm run ops:discordos:operator-activation-runbook",
     },
+    {
+      id: "music_sesh_storage_contract",
+      label: "Music Sesh storage contract",
+      status: "available",
+      command: "npm run ops:discordos:music-sesh-storage-contract",
+    },
+    {
+      id: "slash_command_registration_preflight",
+      label: "Slash command registration preflight",
+      status: "available",
+      command: "npm run ops:discordos:slash-command-registration-preflight",
+    },
+    {
+      id: "discord_interaction_signature_preflight",
+      label: "Discord interaction signature preflight",
+      status: "available",
+      command: "npm run ops:discordos:discord-interaction-signature-preflight",
+    },
+    {
+      id: "moderation_audit_dashboard",
+      label: "Moderation audit dashboard",
+      status: "available",
+      command: "npm run ops:discordos:moderation-audit-dashboard",
+    },
+    {
+      id: "product_workflow_alert_drill",
+      label: "Product workflow alert drill",
+      status: "available",
+      command: "npm run ops:discordos:product-workflow-alert-drill",
+    },
+    {
+      id: "music_sesh_feature_activation_ratchet",
+      label: "Music Sesh activation ratchet",
+      status: "available",
+      command: "npm run ops:discordos:music-sesh-feature-activation-ratchet",
+    },
+    {
+      id: "music_sesh_feedback_board",
+      label: "Music Sesh feedback board",
+      status: "available",
+      command: "npm run ops:discordos:music-sesh-feedback-board",
+    },
   ];
 }
 

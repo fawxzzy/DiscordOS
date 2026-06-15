@@ -21,7 +21,7 @@ test("feature registry dashboard passes current committed registry", async () =>
   assert.equal(result.featureCount, 3);
   assert.equal(result.blockedFeatureCount, 0);
   assert.equal(result.liveBehaviorAdmittedCount, 0);
-  assert.equal(result.statusCounts.shadow, 1);
+  assert.equal(result.statusCounts.shadow, 2);
   assert.equal(result.statusCounts.active, 1);
   assert.equal(result.event.type, "discordos.feature_contract.registry_dashboard_ready");
 });
@@ -34,7 +34,7 @@ test("feature registry dashboard blocks live behavior below active", () => {
         id: "music_sesh",
         label: "Music Sesh",
         domain: "music_sesh",
-        status: "preflight_only",
+        status: "shadow",
         docsPath: "docs/contracts/music.md",
         sourcePath: "src/contracts/music.ts",
         statusCommand: "npm run ops:discordos:music-sesh-status",

@@ -205,7 +205,7 @@ test("operator status combines runtime, publication, and audit status", async ()
   assert.equal(status.atlasHealth.alertReady, true);
   assert.equal(status.atlasHealth.alertReadinessStatus, "ready");
   assert.equal(status.notificationPolicy.ok, true);
-  assert.equal(status.notificationPolicy.routeCount, 4);
+  assert.equal(status.notificationPolicy.routeCount, 5);
   assert.equal(status.notificationPolicy.readyAttachedProducerCount, 5);
   assert.equal(status.event.type, "discordos.operator.status_ready");
 });

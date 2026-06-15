@@ -38,6 +38,16 @@
       "target": "updates",
       "targetEnv": "DISCORDOS_UPDATES_CHANNEL_ID",
       "enabled": true
+    },
+    {
+      "id": "product-workflow-monitor-critical-alert",
+      "source": "product-workflow",
+      "type": "discordos.product_workflow.monitor_attention",
+      "minSeverity": "critical",
+      "target": "alerts",
+      "targetEnv": "DISCORDOS_RUNTIME_HEALTH_ALERT_CHANNEL_ID",
+      "fallbackTargetEnv": "DISCORDOS_ATLAS_HEALTH_ALERT_CHANNEL_ID",
+      "enabled": true
     }
   ]
 }

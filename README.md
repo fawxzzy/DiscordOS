@@ -437,6 +437,27 @@ Current governed contract surface:
 - `scripts/discordos-operator-activation-runbook.js`
   - repo-local activation runbook for guarded storage gates and the Supabase Edge bridge
   - reports command steps and gate readiness without printing or requiring secret values
+- `scripts/discordos-music-sesh-storage-contract.js`
+  - repo-local Music Sesh guarded persistence/readback contract
+  - defines planned private storage tables and readback RPC shape without schema apply, storage writes, provider calls, playback, or Discord sends
+- `scripts/discordos-slash-command-registration-preflight.js`
+  - repo-local slash-command registration and permissions preflight for board, moderation, and Music Sesh
+  - validates command plans without registering commands or calling Discord APIs
+- `scripts/discordos-discord-interaction-signature-preflight.js`
+  - repo-local Discord interaction signature preflight
+  - validates timestamp/signature/public-key shape and can verify Ed25519 signatures without admitting live interactions
+- `scripts/discordos-moderation-audit-dashboard.js`
+  - repo-local moderation audit dashboard summary surface
+  - wraps sanitized audit review/search into action and severity counts without export writes or moderation actions
+- `scripts/discordos-product-workflow-alert-drill.js`
+  - repo-local no-send alert drill for product workflow monitor anomalies
+  - checks notification routing and alert intent without delivering alerts
+- `scripts/discordos-music-sesh-feature-activation-ratchet.js`
+  - repo-local Music Sesh registry ratchet read model
+  - proves Music Sesh is shadow-ready while live behavior remains disabled
+- `scripts/discordos-music-sesh-feedback-board.js`
+  - repo-local Music Sesh feedback board and feature-card read model
+  - reads committed card metadata from `config/discordos-music-sesh-feedback-board.json` without Discord sends or artifact writes
 - `api/cron/runtime-health.js`
   - Vercel Cron guarded runtime-health proof endpoint
   - requires `Authorization: Bearer $CRON_SECRET`
@@ -773,6 +794,20 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local DiscordOS product workflow monitor
 - `npm run verify:discordos-operator-activation-runbook`
   - Node test coverage for the repo-local DiscordOS operator activation runbook
+- `npm run verify:discordos-music-sesh-storage-contract`
+  - Node test coverage for the repo-local DiscordOS Music Sesh storage/readback contract
+- `npm run verify:discordos-slash-command-registration-preflight`
+  - Node test coverage for the repo-local DiscordOS slash-command registration preflight
+- `npm run verify:discordos-discord-interaction-signature-preflight`
+  - Node test coverage for the repo-local DiscordOS interaction signature preflight
+- `npm run verify:discordos-moderation-audit-dashboard`
+  - Node test coverage for the repo-local DiscordOS moderation audit dashboard
+- `npm run verify:discordos-product-workflow-alert-drill`
+  - Node test coverage for the repo-local DiscordOS product workflow alert drill
+- `npm run verify:discordos-music-sesh-feature-activation-ratchet`
+  - Node test coverage for the repo-local DiscordOS Music Sesh activation ratchet
+- `npm run verify:discordos-music-sesh-feedback-board`
+  - Node test coverage for the repo-local DiscordOS Music Sesh feedback board
 - `npm run verify`
   - runs the full repo-local verification surface, then prunes repo-local `.vercel` and `node_modules` residue before exit
 
@@ -978,6 +1013,20 @@ Current repo-local operator surface:
   - checks product workflow readback counts and anomaly thresholds without sending alerts
 - `npm run ops:discordos:operator-activation-runbook`
   - reports guarded storage gate and Supabase Edge bridge activation steps without printing secrets
+- `npm run ops:discordos:music-sesh-storage-contract`
+  - reports the planned Music Sesh persistence/readback contract without storage writes, playback, provider calls, or Discord sends
+- `npm run ops:discordos:slash-command-registration-preflight`
+  - validates slash-command registration and permission plans without registering commands
+- `npm run ops:discordos:discord-interaction-signature-preflight`
+  - validates Discord interaction signature inputs and optional Ed25519 verification without admitting interactions
+- `npm run ops:discordos:moderation-audit-dashboard`
+  - summarizes sanitized moderation audit search results without export writes or moderation actions
+- `npm run ops:discordos:product-workflow-alert-drill`
+  - checks product workflow anomaly alert routing without sending alerts
+- `npm run ops:discordos:music-sesh-feature-activation-ratchet`
+  - proves Music Sesh registry posture is shadow-ready with live behavior disabled
+- `npm run ops:discordos:music-sesh-feedback-board`
+  - reads the committed Music Sesh feedback board and current feature-card metadata
 - `npm run ops:runtime-health:scheduled-proof`
   - runs the full cron-ready proof loop: live health capture, fresh summary check, durable alert decision, fail-closed exit
 - `npm run ops:runtime-health:scheduled-proof:json`

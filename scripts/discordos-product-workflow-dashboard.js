@@ -55,6 +55,9 @@ function nextGateForFeature(feature, storageProof) {
   if (feature.id === "moderation" && storageProof?.ok && feature.liveBehaviorAdmitted === false) {
     return "moderation_audit_review_search";
   }
+  if (feature.id === "music_sesh" && feature.status === "shadow") {
+    return "music_sesh_storage_contract";
+  }
   if (storageProof?.ok && feature.status === "contract_only") {
     return "shadow_registry_admission";
   }
