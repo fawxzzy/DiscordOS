@@ -1371,6 +1371,71 @@
       "reactionStatus": "success",
       "reactionEmojiName": "success",
       "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "music-sesh-host-control-trend-alert-delivery-history-rollup-dashboard",
+      "title": "Music Sesh host control trend alert delivery history rollup dashboard",
+      "state": "completed",
+      "priority": "high",
+      "category": "live_readback",
+      "nextCommand": "npm run ops:discordos:music-sesh-host-control-trend-alert-delivery-history-rollup-dashboard",
+      "liveThreadId": "1516208885281853512",
+      "liveMessageId": "1516208885281853512",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "music-provider-queue-interaction-admission-history-alert-delivery-canary",
+      "title": "Music provider queue interaction admission history alert delivery canary",
+      "state": "completed",
+      "priority": "high",
+      "category": "provider_metadata",
+      "nextCommand": "npm run ops:discordos:music-provider-queue-interaction-admission-history-alert-delivery-canary",
+      "liveThreadId": "1516208902990204989",
+      "liveMessageId": "1516208902990204989",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "button-route-audit-acknowledgement-alert-delivery-readback",
+      "title": "Button route audit acknowledgement alert delivery readback",
+      "state": "completed",
+      "priority": "high",
+      "category": "button_audit",
+      "nextCommand": "npm run ops:discordos:button-route-audit-acknowledgement-alert-delivery-readback",
+      "liveThreadId": "1516208917942767716",
+      "liveMessageId": "1516208917942767716",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "music-sesh-response-delivery-rate-limit-alert-delivery-history",
+      "title": "Music Sesh response delivery rate-limit alert delivery history",
+      "state": "completed",
+      "priority": "high",
+      "category": "chat_status",
+      "nextCommand": "npm run ops:discordos:music-sesh-response-delivery-rate-limit-alert-delivery-history",
+      "liveThreadId": "1516208932559917298",
+      "liveMessageId": "1516208932559917298",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "board-reaction-repair-scheduler-alert-delivery-history-alert-delivery-canary",
+      "title": "Board reaction repair scheduler alert delivery history alert delivery canary",
+      "state": "completed",
+      "priority": "high",
+      "category": "feedback_board",
+      "nextCommand": "npm run ops:discordos:board-reaction-repair-scheduler-alert-delivery-history-alert-delivery-canary",
+      "liveThreadId": "1516208957377482773",
+      "liveMessageId": "1516208957377482773",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
     }
   ]
 }

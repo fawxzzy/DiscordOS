@@ -79,12 +79,12 @@ test("operator dashboard summarizes next-work result into command hint", async (
   assert.equal(dashboard.console.statusLine, "ready");
   assert.equal(dashboard.console.failingTileCount, 0);
   assert.equal(dashboard.console.healthTiles.length, 5);
-  assert.equal(dashboard.productRuntime.surfaceCount, 119);
-  assert.equal(dashboard.productRuntime.availableCount, 119);
+  assert.equal(dashboard.productRuntime.surfaceCount, 124);
+  assert.equal(dashboard.productRuntime.availableCount, 124);
   assert.equal(dashboard.highestValueCategories.length, 5);
-  assert.equal(dashboard.highestValueCategories[0].id, "music_sesh_host_control_trend_alert_delivery_history_rollup_dashboard");
-  assert.match(dashboard.highestValueCategories[0].why, /rollup now summarizes/);
-  assert.match(dashboard.highestValueCategories[0].does, /Shows host-control/);
+  assert.equal(dashboard.highestValueCategories[0].id, "music_sesh_host_control_trend_alert_delivery_rollup_dashboard_history");
+  assert.match(dashboard.highestValueCategories[0].why, /rollup dashboard now makes/);
+  assert.match(dashboard.highestValueCategories[0].does, /Tracks recent host-control/);
   assert.equal(dashboard.console.recommendationGroups[0].category, "operator-env");
   assert.equal(event.type, "discordos.operator.dashboard_ready");
   assert.equal(event.dimensions.topRecommendation, "inspect-operator-command-ergonomics");
@@ -93,7 +93,7 @@ test("operator dashboard summarizes next-work result into command hint", async (
 test("operator dashboard exposes product runtime command tiles", () => {
   const panel = _internals.buildProductRuntimePanel();
 
-  assert.equal(panel.surfaceCount, 119);
+  assert.equal(panel.surfaceCount, 124);
   assert(panel.tiles.some((tile) => tile.id === "board_shadow_persistence"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:board-feature-activation-pilot"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:board-active-admission-canary"));
@@ -119,6 +119,7 @@ test("operator dashboard exposes product runtime command tiles", () => {
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-provider-queue-interaction-admission-dashboard"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-provider-queue-interaction-admission-history"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-provider-queue-interaction-admission-history-alerting"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-provider-queue-interaction-admission-history-alert-delivery-canary"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-control-post"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-control-post-publish"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-channel-target-status"));
@@ -137,6 +138,7 @@ test("operator dashboard exposes product runtime command tiles", () => {
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-host-control-trend-alert-delivery-dashboard"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-host-control-trend-alert-delivery-history"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-host-control-trend-alert-delivery-history-rollup"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-host-control-trend-alert-delivery-history-rollup-dashboard"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:testing-surface-provision"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:board-lifecycle-event-ingest"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:chat-command-intake"));
@@ -154,6 +156,7 @@ test("operator dashboard exposes product runtime command tiles", () => {
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-response-delivery-rate-limit-alert-delivery-canary"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-response-delivery-rate-limit-alert-delivery-readback"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-response-delivery-rate-limit-alert-delivery-dashboard"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-response-delivery-rate-limit-alert-delivery-history"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:product-workflow-monitor"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:operator-activation-runbook"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-storage-contract"));
@@ -183,6 +186,7 @@ test("operator dashboard exposes product runtime command tiles", () => {
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:button-route-audit-acknowledgement-dashboard-alert-history"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:button-route-audit-acknowledgement-history-alerting"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:button-route-audit-acknowledgement-alert-delivery-canary"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:button-route-audit-acknowledgement-alert-delivery-readback"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:signed-interaction-endpoint-smoke -- --type MESSAGE_COMPONENT --execute-route"));
   assert(panel.tiles.some((tile) => tile.id === "button_route_observability_audit"));
   assert(!panel.tiles.some((tile) => /slash-command-adapter|moderation-review-slash-command|slash-command-registration-preflight|slash-command-registration-apply-guard|slash-command-deactivation-apply-guard/.test(tile.command)));
@@ -204,6 +208,7 @@ test("operator dashboard exposes product runtime command tiles", () => {
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:board-reaction-repair-scheduler-alert-delivery-dashboard"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:board-reaction-repair-scheduler-alert-delivery-history"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:board-reaction-repair-scheduler-alert-delivery-history-alerting"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:board-reaction-repair-scheduler-alert-delivery-history-alert-delivery-canary"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-feature-card-forum-post"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-feature-card-reactions"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:board-moderation-post-button-conversion"));
@@ -249,7 +254,7 @@ test("operator dashboard exposes ranked highest-value categories", () => {
     categories.map((category) => category.rank),
     [1, 2, 3, 4, 5]
   );
-  assert(categories.some((category) => category.id === "music_provider_queue_interaction_admission_history_alert_delivery_canary"));
+  assert(categories.some((category) => category.id === "music_provider_queue_interaction_admission_history_alert_delivery_readback"));
   assert(categories.every((category) => category.command.startsWith("npm run ops:discordos:")));
   assert(categories.every((category) => typeof category.why === "string" && category.why.length > 20));
   assert(categories.every((category) => typeof category.does === "string" && category.does.length > 20));
@@ -288,9 +293,9 @@ test("operator dashboard renders compact markdown without target values", () => 
   assert(rendered.includes("command: `npm run ops:discordos:dashboard:prod`"));
   assert(rendered.includes("status line: `ready`"));
   assert(rendered.includes("highest value categories: `5`"));
-  assert(rendered.includes("category 1: `Music Sesh host control trend alert delivery history rollup dashboard`"));
-  assert(rendered.includes("why: The rollup now summarizes"));
-  assert(rendered.includes("does: Shows host-control trend alert delivery rollups"));
+  assert(rendered.includes("category 1: `Music Sesh host control trend alert delivery rollup dashboard history`"));
+  assert(rendered.includes("why: The rollup dashboard now makes"));
+  assert(rendered.includes("does: Tracks recent host-control rollup dashboard states"));
   assert(rendered.includes("group operator-env: `1` top `inspect-operator-command-ergonomics`"));
   assert(rendered.includes("surface board_shadow_persistence: `available`"));
   assert(rendered.includes("surface board_feature_activation_pilot: `available`"));
