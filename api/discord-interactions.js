@@ -4,6 +4,9 @@ const {
 const {
   _internals: admissionInternals,
 } = require("../scripts/discordos-interaction-handler-admission");
+const {
+  _internals: buttonRouterInternals,
+} = require("../scripts/discordos-music-sesh-button-router");
 
 function normalizeHeader(headers = {}, name) {
   const direct = headers[name] ?? headers[name.toLowerCase()];
@@ -66,6 +69,26 @@ function buildAdmissionInput(interaction) {
   };
 }
 
+function shouldExecuteButtonRoute({ env = process.env, admission }) {
+  return env.DISCORDOS_BUTTON_INTERACTION_EXECUTION === "enabled"
+    && admission?.route?.kind === "message_component"
+    && admission?.ok === true;
+}
+
+function buildButtonExecutionInput(interaction = {}, admissionInput = {}) {
+  return {
+    customId: admissionInput.customId,
+    sessionId: interaction?.message?.id
+      ? `interaction-${interaction.message.id}`
+      : "music-sesh-interaction",
+    guildId: interaction.guild_id || null,
+    channelId: interaction.channel_id || interaction.message?.channel_id || null,
+    actorDiscordUserId: interaction.member?.user?.id || interaction.user?.id || null,
+    allowStorageWrite: true,
+    apply: true,
+  };
+}
+
 async function readRawBody(req) {
   if (typeof req.rawBody === "string") {
     return req.rawBody;
@@ -87,7 +110,7 @@ async function readRawBody(req) {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-function responseForAdmission(admission) {
+function responseForAdmission(admission, execution = null) {
   if (!admission.ok) {
     return {
       statusCode: 400,
@@ -95,6 +118,18 @@ function responseForAdmission(admission) {
         type: 4,
         data: {
           content: "Interaction route is not admitted.",
+          flags: 64,
+        },
+      },
+    };
+  }
+  if (execution && !execution.ok) {
+    return {
+      statusCode: 400,
+      payload: {
+        type: 4,
+        data: {
+          content: "DiscordOS button route execution was blocked.",
           flags: 64,
         },
       },
@@ -113,7 +148,9 @@ function responseForAdmission(admission) {
     payload: {
       type: 4,
       data: {
-        content: "DiscordOS button route admitted.",
+        content: execution?.executesStorageWrite
+          ? "DiscordOS button route executed."
+          : "DiscordOS button route admitted.",
         flags: 64,
       },
     },
@@ -126,6 +163,8 @@ async function buildDiscordInteractionResponse({
   rawBody,
   publicKey,
   nowSeconds = Math.floor(Date.now() / 1000),
+  env = process.env,
+  fetchImpl = fetch,
 } = {}) {
   if (method !== "POST") {
     return {
@@ -178,15 +217,28 @@ async function buildDiscordInteractionResponse({
     };
   }
 
-  const admission = admissionInternals.buildInteractionHandlerAdmission(buildAdmissionInput(interaction));
-  const response = responseForAdmission(admission);
+  const admissionInput = buildAdmissionInput(interaction);
+  const admission = admissionInternals.buildInteractionHandlerAdmission(admissionInput);
+  let execution = null;
+  if (shouldExecuteButtonRoute({ env, admission })) {
+    execution = await buttonRouterInternals.buildMusicSeshButtonRouter({
+      ...buildButtonExecutionInput(interaction, admissionInput),
+      env,
+      fetchImpl,
+    });
+  }
+  const response = responseForAdmission(admission, execution);
   return {
-    ok: admission.ok,
+    ok: admission.ok && (!execution || execution.ok),
     statusCode: response.statusCode,
     payload: response.payload,
     signaturePreflight,
     admission,
-    reasonCodes: admission.reasonCodes,
+    execution,
+    reasonCodes: [...new Set([
+      ...admission.reasonCodes,
+      ...(execution?.reasonCodes || []),
+    ])],
   };
 }
 
@@ -207,6 +259,8 @@ module.exports._internals = {
   surfaceFromCommandName,
   extractMusicOptions,
   buildAdmissionInput,
+  shouldExecuteButtonRoute,
+  buildButtonExecutionInput,
   readRawBody,
   responseForAdmission,
   buildDiscordInteractionResponse,

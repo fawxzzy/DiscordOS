@@ -212,6 +212,12 @@ function buildProductRuntimeTiles() {
       command: "npm run ops:discordos:music-sesh-button-router",
     },
     {
+      id: "testing_surface_provision",
+      label: "Testing surface provision",
+      status: "available",
+      command: "npm run ops:discordos:testing-surface-provision",
+    },
+    {
       id: "board_lifecycle_event_ingest",
       label: "Board event ingest",
       status: "available",
@@ -228,6 +234,12 @@ function buildProductRuntimeTiles() {
       label: "Chat message listener",
       status: "available",
       command: "npm run ops:discordos:chat-message-listener",
+    },
+    {
+      id: "chat_message_live_ingest",
+      label: "Chat message live ingest",
+      status: "available",
+      command: "npm run ops:discordos:chat-message-live-ingest",
     },
     {
       id: "product_workflow_monitor",
@@ -296,6 +308,12 @@ function buildProductRuntimeTiles() {
       command: "npm run ops:discordos:music-sesh-live-readback",
     },
     {
+      id: "music_sesh_queue_status",
+      label: "Music Sesh queue status",
+      status: "available",
+      command: "npm run ops:discordos:music-sesh-queue-status",
+    },
+    {
       id: "music_sesh_button_chat_live_canary",
       label: "Music Sesh button/chat live canary",
       status: "available",
@@ -312,6 +330,12 @@ function buildProductRuntimeTiles() {
       label: "Signed button interaction smoke",
       status: "available",
       command: "npm run ops:discordos:signed-interaction-endpoint-smoke",
+    },
+    {
+      id: "signed_button_route_execution_smoke",
+      label: "Signed button route execution smoke",
+      status: "available",
+      command: "npm run ops:discordos:signed-interaction-endpoint-smoke -- --type MESSAGE_COMPONENT --execute-route",
     },
     {
       id: "interaction_handler_admission",
@@ -336,6 +360,12 @@ function buildProductRuntimeTiles() {
       label: "Music Sesh board live sync",
       status: "available",
       command: "npm run ops:discordos:music-sesh-feedback-board-live-sync",
+    },
+    {
+      id: "board_moderation_post_button_conversion",
+      label: "Board moderation post/button conversion",
+      status: "available",
+      command: "npm run ops:discordos:board-moderation-post-button-conversion",
     },
   ];
 }

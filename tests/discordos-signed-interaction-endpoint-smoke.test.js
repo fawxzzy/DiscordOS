@@ -4,10 +4,19 @@ const test = require("node:test");
 const { _internals } = require("../scripts/discordos-signed-interaction-endpoint-smoke");
 
 test("signed interaction endpoint smoke parses type", () => {
-  const parsed = _internals.parseArgs(["--json", "--type", "MESSAGE_COMPONENT"]);
+  const parsed = _internals.parseArgs([
+    "--json",
+    "--type",
+    "MESSAGE_COMPONENT",
+    "--execute-route",
+    "--channel-id",
+    "1515943795999510579",
+  ]);
 
   assert.equal(parsed.json, true);
   assert.equal(parsed.type, "MESSAGE_COMPONENT");
+  assert.equal(parsed.executeRoute, true);
+  assert.equal(parsed.channelId, "1515943795999510579");
 });
 
 test("signed interaction endpoint smoke proves signed ping", async () => {
@@ -28,6 +37,27 @@ test("signed interaction endpoint smoke proves signed button route", async () =>
   assert.equal(result.responseType, 4);
   assert.equal(result.signatureVerified, true);
   assert.equal(result.admissionStatus, "handler_admission_ready");
+});
+
+test("signed interaction endpoint smoke can execute guarded button route", async () => {
+  const result = await _internals.buildSignedInteractionEndpointSmoke({
+    type: "MESSAGE_COMPONENT",
+    executeRoute: true,
+    env: {
+      DISCORDOS_MUSIC_SESH_WRITE_ADAPTER: "enabled",
+      DISCORDOS_SUPABASE_URL: "https://example.supabase.co",
+      DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: "service-role",
+    },
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true }),
+    }),
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.executesRoute, true);
+  assert.equal(result.executionStatus, "button_route_ready");
 });
 
 test("signed interaction endpoint smoke renders bounded markdown", async () => {

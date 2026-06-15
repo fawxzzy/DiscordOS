@@ -59,6 +59,57 @@ test("discord interactions endpoint admits signed music button route without exe
   assert.equal(result.payload.type, 4);
   assert.equal(result.admission.executesRoute, false);
   assert.equal(result.admission.route.kind, "message_component");
+  assert.equal(result.execution, null);
+});
+
+test("discord interactions endpoint executes signed music button route when guarded", async () => {
+  const calls = [];
+  const body = JSON.stringify({
+    type: 3,
+    guild_id: "1504668396338413670",
+    channel_id: "1504671871512346695",
+    member: {
+      user: {
+        id: "1515220075366580224",
+      },
+    },
+    message: {
+      id: "1516000000000000000",
+      channel_id: "1504671871512346695",
+    },
+    data: {
+      custom_id: "music_sesh:queue",
+      component_type: 2,
+    },
+  });
+  const signed = signedRequest(body);
+  const result = await _internals.buildDiscordInteractionResponse({
+    method: "POST",
+    rawBody: body,
+    headers: signed.headers,
+    publicKey: signed.publicKey,
+    nowSeconds: 100,
+    env: {
+      DISCORDOS_BUTTON_INTERACTION_EXECUTION: "enabled",
+      DISCORDOS_MUSIC_SESH_WRITE_ADAPTER: "enabled",
+      DISCORDOS_SUPABASE_URL: "https://example.supabase.co",
+      DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: "service-role",
+    },
+    fetchImpl: async (url, init) => {
+      calls.push({ url: String(url), init });
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true }),
+      };
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.payload.data.content, "DiscordOS button route executed.");
+  assert.equal(result.execution.executesStorageWrite, true);
+  assert.equal(JSON.parse(calls[0].init.body).payload.action, "queue_item");
 });
 
 test("discord interactions endpoint rejects application command routes", async () => {

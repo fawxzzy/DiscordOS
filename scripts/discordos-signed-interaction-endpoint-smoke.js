@@ -7,6 +7,11 @@ function parseArgs(args) {
   const options = {
     json: false,
     type: "PING",
+    executeRoute: false,
+    guildId: "1504668396338413670",
+    channelId: "1515943795999510579",
+    actorDiscordUserId: "1515220075366580224",
+    messageId: "1516000000000000000",
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -19,6 +24,36 @@ function parseArgs(args) {
         throw new Error("missing_type_value");
       }
       options.type = value.trim();
+      index += 1;
+    } else if (arg === "--execute-route") {
+      options.executeRoute = true;
+    } else if (arg === "--guild-id") {
+      const value = args[index + 1];
+      if (typeof value !== "string" || value.trim().length === 0) {
+        throw new Error("missing_guild_id_value");
+      }
+      options.guildId = value.trim();
+      index += 1;
+    } else if (arg === "--channel-id") {
+      const value = args[index + 1];
+      if (typeof value !== "string" || value.trim().length === 0) {
+        throw new Error("missing_channel_id_value");
+      }
+      options.channelId = value.trim();
+      index += 1;
+    } else if (arg === "--actor-user-id") {
+      const value = args[index + 1];
+      if (typeof value !== "string" || value.trim().length === 0) {
+        throw new Error("missing_actor_user_id_value");
+      }
+      options.actorDiscordUserId = value.trim();
+      index += 1;
+    } else if (arg === "--message-id") {
+      const value = args[index + 1];
+      if (typeof value !== "string" || value.trim().length === 0) {
+        throw new Error("missing_message_id_value");
+      }
+      options.messageId = value.trim();
       index += 1;
     } else {
       throw new Error(`unsupported_argument:${arg}`);
@@ -33,10 +68,26 @@ function discordPublicKeyFromKey(publicKey) {
   return publicKeyDer.subarray(publicKeyDer.length - 32).toString("hex");
 }
 
-function buildSmokeBody(type = "PING") {
+function buildSmokeBody(type = "PING", {
+  guildId = "1504668396338413670",
+  channelId = "1515943795999510579",
+  actorDiscordUserId = "1515220075366580224",
+  messageId = "1516000000000000000",
+} = {}) {
   if (type === "MESSAGE_COMPONENT") {
     return JSON.stringify({
       type: 3,
+      guild_id: guildId,
+      channel_id: channelId,
+      member: {
+        user: {
+          id: actorDiscordUserId,
+        },
+      },
+      message: {
+        id: messageId,
+        channel_id: channelId,
+      },
       data: {
         custom_id: "music_sesh:queue",
         component_type: 2,
@@ -49,10 +100,22 @@ function buildSmokeBody(type = "PING") {
 async function buildSignedInteractionEndpointSmoke({
   type = "PING",
   nowSeconds = 100,
+  executeRoute = false,
+  guildId = "1504668396338413670",
+  channelId = "1515943795999510579",
+  actorDiscordUserId = "1515220075366580224",
+  messageId = "1516000000000000000",
+  env = process.env,
+  fetchImpl = fetch,
 } = {}) {
   const { publicKey, privateKey } = crypto.generateKeyPairSync("ed25519");
   const publicKeyHex = discordPublicKeyFromKey(publicKey);
-  const body = buildSmokeBody(type);
+  const body = buildSmokeBody(type, {
+    guildId,
+    channelId,
+    actorDiscordUserId,
+    messageId,
+  });
   const timestamp = String(nowSeconds);
   const signature = crypto.sign(null, Buffer.from(`${timestamp}${body}`), privateKey).toString("hex");
   const response = await endpointInternals.buildDiscordInteractionResponse({
@@ -64,6 +127,13 @@ async function buildSignedInteractionEndpointSmoke({
     rawBody: body,
     publicKey: publicKeyHex,
     nowSeconds,
+    env: executeRoute
+      ? {
+          ...env,
+          DISCORDOS_BUTTON_INTERACTION_EXECUTION: "enabled",
+        }
+      : env,
+    fetchImpl,
   });
   const reasonCodes = [...response.reasonCodes];
   if (!response.signaturePreflight?.signatureVerified) {
@@ -77,11 +147,13 @@ async function buildSignedInteractionEndpointSmoke({
     writesArtifacts: false,
     callsDiscordApi: false,
     executesCommand: false,
+    executesRoute: response.execution?.executesStorageWrite === true,
     status: response.ok && reasonCodes.length === 0 ? "signed_endpoint_smoke_ready" : "blocked",
     interactionType: type,
     responseType: response.payload?.type || null,
     signatureVerified: response.signaturePreflight?.signatureVerified === true,
     admissionStatus: response.admission?.status || null,
+    executionStatus: response.execution?.status || null,
     reasonCodes: [...new Set(reasonCodes)],
   };
 
@@ -111,11 +183,13 @@ function renderMarkdown(result) {
     `- sends messages: \`${result.sendsMessages ? "true" : "false"}\``,
     `- calls Discord API: \`${result.callsDiscordApi ? "true" : "false"}\``,
     `- executes command: \`${result.executesCommand ? "true" : "false"}\``,
+    `- executes route: \`${result.executesRoute ? "true" : "false"}\``,
     `- status: \`${result.status}\``,
     `- interaction type: \`${result.interactionType}\``,
     `- response type: \`${result.responseType || "none"}\``,
     `- signature verified: \`${result.signatureVerified ? "true" : "false"}\``,
     `- admission status: \`${result.admissionStatus || "none"}\``,
+    `- execution status: \`${result.executionStatus || "none"}\``,
     `- reason codes: \`${result.reasonCodes.join(",") || "none"}\``,
     "",
   ].join("\n");
