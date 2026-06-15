@@ -25,7 +25,7 @@
       "id": "music_sesh",
       "label": "DiscordOS Music Sesh Workflow v0",
       "domain": "music_sesh",
-      "status": "shadow",
+      "status": "active",
       "docsPath": "docs/contracts/discordos-music-sesh-workflow-v0.md",
       "sourcePath": "src/contracts/music-sesh.ts",
       "statusCommand": "npm run ops:discordos:music-sesh-status",

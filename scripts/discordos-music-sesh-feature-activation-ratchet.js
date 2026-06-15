@@ -12,8 +12,8 @@ function buildMusicSeshRatchetReadModel(registryStatus) {
   if (!music) {
     reasonCodes.push("music_sesh_registry_record_missing");
   }
-  if (music && music.status !== "shadow") {
-    reasonCodes.push("music_sesh_not_shadow_ratcheted");
+  if (music && music.status !== "active") {
+    reasonCodes.push("music_sesh_not_active_ratcheted");
   }
   if (music?.liveBehaviorAdmitted) {
     reasonCodes.push("music_sesh_live_behavior_unexpected");
@@ -23,10 +23,10 @@ function buildMusicSeshRatchetReadModel(registryStatus) {
     ok: reasonCodes.length === 0,
     featureId: "music_sesh",
     currentStatus: music?.status || null,
-    targetStatus: "shadow",
+    targetStatus: "active",
     liveBehaviorAdmitted: music?.liveBehaviorAdmitted === true,
     runtimeCommand: "npm run ops:discordos:music-sesh-runtime",
-    nextGate: "music_sesh_storage_contract_and_live_admission",
+    nextGate: "music_sesh_live_behavior_admission",
     reasonCodes: [...new Set(reasonCodes)],
   };
 }

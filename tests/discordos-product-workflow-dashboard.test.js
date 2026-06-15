@@ -33,9 +33,9 @@ test("product workflow dashboard builds board, moderation, and music rows", asyn
   assert.equal(moderation.registryStatus, "shadow");
   assert.equal(moderation.persistenceStatus, "storage_migration_rls_ready");
   assert.equal(moderation.nextGate, "moderation_audit_review_search");
-  assert.equal(music.registryStatus, "shadow");
+  assert.equal(music.registryStatus, "active");
   assert.equal(music.persistenceStatus, "storage_migration_rls_ready");
-  assert.equal(music.nextGate, "music_sesh_write_adapter_guard");
+  assert.equal(music.nextGate, "continue_governed_verification");
   assert.equal(result.releaseSummary.status, "operator_ready");
   assert.equal(result.releaseSummary.storageBackedWorkflowCount, 3);
   assert.equal(result.releaseSummary.guardedAdapterWorkflowCount, 2);
@@ -70,6 +70,6 @@ test("product workflow dashboard renders bounded markdown", async () => {
   assert(rendered.includes("live readback command: `npm run ops:discordos:product-workflow-live-readback -- --live`"));
   assert(rendered.includes("board: registry `active`"));
   assert(rendered.includes("moderation: registry `shadow`"));
-  assert(rendered.includes("music_sesh: registry `shadow`"));
+  assert(rendered.includes("music_sesh: registry `active`"));
   assert(!rendered.includes("SUPABASE_SERVICE_ROLE_KEY="));
 });

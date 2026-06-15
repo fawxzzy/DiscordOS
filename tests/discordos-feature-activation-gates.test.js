@@ -102,6 +102,6 @@ test("feature activation gates render bounded markdown", async () => {
   assert(rendered.includes("# DiscordOS Feature Activation Gates"));
   assert(rendered.includes("activation allowed: `0`"));
   assert(rendered.includes("board: status `active`"));
-  assert(rendered.includes("music_sesh: status `shadow`"));
+  assert(rendered.includes("music_sesh: status `active`"));
   assert(!rendered.includes("bot-secret"));
 });

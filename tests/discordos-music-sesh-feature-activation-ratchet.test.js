@@ -34,11 +34,12 @@ test("music sesh activation ratchet parses registry flag", () => {
   assert(parsed.registryPath.endsWith("registry.json"));
 });
 
-test("music sesh activation ratchet passes current registry shadow posture", async () => {
+test("music sesh activation ratchet passes current registry active posture", async () => {
   const result = await _internals.buildMusicSeshFeatureActivationRatchet();
 
   assert.equal(result.ok, true);
-  assert.equal(result.currentStatus, "shadow");
+  assert.equal(result.currentStatus, "active");
+  assert.equal(result.targetStatus, "active");
   assert.equal(result.liveBehaviorAdmitted, false);
   assert.equal(result.status, "ratchet_applied");
 });
@@ -48,7 +49,7 @@ test("music sesh activation ratchet blocks preflight-only registry", async () =>
   const result = await _internals.buildMusicSeshFeatureActivationRatchet({ registryPath });
 
   assert.equal(result.ok, false);
-  assert(result.reasonCodes.includes("music_sesh_not_shadow_ratcheted"));
+  assert(result.reasonCodes.includes("music_sesh_not_active_ratcheted"));
 });
 
 test("music sesh activation ratchet renders bounded markdown", async () => {
@@ -56,5 +57,5 @@ test("music sesh activation ratchet renders bounded markdown", async () => {
   const rendered = _internals.renderMarkdown(result);
 
   assert(rendered.includes("# DiscordOS Music Sesh Feature Activation Ratchet"));
-  assert(rendered.includes("current status: `shadow`"));
+  assert(rendered.includes("current status: `active`"));
 });
