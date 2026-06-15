@@ -4,29 +4,39 @@ const {
 
 const HIGHEST_VALUE_CATEGORIES = [
   {
-    id: "music_sesh_live_canary_depth",
-    label: "Music Sesh live canary depth",
-    command: "npm run ops:discordos:music-sesh-button-chat-live-canary",
+    id: "live_guarded_music_sesh_write_readback_canary",
+    label: "Live guarded Music Sesh write/readback canary",
+    command: "npm run ops:discordos:music-sesh-live-readback -- --live",
+    why: "It is the shortest path from no-send readiness to proof that Music Sesh state can be read back from the live store.",
+    does: "Runs the guarded live readback path and summarizes sessions, queue items, votes, latest rows, and RPC status without posting to Discord.",
   },
   {
-    id: "button_chat_execution_ergonomics",
-    label: "Button/chat execution ergonomics",
-    command: "npm run ops:discordos:signed-interaction-endpoint-smoke -- --type MESSAGE_COMPONENT --execute-route",
+    id: "production_button_post_publish_readback",
+    label: "Production button post publish/readback",
+    command: "npm run ops:discordos:music-sesh-control-post-publish",
+    why: "The public Music Sesh surface needs a stable button post before users can operate the workflow without slash commands.",
+    does: "Builds the Music Sesh button post payload, checks duplicate titles, refuses updates-channel fallback, and confirms publish readback when explicitly double-guarded.",
   },
   {
-    id: "board_forum_lifecycle_automation",
-    label: "Board-to-forum lifecycle automation polish",
-    command: "npm run ops:discordos:music-sesh-feedback-board-live-sync",
+    id: "board_lifecycle_sync_apply_readback_hardening",
+    label: "Board lifecycle sync apply/readback hardening",
+    command: "npm run ops:discordos:board-lifecycle-sync",
+    why: "Feature cards are now the operating board, so lifecycle changes need stronger apply/readback proof before more live automation is layered on top.",
+    does: "Exercises the forum-card lifecycle sync path through the guarded board writer and exposes storage admission, state, card id, and no-send guarantees.",
   },
   {
-    id: "product_workflow_monitor_thresholds",
-    label: "Product workflow monitor thresholds",
-    command: "npm run ops:discordos:product-workflow-alert-delivery-canary",
+    id: "product_workflow_live_readback_thresholds",
+    label: "Product workflow live readback thresholds",
+    command: "npm run ops:discordos:product-workflow-live-readback -- --live",
+    why: "The monitor canary is only useful if the live product readback counts are visible and can explain why an alert would or would not fire.",
+    does: "Runs the product workflow live readback RPC and reports board card counts, moderation audit counts, latest row presence, and reason codes.",
   },
   {
-    id: "operator_dashboard_read_model_cleanup",
-    label: "Operator dashboard/read-model cleanup",
+    id: "operator_dashboard_category_command_routing",
+    label: "Operator dashboard category-to-command routing",
     command: "npm run ops:discordos:dashboard",
+    why: "The dashboard should tell the operator what to run next and why, even when the recommender queue is empty.",
+    does: "Renders ranked highest-value categories with command hints, reasoning, and expected effect so future batches can start from the dashboard.",
   },
 ];
 
@@ -521,6 +531,8 @@ function renderMarkdown(result) {
 
   for (const category of result.highestValueCategories) {
     lines.push(`- category ${category.rank}: \`${category.label}\` command \`${category.command}\``);
+    lines.push(`  - why: ${category.why}`);
+    lines.push(`  - does: ${category.does}`);
   }
 
   lines.push(

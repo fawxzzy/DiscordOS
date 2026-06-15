@@ -82,7 +82,9 @@ test("operator dashboard summarizes next-work result into command hint", async (
   assert.equal(dashboard.productRuntime.surfaceCount, 44);
   assert.equal(dashboard.productRuntime.availableCount, 44);
   assert.equal(dashboard.highestValueCategories.length, 5);
-  assert.equal(dashboard.highestValueCategories[0].id, "music_sesh_live_canary_depth");
+  assert.equal(dashboard.highestValueCategories[0].id, "live_guarded_music_sesh_write_readback_canary");
+  assert.match(dashboard.highestValueCategories[0].why, /live store/);
+  assert.match(dashboard.highestValueCategories[0].does, /guarded live readback path/);
   assert.equal(dashboard.console.recommendationGroups[0].category, "operator-env");
   assert.equal(event.type, "discordos.operator.dashboard_ready");
   assert.equal(event.dimensions.topRecommendation, "inspect-operator-command-ergonomics");
@@ -177,8 +179,10 @@ test("operator dashboard exposes ranked highest-value categories", () => {
     categories.map((category) => category.rank),
     [1, 2, 3, 4, 5]
   );
-  assert(categories.some((category) => category.id === "product_workflow_monitor_thresholds"));
+  assert(categories.some((category) => category.id === "product_workflow_live_readback_thresholds"));
   assert(categories.every((category) => category.command.startsWith("npm run ops:discordos:")));
+  assert(categories.every((category) => typeof category.why === "string" && category.why.length > 20));
+  assert(categories.every((category) => typeof category.does === "string" && category.does.length > 20));
 });
 
 test("operator dashboard renders compact markdown without target values", () => {
@@ -214,7 +218,9 @@ test("operator dashboard renders compact markdown without target values", () => 
   assert(rendered.includes("command: `npm run ops:discordos:dashboard:prod`"));
   assert(rendered.includes("status line: `ready`"));
   assert(rendered.includes("highest value categories: `5`"));
-  assert(rendered.includes("category 1: `Music Sesh live canary depth`"));
+  assert(rendered.includes("category 1: `Live guarded Music Sesh write/readback canary`"));
+  assert(rendered.includes("why: It is the shortest path from no-send readiness"));
+  assert(rendered.includes("does: Runs the guarded live readback path"));
   assert(rendered.includes("group operator-env: `1` top `inspect-operator-command-ergonomics`"));
   assert(rendered.includes("surface board_shadow_persistence: `available`"));
   assert(rendered.includes("surface board_feature_activation_pilot: `available`"));
