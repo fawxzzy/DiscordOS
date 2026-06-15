@@ -69,7 +69,10 @@
       "state": "completed",
       "priority": "high",
       "category": "testing_surface",
-      "nextCommand": "npm run ops:discordos:testing-surface-provision"
+      "nextCommand": "npm run ops:discordos:testing-surface-provision",
+      "liveThreadId": "1515961745414557896",
+      "liveMessageId": "1515961745414557896",
+      "reactionStatus": "success"
     },
     {
       "id": "music-sesh-signed-button-route-execution",
@@ -77,7 +80,10 @@
       "state": "completed",
       "priority": "high",
       "category": "button_execution",
-      "nextCommand": "npm run ops:discordos:signed-interaction-endpoint-smoke"
+      "nextCommand": "npm run ops:discordos:signed-interaction-endpoint-smoke",
+      "liveThreadId": "1515961745896771755",
+      "liveMessageId": "1515961745896771755",
+      "reactionStatus": "success"
     },
     {
       "id": "music-sesh-chat-message-live-ingest",
@@ -85,7 +91,10 @@
       "state": "completed",
       "priority": "high",
       "category": "chat_ingest",
-      "nextCommand": "npm run ops:discordos:chat-message-live-ingest"
+      "nextCommand": "npm run ops:discordos:chat-message-live-ingest",
+      "liveThreadId": "1515961747050201168",
+      "liveMessageId": "1515961747050201168",
+      "reactionStatus": "success"
     },
     {
       "id": "music-sesh-queue-status-read-model",
@@ -93,7 +102,10 @@
       "state": "completed",
       "priority": "high",
       "category": "queue_status",
-      "nextCommand": "npm run ops:discordos:music-sesh-queue-status"
+      "nextCommand": "npm run ops:discordos:music-sesh-queue-status",
+      "liveThreadId": "1515961747880673361",
+      "liveMessageId": "1515961747880673361",
+      "reactionStatus": "success"
     },
     {
       "id": "music-sesh-board-moderation-post-button-conversion",
@@ -101,7 +113,10 @@
       "state": "completed",
       "priority": "medium",
       "category": "post_button_conversion",
-      "nextCommand": "npm run ops:discordos:board-moderation-post-button-conversion"
+      "nextCommand": "npm run ops:discordos:board-moderation-post-button-conversion",
+      "liveThreadId": "1515961748719407114",
+      "liveMessageId": "1515961748719407114",
+      "reactionStatus": "success"
     }
   ]
 }

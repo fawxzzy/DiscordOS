@@ -4,6 +4,7 @@ const path = require("node:path");
 const DEFAULT_BOARD_PATH = path.resolve(process.cwd(), "config", "discordos-music-sesh-feedback-board.json");
 const STATES = new Set(["open", "ready", "blocked", "completed"]);
 const PRIORITIES = new Set(["low", "medium", "high"]);
+const REACTION_STATUSES = new Set(["success", "failure"]);
 
 function readValue(args, index, missingCode) {
   const value = args[index + 1];
@@ -64,6 +65,19 @@ function classifyCard(card) {
   if (typeof card.nextCommand !== "string" || !card.nextCommand.startsWith("npm run ops:discordos:")) {
     reasonCodes.push("card_next_command_invalid");
   }
+  if (card.state === "completed") {
+    if (typeof card.liveThreadId !== "string" || card.liveThreadId.trim().length === 0) {
+      reasonCodes.push("card_live_thread_id_missing");
+    }
+    if (typeof card.liveMessageId !== "string" || card.liveMessageId.trim().length === 0) {
+      reasonCodes.push("card_live_message_id_missing");
+    }
+    if (!REACTION_STATUSES.has(card.reactionStatus)) {
+      reasonCodes.push("card_reaction_status_invalid");
+    }
+  } else if (card.reactionStatus && !REACTION_STATUSES.has(card.reactionStatus)) {
+    reasonCodes.push("card_reaction_status_invalid");
+  }
 
   return {
     ok: reasonCodes.length === 0,
@@ -73,6 +87,9 @@ function classifyCard(card) {
     priority: card?.priority || null,
     category: card?.category || null,
     nextCommand: card?.nextCommand || null,
+    liveThreadId: card?.liveThreadId || null,
+    liveMessageId: card?.liveMessageId || null,
+    reactionStatus: card?.reactionStatus || null,
     reasonCodes,
   };
 }
@@ -109,6 +126,12 @@ function buildFeedbackBoardReadModel(board, { cardId = null, state = null } = {}
     readyCardCount: cards.filter((card) => card.state === "ready").length,
     completedCardCount: cards.filter((card) => card.state === "completed").length,
     blockedCardCount: cards.filter((card) => card.state === "blocked").length,
+    reactionReadyCardCount: cards.filter((card) =>
+      card.state === "completed"
+        && card.liveThreadId
+        && card.liveMessageId
+        && REACTION_STATUSES.has(card.reactionStatus)
+    ).length,
     nextCard: nextEligibleCards.find((card) => card.priority === "high") || nextEligibleCards[0] || null,
     cards: filteredCards,
     reasonCodes: [...new Set(reasonCodes)],
@@ -163,12 +186,13 @@ function renderMarkdown(result) {
     `- ready cards: \`${result.readyCardCount}\``,
     `- completed cards: \`${result.completedCardCount}\``,
     `- blocked cards: \`${result.blockedCardCount}\``,
+    `- reaction-ready cards: \`${result.reactionReadyCardCount}\``,
     `- next card: \`${result.nextCard?.id || "none"}\``,
     `- reason codes: \`${result.reasonCodes.join(",") || "none"}\``,
   ];
 
   for (const card of result.cards) {
-    lines.push(`- card ${card.id}: state \`${card.state}\`, priority \`${card.priority}\`, command \`${card.nextCommand}\``);
+    lines.push(`- card ${card.id}: state \`${card.state}\`, priority \`${card.priority}\`, reaction \`${card.reactionStatus || "none"}\`, thread \`${card.liveThreadId || "none"}\`, command \`${card.nextCommand}\``);
   }
 
   return `${lines.join("\n")}\n`;
@@ -197,6 +221,7 @@ module.exports = {
     DEFAULT_BOARD_PATH,
     STATES,
     PRIORITIES,
+    REACTION_STATUSES,
     parseArgs,
     classifyCard,
     buildFeedbackBoardReadModel,

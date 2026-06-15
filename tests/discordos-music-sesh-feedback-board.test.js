@@ -31,6 +31,22 @@ test("music sesh feedback board classifies card metadata", () => {
   assert.equal(card.priority, "high");
 });
 
+test("music sesh feedback board requires completed card reaction metadata", () => {
+  const card = _internals.classifyCard({
+    id: "card-1",
+    title: "Card",
+    state: "completed",
+    priority: "high",
+    category: "music_sesh",
+    nextCommand: "npm run ops:discordos:music-sesh-runtime",
+  });
+
+  assert.equal(card.ok, false);
+  assert(card.reasonCodes.includes("card_live_thread_id_missing"));
+  assert(card.reasonCodes.includes("card_live_message_id_missing"));
+  assert(card.reasonCodes.includes("card_reaction_status_invalid"));
+});
+
 test("music sesh feedback board reads committed cards", async () => {
   const result = await _internals.buildMusicSeshFeedbackBoard();
 
@@ -39,6 +55,7 @@ test("music sesh feedback board reads committed cards", async () => {
   assert.equal(result.cardCount, 12);
   assert.equal(result.readyCardCount, 7);
   assert.equal(result.completedCardCount, 5);
+  assert.equal(result.reactionReadyCardCount, 5);
   assert.equal(result.nextCard.id, "music-sesh-storage-contract");
 });
 
@@ -51,4 +68,5 @@ test("music sesh feedback board renders bounded markdown", async () => {
   assert(rendered.includes("# DiscordOS Music Sesh Feedback Board"));
   assert(rendered.includes("sends messages: `false`"));
   assert(rendered.includes("music-sesh-feedback-board-read-model"));
+  assert(rendered.includes("reaction-ready cards: `"));
 });
