@@ -786,6 +786,71 @@
       "reactionStatus": "success",
       "reactionEmojiName": "success",
       "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "music-sesh-host-control-live-apply-dashboard-rollup",
+      "title": "Music Sesh host control live apply dashboard rollup",
+      "state": "completed",
+      "priority": "high",
+      "category": "live_readback",
+      "nextCommand": "npm run ops:discordos:music-sesh-host-control-live-apply-dashboard-rollup",
+      "liveThreadId": "1516149004377919758",
+      "liveMessageId": "1516149004377919758",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "music-provider-queue-selection-user-button-surface",
+      "title": "Music provider queue selection user button surface",
+      "state": "completed",
+      "priority": "high",
+      "category": "provider_metadata",
+      "nextCommand": "npm run ops:discordos:music-provider-queue-selection-user-button-surface",
+      "liveThreadId": "1516149016356978931",
+      "liveMessageId": "1516149016356978931",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "button-route-audit-alert-target-readback",
+      "title": "Button route audit alert target readback",
+      "state": "completed",
+      "priority": "high",
+      "category": "button_audit",
+      "nextCommand": "npm run ops:discordos:button-route-audit-alert-target-readback",
+      "liveThreadId": "1516149026670772397",
+      "liveMessageId": "1516149026670772397",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "music-sesh-response-delivery-non-testing-canary",
+      "title": "Music Sesh response delivery non-testing canary",
+      "state": "completed",
+      "priority": "high",
+      "category": "chat_status",
+      "nextCommand": "npm run ops:discordos:music-sesh-response-delivery-non-testing-canary",
+      "liveThreadId": "1516149037731156178",
+      "liveMessageId": "1516149037731156178",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "board-reaction-repair-drift-scheduler",
+      "title": "Board reaction repair drift scheduler",
+      "state": "completed",
+      "priority": "high",
+      "category": "feedback_board",
+      "nextCommand": "npm run ops:discordos:board-reaction-repair-drift-scheduler",
+      "liveThreadId": "1516149050628374641",
+      "liveMessageId": "1516149050628374641",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
     }
   ]
 }
