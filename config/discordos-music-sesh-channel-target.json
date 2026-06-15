@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "target": {
+    "id": "music-sesh-production",
+    "label": "Music Sesh production channel",
+    "guildId": "1504668396338413670",
+    "categoryId": "1516089949286568007",
+    "categoryName": "Music Sesh",
+    "channelId": "1516089950787862689",
+    "channelName": "music-sesh",
+    "channelType": "text",
+    "purpose": "User-facing Music Sesh button and computa chat surface",
+    "slashCommandsAdmitted": false
+  }
+}

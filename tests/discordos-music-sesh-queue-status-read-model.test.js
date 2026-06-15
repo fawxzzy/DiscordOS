@@ -33,6 +33,23 @@ test("queue status read model summarizes readback payload", () => {
   assert.equal(model.latestQueueItemTitle, "Track");
 });
 
+test("queue status read model builds user-facing response", () => {
+  const response = _internals.buildUserStatusResponse({
+    currentSessionId: "music-1",
+    currentState: "open",
+    queueItemCount: 3,
+    voteCount: 1,
+    latestQueueItemTitle: "Track",
+  });
+
+  assert.equal(response.ephemeralPreferred, false);
+  assert.equal(response.allowedMentionsDisabled, true);
+  assert(response.content.includes("Music Sesh status: music-1 is open"));
+  assert(response.content.includes("3 queued"));
+  assert(response.content.includes("1 vote"));
+  assert(response.content.includes("Latest: Track."));
+});
+
 test("queue status read model fetches live readback", async () => {
   const result = await _internals.buildMusicSeshQueueStatusReadModel({
     live: true,
@@ -59,4 +76,5 @@ test("queue status read model fetches live readback", async () => {
   assert.equal(result.callsMusicProviders, false);
   assert.equal(result.controlsPlayback, false);
   assert.equal(result.model.latestQueueItemTitle, "Track");
+  assert(result.userResponse.content.includes("Music Sesh status: music-1 is open"));
 });
