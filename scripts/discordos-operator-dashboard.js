@@ -265,6 +265,48 @@ function buildProductRuntimeTiles() {
       status: "available",
       command: "npm run ops:discordos:music-sesh-feedback-board",
     },
+    {
+      id: "music_sesh_write_adapter_guard",
+      label: "Music Sesh write adapter guard",
+      status: "available",
+      command: "npm run ops:discordos:music-sesh-write-adapter-guard",
+    },
+    {
+      id: "music_sesh_live_readback",
+      label: "Music Sesh live readback",
+      status: "available",
+      command: "npm run ops:discordos:music-sesh-live-readback",
+    },
+    {
+      id: "slash_command_registration_apply_guard",
+      label: "Slash command apply guard",
+      status: "available",
+      command: "npm run ops:discordos:slash-command-registration-apply-guard",
+    },
+    {
+      id: "interaction_handler_admission",
+      label: "Interaction handler admission",
+      status: "available",
+      command: "npm run ops:discordos:interaction-handler-admission",
+    },
+    {
+      id: "music_sesh_queue_replay_proof",
+      label: "Music Sesh queue replay proof",
+      status: "available",
+      command: "npm run ops:discordos:music-sesh-queue-replay-proof",
+    },
+    {
+      id: "product_workflow_alert_delivery_canary",
+      label: "Product workflow alert canary",
+      status: "available",
+      command: "npm run ops:discordos:product-workflow-alert-delivery-canary",
+    },
+    {
+      id: "music_sesh_feedback_board_live_sync",
+      label: "Music Sesh board live sync",
+      status: "available",
+      command: "npm run ops:discordos:music-sesh-feedback-board-live-sync",
+    },
   ];
 }
 

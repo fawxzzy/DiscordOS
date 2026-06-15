@@ -55,6 +55,16 @@ test("storage migration RLS proof passes moderation migration", async () => {
   assert.equal(result.serviceRoleOnly, true);
 });
 
+test("storage migration RLS proof passes music sesh migration", async () => {
+  const result = await _internals.buildStorageMigrationRlsProof({ feature: "music_sesh" });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.table, "discordos.discordos_music_sesh_sessions");
+  assert.equal(result.idempotencyColumn, "session_id");
+  assert.equal(result.rlsEnabled, true);
+  assert.equal(result.serviceRoleOnly, true);
+});
+
 test("storage migration RLS proof blocks public policies", async () => {
   const migrationPath = await writeSql(`
     create table if not exists discordos.discordos_board_cards (card_id text primary key);

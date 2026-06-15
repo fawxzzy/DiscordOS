@@ -41,6 +41,33 @@ const MIGRATIONS = {
       "Service-role only; no public policies",
     ],
   },
+  music_sesh: {
+    label: "DiscordOS Music Sesh Storage Migration",
+    path: path.resolve(process.cwd(), "supabase", "migrations", "20260615033000_discordos_music_sesh_storage.sql"),
+    table: "discordos.discordos_music_sesh_sessions",
+    idempotencyColumn: "session_id",
+    requiredTokens: [
+      "create table if not exists discordos.discordos_music_sesh_sessions",
+      "session_id text primary key",
+      "create table if not exists discordos.discordos_music_sesh_queue_items",
+      "queue_item_id text primary key",
+      "create table if not exists discordos.discordos_music_sesh_votes",
+      "vote_id text primary key",
+      "create index if not exists discordos_music_sesh_sessions_state_idx",
+      "create index if not exists discordos_music_sesh_queue_items_session_idx",
+      "create index if not exists discordos_music_sesh_votes_session_idx",
+      "alter table discordos.discordos_music_sesh_sessions enable row level security",
+      "alter table discordos.discordos_music_sesh_queue_items enable row level security",
+      "alter table discordos.discordos_music_sesh_votes enable row level security",
+      "revoke all on table discordos.discordos_music_sesh_sessions from public, anon, authenticated",
+      "revoke all on table discordos.discordos_music_sesh_queue_items from public, anon, authenticated",
+      "revoke all on table discordos.discordos_music_sesh_votes from public, anon, authenticated",
+      "grant all privileges on table discordos.discordos_music_sesh_sessions to service_role",
+      "grant all privileges on table discordos.discordos_music_sesh_queue_items to service_role",
+      "grant all privileges on table discordos.discordos_music_sesh_votes to service_role",
+      "Service-role only; no public policies",
+    ],
+  },
 };
 
 const FORBIDDEN_TOKENS = [

@@ -55,8 +55,11 @@ function nextGateForFeature(feature, storageProof) {
   if (feature.id === "moderation" && storageProof?.ok && feature.liveBehaviorAdmitted === false) {
     return "moderation_audit_review_search";
   }
+  if (feature.id === "music_sesh" && storageProof?.ok && feature.status === "shadow") {
+    return "music_sesh_write_adapter_guard";
+  }
   if (feature.id === "music_sesh" && feature.status === "shadow") {
-    return "music_sesh_storage_contract";
+    return "music_sesh_storage_migration_rls_proof";
   }
   if (storageProof?.ok && feature.status === "contract_only") {
     return "shadow_registry_admission";
@@ -85,6 +88,7 @@ function buildReleaseSummary(workflows) {
     liveReadbackCommand: "npm run ops:discordos:product-workflow-live-readback -- --live",
     boardWriterCommand: "npm run ops:discordos:board-active-write-adapter-guard -- --allow-storage-write --apply",
     moderationWriterCommand: "npm run ops:discordos:moderation-audit-write-adapter-guard -- --allow-storage-write --apply",
+    musicSeshWriterCommand: "npm run ops:discordos:music-sesh-write-adapter-guard -- --allow-storage-write --apply",
     nextReleaseGate: guardedAdapterWorkflows.length > 0
       ? "lifecycle_sync_and_review_search"
       : "music_sesh_runtime_queue",
@@ -95,7 +99,7 @@ function buildOperatorSummary(workflows) {
   return {
     boardCommand: workflows.find((workflow) => workflow.id === "board")?.workflowCommand || null,
     moderationCommand: workflows.find((workflow) => workflow.id === "moderation")?.workflowCommand || null,
-    musicCommand: workflows.find((workflow) => workflow.id === "music_sesh")?.workflowCommand || null,
+    musicCommand: "npm run ops:discordos:music-sesh-write-adapter-guard",
     proofCommand: "npm run ops:discordos:supabase-apply-readback-proof",
     liveReadbackCommand: "npm run ops:discordos:product-workflow-live-readback -- --live",
     dashboardCommand: "npm run ops:discordos:product-workflow-dashboard",
@@ -123,7 +127,7 @@ async function buildDiscordOSProductWorkflowDashboard({
   registryPath = registryDashboardInternals.DEFAULT_REGISTRY_PATH,
   fsImpl,
 } = {}) {
-  const [registryDashboard, boardStorage, moderationStorage] = await Promise.all([
+  const [registryDashboard, boardStorage, moderationStorage, musicSeshStorage] = await Promise.all([
     registryDashboardInternals.buildFeatureContractRegistryDashboard({
       registryPath,
       fsImpl,
@@ -136,15 +140,20 @@ async function buildDiscordOSProductWorkflowDashboard({
       feature: "moderation",
       fsImpl,
     }),
+    storageProofInternals.buildStorageMigrationRlsProof({
+      feature: "music_sesh",
+      fsImpl,
+    }),
   ]);
-  const workflows = buildWorkflowRows(registryDashboard, [boardStorage, moderationStorage]);
+  const workflows = buildWorkflowRows(registryDashboard, [boardStorage, moderationStorage, musicSeshStorage]);
   const reasonCodes = [...new Set([
     ...registryDashboard.reasonCodes,
     ...boardStorage.reasonCodes,
     ...moderationStorage.reasonCodes,
+    ...musicSeshStorage.reasonCodes,
   ])];
   const result = {
-    ok: registryDashboard.ok && boardStorage.ok && moderationStorage.ok,
+    ok: registryDashboard.ok && boardStorage.ok && moderationStorage.ok && musicSeshStorage.ok,
     destructive: false,
     sendsMessages: false,
     writesArtifacts: false,

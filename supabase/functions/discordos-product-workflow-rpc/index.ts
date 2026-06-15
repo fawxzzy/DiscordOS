@@ -13,6 +13,8 @@ const allowedRpcs = new Set([
   "discordos_insert_moderation_audit",
   "discordos_get_product_workflow_readback",
   "discordos_search_moderation_audit",
+  "discordos_upsert_music_sesh_event",
+  "discordos_get_music_sesh_readback",
 ]);
 
 function hasValue(value: string | undefined): value is string {

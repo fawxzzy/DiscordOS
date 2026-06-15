@@ -19,7 +19,7 @@ test("product workflow dashboard builds board, moderation, and music rows", asyn
   assert.equal(result.writesArtifacts, false);
   assert.equal(result.status, "ready");
   assert.equal(result.workflowCount, 3);
-  assert.equal(result.storageProofReadyCount, 2);
+  assert.equal(result.storageProofReadyCount, 3);
   assert.equal(result.liveBehaviorAdmittedCount, 0);
   assert.equal(result.event.type, "discordos.product_workflow.dashboard_ready");
 
@@ -34,14 +34,15 @@ test("product workflow dashboard builds board, moderation, and music rows", asyn
   assert.equal(moderation.persistenceStatus, "storage_migration_rls_ready");
   assert.equal(moderation.nextGate, "moderation_audit_review_search");
   assert.equal(music.registryStatus, "shadow");
-  assert.equal(music.persistenceStatus, "storage_not_proven");
-  assert.equal(music.nextGate, "music_sesh_storage_contract");
+  assert.equal(music.persistenceStatus, "storage_migration_rls_ready");
+  assert.equal(music.nextGate, "music_sesh_write_adapter_guard");
   assert.equal(result.releaseSummary.status, "operator_ready");
-  assert.equal(result.releaseSummary.storageBackedWorkflowCount, 2);
+  assert.equal(result.releaseSummary.storageBackedWorkflowCount, 3);
   assert.equal(result.releaseSummary.guardedAdapterWorkflowCount, 2);
   assert.equal(result.releaseSummary.nextReleaseGate, "lifecycle_sync_and_review_search");
   assert.equal(result.operatorSummary.proofCommand, "npm run ops:discordos:supabase-apply-readback-proof");
   assert.equal(result.operatorSummary.liveReadbackCommand, "npm run ops:discordos:product-workflow-live-readback -- --live");
+  assert.equal(result.operatorSummary.musicCommand, "npm run ops:discordos:music-sesh-write-adapter-guard");
 });
 
 test("product workflow dashboard command helpers are stable", () => {

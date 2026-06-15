@@ -78,8 +78,8 @@ test("operator dashboard summarizes next-work result into command hint", async (
   assert.equal(dashboard.console.statusLine, "ready");
   assert.equal(dashboard.console.failingTileCount, 0);
   assert.equal(dashboard.console.healthTiles.length, 5);
-  assert.equal(dashboard.productRuntime.surfaceCount, 25);
-  assert.equal(dashboard.productRuntime.availableCount, 25);
+  assert.equal(dashboard.productRuntime.surfaceCount, 32);
+  assert.equal(dashboard.productRuntime.availableCount, 32);
   assert.equal(dashboard.console.recommendationGroups[0].category, "operator-env");
   assert.equal(event.type, "discordos.operator.dashboard_ready");
   assert.equal(event.dimensions.topRecommendation, "inspect-operator-command-ergonomics");
@@ -88,7 +88,7 @@ test("operator dashboard summarizes next-work result into command hint", async (
 test("operator dashboard exposes product runtime command tiles", () => {
   const panel = _internals.buildProductRuntimePanel();
 
-  assert.equal(panel.surfaceCount, 25);
+  assert.equal(panel.surfaceCount, 32);
   assert(panel.tiles.some((tile) => tile.id === "board_shadow_persistence"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:board-feature-activation-pilot"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:board-active-admission-canary"));
@@ -112,6 +112,13 @@ test("operator dashboard exposes product runtime command tiles", () => {
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:product-workflow-alert-drill"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-feature-activation-ratchet"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-feedback-board"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-write-adapter-guard"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-live-readback"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:slash-command-registration-apply-guard"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:interaction-handler-admission"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-queue-replay-proof"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:product-workflow-alert-delivery-canary"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-feedback-board-live-sync"));
 });
 
 test("operator dashboard groups recommendations by category and highest score", () => {
@@ -201,5 +208,12 @@ test("operator dashboard renders compact markdown without target values", () => 
   assert(rendered.includes("surface product_workflow_alert_drill: `available`"));
   assert(rendered.includes("surface music_sesh_feature_activation_ratchet: `available`"));
   assert(rendered.includes("surface music_sesh_feedback_board: `available`"));
+  assert(rendered.includes("surface music_sesh_write_adapter_guard: `available`"));
+  assert(rendered.includes("surface music_sesh_live_readback: `available`"));
+  assert(rendered.includes("surface slash_command_registration_apply_guard: `available`"));
+  assert(rendered.includes("surface interaction_handler_admission: `available`"));
+  assert(rendered.includes("surface music_sesh_queue_replay_proof: `available`"));
+  assert(rendered.includes("surface product_workflow_alert_delivery_canary: `available`"));
+  assert(rendered.includes("surface music_sesh_feedback_board_live_sync: `available`"));
   assert(!rendered.includes("bot-secret"));
 });
