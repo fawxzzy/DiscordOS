@@ -24,6 +24,9 @@ function interactionTypeName(type) {
   if (type === 2) {
     return "APPLICATION_COMMAND";
   }
+  if (type === 3) {
+    return "MESSAGE_COMPONENT";
+  }
   return "UNKNOWN";
 }
 
@@ -58,6 +61,7 @@ function buildAdmissionInput(interaction) {
     type,
     surface: surfaceFromCommandName(commandName) || "music",
     command: commandName,
+    customId: interaction?.data?.custom_id || null,
     ...musicOptions,
   };
 }
@@ -109,7 +113,7 @@ function responseForAdmission(admission) {
     payload: {
       type: 4,
       data: {
-        content: "DiscordOS command route admitted.",
+        content: "DiscordOS button route admitted.",
         flags: 64,
       },
     },

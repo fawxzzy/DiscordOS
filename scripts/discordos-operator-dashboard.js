@@ -194,10 +194,10 @@ function buildProductRuntimeTiles() {
       command: "npm run ops:discordos:music-sesh-runtime",
     },
     {
-      id: "slash_command_adapter",
-      label: "Slash command adapter",
+      id: "music_sesh_control_post",
+      label: "Music Sesh control post",
       status: "available",
-      command: "npm run ops:discordos:slash-command-adapter",
+      command: "npm run ops:discordos:music-sesh-control-post",
     },
     {
       id: "board_lifecycle_event_ingest",
@@ -206,10 +206,10 @@ function buildProductRuntimeTiles() {
       command: "npm run ops:discordos:board-lifecycle-event-ingest",
     },
     {
-      id: "moderation_review_slash_command",
-      label: "Moderation review slash command",
+      id: "chat_command_intake",
+      label: "Chat command intake",
       status: "available",
-      command: "npm run ops:discordos:moderation-review-slash-command",
+      command: "npm run ops:discordos:chat-command-intake",
     },
     {
       id: "product_workflow_monitor",
@@ -230,10 +230,10 @@ function buildProductRuntimeTiles() {
       command: "npm run ops:discordos:music-sesh-storage-contract",
     },
     {
-      id: "slash_command_registration_preflight",
-      label: "Slash command registration preflight",
+      id: "interaction_doctrine_status",
+      label: "Interaction doctrine status",
       status: "available",
-      command: "npm run ops:discordos:slash-command-registration-preflight",
+      command: "npm run ops:discordos:interaction-doctrine-status",
     },
     {
       id: "discord_interaction_signature_preflight",
@@ -278,10 +278,10 @@ function buildProductRuntimeTiles() {
       command: "npm run ops:discordos:music-sesh-live-readback",
     },
     {
-      id: "slash_command_registration_apply_guard",
-      label: "Slash command apply guard",
+      id: "signed_button_interaction_smoke",
+      label: "Signed button interaction smoke",
       status: "available",
-      command: "npm run ops:discordos:slash-command-registration-apply-guard",
+      command: "npm run ops:discordos:signed-interaction-endpoint-smoke",
     },
     {
       id: "interaction_handler_admission",

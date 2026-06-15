@@ -17,7 +17,7 @@ test("slash command registration preflight parses surface and ids", () => {
   assert.equal(parsed.applicationId, "1504668396338413670");
 });
 
-test("slash command registration preflight builds no-api command plan", () => {
+test("slash command registration preflight reports disabled no-api posture", () => {
   const result = _internals.buildSlashCommandRegistrationPreflight({
     surface: "all",
     applicationId: "1504668396338413670",
@@ -27,8 +27,10 @@ test("slash command registration preflight builds no-api command plan", () => {
   assert.equal(result.ok, true);
   assert.equal(result.callsDiscordApi, false);
   assert.equal(result.registersCommands, false);
-  assert.equal(result.commandCount, 3);
-  assert(result.commands.some((command) => command.name === "music"));
+  assert.equal(result.slashCommandsAdmitted, false);
+  assert.equal(result.status, "slash_commands_disabled");
+  assert.equal(result.commandCount, 0);
+  assert.deepEqual(result.commands, []);
 });
 
 test("slash command registration preflight blocks invalid surface", () => {
@@ -44,5 +46,6 @@ test("slash command registration preflight renders bounded markdown", () => {
 
   assert(rendered.includes("# DiscordOS Slash Command Registration Preflight"));
   assert(rendered.includes("registers commands: `false`"));
-  assert(rendered.includes("/music"));
+  assert(rendered.includes("slash commands admitted: `false`"));
+  assert(!rendered.includes("/music"));
 });

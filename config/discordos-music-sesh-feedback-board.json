@@ -16,16 +16,16 @@
       "nextCommand": "npm run ops:discordos:music-sesh-storage-contract"
     },
     {
-      "id": "slash-command-registration-preflight",
-      "title": "Slash command registration and permission preflight",
+      "id": "music-sesh-control-post-buttons",
+      "title": "Music Sesh channel control post with buttons",
       "state": "ready",
       "priority": "high",
-      "category": "slash_commands",
-      "nextCommand": "npm run ops:discordos:slash-command-registration-preflight"
+      "category": "channel_button_surface",
+      "nextCommand": "npm run ops:discordos:music-sesh-control-post"
     },
     {
       "id": "discord-interaction-signature-preflight",
-      "title": "Discord interaction signature verification path",
+      "title": "Discord button interaction signature verification path",
       "state": "ready",
       "priority": "high",
       "category": "discord_interactions",

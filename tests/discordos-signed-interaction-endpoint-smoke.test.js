@@ -4,10 +4,10 @@ const test = require("node:test");
 const { _internals } = require("../scripts/discordos-signed-interaction-endpoint-smoke");
 
 test("signed interaction endpoint smoke parses type", () => {
-  const parsed = _internals.parseArgs(["--json", "--type", "APPLICATION_COMMAND"]);
+  const parsed = _internals.parseArgs(["--json", "--type", "MESSAGE_COMPONENT"]);
 
   assert.equal(parsed.json, true);
-  assert.equal(parsed.type, "APPLICATION_COMMAND");
+  assert.equal(parsed.type, "MESSAGE_COMPONENT");
 });
 
 test("signed interaction endpoint smoke proves signed ping", async () => {
@@ -21,8 +21,8 @@ test("signed interaction endpoint smoke proves signed ping", async () => {
   assert.equal(result.signatureVerified, true);
 });
 
-test("signed interaction endpoint smoke proves signed command route", async () => {
-  const result = await _internals.buildSignedInteractionEndpointSmoke({ type: "APPLICATION_COMMAND" });
+test("signed interaction endpoint smoke proves signed button route", async () => {
+  const result = await _internals.buildSignedInteractionEndpointSmoke({ type: "MESSAGE_COMPONENT" });
 
   assert.equal(result.ok, true);
   assert.equal(result.responseType, 4);

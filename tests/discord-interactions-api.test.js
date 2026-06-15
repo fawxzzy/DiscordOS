@@ -37,12 +37,12 @@ test("discord interactions endpoint admits signed ping", async () => {
   assert.equal(result.admission.route.kind, "pong");
 });
 
-test("discord interactions endpoint admits signed music command route without executing", async () => {
+test("discord interactions endpoint admits signed music button route without executing", async () => {
   const body = JSON.stringify({
-    type: 2,
+    type: 3,
     data: {
-      name: "music",
-      options: [{ name: "title", value: "TrackName" }],
+      custom_id: "music_sesh:queue",
+      component_type: 2,
     },
   });
   const signed = signedRequest(body);
@@ -58,6 +58,28 @@ test("discord interactions endpoint admits signed music command route without ex
   assert.equal(result.statusCode, 200);
   assert.equal(result.payload.type, 4);
   assert.equal(result.admission.executesRoute, false);
+  assert.equal(result.admission.route.kind, "message_component");
+});
+
+test("discord interactions endpoint rejects application command routes", async () => {
+  const body = JSON.stringify({
+    type: 2,
+    data: {
+      name: "music",
+    },
+  });
+  const signed = signedRequest(body);
+  const result = await _internals.buildDiscordInteractionResponse({
+    method: "POST",
+    rawBody: body,
+    headers: signed.headers,
+    publicKey: signed.publicKey,
+    nowSeconds: 100,
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.statusCode, 400);
+  assert(result.reasonCodes.includes("slash_commands_disabled"));
 });
 
 test("discord interactions endpoint rejects invalid signature", async () => {

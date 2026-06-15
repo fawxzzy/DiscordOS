@@ -42,6 +42,14 @@ function buildDiscordCommandPayload(commands) {
 }
 
 function resolveRegistrationAdmission({ allowRegistration, env }) {
+  if (allowRegistration || env?.[REGISTRATION_ENV] === REGISTRATION_ENV_VALUE) {
+    return {
+      requested: true,
+      admitted: false,
+      status: "slash_commands_disabled",
+      reasonCodes: ["slash_commands_disabled"],
+    };
+  }
   const envEnabled = env?.[REGISTRATION_ENV] === REGISTRATION_ENV_VALUE;
   if (!allowRegistration && !envEnabled) {
     return {
@@ -153,6 +161,7 @@ async function buildSlashCommandRegistrationApplyGuard({
     writesArtifacts: false,
     callsDiscordApi: applyResult.attempted,
     registersCommands: applyResult.status === "registered",
+    slashCommandsAdmitted: false,
     status: reasonCodes.length === 0 ? "apply_guard_ready" : "blocked",
     scope: preflight.scope,
     commandCount: preflight.commandCount,
@@ -196,6 +205,7 @@ function renderMarkdown(result) {
     `- sends messages: \`${result.sendsMessages ? "true" : "false"}\``,
     `- calls Discord API: \`${result.callsDiscordApi ? "true" : "false"}\``,
     `- registers commands: \`${result.registersCommands ? "true" : "false"}\``,
+    `- slash commands admitted: \`${result.slashCommandsAdmitted ? "true" : "false"}\``,
     `- status: \`${result.status}\``,
     `- scope: \`${result.scope}\``,
     `- commands: \`${result.commandCount}\``,

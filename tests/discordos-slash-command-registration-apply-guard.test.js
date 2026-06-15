@@ -30,12 +30,13 @@ test("slash command registration apply guard defaults to no-api dry readiness", 
   assert.equal(result.ok, true);
   assert.equal(result.callsDiscordApi, false);
   assert.equal(result.registersCommands, false);
-  assert.equal(result.commandCount, 3);
+  assert.equal(result.slashCommandsAdmitted, false);
+  assert.equal(result.commandCount, 0);
   assert.equal(result.registrationAdmission.status, "no_registration_guard_active");
-  assert.equal(result.payloadPreview.some((command) => command.name === "music"), true);
+  assert.deepEqual(result.payloadPreview, []);
 });
 
-test("slash command registration apply guard blocks partial registration admission", async () => {
+test("slash command registration apply guard blocks registration admission", async () => {
   const result = await _internals.buildSlashCommandRegistrationApplyGuard({
     surface: "music",
     applicationId: "1504668396338413670",
@@ -44,10 +45,10 @@ test("slash command registration apply guard blocks partial registration admissi
   });
 
   assert.equal(result.ok, false);
-  assert(result.reasonCodes.includes("registration_double_guard_missing"));
+  assert(result.reasonCodes.includes("slash_commands_disabled"));
 });
 
-test("slash command registration apply guard calls Discord only when applied and configured", async () => {
+test("slash command registration apply guard never calls Discord to register", async () => {
   const calls = [];
   const result = await _internals.buildSlashCommandRegistrationApplyGuard({
     surface: "music",
@@ -68,11 +69,11 @@ test("slash command registration apply guard calls Discord only when applied and
     },
   });
 
-  assert.equal(result.ok, true);
-  assert.equal(result.callsDiscordApi, true);
-  assert.equal(result.registersCommands, true);
-  assert.equal(calls[0].url, "https://discord.com/api/v10/applications/1504668396338413670/guilds/1504671871512346695/commands");
-  assert.equal(JSON.parse(calls[0].init.body)[0].name, "music");
+  assert.equal(result.ok, false);
+  assert.equal(result.callsDiscordApi, false);
+  assert.equal(result.registersCommands, false);
+  assert.equal(calls.length, 0);
+  assert(result.reasonCodes.includes("slash_commands_disabled"));
 });
 
 test("slash command registration apply guard renders bounded markdown", async () => {
@@ -81,5 +82,6 @@ test("slash command registration apply guard renders bounded markdown", async ()
 
   assert(rendered.includes("# DiscordOS Slash Command Registration Apply Guard"));
   assert(rendered.includes("calls Discord API: `false`"));
+  assert(rendered.includes("slash commands admitted: `false`"));
   assert(!rendered.includes("bot-secret"));
 });

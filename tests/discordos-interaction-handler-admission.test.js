@@ -3,20 +3,16 @@ const test = require("node:test");
 
 const { _internals } = require("../scripts/discordos-interaction-handler-admission");
 
-test("interaction handler admission parses application command route", () => {
+test("interaction handler admission parses component route", () => {
   const parsed = _internals.parseArgs([
     "--json",
-    "--type",
-    "APPLICATION_COMMAND",
-    "--surface",
-    "music",
-    "--command",
-    "music",
+    "--type", "MESSAGE_COMPONENT",
+    "--custom-id", "music_sesh:queue",
   ]);
 
   assert.equal(parsed.json, true);
-  assert.equal(parsed.type, "APPLICATION_COMMAND");
-  assert.equal(parsed.surface, "music");
+  assert.equal(parsed.type, "MESSAGE_COMPONENT");
+  assert.equal(parsed.customId, "music_sesh:queue");
 });
 
 test("interaction handler admission admits ping response", () => {
@@ -30,19 +26,24 @@ test("interaction handler admission admits ping response", () => {
   assert.equal(result.route.responseType, 1);
 });
 
-test("interaction handler admission routes music command through slash adapter", () => {
+test("interaction handler admission routes music buttons without executing", () => {
   const result = _internals.buildInteractionHandlerAdmission({
-    type: "APPLICATION_COMMAND",
-    surface: "music",
-    command: "music",
-    sessionId: "music-1",
-    action: "queue_item",
-    itemTitle: "TrackName",
+    type: "MESSAGE_COMPONENT",
+    customId: "music_sesh:queue",
   });
 
   assert.equal(result.ok, true);
-  assert.equal(result.route.kind, "slash_command_adapter");
-  assert.equal(result.route.command, "npm run ops:discordos:music-sesh-runtime");
+  assert.equal(result.route.kind, "message_component");
+  assert.equal(result.route.customId, "music_sesh:queue");
+  assert.equal(result.executesRoute, false);
+});
+
+test("interaction handler admission blocks application commands", () => {
+  const result = _internals.buildInteractionHandlerAdmission({ type: "APPLICATION_COMMAND" });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.admitsInteraction, false);
+  assert(result.reasonCodes.includes("slash_commands_disabled"));
 });
 
 test("interaction handler admission blocks unsupported interaction type", () => {

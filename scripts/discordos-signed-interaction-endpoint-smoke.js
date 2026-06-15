@@ -34,16 +34,12 @@ function discordPublicKeyFromKey(publicKey) {
 }
 
 function buildSmokeBody(type = "PING") {
-  if (type === "APPLICATION_COMMAND") {
+  if (type === "MESSAGE_COMPONENT") {
     return JSON.stringify({
-      type: 2,
+      type: 3,
       data: {
-        name: "music",
-        options: [
-          { name: "session", value: "music-sesh-smoke" },
-          { name: "action", value: "queue_item" },
-          { name: "title", value: "Smoke Track" },
-        ],
+        custom_id: "music_sesh:queue",
+        component_type: 2,
       },
     });
   }

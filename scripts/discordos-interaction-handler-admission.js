@@ -1,8 +1,4 @@
-const {
-  _internals: adapterInternals,
-} = require("./discordos-slash-command-adapter");
-
-const INTERACTION_TYPES = new Set(["PING", "APPLICATION_COMMAND"]);
+const INTERACTION_TYPES = new Set(["PING", "MESSAGE_COMPONENT"]);
 
 function readValue(args, index, missingCode) {
   const value = args[index + 1];
@@ -21,6 +17,7 @@ function parseArgs(args) {
     sessionId: "music-sesh-smoke",
     action: "queue_item",
     itemTitle: "Smoke Track",
+    customId: "music_sesh:queue",
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -45,6 +42,9 @@ function parseArgs(args) {
     } else if (arg === "--item-title") {
       options.itemTitle = readValue(args, index, "missing_item_title_value");
       index += 1;
+    } else if (arg === "--custom-id") {
+      options.customId = readValue(args, index, "missing_custom_id_value");
+      index += 1;
     } else {
       throw new Error(`unsupported_argument:${arg}`);
     }
@@ -59,6 +59,9 @@ function buildInteractionHandlerAdmission(input = {}) {
   if (!INTERACTION_TYPES.has(type)) {
     reasonCodes.push("interaction_type_not_admitted");
   }
+  if (type === "APPLICATION_COMMAND") {
+    reasonCodes.push("slash_commands_disabled");
+  }
 
   let route = null;
   if (type === "PING") {
@@ -67,22 +70,14 @@ function buildInteractionHandlerAdmission(input = {}) {
       responseType: 1,
       command: null,
     };
-  } else if (type === "APPLICATION_COMMAND") {
-    const adapter = adapterInternals.buildSlashCommandAdapter({
-      surface: input.surface,
-      command: input.command,
-      sessionId: input.sessionId,
-      action: input.action,
-      itemTitle: input.itemTitle,
-    });
+  } else if (type === "MESSAGE_COMPONENT") {
     route = {
-      kind: "slash_command_adapter",
+      kind: "message_component",
       responseType: 4,
-      command: adapter.commandPlan?.command || null,
-      adapterStatus: adapter.status,
-      adapterReasonCodes: adapter.reasonCodes,
+      command: null,
+      customId: input.customId || "music_sesh:queue",
+      surface: String(input.customId || "").startsWith("music_sesh:") ? "music_sesh" : "unknown",
     };
-    reasonCodes.push(...adapter.reasonCodes);
   }
 
   const result = {
@@ -133,6 +128,7 @@ function renderMarkdown(result) {
     `- route: \`${result.route?.kind || "none"}\``,
     `- response type: \`${result.route?.responseType || "none"}\``,
     `- command: \`${result.route?.command || "none"}\``,
+    `- custom id: \`${result.route?.customId || "none"}\``,
     `- reason codes: \`${result.reasonCodes.join(",") || "none"}\``,
     "",
   ].join("\n");

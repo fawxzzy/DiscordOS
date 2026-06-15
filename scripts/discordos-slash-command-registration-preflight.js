@@ -42,28 +42,10 @@ function isSnowflake(value) {
 }
 
 function buildCommandDefinitions(surface = "all") {
-  const commands = [
-    {
-      surface: "board",
-      name: "board-card",
-      defaultPermission: "Manage Threads",
-      adapterCommand: "npm run ops:discordos:slash-command-adapter -- --surface board",
-    },
-    {
-      surface: "moderation",
-      name: "mod-review",
-      defaultPermission: "Moderate Members",
-      adapterCommand: "npm run ops:discordos:moderation-review-slash-command",
-    },
-    {
-      surface: "music",
-      name: "music",
-      defaultPermission: "Use Application Commands",
-      adapterCommand: "npm run ops:discordos:music-sesh-runtime",
-    },
-  ];
-
-  return surface === "all" ? commands : commands.filter((command) => command.surface === surface);
+  if (!SURFACES.has(surface)) {
+    return [];
+  }
+  return [];
 }
 
 function buildSlashCommandRegistrationPreflight(input = {}) {
@@ -87,11 +69,12 @@ function buildSlashCommandRegistrationPreflight(input = {}) {
     writesArtifacts: false,
     callsDiscordApi: false,
     registersCommands: false,
-    status: reasonCodes.length === 0 ? "registration_preflight_ready" : "blocked",
+    slashCommandsAdmitted: false,
+    status: reasonCodes.length === 0 ? "slash_commands_disabled" : "blocked",
     scope: input.guildId ? "guild" : "application",
     commandCount: commands.length,
     commands,
-    nextGate: "discord_command_registration_apply_guard",
+    nextGate: "discordos_chat_or_button_interaction_surface",
     reasonCodes,
   };
 
@@ -99,7 +82,7 @@ function buildSlashCommandRegistrationPreflight(input = {}) {
     ...result,
     event: {
       type: result.ok
-        ? "discordos.slash_command.registration_preflight_ready"
+        ? "discordos.slash_command.registration_disabled_ready"
         : "discordos.slash_command.registration_preflight_blocked",
       severity: result.ok ? "info" : "warning",
       subject: "discordos.slash_command.registration_preflight",
@@ -121,6 +104,7 @@ function renderMarkdown(result) {
     `- result: \`${result.ok ? "pass" : "fail"}\``,
     `- calls Discord API: \`${result.callsDiscordApi ? "true" : "false"}\``,
     `- registers commands: \`${result.registersCommands ? "true" : "false"}\``,
+    `- slash commands admitted: \`${result.slashCommandsAdmitted ? "true" : "false"}\``,
     `- status: \`${result.status}\``,
     `- scope: \`${result.scope}\``,
     `- commands: \`${result.commandCount}\``,
