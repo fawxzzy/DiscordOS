@@ -36,8 +36,9 @@ test("music sesh feedback board reads committed cards", async () => {
 
   assert.equal(result.ok, true);
   assert.equal(result.sendsMessages, false);
-  assert.equal(result.cardCount, 7);
+  assert.equal(result.cardCount, 12);
   assert.equal(result.readyCardCount, 7);
+  assert.equal(result.completedCardCount, 5);
   assert.equal(result.nextCard.id, "music-sesh-storage-contract");
 });
 

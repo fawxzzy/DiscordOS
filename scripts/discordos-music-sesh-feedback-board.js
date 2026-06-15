@@ -93,6 +93,7 @@ function buildFeedbackBoardReadModel(board, { cardId = null, state = null } = {}
   const filteredCards = cards.filter((card) =>
     (!cardId || card.id === cardId) && (!state || card.state === state)
   );
+  const nextEligibleCards = filteredCards.filter((card) => card.state !== "completed");
   if (cardId && filteredCards.length === 0) {
     reasonCodes.push("card_not_found");
   }
@@ -106,8 +107,9 @@ function buildFeedbackBoardReadModel(board, { cardId = null, state = null } = {}
     cardCount: cards.length,
     filteredCardCount: filteredCards.length,
     readyCardCount: cards.filter((card) => card.state === "ready").length,
+    completedCardCount: cards.filter((card) => card.state === "completed").length,
     blockedCardCount: cards.filter((card) => card.state === "blocked").length,
-    nextCard: filteredCards.find((card) => card.priority === "high") || filteredCards[0] || null,
+    nextCard: nextEligibleCards.find((card) => card.priority === "high") || nextEligibleCards[0] || null,
     cards: filteredCards,
     reasonCodes: [...new Set(reasonCodes)],
   };
@@ -140,6 +142,7 @@ async function buildMusicSeshFeedbackBoard({
       dimensions: {
         cardCount: result.cardCount,
         readyCardCount: result.readyCardCount,
+        completedCardCount: result.completedCardCount,
         blockedCardCount: result.blockedCardCount,
       },
     },
@@ -158,6 +161,7 @@ function renderMarkdown(result) {
     `- cards: \`${result.cardCount}\``,
     `- filtered cards: \`${result.filteredCardCount}\``,
     `- ready cards: \`${result.readyCardCount}\``,
+    `- completed cards: \`${result.completedCardCount}\``,
     `- blocked cards: \`${result.blockedCardCount}\``,
     `- next card: \`${result.nextCard?.id || "none"}\``,
     `- reason codes: \`${result.reasonCodes.join(",") || "none"}\``,

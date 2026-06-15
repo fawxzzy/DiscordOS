@@ -62,6 +62,46 @@
       "priority": "medium",
       "category": "feedback_board",
       "nextCommand": "npm run ops:discordos:music-sesh-feedback-board"
+    },
+    {
+      "id": "music-sesh-testing-surface",
+      "title": "Music Sesh testing channel surface",
+      "state": "completed",
+      "priority": "high",
+      "category": "testing_surface",
+      "nextCommand": "npm run ops:discordos:testing-surface-provision"
+    },
+    {
+      "id": "music-sesh-signed-button-route-execution",
+      "title": "Music Sesh signed button route execution",
+      "state": "completed",
+      "priority": "high",
+      "category": "button_execution",
+      "nextCommand": "npm run ops:discordos:signed-interaction-endpoint-smoke"
+    },
+    {
+      "id": "music-sesh-chat-message-live-ingest",
+      "title": "Music Sesh computa chat-message live ingest",
+      "state": "completed",
+      "priority": "high",
+      "category": "chat_ingest",
+      "nextCommand": "npm run ops:discordos:chat-message-live-ingest"
+    },
+    {
+      "id": "music-sesh-queue-status-read-model",
+      "title": "Music Sesh live queue status read model",
+      "state": "completed",
+      "priority": "high",
+      "category": "queue_status",
+      "nextCommand": "npm run ops:discordos:music-sesh-queue-status"
+    },
+    {
+      "id": "music-sesh-board-moderation-post-button-conversion",
+      "title": "Board and moderation post-button conversion for no-slash workflows",
+      "state": "completed",
+      "priority": "medium",
+      "category": "post_button_conversion",
+      "nextCommand": "npm run ops:discordos:board-moderation-post-button-conversion"
     }
   ]
 }
