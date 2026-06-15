@@ -6,12 +6,27 @@ function parseArgs(args) {
   return drillInternals.parseArgs(args);
 }
 
-async function buildProductWorkflowAlertDeliveryCanary(input = {}) {
-  const drill = await drillInternals.buildProductWorkflowAlertDrill({
+function normalizeCanaryThresholds(input = {}) {
+  const minBoardCards = Number(input.minBoardCards || 0);
+  const minModerationAudits = Number(input.minModerationAudits || 0);
+  if (minBoardCards > 0 || minModerationAudits > 0) {
+    return {
+      ...input,
+      minBoardCards,
+      minModerationAudits,
+    };
+  }
+
+  return {
+    ...input,
     minBoardCards: 1,
     minModerationAudits: 1,
-    ...input,
-  });
+  };
+}
+
+async function buildProductWorkflowAlertDeliveryCanary(input = {}) {
+  const thresholds = normalizeCanaryThresholds(input);
+  const drill = await drillInternals.buildProductWorkflowAlertDrill(thresholds);
   const reasonCodes = [...drill.reasonCodes];
   if (!drill.alertWouldSend) {
     reasonCodes.push("canary_alert_not_exercised");
@@ -24,6 +39,10 @@ async function buildProductWorkflowAlertDeliveryCanary(input = {}) {
     writesArtifacts: false,
     alertWouldSend: drill.alertWouldSend,
     deliveryCanaryStatus: reasonCodes.length === 0 ? "critical_route_ready_no_send" : "blocked",
+    thresholds: {
+      minBoardCards: thresholds.minBoardCards,
+      minModerationAudits: thresholds.minModerationAudits,
+    },
     notificationRoute: drill.notificationRoute,
     anomalies: drill.anomalies,
     reasonCodes: [...new Set(reasonCodes)],
@@ -55,6 +74,8 @@ function renderMarkdown(result) {
     `- sends messages: \`${result.sendsMessages ? "true" : "false"}\``,
     `- alert would send: \`${result.alertWouldSend ? "true" : "false"}\``,
     `- delivery canary: \`${result.deliveryCanaryStatus}\``,
+    `- threshold board cards: \`${result.thresholds?.minBoardCards ?? "unknown"}\``,
+    `- threshold moderation audits: \`${result.thresholds?.minModerationAudits ?? "unknown"}\``,
     `- notification route: \`${result.notificationRoute?.routeId || "none"}\``,
     `- route target: \`${result.notificationRoute?.target || "none"}\``,
     `- anomalies: \`${result.anomalies.join(",") || "none"}\``,
@@ -84,6 +105,7 @@ if (require.main === module) {
 module.exports = {
   _internals: {
     parseArgs,
+    normalizeCanaryThresholds,
     buildProductWorkflowAlertDeliveryCanary,
     renderMarkdown,
   },

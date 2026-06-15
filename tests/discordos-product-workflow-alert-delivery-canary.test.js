@@ -10,12 +10,25 @@ test("product workflow alert delivery canary parses monitor args", () => {
   assert.equal(parsed.minBoardCards, 1);
 });
 
+test("product workflow alert delivery canary normalizes default CLI thresholds", () => {
+  const thresholds = _internals.normalizeCanaryThresholds({
+    json: true,
+    minBoardCards: 0,
+    minModerationAudits: 0,
+  });
+
+  assert.equal(thresholds.minBoardCards, 1);
+  assert.equal(thresholds.minModerationAudits, 1);
+});
+
 test("product workflow alert delivery canary exercises critical no-send route", async () => {
   const result = await _internals.buildProductWorkflowAlertDeliveryCanary();
 
   assert.equal(result.ok, true);
   assert.equal(result.sendsMessages, false);
   assert.equal(result.alertWouldSend, true);
+  assert.equal(result.thresholds.minBoardCards, 1);
+  assert.equal(result.thresholds.minModerationAudits, 1);
   assert.equal(result.deliveryCanaryStatus, "critical_route_ready_no_send");
   assert.equal(result.notificationRoute.routeId, "product-workflow-monitor-critical-alert");
   assert.equal(result.notificationRoute.target, "alerts");
@@ -27,4 +40,5 @@ test("product workflow alert delivery canary renders bounded markdown", async ()
 
   assert(rendered.includes("# DiscordOS Product Workflow Alert Delivery Canary"));
   assert(rendered.includes("sends messages: `false`"));
+  assert(rendered.includes("threshold board cards: `1`"));
 });

@@ -28,6 +28,8 @@ test("music sesh feedback board live sync builds no-send lifecycle preview by de
   assert.equal(result.sendsMessages, false);
   assert.equal(result.status, "live_sync_ready");
   assert.equal(result.nextCard.id, "music-sesh-feedback-board-read-model");
+  assert.equal(result.selectedCardId, "music-sesh-feedback-board-read-model");
+  assert.equal(result.lifecycleState, "completed");
   assert.equal(result.syncAdmission.status, "no_sync_guard_active");
   assert.equal(result.lifecycleStatus, "dry_run");
   assert.equal(result.lifecyclePreview.workflow, "Music Sesh");
@@ -52,4 +54,5 @@ test("music sesh feedback board live sync renders bounded markdown", async () =>
 
   assert(rendered.includes("# DiscordOS Music Sesh Feedback Board Live Sync"));
   assert(rendered.includes("sends messages: `false`"));
+  assert(rendered.includes("selected card: `music-sesh-feedback-board-read-model`"));
 });

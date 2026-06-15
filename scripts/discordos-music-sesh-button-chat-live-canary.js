@@ -83,6 +83,20 @@ function buildCanarySteps(input = {}) {
   }));
 }
 
+function summarizeCanarySteps(steps) {
+  const buttonStepCount = steps.filter((step) => step.runner === "button").length;
+  const chatStepCount = steps.filter((step) => step.runner === "chat").length;
+  const interactionTypes = [...new Set(steps.map((step) => step.interactionType))];
+
+  return {
+    stepCount: steps.length,
+    buttonStepCount,
+    chatStepCount,
+    interactionTypes,
+    slashCommandsAdmitted: false,
+  };
+}
+
 async function runCanaryStep({
   step,
   live,
@@ -159,6 +173,7 @@ async function buildButtonChatLiveCanary({
     slashCommandsAdmitted: false,
     status: reasonCodes.length === 0 ? "button_chat_canary_ready" : "blocked",
     sessionId: input.sessionId,
+    routeSummary: summarizeCanarySteps(steps),
     steps,
     stepResults: results,
     readback: {
@@ -202,6 +217,9 @@ function renderMarkdown(result) {
     `- slash commands admitted: \`${result.slashCommandsAdmitted ? "true" : "false"}\``,
     `- status: \`${result.status}\``,
     `- session id: \`${result.sessionId || "none"}\``,
+    `- route steps: \`${result.routeSummary.stepCount}\``,
+    `- button steps: \`${result.routeSummary.buttonStepCount}\``,
+    `- chat steps: \`${result.routeSummary.chatStepCount}\``,
     `- reason codes: \`${result.reasonCodes.join(",") || "none"}\``,
   ];
 
@@ -234,6 +252,7 @@ module.exports = {
   _internals: {
     parseArgs,
     buildCanarySteps,
+    summarizeCanarySteps,
     runCanaryStep,
     buildButtonChatLiveCanary,
     renderMarkdown,

@@ -2,6 +2,34 @@ const {
   _internals: nextWorkInternals,
 } = require("./discordos-next-work-recommender");
 
+const HIGHEST_VALUE_CATEGORIES = [
+  {
+    id: "music_sesh_live_canary_depth",
+    label: "Music Sesh live canary depth",
+    command: "npm run ops:discordos:music-sesh-button-chat-live-canary",
+  },
+  {
+    id: "button_chat_execution_ergonomics",
+    label: "Button/chat execution ergonomics",
+    command: "npm run ops:discordos:signed-interaction-endpoint-smoke -- --type MESSAGE_COMPONENT --execute-route",
+  },
+  {
+    id: "board_forum_lifecycle_automation",
+    label: "Board-to-forum lifecycle automation polish",
+    command: "npm run ops:discordos:music-sesh-feedback-board-live-sync",
+  },
+  {
+    id: "product_workflow_monitor_thresholds",
+    label: "Product workflow monitor thresholds",
+    command: "npm run ops:discordos:product-workflow-alert-delivery-canary",
+  },
+  {
+    id: "operator_dashboard_read_model_cleanup",
+    label: "Operator dashboard/read-model cleanup",
+    command: "npm run ops:discordos:dashboard",
+  },
+];
+
 function parseArgs(args) {
   return nextWorkInternals.parseArgs(args);
 }
@@ -392,6 +420,13 @@ function buildProductRuntimePanel() {
   };
 }
 
+function buildHighestValueCategories() {
+  return HIGHEST_VALUE_CATEGORIES.map((category, index) => ({
+    rank: index + 1,
+    ...category,
+  }));
+}
+
 function classifyDashboardEvent(result) {
   return {
     type: result.operator.ok
@@ -426,6 +461,7 @@ async function buildDiscordOSOperatorDashboard(options = {}) {
     },
     commandHint: buildCommandHint(topRecommendation),
     recommendations: nextWork.recommendations,
+    highestValueCategories: buildHighestValueCategories(),
     console: buildDashboardConsole(nextWork),
     productRuntime: buildProductRuntimePanel(),
     receiptState: nextWork.receiptState,
@@ -465,6 +501,7 @@ function renderMarkdown(result) {
     `- top recommendation: \`${result.nextWork.topRecommendationId}\``,
     `- reason codes: \`${result.nextWork.reasonCodes.join(",") || "none"}\``,
     `- command: \`${result.commandHint?.command || "none"}\``,
+    `- highest value categories: \`${result.highestValueCategories.length}\``,
     "",
     "## Console",
     "",
@@ -480,6 +517,10 @@ function renderMarkdown(result) {
 
   for (const group of result.console.recommendationGroups) {
     lines.push(`- group ${group.category}: \`${group.count}\` top \`${group.topRecommendationId || "none"}\``);
+  }
+
+  for (const category of result.highestValueCategories) {
+    lines.push(`- category ${category.rank}: \`${category.label}\` command \`${category.command}\``);
   }
 
   lines.push(
@@ -525,6 +566,7 @@ module.exports = {
     buildDashboardConsole,
     buildProductRuntimeTiles,
     buildProductRuntimePanel,
+    buildHighestValueCategories,
     classifyDashboardEvent,
     buildDiscordOSOperatorDashboard,
     renderMarkdown,

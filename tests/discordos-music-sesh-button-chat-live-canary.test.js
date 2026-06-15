@@ -38,6 +38,10 @@ test("button chat canary dry run proves button and chat paths without writes", a
   assert.equal(result.executesStorageWrite, false);
   assert.equal(result.slashCommandsAdmitted, false);
   assert.equal(result.stepResults.length, 3);
+  assert.equal(result.routeSummary.stepCount, 3);
+  assert.equal(result.routeSummary.buttonStepCount, 2);
+  assert.equal(result.routeSummary.chatStepCount, 1);
+  assert.deepEqual(result.routeSummary.interactionTypes, ["MESSAGE_COMPONENT", "MESSAGE_CREATE"]);
 });
 
 test("button chat canary live mode executes guarded queue vote and close writes", async () => {
@@ -77,6 +81,7 @@ test("button chat canary live mode executes guarded queue vote and close writes"
   assert.equal(result.ok, true);
   assert.equal(result.executesStorageWrite, true);
   assert.equal(result.readback.liveAttempted, true);
+  assert.equal(result.routeSummary.slashCommandsAdmitted, false);
   assert.equal(calls.length, 4);
   assert.deepEqual(
     calls.slice(0, 3).map((call) => JSON.parse(call.init.body).payload.action),
