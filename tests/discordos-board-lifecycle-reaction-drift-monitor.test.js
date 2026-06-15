@@ -24,7 +24,7 @@ test("board lifecycle reaction drift monitor reports committed board clear", asy
   assert.equal(result.callsDiscordApi, false);
   assert.equal(result.slashCommandsAdmitted, false);
   assert.equal(result.status, "reaction_drift_monitor_clear");
-  assert.equal(result.board.cardCount, 120);
+  assert.equal(result.board.cardCount, 125);
   assert.equal(result.drift.driftCount, 0);
 });
 

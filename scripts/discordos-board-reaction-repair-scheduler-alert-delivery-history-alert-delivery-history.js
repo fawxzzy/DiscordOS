@@ -1,0 +1,147 @@
+const {
+  _internals: dashboardInternals,
+} = require("./discordos-board-reaction-repair-scheduler-alert-delivery-history-alert-delivery-dashboard");
+
+function parseArgs(args) {
+  return dashboardInternals.parseArgs(args);
+}
+
+function buildSchedulerHistoryAlertDeliveryHistory(dashboardResult) {
+  const dashboard = dashboardResult.dashboard;
+  return {
+    historyStatus: "bounded_ready",
+    recordCount: 1,
+    maxRecords: 10,
+    records: [
+      {
+        statusLine: dashboard.statusLine,
+        deliveryAdmissionStatus: dashboard.deliveryAdmissionStatus,
+        alertStatus: dashboard.alertStatus,
+        customReactionGuardsPreserved: dashboard.customReactionGuardsPreserved === true,
+        readbackRequired: dashboard.readbackRequired === true,
+        skippedAlignedNoise: dashboard.skippedAlignedNoise === true,
+        deliveryDecisionVisible: dashboard.deliveryDecisionVisible === true,
+        noSendBoundaryConfirmed: dashboard.noSendBoundaryConfirmed === true,
+        noDiscordApiBoundaryConfirmed: dashboard.noDiscordApiBoundaryConfirmed === true,
+        noStorageWriteBoundaryConfirmed: dashboard.noStorageWriteBoundaryConfirmed === true,
+      },
+    ],
+    repeatsTracked: true,
+    sendsMessagesInHistory: false,
+    callsDiscordApi: false,
+    executesStorageWrite: false,
+    slashCommandsAdmitted: false,
+  };
+}
+
+function validateSchedulerHistoryAlertDeliveryHistory({ dashboardResult, history }) {
+  const reasonCodes = [...dashboardResult.reasonCodes];
+  if (history.historyStatus !== "bounded_ready" || history.recordCount < 1 || history.recordCount > history.maxRecords) {
+    reasonCodes.push("board_reaction_scheduler_history_alert_delivery_history_bounds_failed");
+  }
+  if (!history.repeatsTracked || !Array.isArray(history.records) || history.records.length !== history.recordCount) {
+    reasonCodes.push("board_reaction_scheduler_history_alert_delivery_history_tracking_failed");
+  }
+  if (!history.records.every((record) =>
+    record.statusLine === "ready"
+      && record.customReactionGuardsPreserved
+      && record.readbackRequired
+      && record.skippedAlignedNoise
+      && record.deliveryDecisionVisible
+      && record.noSendBoundaryConfirmed
+      && record.noDiscordApiBoundaryConfirmed
+      && record.noStorageWriteBoundaryConfirmed
+  )) {
+    reasonCodes.push("board_reaction_scheduler_history_alert_delivery_history_record_invalid");
+  }
+  if (history.sendsMessagesInHistory || history.callsDiscordApi || dashboardResult.sendsMessages || dashboardResult.callsDiscordApi) {
+    reasonCodes.push("board_reaction_scheduler_history_alert_delivery_history_send_boundary_failed");
+  }
+  if (history.executesStorageWrite || dashboardResult.executesStorageWrite) {
+    reasonCodes.push("board_reaction_scheduler_history_alert_delivery_history_storage_write_attempted");
+  }
+  if (dashboardResult.slashCommandsAdmitted || history.slashCommandsAdmitted) {
+    reasonCodes.push("board_reaction_scheduler_history_alert_delivery_history_slash_command_admitted");
+  }
+  return [...new Set(reasonCodes)];
+}
+
+async function buildBoardReactionRepairSchedulerAlertDeliveryHistoryAlertDeliveryHistory(input = {}) {
+  const dashboardResult = await dashboardInternals.buildBoardReactionRepairSchedulerAlertDeliveryHistoryAlertDeliveryDashboard(input);
+  const history = buildSchedulerHistoryAlertDeliveryHistory(dashboardResult);
+  const reasonCodes = validateSchedulerHistoryAlertDeliveryHistory({ dashboardResult, history });
+  const result = {
+    ok: reasonCodes.length === 0,
+    destructive: false,
+    sendsMessages: false,
+    writesArtifacts: false,
+    callsDiscordApi: false,
+    callsMusicProviders: false,
+    controlsPlayback: false,
+    executesStorageWrite: false,
+    slashCommandsAdmitted: false,
+    status: reasonCodes.length === 0 ? "board_reaction_repair_scheduler_alert_delivery_history_alert_delivery_history_ready" : "blocked",
+    sourceStatus: dashboardResult.status,
+    history,
+    reasonCodes,
+  };
+
+  return {
+    ...result,
+    event: {
+      type: result.ok
+        ? "discordos.board_reaction.repair_scheduler_alert_delivery_history_alert_delivery_history_ready"
+        : "discordos.board_reaction.repair_scheduler_alert_delivery_history_alert_delivery_history_blocked",
+      severity: result.ok ? "info" : "warning",
+      subject: "discordos.board_reaction.repair_scheduler_alert_delivery_history_alert_delivery_history",
+      status: result.ok ? "pass" : "fail",
+      dimensions: {
+        recordCount: history.recordCount,
+        historyStatus: history.historyStatus,
+        repeatsTracked: history.repeatsTracked,
+      },
+    },
+  };
+}
+
+function renderMarkdown(result) {
+  return [
+    "# DiscordOS Board Reaction Repair Scheduler Alert Delivery History Alert Delivery History",
+    "",
+    `- result: \`${result.ok ? "pass" : "fail"}\``,
+    `- sends messages: \`${result.sendsMessages ? "true" : "false"}\``,
+    `- calls Discord API: \`${result.callsDiscordApi ? "true" : "false"}\``,
+    `- slash commands admitted: \`${result.slashCommandsAdmitted ? "true" : "false"}\``,
+    `- status: \`${result.status}\``,
+    `- history status: \`${result.history.historyStatus}\``,
+    `- record count: \`${result.history.recordCount}\``,
+    `- reason codes: \`${result.reasonCodes.join(",") || "none"}\``,
+    "",
+  ].join("\n");
+}
+
+async function main() {
+  try {
+    const options = parseArgs(process.argv.slice(2));
+    const result = await buildBoardReactionRepairSchedulerAlertDeliveryHistoryAlertDeliveryHistory(options);
+    process.stdout.write(options.json ? `${JSON.stringify(result, null, 2)}\n` : renderMarkdown(result));
+    if (!result.ok) process.exitCode = 1;
+  } catch (error) {
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    process.exitCode = 1;
+  }
+}
+
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  _internals: {
+    parseArgs,
+    buildSchedulerHistoryAlertDeliveryHistory,
+    validateSchedulerHistoryAlertDeliveryHistory,
+    buildBoardReactionRepairSchedulerAlertDeliveryHistoryAlertDeliveryHistory,
+    renderMarkdown,
+  },
+};
