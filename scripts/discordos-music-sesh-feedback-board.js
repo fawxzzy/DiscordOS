@@ -5,6 +5,16 @@ const DEFAULT_BOARD_PATH = path.resolve(process.cwd(), "config", "discordos-musi
 const STATES = new Set(["open", "ready", "blocked", "completed"]);
 const PRIORITIES = new Set(["low", "medium", "high"]);
 const REACTION_STATUSES = new Set(["success", "failure"]);
+const STATUS_REACTIONS = {
+  success: {
+    name: "success",
+    id: "1507384062166302851",
+  },
+  failure: {
+    name: "failure",
+    id: "1507384094424694785",
+  },
+};
 
 function readValue(args, index, missingCode) {
   const value = args[index + 1];
@@ -75,6 +85,13 @@ function classifyCard(card) {
     if (!REACTION_STATUSES.has(card.reactionStatus)) {
       reasonCodes.push("card_reaction_status_invalid");
     }
+    const expectedReaction = STATUS_REACTIONS[card.reactionStatus];
+    if (!expectedReaction || card.reactionEmojiName !== expectedReaction.name) {
+      reasonCodes.push("card_reaction_emoji_name_invalid");
+    }
+    if (!expectedReaction || card.reactionEmojiId !== expectedReaction.id) {
+      reasonCodes.push("card_reaction_emoji_id_invalid");
+    }
   } else if (card.reactionStatus && !REACTION_STATUSES.has(card.reactionStatus)) {
     reasonCodes.push("card_reaction_status_invalid");
   }
@@ -90,6 +107,8 @@ function classifyCard(card) {
     liveThreadId: card?.liveThreadId || null,
     liveMessageId: card?.liveMessageId || null,
     reactionStatus: card?.reactionStatus || null,
+    reactionEmojiName: card?.reactionEmojiName || null,
+    reactionEmojiId: card?.reactionEmojiId || null,
     reasonCodes,
   };
 }
@@ -131,6 +150,8 @@ function buildFeedbackBoardReadModel(board, { cardId = null, state = null } = {}
         && card.liveThreadId
         && card.liveMessageId
         && REACTION_STATUSES.has(card.reactionStatus)
+        && card.reactionEmojiName === STATUS_REACTIONS[card.reactionStatus]?.name
+        && card.reactionEmojiId === STATUS_REACTIONS[card.reactionStatus]?.id
     ).length,
     nextCard: nextEligibleCards.find((card) => card.priority === "high") || nextEligibleCards[0] || null,
     cards: filteredCards,
@@ -192,7 +213,7 @@ function renderMarkdown(result) {
   ];
 
   for (const card of result.cards) {
-    lines.push(`- card ${card.id}: state \`${card.state}\`, priority \`${card.priority}\`, reaction \`${card.reactionStatus || "none"}\`, thread \`${card.liveThreadId || "none"}\`, command \`${card.nextCommand}\``);
+    lines.push(`- card ${card.id}: state \`${card.state}\`, priority \`${card.priority}\`, reaction \`${card.reactionStatus || "none"}\`, emoji \`${card.reactionEmojiName || "none"}\`, thread \`${card.liveThreadId || "none"}\`, command \`${card.nextCommand}\``);
   }
 
   return `${lines.join("\n")}\n`;
@@ -222,6 +243,7 @@ module.exports = {
     STATES,
     PRIORITIES,
     REACTION_STATUSES,
+    STATUS_REACTIONS,
     parseArgs,
     classifyCard,
     buildFeedbackBoardReadModel,

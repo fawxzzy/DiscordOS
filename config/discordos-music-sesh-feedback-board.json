@@ -72,7 +72,9 @@
       "nextCommand": "npm run ops:discordos:testing-surface-provision",
       "liveThreadId": "1515961745414557896",
       "liveMessageId": "1515961745414557896",
-      "reactionStatus": "success"
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
     },
     {
       "id": "music-sesh-signed-button-route-execution",
@@ -83,7 +85,9 @@
       "nextCommand": "npm run ops:discordos:signed-interaction-endpoint-smoke",
       "liveThreadId": "1515961745896771755",
       "liveMessageId": "1515961745896771755",
-      "reactionStatus": "success"
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
     },
     {
       "id": "music-sesh-chat-message-live-ingest",
@@ -94,7 +98,9 @@
       "nextCommand": "npm run ops:discordos:chat-message-live-ingest",
       "liveThreadId": "1515961747050201168",
       "liveMessageId": "1515961747050201168",
-      "reactionStatus": "success"
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
     },
     {
       "id": "music-sesh-queue-status-read-model",
@@ -105,7 +111,9 @@
       "nextCommand": "npm run ops:discordos:music-sesh-queue-status",
       "liveThreadId": "1515961747880673361",
       "liveMessageId": "1515961747880673361",
-      "reactionStatus": "success"
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
     },
     {
       "id": "music-sesh-board-moderation-post-button-conversion",
@@ -116,7 +124,9 @@
       "nextCommand": "npm run ops:discordos:board-moderation-post-button-conversion",
       "liveThreadId": "1515961748719407114",
       "liveMessageId": "1515961748719407114",
-      "reactionStatus": "success"
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
     }
   ]
 }

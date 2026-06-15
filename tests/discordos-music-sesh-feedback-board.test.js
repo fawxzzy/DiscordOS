@@ -45,6 +45,8 @@ test("music sesh feedback board requires completed card reaction metadata", () =
   assert(card.reasonCodes.includes("card_live_thread_id_missing"));
   assert(card.reasonCodes.includes("card_live_message_id_missing"));
   assert(card.reasonCodes.includes("card_reaction_status_invalid"));
+  assert(card.reasonCodes.includes("card_reaction_emoji_name_invalid"));
+  assert(card.reasonCodes.includes("card_reaction_emoji_id_invalid"));
 });
 
 test("music sesh feedback board reads committed cards", async () => {

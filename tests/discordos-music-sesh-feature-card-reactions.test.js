@@ -49,7 +49,8 @@ test("music sesh feature card reactions dry-runs without Discord calls", async (
   assert.equal(result.callsDiscordApi, false);
   assert.equal(result.sendsMessages, false);
   assert.equal(result.messageId, "thread-1");
-  assert.equal(result.reactionEmoji, "\u2705");
+  assert.equal(result.reactionEmoji, "success:1507384062166302851");
+  assert.equal(result.reactionEmojiName, "success");
   assert.equal(fetchCount, 0);
 });
 
@@ -87,7 +88,7 @@ test("music sesh feature card reactions applies success reaction with readback",
           payload: {
             reactions: [
               {
-                emoji: { name: "\u2705" },
+                emoji: { name: "success", id: "1507384062166302851" },
                 count: 1,
                 me: true,
               },
@@ -104,12 +105,16 @@ test("music sesh feature card reactions applies success reaction with readback",
   assert.equal(result.removeOppositeResult.attempted, true);
   assert.equal(result.addReactionResult.attempted, true);
   assert.equal(result.readback.currentReactionPresent, true);
-  assert.equal(calls.length, 3);
+  assert.equal(calls.length, 5);
   assert.equal(calls[0].method, "DELETE");
-  assert(calls[0].url.endsWith("/channels/thread-1/messages/thread-1/reactions/%E2%9D%8C/@me"));
-  assert.equal(calls[1].method, "PUT");
+  assert(calls[0].url.endsWith("/channels/thread-1/messages/thread-1/reactions/failure%3A1507384094424694785/@me"));
+  assert.equal(calls[1].method, "DELETE");
   assert(calls[1].url.endsWith("/channels/thread-1/messages/thread-1/reactions/%E2%9C%85/@me"));
-  assert.equal(calls[2].method, "GET");
+  assert.equal(calls[2].method, "DELETE");
+  assert(calls[2].url.endsWith("/channels/thread-1/messages/thread-1/reactions/%E2%9D%8C/@me"));
+  assert.equal(calls[3].method, "PUT");
+  assert(calls[3].url.endsWith("/channels/thread-1/messages/thread-1/reactions/success%3A1507384062166302851/@me"));
+  assert.equal(calls[4].method, "GET");
 });
 
 test("music sesh feature card reactions maps failure status", async () => {
@@ -119,8 +124,10 @@ test("music sesh feature card reactions maps failure status", async () => {
     env: {},
   });
 
-  assert.equal(result.reactionEmoji, "\u274c");
-  assert.equal(result.oppositeEmoji, "\u2705");
+  assert.equal(result.reactionEmoji, "failure:1507384094424694785");
+  assert.equal(result.oppositeEmoji, "success:1507384062166302851");
+  assert.equal(result.legacyReactionEmoji, "\u274c");
+  assert.equal(result.legacyOppositeEmoji, "\u2705");
 });
 
 test("music sesh feature card reactions reports readback misses", async () => {

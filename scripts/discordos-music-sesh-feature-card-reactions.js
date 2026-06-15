@@ -5,6 +5,16 @@ const {
 const REACTION_ENV = "DISCORDOS_MUSIC_SESH_CARD_REACTIONS";
 const REACTION_ENV_VALUE = "enabled";
 const STATUS_REACTIONS = {
+  success: {
+    name: "success",
+    id: "1507384062166302851",
+  },
+  failure: {
+    name: "failure",
+    id: "1507384094424694785",
+  },
+};
+const LEGACY_STATUS_REACTIONS = {
   success: "\u2705",
   failure: "\u274c",
 };
@@ -93,7 +103,16 @@ function resolveReactionAdmission({ allowApply, env }) {
 }
 
 function encodeDiscordReactionEmoji(emoji) {
-  return encodeURIComponent(emoji);
+  const reaction = typeof emoji === "string" ? emoji : `${emoji.name}:${emoji.id}`;
+  return encodeURIComponent(reaction);
+}
+
+function formatReactionEmoji(emoji) {
+  return typeof emoji === "string" ? emoji : `${emoji.name}:${emoji.id}`;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function discordRequest({
@@ -101,6 +120,7 @@ async function discordRequest({
   token,
   method = "GET",
   fetchImpl = fetch,
+  retryCount = 1,
 }) {
   const response = await fetchImpl(`${updatePostInternals.DISCORD_API_BASE}${path}`, {
     method,
@@ -112,6 +132,20 @@ async function discordRequest({
   const payload = response.status === 204 || typeof response.json !== "function"
     ? null
     : await response.json().catch(() => null);
+  if (response.status === 429 && retryCount > 0) {
+    const retryAfterSeconds = Number(payload?.retry_after);
+    const retryAfterMs = Number.isFinite(retryAfterSeconds)
+      ? Math.ceil(retryAfterSeconds * 1000) + 250
+      : 1500;
+    await sleep(retryAfterMs);
+    return discordRequest({
+      path,
+      token,
+      method,
+      fetchImpl,
+      retryCount: retryCount - 1,
+    });
+  }
   return {
     ok: response.ok,
     status: response.status,
@@ -180,7 +214,14 @@ function summarizeReactions(message) {
 }
 
 function reactionPresent(reactions, emoji) {
-  return reactions.some((reaction) => reaction.name === emoji && reaction.me === true);
+  if (typeof emoji === "string") {
+    return reactions.some((reaction) => reaction.name === emoji && reaction.me === true);
+  }
+  return reactions.some((reaction) =>
+    reaction.name === emoji.name
+      && reaction.id === emoji.id
+      && reaction.me === true
+  );
 }
 
 async function buildMusicSeshFeatureCardReactions({
@@ -196,6 +237,8 @@ async function buildMusicSeshFeatureCardReactions({
   const reactionEmoji = STATUS_REACTIONS[normalizedStatus];
   const oppositeStatus = normalizedStatus === "success" ? "failure" : "success";
   const oppositeEmoji = STATUS_REACTIONS[oppositeStatus];
+  const legacyReactionEmoji = LEGACY_STATUS_REACTIONS[normalizedStatus];
+  const legacyOppositeEmoji = LEGACY_STATUS_REACTIONS[oppositeStatus];
   const resolvedMessageId = messageId || threadId;
   const admission = resolveReactionAdmission({ allowApply, env });
   const reasonCodes = [...admission.reasonCodes];
@@ -222,6 +265,11 @@ async function buildMusicSeshFeatureCardReactions({
     attempted: false,
     ok: false,
     httpStatus: null,
+  };
+  let removeLegacyResult = {
+    attempted: false,
+    ok: false,
+    httpStatuses: [],
   };
   let addReactionResult = {
     attempted: false,
@@ -250,9 +298,23 @@ async function buildMusicSeshFeatureCardReactions({
       ok: removed.ok,
       httpStatus: removed.status,
     };
-    if (!removed.ok) {
-      reasonCodes.push("opposite_reaction_remove_failed");
+
+    const legacyRemovals = [];
+    for (const legacyEmoji of [legacyReactionEmoji, legacyOppositeEmoji]) {
+      const legacyRemoved = await removeOwnMessageReaction({
+        channelId: threadId,
+        messageId: resolvedMessageId,
+        token: env.DISCORDOS_BOT_TOKEN,
+        emoji: legacyEmoji,
+        fetchImpl,
+      });
+      legacyRemovals.push(legacyRemoved);
     }
+    removeLegacyResult = {
+      attempted: true,
+      ok: legacyRemovals.every((legacyRemoved) => legacyRemoved.ok),
+      httpStatuses: legacyRemovals.map((legacyRemoved) => legacyRemoved.status),
+    };
 
     const added = await addMessageReaction({
       channelId: threadId,
@@ -266,9 +328,6 @@ async function buildMusicSeshFeatureCardReactions({
       ok: added.ok,
       httpStatus: added.status,
     };
-    if (!added.ok) {
-      reasonCodes.push("feature_card_reaction_add_failed");
-    }
 
     const fetched = await fetchDiscordMessage({
       channelId: threadId,
@@ -283,12 +342,18 @@ async function buildMusicSeshFeatureCardReactions({
       httpStatus: fetched.status,
       currentReactionPresent: reactionPresent(reactions, reactionEmoji),
       oppositeReactionPresent: reactionPresent(reactions, oppositeEmoji),
+      legacyCurrentReactionPresent: reactionPresent(reactions, legacyReactionEmoji),
+      legacyOppositeReactionPresent: reactionPresent(reactions, legacyOppositeEmoji),
       reactions,
     };
     if (!fetched.ok) {
       reasonCodes.push("feature_card_reaction_readback_failed");
     } else if (!readback.currentReactionPresent) {
       reasonCodes.push("feature_card_reaction_readback_missing");
+    } else if (readback.oppositeReactionPresent) {
+      reasonCodes.push("opposite_reaction_readback_present");
+    } else if (readback.legacyCurrentReactionPresent || readback.legacyOppositeReactionPresent) {
+      reasonCodes.push("legacy_reaction_readback_present");
     }
   }
 
@@ -309,11 +374,18 @@ async function buildMusicSeshFeatureCardReactions({
     threadId,
     messageId: resolvedMessageId,
     requestedStatus: normalizedStatus,
-    reactionEmoji,
+    reactionEmoji: formatReactionEmoji(reactionEmoji),
+    reactionEmojiName: reactionEmoji.name,
+    reactionEmojiId: reactionEmoji.id,
     oppositeStatus,
-    oppositeEmoji,
+    oppositeEmoji: formatReactionEmoji(oppositeEmoji),
+    oppositeEmojiName: oppositeEmoji.name,
+    oppositeEmojiId: oppositeEmoji.id,
+    legacyReactionEmoji,
+    legacyOppositeEmoji,
     admission,
     removeOppositeResult,
+    removeLegacyResult,
     addReactionResult,
     readback,
     reasonCodes: uniqueReasonCodes,
