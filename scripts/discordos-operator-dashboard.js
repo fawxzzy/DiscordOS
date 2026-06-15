@@ -362,6 +362,12 @@ function buildProductRuntimeTiles() {
       command: "npm run ops:discordos:music-sesh-feedback-board-live-sync",
     },
     {
+      id: "music_sesh_feature_card_forum_post",
+      label: "Music Sesh card forum post",
+      status: "available",
+      command: "npm run ops:discordos:music-sesh-feature-card-forum-post",
+    },
+    {
       id: "music_sesh_feature_card_reactions",
       label: "Music Sesh card reactions",
       status: "available",
