@@ -721,6 +721,71 @@
       "reactionStatus": "success",
       "reactionEmojiName": "success",
       "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "music-sesh-host-control-live-apply-reconciliation",
+      "title": "Music Sesh host control live apply reconciliation",
+      "state": "completed",
+      "priority": "high",
+      "category": "live_readback",
+      "nextCommand": "npm run ops:discordos:music-sesh-host-control-live-apply-reconciliation",
+      "liveThreadId": "1516144622617755794",
+      "liveMessageId": "1516144622617755794",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "music-provider-selection-to-queue-live-canary",
+      "title": "Music provider selection-to-queue live canary",
+      "state": "completed",
+      "priority": "high",
+      "category": "provider_metadata",
+      "nextCommand": "npm run ops:discordos:music-provider-selection-to-queue-live-canary",
+      "liveThreadId": "1516144635477622864",
+      "liveMessageId": "1516144635477622864",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "button-route-audit-alert-delivery-canary",
+      "title": "Button route audit alert delivery canary",
+      "state": "completed",
+      "priority": "high",
+      "category": "button_audit",
+      "nextCommand": "npm run ops:discordos:button-route-audit-alert-delivery-canary",
+      "liveThreadId": "1516144646341001378",
+      "liveMessageId": "1516144646341001378",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "music-sesh-response-delivery-channel-admission-gate",
+      "title": "Music Sesh response delivery channel admission gate",
+      "state": "completed",
+      "priority": "high",
+      "category": "chat_status",
+      "nextCommand": "npm run ops:discordos:music-sesh-response-delivery-channel-admission-gate",
+      "liveThreadId": "1516144657829200042",
+      "liveMessageId": "1516144657829200042",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "board-reaction-auto-repair-live-apply-reconciliation",
+      "title": "Board reaction auto-repair live apply reconciliation",
+      "state": "completed",
+      "priority": "high",
+      "category": "feedback_board",
+      "nextCommand": "npm run ops:discordos:board-reaction-auto-repair-live-apply-reconciliation",
+      "liveThreadId": "1516144670579888128",
+      "liveMessageId": "1516144670579888128",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
     }
   ]
 }
