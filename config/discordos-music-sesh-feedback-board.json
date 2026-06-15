@@ -851,6 +851,71 @@
       "reactionStatus": "success",
       "reactionEmojiName": "success",
       "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "music-sesh-host-control-rollup-history-persistence",
+      "title": "Music Sesh host control rollup history persistence",
+      "state": "completed",
+      "priority": "high",
+      "category": "live_readback",
+      "nextCommand": "npm run ops:discordos:music-sesh-host-control-rollup-history-persistence",
+      "liveThreadId": "1516159556135293101",
+      "liveMessageId": "1516159556135293101",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "music-provider-queue-surface-publish-readback",
+      "title": "Music provider queue surface publish readback",
+      "state": "completed",
+      "priority": "high",
+      "category": "provider_metadata",
+      "nextCommand": "npm run ops:discordos:music-provider-queue-surface-publish-readback",
+      "liveThreadId": "1516159619922395136",
+      "liveMessageId": "1516159619922395136",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "button-route-audit-alert-runbook-linking",
+      "title": "Button route audit alert runbook linking",
+      "state": "completed",
+      "priority": "high",
+      "category": "button_audit",
+      "nextCommand": "npm run ops:discordos:button-route-audit-alert-runbook-linking",
+      "liveThreadId": "1516159671839232170",
+      "liveMessageId": "1516159671839232170",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "music-sesh-non-testing-response-live-readback",
+      "title": "Music Sesh non-testing response live readback",
+      "state": "completed",
+      "priority": "high",
+      "category": "chat_status",
+      "nextCommand": "npm run ops:discordos:music-sesh-non-testing-response-live-readback",
+      "liveThreadId": "1516159732900167792",
+      "liveMessageId": "1516159732900167792",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "board-reaction-scheduler-guarded-apply",
+      "title": "Board reaction scheduler guarded apply",
+      "state": "completed",
+      "priority": "high",
+      "category": "feedback_board",
+      "nextCommand": "npm run ops:discordos:board-reaction-scheduler-guarded-apply",
+      "liveThreadId": "1516159791674691794",
+      "liveMessageId": "1516159791674691794",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
     }
   ]
 }
