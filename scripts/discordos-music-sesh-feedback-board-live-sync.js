@@ -78,13 +78,13 @@ async function buildMusicSeshFeedbackBoardLiveSync({
 } = {}) {
   const board = await boardInternals.buildMusicSeshFeedbackBoard(input);
   const syncAdmission = resolveSyncAdmission({ allowSync, env });
-  const nextCard = board.nextCard;
-  const lifecyclePreview = nextCard ? buildLifecyclePreview(nextCard) : null;
+  const selectedCard = board.nextCard || (input.cardId ? board.cards[0] : null);
+  const lifecyclePreview = selectedCard ? buildLifecyclePreview(selectedCard) : null;
   let lifecycleResult = {
-    ok: false,
+    ok: true,
     sendsMessages: false,
-    status: "not_requested",
-    reasonCodes: nextCard ? [] : ["feedback_board_card_missing"],
+    status: selectedCard ? "not_requested" : "no_pending_card",
+    reasonCodes: [],
   };
 
   if (lifecyclePreview) {
@@ -111,7 +111,7 @@ async function buildMusicSeshFeedbackBoardLiveSync({
     boardId: board.boardId,
     cardCount: board.cardCount,
     readyCardCount: board.readyCardCount,
-    nextCard,
+    nextCard: selectedCard,
     syncAdmission,
     lifecyclePreview,
     lifecycleStatus: lifecycleResult.status,

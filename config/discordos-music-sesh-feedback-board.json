@@ -75,18 +75,67 @@
     {
       "id": "music-sesh-runtime-registry-ratchet",
       "title": "Music Sesh runtime readiness registry ratchet",
-      "state": "ready",
+      "state": "completed",
       "priority": "medium",
       "category": "activation",
-      "nextCommand": "npm run ops:discordos:music-sesh-feature-activation-ratchet"
+      "nextCommand": "npm run ops:discordos:music-sesh-feature-activation-ratchet",
+      "liveThreadId": "1515983994309578834",
+      "liveMessageId": "1515983994309578834",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
     },
     {
       "id": "music-sesh-feedback-board-read-model",
       "title": "Music Sesh feedback board and feature-card read model",
-      "state": "ready",
+      "state": "completed",
       "priority": "medium",
       "category": "feedback_board",
-      "nextCommand": "npm run ops:discordos:music-sesh-feedback-board"
+      "nextCommand": "npm run ops:discordos:music-sesh-feedback-board",
+      "liveThreadId": "1515984061842198538",
+      "liveMessageId": "1515984061842198538",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "music-sesh-feedback-board-live-sync",
+      "title": "Music Sesh feedback board live sync proof",
+      "state": "completed",
+      "priority": "medium",
+      "category": "feedback_board",
+      "nextCommand": "npm run ops:discordos:music-sesh-feedback-board-live-sync",
+      "liveThreadId": "1515984128078516265",
+      "liveMessageId": "1515984128078516265",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "music-sesh-queue-replay-proof",
+      "title": "Music Sesh queue replay and idempotency proof",
+      "state": "completed",
+      "priority": "medium",
+      "category": "queue_replay",
+      "nextCommand": "npm run ops:discordos:music-sesh-queue-replay-proof",
+      "liveThreadId": "1515984210513498184",
+      "liveMessageId": "1515984210513498184",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "product-workflow-alert-delivery-canary",
+      "title": "Product workflow alert delivery canary",
+      "state": "completed",
+      "priority": "medium",
+      "category": "monitoring",
+      "nextCommand": "npm run ops:discordos:product-workflow-alert-delivery-canary",
+      "liveThreadId": "1515984293917360270",
+      "liveMessageId": "1515984293917360270",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
     },
     {
       "id": "music-sesh-testing-surface",

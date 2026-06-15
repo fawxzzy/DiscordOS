@@ -54,11 +54,11 @@ test("music sesh feedback board reads committed cards", async () => {
 
   assert.equal(result.ok, true);
   assert.equal(result.sendsMessages, false);
-  assert.equal(result.cardCount, 12);
-  assert.equal(result.readyCardCount, 2);
-  assert.equal(result.completedCardCount, 10);
-  assert.equal(result.reactionReadyCardCount, 10);
-  assert.equal(result.nextCard.id, "music-sesh-runtime-registry-ratchet");
+  assert.equal(result.cardCount, 15);
+  assert.equal(result.readyCardCount, 0);
+  assert.equal(result.completedCardCount, 15);
+  assert.equal(result.reactionReadyCardCount, 15);
+  assert.equal(result.nextCard, null);
 });
 
 test("music sesh feedback board renders bounded markdown", async () => {
