@@ -419,6 +419,24 @@ Current governed contract surface:
   - repo-local no-send preflight command for future Music Sesh action payloads
   - validates session/action shape while keeping provider calls, playback, persistence, and live behavior blocked
   - sends no Discord messages and writes no artifacts
+- `scripts/discordos-music-sesh-runtime.js`
+  - repo-local Music Sesh runtime v1 queue workflow command
+  - models session open, queue item, vote, lock, and close actions without provider calls, playback, persistence, or Discord sends
+- `scripts/discordos-slash-command-adapter.js`
+  - shared slash-command adapter foundation for board, moderation, and Music Sesh command plans
+  - maps slash-shaped input to repo-local operator commands without registering Discord commands or calling Discord APIs
+- `scripts/discordos-board-lifecycle-event-ingest.js`
+  - repo-local Discord forum/card event ingestion surface for board lifecycle sync
+  - maps thread event inputs into the governed board lifecycle sync path, defaulting to no storage apply
+- `scripts/discordos-moderation-review-slash-command.js`
+  - repo-local moderation review slash-command UX surface
+  - wraps sanitized moderation audit review/search without executing moderation actions or exposing raw Discord user ids
+- `scripts/discordos-product-workflow-monitor.js`
+  - repo-local monitor for product workflow storage readback anomalies
+  - can use live readback when explicitly requested and reports bounded count/threshold anomalies without sending alerts
+- `scripts/discordos-operator-activation-runbook.js`
+  - repo-local activation runbook for guarded storage gates and the Supabase Edge bridge
+  - reports command steps and gate readiness without printing or requiring secret values
 - `api/cron/runtime-health.js`
   - Vercel Cron guarded runtime-health proof endpoint
   - requires `Authorization: Bearer $CRON_SECRET`
@@ -743,6 +761,18 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local DiscordOS product workflow dashboard command
 - `npm run verify:discordos-music-sesh-preflight`
   - Node test coverage for the repo-local DiscordOS Music Sesh preflight command
+- `npm run verify:discordos-music-sesh-runtime`
+  - Node test coverage for the repo-local DiscordOS Music Sesh runtime command
+- `npm run verify:discordos-slash-command-adapter`
+  - Node test coverage for the repo-local DiscordOS slash command adapter foundation
+- `npm run verify:discordos-board-lifecycle-event-ingest`
+  - Node test coverage for the repo-local DiscordOS board lifecycle event ingestion command
+- `npm run verify:discordos-moderation-review-slash-command`
+  - Node test coverage for the repo-local DiscordOS moderation review slash-command UX
+- `npm run verify:discordos-product-workflow-monitor`
+  - Node test coverage for the repo-local DiscordOS product workflow monitor
+- `npm run verify:discordos-operator-activation-runbook`
+  - Node test coverage for the repo-local DiscordOS operator activation runbook
 - `npm run verify`
   - runs the full repo-local verification surface, then prunes repo-local `.vercel` and `node_modules` residue before exit
 
@@ -936,6 +966,18 @@ Current repo-local operator surface:
   - summarizes board, moderation, and Music Sesh workflow posture, storage proof state, release/operator command hints, and next gates
 - `npm run ops:discordos:music-sesh-preflight`
   - validates a future Music Sesh action payload without provider calls, playback, persistence, or Discord sends
+- `npm run ops:discordos:music-sesh-runtime`
+  - runs the local Music Sesh runtime v1 queue workflow without provider calls, playback, persistence, or Discord sends
+- `npm run ops:discordos:slash-command-adapter`
+  - maps board, moderation, and Music Sesh slash-shaped inputs into governed repo-local command plans
+- `npm run ops:discordos:board-lifecycle-event-ingest`
+  - maps Discord forum/card event inputs into board lifecycle sync, defaulting to no storage apply
+- `npm run ops:discordos:moderation-review-slash-command`
+  - wraps moderation audit review/search as a no-action slash-command UX surface
+- `npm run ops:discordos:product-workflow-monitor`
+  - checks product workflow readback counts and anomaly thresholds without sending alerts
+- `npm run ops:discordos:operator-activation-runbook`
+  - reports guarded storage gate and Supabase Edge bridge activation steps without printing secrets
 - `npm run ops:runtime-health:scheduled-proof`
   - runs the full cron-ready proof loop: live health capture, fresh summary check, durable alert decision, fail-closed exit
 - `npm run ops:runtime-health:scheduled-proof:json`

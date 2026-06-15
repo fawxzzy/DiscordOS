@@ -78,8 +78,8 @@ test("operator dashboard summarizes next-work result into command hint", async (
   assert.equal(dashboard.console.statusLine, "ready");
   assert.equal(dashboard.console.failingTileCount, 0);
   assert.equal(dashboard.console.healthTiles.length, 5);
-  assert.equal(dashboard.productRuntime.surfaceCount, 12);
-  assert.equal(dashboard.productRuntime.availableCount, 12);
+  assert.equal(dashboard.productRuntime.surfaceCount, 18);
+  assert.equal(dashboard.productRuntime.availableCount, 18);
   assert.equal(dashboard.console.recommendationGroups[0].category, "operator-env");
   assert.equal(event.type, "discordos.operator.dashboard_ready");
   assert.equal(event.dimensions.topRecommendation, "inspect-operator-command-ergonomics");
@@ -88,7 +88,7 @@ test("operator dashboard summarizes next-work result into command hint", async (
 test("operator dashboard exposes product runtime command tiles", () => {
   const panel = _internals.buildProductRuntimePanel();
 
-  assert.equal(panel.surfaceCount, 12);
+  assert.equal(panel.surfaceCount, 18);
   assert(panel.tiles.some((tile) => tile.id === "board_shadow_persistence"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:board-feature-activation-pilot"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:board-active-admission-canary"));
@@ -99,6 +99,12 @@ test("operator dashboard exposes product runtime command tiles", () => {
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:supabase-apply-readback-proof"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:product-workflow-live-readback"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:product-workflow-dashboard"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-runtime"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:slash-command-adapter"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:board-lifecycle-event-ingest"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:moderation-review-slash-command"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:product-workflow-monitor"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:operator-activation-runbook"));
 });
 
 test("operator dashboard groups recommendations by category and highest score", () => {
@@ -175,5 +181,11 @@ test("operator dashboard renders compact markdown without target values", () => 
   assert(rendered.includes("surface supabase_apply_readback_proof: `available`"));
   assert(rendered.includes("surface product_workflow_live_readback: `available`"));
   assert(rendered.includes("surface product_workflow_dashboard: `available`"));
+  assert(rendered.includes("surface music_sesh_runtime: `available`"));
+  assert(rendered.includes("surface slash_command_adapter: `available`"));
+  assert(rendered.includes("surface board_lifecycle_event_ingest: `available`"));
+  assert(rendered.includes("surface moderation_review_slash_command: `available`"));
+  assert(rendered.includes("surface product_workflow_monitor: `available`"));
+  assert(rendered.includes("surface operator_activation_runbook: `available`"));
   assert(!rendered.includes("bot-secret"));
 });

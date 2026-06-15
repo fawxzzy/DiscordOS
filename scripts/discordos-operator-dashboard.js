@@ -187,6 +187,42 @@ function buildProductRuntimeTiles() {
       status: "available",
       command: "npm run ops:discordos:product-workflow-dashboard",
     },
+    {
+      id: "music_sesh_runtime",
+      label: "Music Sesh runtime",
+      status: "available",
+      command: "npm run ops:discordos:music-sesh-runtime",
+    },
+    {
+      id: "slash_command_adapter",
+      label: "Slash command adapter",
+      status: "available",
+      command: "npm run ops:discordos:slash-command-adapter",
+    },
+    {
+      id: "board_lifecycle_event_ingest",
+      label: "Board event ingest",
+      status: "available",
+      command: "npm run ops:discordos:board-lifecycle-event-ingest",
+    },
+    {
+      id: "moderation_review_slash_command",
+      label: "Moderation review slash command",
+      status: "available",
+      command: "npm run ops:discordos:moderation-review-slash-command",
+    },
+    {
+      id: "product_workflow_monitor",
+      label: "Product workflow monitor",
+      status: "available",
+      command: "npm run ops:discordos:product-workflow-monitor",
+    },
+    {
+      id: "operator_activation_runbook",
+      label: "Operator activation runbook",
+      status: "available",
+      command: "npm run ops:discordos:operator-activation-runbook",
+    },
   ];
 }
 

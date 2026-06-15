@@ -43,7 +43,7 @@ function commandForFeature(featureId) {
     return "npm run ops:discordos:moderation-audit-review-search";
   }
   if (featureId === "music_sesh") {
-    return "npm run ops:discordos:music-sesh-preflight";
+    return "npm run ops:discordos:music-sesh-runtime";
   }
   return null;
 }

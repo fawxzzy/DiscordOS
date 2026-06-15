@@ -54,7 +54,7 @@ test("product workflow dashboard command helpers are stable", () => {
   );
   assert.equal(
     _internals.commandForFeature("music_sesh"),
-    "npm run ops:discordos:music-sesh-preflight"
+    "npm run ops:discordos:music-sesh-runtime"
   );
 });
 
