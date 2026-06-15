@@ -3,6 +3,20 @@ const path = require("node:path");
 
 const DEFAULT_CONFIG_PATH = path.resolve(process.cwd(), "config", "discordos-music-sesh-channel-target.json");
 const SNOWFLAKE_PATTERN = /^\d{17,20}$/;
+const TARGET_ENV_CONTRACT = [
+  {
+    envName: "DISCORDOS_MUSIC_SESH_GUILD_ID",
+    targetKey: "guildId",
+  },
+  {
+    envName: "DISCORDOS_MUSIC_SESH_CATEGORY_ID",
+    targetKey: "categoryId",
+  },
+  {
+    envName: "DISCORDOS_MUSIC_SESH_CHANNEL_ID",
+    targetKey: "channelId",
+  },
+];
 
 function readValue(args, index, missingCode) {
   const value = args[index + 1];
@@ -16,6 +30,7 @@ function parseArgs(args) {
   const options = {
     json: false,
     configPath: DEFAULT_CONFIG_PATH,
+    requireEnv: false,
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -25,6 +40,8 @@ function parseArgs(args) {
     } else if (arg === "--config") {
       options.configPath = path.resolve(readValue(args, index, "missing_config_value"));
       index += 1;
+    } else if (arg === "--require-env") {
+      options.requireEnv = true;
     } else {
       throw new Error(`unsupported_argument:${arg}`);
     }
@@ -91,19 +108,63 @@ function buildTargetStatus(config) {
   };
 }
 
+function buildEnvContract(target, {
+  env = process.env,
+  requireEnv = false,
+} = {}) {
+  const reasonCodes = [];
+  const variables = TARGET_ENV_CONTRACT.map((entry) => {
+    const expectedValue = target?.[entry.targetKey] || null;
+    const actualValue = env?.[entry.envName] || null;
+    const provided = hasValue(actualValue);
+    const matches = provided && actualValue === expectedValue;
+    if (requireEnv && !provided) {
+      reasonCodes.push(`${entry.envName.toLowerCase()}_missing`);
+    } else if (provided && !matches) {
+      reasonCodes.push(`${entry.envName.toLowerCase()}_mismatch`);
+    }
+    return {
+      envName: entry.envName,
+      targetKey: entry.targetKey,
+      expectedValue,
+      provided,
+      matches,
+    };
+  });
+
+  return {
+    ok: reasonCodes.length === 0,
+    requireEnv,
+    operatorProvidedIdsRequired: false,
+    runtimeResolutionSource: "committed_config",
+    variables,
+    reasonCodes,
+  };
+}
+
 async function buildMusicSeshChannelTargetStatus({
   configPath = DEFAULT_CONFIG_PATH,
+  requireEnv = false,
+  env = process.env,
   fsImpl = fs,
 } = {}) {
   const config = await readConfig(configPath, fsImpl);
   const target = buildTargetStatus(config);
+  const envContract = buildEnvContract(config?.target || {}, { env, requireEnv });
+  const reasonCodes = [...new Set([
+    ...target.reasonCodes,
+    ...envContract.reasonCodes,
+  ])];
   const result = {
     ...target,
+    ok: reasonCodes.length === 0,
     destructive: false,
     sendsMessages: false,
     writesArtifacts: false,
     callsDiscordApi: false,
-    status: target.ok ? "channel_target_ready" : "blocked",
+    envContract,
+    status: reasonCodes.length === 0 ? "channel_target_ready" : "blocked",
+    reasonCodes,
   };
 
   return {
@@ -118,6 +179,7 @@ async function buildMusicSeshChannelTargetStatus({
       dimensions: {
         channelId: result.channelId || "none",
         slashCommandsAdmitted: result.slashCommandsAdmitted,
+        operatorProvidedIdsRequired: result.envContract.operatorProvidedIdsRequired,
       },
     },
   };
@@ -135,6 +197,8 @@ function renderMarkdown(result) {
     `- channel: \`${result.channelName || "none"}\``,
     `- channel id: \`${result.channelId || "none"}\``,
     `- slash commands admitted: \`${result.slashCommandsAdmitted ? "true" : "false"}\``,
+    `- runtime resolution: \`${result.envContract.runtimeResolutionSource}\``,
+    `- operator-provided ids required: \`${result.envContract.operatorProvidedIdsRequired ? "true" : "false"}\``,
     `- reason codes: \`${result.reasonCodes.join(",") || "none"}\``,
     "",
   ].join("\n");
@@ -167,6 +231,7 @@ module.exports = {
     snowflakeValid,
     readConfig,
     buildTargetStatus,
+    buildEnvContract,
     buildMusicSeshChannelTargetStatus,
     renderMarkdown,
   },

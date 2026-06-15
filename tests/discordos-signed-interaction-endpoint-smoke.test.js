@@ -37,6 +37,9 @@ test("signed interaction endpoint smoke proves signed button route", async () =>
   assert.equal(result.responseType, 4);
   assert.equal(result.signatureVerified, true);
   assert.equal(result.admissionStatus, "handler_admission_ready");
+  assert.equal(result.routeAudit.routeKind, "message_component");
+  assert.equal(result.routeAudit.customId, "music_sesh:queue");
+  assert.equal(result.routeAudit.slashCommandsAdmitted, false);
 });
 
 test("signed interaction endpoint smoke can execute guarded button route", async () => {
@@ -58,6 +61,9 @@ test("signed interaction endpoint smoke can execute guarded button route", async
   assert.equal(result.ok, true);
   assert.equal(result.executesRoute, true);
   assert.equal(result.executionStatus, "button_route_ready");
+  assert.equal(result.routeAudit.storageWriteAttempted, true);
+  assert.equal(result.routeAudit.storageWriteStatus, "written");
+  assert.equal(result.routeAudit.commandExecuted, false);
 });
 
 test("signed interaction endpoint smoke renders bounded markdown", async () => {
@@ -66,4 +72,5 @@ test("signed interaction endpoint smoke renders bounded markdown", async () => {
 
   assert(rendered.includes("# DiscordOS Signed Interaction Endpoint Smoke"));
   assert(rendered.includes("signature verified: `true`"));
+  assert(rendered.includes("slash commands admitted: `false`"));
 });

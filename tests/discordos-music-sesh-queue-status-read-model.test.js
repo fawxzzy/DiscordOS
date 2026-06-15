@@ -50,6 +50,24 @@ test("queue status read model builds user-facing response", () => {
   assert(response.content.includes("Latest: Track."));
 });
 
+test("queue status read model readback rejects unsafe mentions", () => {
+  const readback = _internals.buildUserStatusResponseReadback(
+    {
+      currentSessionId: "music-1",
+      currentState: "open",
+      queueItemCount: 1,
+      voteCount: 0,
+    },
+    {
+      content: "Music Sesh status: music-1 is open; 1 queued; 0 votes. @everyone",
+      allowedMentionsDisabled: true,
+    }
+  );
+
+  assert.equal(readback.ok, false);
+  assert(readback.reasonCodes.includes("status_response_unsafe_mentions"));
+});
+
 test("queue status read model fetches live readback", async () => {
   const result = await _internals.buildMusicSeshQueueStatusReadModel({
     live: true,
@@ -76,5 +94,7 @@ test("queue status read model fetches live readback", async () => {
   assert.equal(result.callsMusicProviders, false);
   assert.equal(result.controlsPlayback, false);
   assert.equal(result.model.latestQueueItemTitle, "Track");
+  assert.equal(result.responseReadback.ok, true);
+  assert.equal(result.responseReadback.alignedWithModel, true);
   assert(result.userResponse.content.includes("Music Sesh status: music-1 is open"));
 });

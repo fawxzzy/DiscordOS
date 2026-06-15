@@ -97,6 +97,23 @@ function buildSmokeBody(type = "PING", {
   return JSON.stringify({ type: 1 });
 }
 
+function buildRouteAudit(response = {}) {
+  const execution = response.execution || null;
+  const storageWriteResult = execution?.writeAdapter?.storageWriteResult || null;
+  return {
+    interactionType: response.admission?.type || null,
+    routeKind: response.admission?.route?.kind || null,
+    customId: response.admission?.route?.customId || null,
+    responseType: response.payload?.type || null,
+    commandExecuted: false,
+    slashCommandsAdmitted: false,
+    storageWriteAttempted: storageWriteResult?.attempted === true,
+    storageWriteStatus: storageWriteResult?.status || null,
+    executionStatus: execution?.status || null,
+    reasonCodeCount: Array.isArray(response.reasonCodes) ? response.reasonCodes.length : 0,
+  };
+}
+
 async function buildSignedInteractionEndpointSmoke({
   type = "PING",
   nowSeconds = 100,
@@ -139,6 +156,7 @@ async function buildSignedInteractionEndpointSmoke({
   if (!response.signaturePreflight?.signatureVerified) {
     reasonCodes.push("signature_not_verified");
   }
+  const routeAudit = buildRouteAudit(response);
 
   const result = {
     ok: response.ok && reasonCodes.length === 0,
@@ -154,6 +172,7 @@ async function buildSignedInteractionEndpointSmoke({
     signatureVerified: response.signaturePreflight?.signatureVerified === true,
     admissionStatus: response.admission?.status || null,
     executionStatus: response.execution?.status || null,
+    routeAudit,
     reasonCodes: [...new Set(reasonCodes)],
   };
 
@@ -170,6 +189,7 @@ async function buildSignedInteractionEndpointSmoke({
         interactionType: result.interactionType,
         responseType: result.responseType,
         signatureVerified: result.signatureVerified,
+        storageWriteAttempted: result.routeAudit.storageWriteAttempted,
       },
     },
   };
@@ -190,6 +210,9 @@ function renderMarkdown(result) {
     `- signature verified: \`${result.signatureVerified ? "true" : "false"}\``,
     `- admission status: \`${result.admissionStatus || "none"}\``,
     `- execution status: \`${result.executionStatus || "none"}\``,
+    `- audit route kind: \`${result.routeAudit.routeKind || "none"}\``,
+    `- audit storage write: \`${result.routeAudit.storageWriteStatus || "none"}\``,
+    `- slash commands admitted: \`${result.routeAudit.slashCommandsAdmitted ? "true" : "false"}\``,
     `- reason codes: \`${result.reasonCodes.join(",") || "none"}\``,
     "",
   ].join("\n");
@@ -218,6 +241,7 @@ module.exports = {
     parseArgs,
     discordPublicKeyFromKey,
     buildSmokeBody,
+    buildRouteAudit,
     buildSignedInteractionEndpointSmoke,
     renderMarkdown,
   },

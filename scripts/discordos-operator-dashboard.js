@@ -4,39 +4,39 @@ const {
 
 const HIGHEST_VALUE_CATEGORIES = [
   {
-    id: "music_sesh_live_status_response_readback",
-    label: "Music Sesh live status response readback",
-    command: "npm run ops:discordos:music-sesh-queue-status -- --live",
-    why: "Users now have a button surface and a status response preview, so the next value is proving the live response stays aligned with queue/session state.",
-    does: "Runs live Music Sesh readback and renders the exact no-mention status response users should see from buttons or computa chat.",
+    id: "music_sesh_chat_status_response_route",
+    label: "Music Sesh chat status response route",
+    command: "npm run ops:discordos:chat-message-live-ingest",
+    why: "Buttons now have a verified status response path; the matching computa chat route should return the same user-safe status without slash commands.",
+    does: "Routes a chat-message status request through the admitted listener path and returns the same no-mention status summary users get from buttons.",
   },
   {
-    id: "music_sesh_channel_target_env_contract",
-    label: "Music Sesh channel target env contract",
-    command: "npm run ops:discordos:music-sesh-channel-target-status",
-    why: "The committed target is ready, but deployed runtime should resolve the Music Sesh channel consistently without operator-provided IDs.",
-    does: "Validates the durable channel target and gives the env/deploy contract a single no-secret read model to enforce.",
+    id: "music_sesh_session_lifecycle_buttons",
+    label: "Music Sesh session lifecycle buttons",
+    command: "npm run ops:discordos:music-sesh-button-router",
+    why: "Queue and status actions are wired; session open, lock, close, and vote controls need the same button-grade proof so hosts can run a session from the channel.",
+    does: "Exercises each admitted Music Sesh button route against storage/readback while keeping provider playback gated.",
   },
   {
-    id: "music_provider_adapter_admission_guard",
-    label: "Music provider adapter admission guard",
-    command: "npm run ops:discordos:music-sesh-runtime",
-    why: "Music Sesh can now accept user actions, but provider playback must stay gated until explicit provider admission exists.",
-    does: "Introduces the next guard layer for provider calls so queue actions and playback controls remain separate and auditable.",
+    id: "music_provider_metadata_adapter_contract",
+    label: "Music provider metadata adapter contract",
+    command: "npm run ops:discordos:music-sesh-runtime -- --provider-action search --allow-provider-admission",
+    why: "Provider admission is guarded; the next safe provider step is metadata/search shape proof without playback control.",
+    does: "Defines the provider metadata contract for search/read-only enrichment before any play, pause, skip, or queue playback calls are allowed.",
   },
   {
-    id: "button_route_observability_audit",
-    label: "Button route observability audit",
+    id: "button_route_audit_persistence",
+    label: "Button route audit persistence",
     command: "npm run ops:discordos:signed-interaction-endpoint-smoke -- --type MESSAGE_COMPONENT --execute-route",
-    why: "Production-style button execution is proven; the next gap is an audit trail that explains which button ran and what storage effect it had.",
-    does: "Adds route-level observation around signed button execution, storage write status, response type, and no-slash guarantees.",
+    why: "The route audit exists in readback; persisting it makes button execution explainable after the interaction has completed.",
+    does: "Writes sanitized audit events for signed button execution, storage status, response type, and no-slash admission.",
   },
   {
-    id: "board_reaction_lifecycle_sync",
-    label: "Board reaction lifecycle sync",
-    command: "npm run ops:discordos:board-lifecycle-readback-reconciliation -- --live",
-    why: "Feature cards already carry success/failure reactions; the next useful automation is syncing those reactions into board lifecycle state.",
-    does: "Connects forum-card reaction state to lifecycle reconciliation so the board, forum card, and storage row stay aligned.",
+    id: "board_reaction_live_apply_reconciliation",
+    label: "Board reaction live apply reconciliation",
+    command: "npm run ops:discordos:board-reaction-lifecycle-sync",
+    why: "Committed reaction lifecycle is synced; the next step is live apply/readback reconciliation when reactions change on forum cards.",
+    does: "Reads forum-card reactions, applies the matching board lifecycle state, and proves storage/forum/board alignment.",
   },
 ];
 
@@ -232,6 +232,12 @@ function buildProductRuntimeTiles() {
       command: "npm run ops:discordos:music-sesh-runtime",
     },
     {
+      id: "music_provider_adapter_admission_guard",
+      label: "Music provider admission guard",
+      status: "available",
+      command: "npm run ops:discordos:music-sesh-runtime -- --provider-action search --allow-provider-admission",
+    },
+    {
       id: "music_sesh_control_post",
       label: "Music Sesh control post",
       status: "available",
@@ -248,6 +254,12 @@ function buildProductRuntimeTiles() {
       label: "Music Sesh channel target",
       status: "available",
       command: "npm run ops:discordos:music-sesh-channel-target-status",
+    },
+    {
+      id: "music_sesh_channel_target_env_contract",
+      label: "Music Sesh channel env contract",
+      status: "available",
+      command: "npm run ops:discordos:music-sesh-channel-target-status -- --require-env",
     },
     {
       id: "music_sesh_button_router",
@@ -358,6 +370,12 @@ function buildProductRuntimeTiles() {
       command: "npm run ops:discordos:music-sesh-queue-status",
     },
     {
+      id: "music_sesh_live_status_response_readback",
+      label: "Music Sesh live status response readback",
+      status: "available",
+      command: "npm run ops:discordos:music-sesh-queue-status -- --live",
+    },
+    {
       id: "music_sesh_button_chat_live_canary",
       label: "Music Sesh button/chat live canary",
       status: "available",
@@ -378,6 +396,12 @@ function buildProductRuntimeTiles() {
     {
       id: "signed_button_route_execution_smoke",
       label: "Signed button route execution smoke",
+      status: "available",
+      command: "npm run ops:discordos:signed-interaction-endpoint-smoke -- --type MESSAGE_COMPONENT --execute-route",
+    },
+    {
+      id: "button_route_observability_audit",
+      label: "Button route observability audit",
       status: "available",
       command: "npm run ops:discordos:signed-interaction-endpoint-smoke -- --type MESSAGE_COMPONENT --execute-route",
     },
@@ -410,6 +434,12 @@ function buildProductRuntimeTiles() {
       label: "Board lifecycle readback reconciliation",
       status: "available",
       command: "npm run ops:discordos:board-lifecycle-readback-reconciliation",
+    },
+    {
+      id: "board_reaction_lifecycle_sync",
+      label: "Board reaction lifecycle sync",
+      status: "available",
+      command: "npm run ops:discordos:board-reaction-lifecycle-sync",
     },
     {
       id: "music_sesh_feature_card_forum_post",

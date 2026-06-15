@@ -59,6 +59,45 @@ function buildUserStatusResponse(model = {}) {
   };
 }
 
+function contentHasUnsafeMentions(content) {
+  return /<@!?&?\d+>|@everyone|@here/i.test(String(content || ""));
+}
+
+function buildUserStatusResponseReadback(model = {}, response = {}) {
+  const content = String(response.content || "");
+  const reasonCodes = [];
+  const queuedLabel = `${Number(model.queueItemCount || 0)} queued`;
+  const voteLabel = `${Number(model.voteCount || 0)} vote${Number(model.voteCount || 0) === 1 ? "" : "s"}`;
+
+  if (!content.includes(model.currentSessionId || "no active session")) {
+    reasonCodes.push("status_response_session_mismatch");
+  }
+  if (!content.includes(model.currentState || "unknown")) {
+    reasonCodes.push("status_response_state_mismatch");
+  }
+  if (!content.includes(queuedLabel)) {
+    reasonCodes.push("status_response_queue_count_mismatch");
+  }
+  if (!content.includes(voteLabel)) {
+    reasonCodes.push("status_response_vote_count_mismatch");
+  }
+  if (contentHasUnsafeMentions(content)) {
+    reasonCodes.push("status_response_unsafe_mentions");
+  }
+  if (response.allowedMentionsDisabled !== true) {
+    reasonCodes.push("status_response_mentions_not_disabled");
+  }
+
+  return {
+    ok: reasonCodes.length === 0,
+    contentPresent: content.length > 0,
+    noUnsafeMentions: !contentHasUnsafeMentions(content),
+    allowedMentionsDisabled: response.allowedMentionsDisabled === true,
+    alignedWithModel: reasonCodes.length === 0,
+    reasonCodes,
+  };
+}
+
 async function buildMusicSeshQueueStatusReadModel({
   live = false,
   env = process.env,
@@ -71,22 +110,28 @@ async function buildMusicSeshQueueStatusReadModel({
   });
   const model = buildQueueStatusReadModel(readback.readback || {});
   const userResponse = buildUserStatusResponse(model);
+  const responseReadback = buildUserStatusResponseReadback(model, userResponse);
+  const reasonCodes = [...new Set([
+    ...readback.reasonCodes,
+    ...responseReadback.reasonCodes,
+  ])];
   const result = {
-    ok: readback.ok,
+    ok: readback.ok && responseReadback.ok,
     destructive: false,
     sendsMessages: false,
     writesArtifacts: false,
     callsMusicProviders: false,
     controlsPlayback: false,
     liveAttempted: readback.liveAttempted,
-    status: readback.ok ? "queue_status_ready" : "blocked",
+    status: readback.ok && responseReadback.ok ? "queue_status_ready" : "blocked",
     model,
     userResponse,
+    responseReadback,
     readback: {
       status: readback.status,
       summary: readback.summary,
     },
-    reasonCodes: readback.reasonCodes,
+    reasonCodes,
   };
 
   return {
@@ -123,6 +168,8 @@ function renderMarkdown(result) {
     `- current state: \`${result.model.currentState}\``,
     `- latest queue item: \`${result.model.latestQueueItemTitle || "none"}\``,
     `- user response: \`${result.userResponse.content}\``,
+    `- response aligned: \`${result.responseReadback.alignedWithModel ? "true" : "false"}\``,
+    `- unsafe mentions: \`${result.responseReadback.noUnsafeMentions ? "false" : "true"}\``,
     `- reason codes: \`${result.reasonCodes.join(",") || "none"}\``,
     "",
   ].join("\n");
@@ -151,6 +198,8 @@ module.exports = {
     parseArgs,
     buildQueueStatusReadModel,
     buildUserStatusResponse,
+    contentHasUnsafeMentions,
+    buildUserStatusResponseReadback,
     buildMusicSeshQueueStatusReadModel,
     renderMarkdown,
   },
