@@ -9,6 +9,7 @@ const os = require("node:os");
 const REPO_ROOT = path.resolve(__dirname, "..");
 const GENERATED_STATE_DIRS = [".vercel", "node_modules"];
 const VERCEL_LINK_CONFIG_REF = path.join("config", "vercel.project.json");
+const PACKAGE_JSON_REF = path.join("package.json");
 
 function normalizeRelativePath(value) {
   return String(value).replaceAll("\\", "/");
@@ -87,6 +88,36 @@ async function materializeVercelLink({
   return projectJsonPath;
 }
 
+function parseVerifyInnerSteps(commandText) {
+  return String(commandText || "")
+    .split("&&")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const match = /^npm run\s+(.+)$/.exec(part);
+      if (!match || !match[1].trim()) {
+        throw new Error(`Unsupported verify:_inner step: ${part}`);
+      }
+      return match[1].trim();
+    });
+}
+
+async function loadVerifyInnerSteps({
+  repoRoot = REPO_ROOT,
+  packageJsonRef = PACKAGE_JSON_REF,
+  fsImpl = fs
+} = {}) {
+  const packageJsonPath = resolveRepoChild(repoRoot, packageJsonRef);
+  const packageJson = JSON.parse(await fsImpl.readFile(packageJsonPath, "utf8"));
+  const scripts = packageJson.scripts || {};
+  const verifyInner = typeof scripts["verify:_inner"] === "string" ? scripts["verify:_inner"] : "";
+  const steps = parseVerifyInnerSteps(verifyInner);
+  if (steps.length === 0) {
+    throw new Error("package.json is missing a usable verify:_inner script.");
+  }
+  return steps;
+}
+
 function getExecutable(command) {
   if (process.platform === "win32" && command === "npm") {
     return "npm.cmd";
@@ -159,18 +190,25 @@ async function runVerifyWorkflow(dependencies = {}) {
   const { repoRoot = REPO_ROOT } = dependencies;
   const executeCommand = dependencies.runCommand || runCommand;
   await pruneGeneratedState({ ...dependencies, repoRoot });
+  const verifySteps = await loadVerifyInnerSteps({ ...dependencies, repoRoot });
 
   let verifyExitCode = 1;
   let cleanupError = null;
 
   try {
-    verifyExitCode = await executeCommand({
-      ...dependencies,
-      command: "npm",
-      args: ["run", "verify:_inner"],
-      cwd: repoRoot,
-      runCommand: undefined
-    });
+    verifyExitCode = 0;
+    for (const step of verifySteps) {
+      verifyExitCode = await executeCommand({
+        ...dependencies,
+        command: "npm",
+        args: ["run", step],
+        cwd: repoRoot,
+        runCommand: undefined
+      });
+      if (verifyExitCode !== 0) {
+        break;
+      }
+    }
   } finally {
     try {
       await pruneGeneratedState({ ...dependencies, repoRoot });
@@ -346,6 +384,8 @@ const _internals = {
   pruneGeneratedState,
   loadVercelLinkConfig,
   materializeVercelLink,
+  parseVerifyInnerSteps,
+  loadVerifyInnerSteps,
   runCommand,
   parseEnvFile,
   runVerifyWorkflow,

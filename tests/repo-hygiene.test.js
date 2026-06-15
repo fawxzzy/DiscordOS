@@ -109,6 +109,43 @@ test("parseEnvFile reads simple dotenv values without exposing comments", () => 
   });
 });
 
+test("parseVerifyInnerSteps expands chained npm run commands", () => {
+  assert.deepEqual(
+    _internals.parseVerifyInnerSteps("npm run verify:one && npm run verify:two && npm run verify:three"),
+    ["verify:one", "verify:two", "verify:three"]
+  );
+});
+
+test("runVerifyWorkflow executes verify:_inner steps sequentially", async () => {
+  await withTempRepo(async (repoRoot) => {
+    await fs.writeFile(
+      path.join(repoRoot, "package.json"),
+      JSON.stringify({
+        scripts: {
+          "verify:_inner": "npm run verify:one && npm run verify:two && npm run verify:three"
+        }
+      }),
+      "utf8"
+    );
+    const commands = [];
+
+    const exitCode = await _internals.runVerifyWorkflow({
+      repoRoot,
+      runCommand: async ({ command, args }) => {
+        commands.push([command, ...args].join(" "));
+        return 0;
+      }
+    });
+
+    assert.equal(exitCode, 0);
+    assert.deepEqual(commands, [
+      "npm run verify:one",
+      "npm run verify:two",
+      "npm run verify:three",
+    ]);
+  });
+});
+
 test("runWithProductionEnv pulls env into a temp file and cleans it afterward", async () => {
   await withTempRepo(async (repoRoot) => {
     let sawProjectJson = false;
