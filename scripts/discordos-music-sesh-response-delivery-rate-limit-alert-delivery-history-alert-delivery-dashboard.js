@@ -1,0 +1,131 @@
+const {
+  _internals: readbackInternals,
+} = require("./discordos-music-sesh-response-delivery-rate-limit-alert-delivery-history-alert-delivery-readback");
+
+function parseArgs(args) {
+  return readbackInternals.parseArgs(args);
+}
+
+function buildRateLimitAlertDeliveryHistoryAlertDeliveryDashboard(readbackResult) {
+  const readback = readbackResult.readback;
+  return {
+    statusLine: "ready",
+    deliveryAdmissionStatus: readback.deliveryAdmissionStatus,
+    alertRequired: readback.alertRequired === true,
+    alertStatus: readback.alertStatus,
+    historyStatus: readback.historyStatus,
+    userContentHidden: readback.userContentHidden === true,
+    mentionSafetyPreserved: readback.mentionSafetyPreserved === true,
+    deliveryDecisionVisible: readback.deliveryDecisionVisible === true,
+    noSendBoundaryConfirmed: readback.noSendBoundaryConfirmed === true,
+    noDiscordApiBoundaryConfirmed: readback.noDiscordApiBoundaryConfirmed === true,
+    noStorageWriteBoundaryConfirmed: readback.noStorageWriteBoundaryConfirmed === true,
+    sendsMessagesInDashboard: false,
+    callsDiscordApi: false,
+    executesStorageWrite: false,
+    slashCommandsAdmitted: false,
+  };
+}
+
+function validateRateLimitAlertDeliveryHistoryAlertDeliveryDashboard({ readbackResult, dashboard }) {
+  const reasonCodes = [...readbackResult.reasonCodes];
+  if (dashboard.statusLine !== "ready" || !dashboard.deliveryDecisionVisible || dashboard.historyStatus !== "bounded_ready") {
+    reasonCodes.push("music_sesh_rate_limit_alert_delivery_history_alert_delivery_dashboard_visibility_missing");
+  }
+  if (!dashboard.userContentHidden || !dashboard.mentionSafetyPreserved) {
+    reasonCodes.push("music_sesh_rate_limit_alert_delivery_history_alert_delivery_dashboard_privacy_failed");
+  }
+  if (!dashboard.noSendBoundaryConfirmed || !dashboard.noDiscordApiBoundaryConfirmed || dashboard.sendsMessagesInDashboard || dashboard.callsDiscordApi || readbackResult.sendsMessages || readbackResult.callsDiscordApi) {
+    reasonCodes.push("music_sesh_rate_limit_alert_delivery_history_alert_delivery_dashboard_send_boundary_failed");
+  }
+  if (!dashboard.noStorageWriteBoundaryConfirmed || dashboard.executesStorageWrite || readbackResult.executesStorageWrite) {
+    reasonCodes.push("music_sesh_rate_limit_alert_delivery_history_alert_delivery_dashboard_storage_write_attempted");
+  }
+  if (dashboard.alertRequired && dashboard.deliveryAdmissionStatus !== "admitted_no_send") {
+    reasonCodes.push("music_sesh_rate_limit_alert_delivery_history_alert_delivery_dashboard_admission_missing");
+  }
+  if (readbackResult.slashCommandsAdmitted || dashboard.slashCommandsAdmitted) {
+    reasonCodes.push("music_sesh_rate_limit_alert_delivery_history_alert_delivery_dashboard_slash_command_admitted");
+  }
+  return [...new Set(reasonCodes)];
+}
+
+async function buildMusicSeshResponseDeliveryRateLimitAlertDeliveryHistoryAlertDeliveryDashboard(input = {}) {
+  const readbackResult = await readbackInternals.buildMusicSeshResponseDeliveryRateLimitAlertDeliveryHistoryAlertDeliveryReadback(input);
+  const dashboard = buildRateLimitAlertDeliveryHistoryAlertDeliveryDashboard(readbackResult);
+  const reasonCodes = validateRateLimitAlertDeliveryHistoryAlertDeliveryDashboard({ readbackResult, dashboard });
+  const result = {
+    ok: reasonCodes.length === 0,
+    destructive: false,
+    sendsMessages: false,
+    writesArtifacts: false,
+    callsDiscordApi: false,
+    callsMusicProviders: false,
+    controlsPlayback: false,
+    executesStorageWrite: false,
+    slashCommandsAdmitted: false,
+    status: reasonCodes.length === 0 ? "music_sesh_response_delivery_rate_limit_alert_delivery_history_alert_delivery_dashboard_ready" : "blocked",
+    sourceStatus: readbackResult.status,
+    dashboard,
+    reasonCodes,
+  };
+
+  return {
+    ...result,
+    event: {
+      type: result.ok
+        ? "discordos.music_sesh.response_delivery_rate_limit_alert_delivery_history_alert_delivery_dashboard_ready"
+        : "discordos.music_sesh.response_delivery_rate_limit_alert_delivery_history_alert_delivery_dashboard_blocked",
+      severity: result.ok ? "info" : "warning",
+      subject: "discordos.music_sesh.response_delivery_rate_limit_alert_delivery_history_alert_delivery_dashboard",
+      status: result.ok ? "pass" : "fail",
+      dimensions: {
+        alertRequired: dashboard.alertRequired,
+        admission: dashboard.deliveryAdmissionStatus,
+        userContentHidden: dashboard.userContentHidden,
+      },
+    },
+  };
+}
+
+function renderMarkdown(result) {
+  return [
+    "# DiscordOS Music Sesh Response Delivery Rate-Limit Alert Delivery History Alert Delivery Dashboard",
+    "",
+    `- result: \`${result.ok ? "pass" : "fail"}\``,
+    `- sends messages: \`${result.sendsMessages ? "true" : "false"}\``,
+    `- calls Discord API: \`${result.callsDiscordApi ? "true" : "false"}\``,
+    `- slash commands admitted: \`${result.slashCommandsAdmitted ? "true" : "false"}\``,
+    `- status: \`${result.status}\``,
+    `- status line: \`${result.dashboard.statusLine}\``,
+    `- admission: \`${result.dashboard.deliveryAdmissionStatus}\``,
+    `- reason codes: \`${result.reasonCodes.join(",") || "none"}\``,
+    "",
+  ].join("\n");
+}
+
+async function main() {
+  try {
+    const options = parseArgs(process.argv.slice(2));
+    const result = await buildMusicSeshResponseDeliveryRateLimitAlertDeliveryHistoryAlertDeliveryDashboard(options);
+    process.stdout.write(options.json ? `${JSON.stringify(result, null, 2)}\n` : renderMarkdown(result));
+    if (!result.ok) process.exitCode = 1;
+  } catch (error) {
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    process.exitCode = 1;
+  }
+}
+
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  _internals: {
+    parseArgs,
+    buildRateLimitAlertDeliveryHistoryAlertDeliveryDashboard,
+    validateRateLimitAlertDeliveryHistoryAlertDeliveryDashboard,
+    buildMusicSeshResponseDeliveryRateLimitAlertDeliveryHistoryAlertDeliveryDashboard,
+    renderMarkdown,
+  },
+};
