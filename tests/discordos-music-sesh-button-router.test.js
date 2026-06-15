@@ -54,6 +54,31 @@ test("music sesh button router maps skip to a guarded vote", async () => {
   assert.equal(result.route.voteDirection, "down");
 });
 
+test("music sesh button router maps lifecycle controls", async () => {
+  const open = await _internals.buildMusicSeshButtonRouter({
+    ...VALID_INPUT,
+    customId: "music_sesh:open",
+    env: {},
+  });
+  const lock = await _internals.buildMusicSeshButtonRouter({
+    ...VALID_INPUT,
+    customId: "music_sesh:lock",
+    env: {},
+  });
+  const close = await _internals.buildMusicSeshButtonRouter({
+    ...VALID_INPUT,
+    customId: "music_sesh:close",
+    env: {},
+  });
+
+  assert.equal(open.ok, true);
+  assert.equal(open.route.action, "open_session");
+  assert.equal(lock.ok, true);
+  assert.equal(lock.route.action, "lock_session");
+  assert.equal(close.ok, true);
+  assert.equal(close.route.action, "close_session");
+});
+
 test("music sesh button router executes storage when double guarded", async () => {
   const calls = [];
   const result = await _internals.buildMusicSeshButtonRouter({

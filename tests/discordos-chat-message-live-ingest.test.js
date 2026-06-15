@@ -40,6 +40,23 @@ test("chat message live ingest dry run routes without storage", async () => {
   assert.equal(result.slashCommandsAdmitted, false);
 });
 
+test("chat message live ingest returns no-mention status response route", async () => {
+  const result = await _internals.buildChatMessageLiveIngest({
+    ...VALID_INPUT,
+    content: "computa music status",
+    env: {},
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.sendsMessages, false);
+  assert.equal(result.callsDiscordApi, false);
+  assert.equal(result.executesStorageWrite, false);
+  assert.equal(result.slashCommandsAdmitted, false);
+  assert.equal(result.listener.status, "chat_message_status_response_ready");
+  assert.equal(result.statusResponseRoute.allowedMentionsDisabled, true);
+  assert.match(result.userResponse.content, /Music Sesh status:/);
+});
+
 test("chat message live ingest blocks partial admission", async () => {
   const result = await _internals.buildChatMessageLiveIngest({
     ...VALID_INPUT,

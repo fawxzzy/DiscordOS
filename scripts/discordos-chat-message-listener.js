@@ -4,6 +4,9 @@ const {
 const {
   _internals: writeAdapterInternals,
 } = require("./discordos-music-sesh-write-adapter-guard");
+const {
+  _internals: queueStatusInternals,
+} = require("./discordos-music-sesh-queue-status-read-model");
 
 function readValue(args, index, missingCode) {
   const value = args[index + 1];
@@ -154,6 +157,51 @@ async function buildChatMessageListener({
   }
 
   const normalized = normalizeChatAction(intake.action);
+  if (normalized.action === "status") {
+    const statusReadModel = await queueStatusInternals.buildMusicSeshQueueStatusReadModel({
+      live: input.apply === true,
+      env,
+      fetchImpl,
+    });
+    const result = {
+      ok: statusReadModel.ok,
+      destructive: false,
+      sendsMessages: false,
+      callsDiscordApi: false,
+      callsMusicProviders: false,
+      controlsPlayback: false,
+      executesStorageWrite: false,
+      slashCommandsAdmitted: false,
+      status: statusReadModel.ok ? "chat_message_status_response_ready" : "blocked",
+      intake,
+      writeAdapter: null,
+      statusReadModel: {
+        status: statusReadModel.status,
+        liveAttempted: statusReadModel.liveAttempted,
+        model: statusReadModel.model,
+        responseReadback: statusReadModel.responseReadback,
+      },
+      userResponse: statusReadModel.userResponse,
+      reasonCodes: statusReadModel.reasonCodes,
+    };
+    return {
+      ...result,
+      event: {
+        type: result.ok
+          ? "discordos.chat_message.status_response_ready"
+          : "discordos.chat_message.status_response_blocked",
+        severity: result.ok ? "info" : "warning",
+        subject: "discordos.chat_message.status_response",
+        status: result.ok ? "pass" : "fail",
+        dimensions: {
+          action: intake.action || "none",
+          sendsMessages: false,
+          allowedMentionsDisabled: result.userResponse?.allowedMentionsDisabled === true,
+        },
+      },
+    };
+  }
+
   const writeAdapter = await writeAdapterInternals.buildMusicSeshWriteAdapterGuard({
     sessionId: input.sessionId,
     action: normalized.action,

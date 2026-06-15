@@ -461,6 +461,71 @@
       "reactionStatus": "success",
       "reactionEmojiName": "success",
       "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "music-sesh-chat-status-response-route",
+      "title": "Music Sesh chat status response route",
+      "state": "completed",
+      "priority": "high",
+      "category": "chat_status",
+      "nextCommand": "npm run ops:discordos:chat-message-live-ingest",
+      "liveThreadId": "1516118471988088907",
+      "liveMessageId": "1516118471988088907",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "music-sesh-session-lifecycle-buttons",
+      "title": "Music Sesh session lifecycle buttons",
+      "state": "completed",
+      "priority": "high",
+      "category": "session_lifecycle",
+      "nextCommand": "npm run ops:discordos:music-sesh-session-lifecycle-buttons",
+      "liveThreadId": "1516118697281060975",
+      "liveMessageId": "1516118697281060975",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "music-provider-metadata-adapter-contract",
+      "title": "Music provider metadata adapter contract",
+      "state": "completed",
+      "priority": "high",
+      "category": "provider_metadata",
+      "nextCommand": "npm run ops:discordos:music-provider-metadata-contract",
+      "liveThreadId": "1516118619652751490",
+      "liveMessageId": "1516118619652751490",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "button-route-audit-persistence",
+      "title": "Button route audit persistence",
+      "state": "completed",
+      "priority": "high",
+      "category": "button_audit",
+      "nextCommand": "npm run ops:discordos:button-route-audit-persistence",
+      "liveThreadId": "1516118626367705271",
+      "liveMessageId": "1516118626367705271",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
+    },
+    {
+      "id": "board-reaction-live-apply-reconciliation",
+      "title": "Board reaction live apply reconciliation",
+      "state": "completed",
+      "priority": "high",
+      "category": "feedback_board",
+      "nextCommand": "npm run ops:discordos:board-reaction-lifecycle-sync",
+      "liveThreadId": "1516118629811359776",
+      "liveMessageId": "1516118629811359776",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
     }
   ]
 }

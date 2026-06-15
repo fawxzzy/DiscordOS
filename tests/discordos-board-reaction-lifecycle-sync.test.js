@@ -4,10 +4,20 @@ const test = require("node:test");
 const { _internals } = require("../scripts/discordos-board-reaction-lifecycle-sync");
 
 test("board reaction lifecycle sync parses card filter", () => {
-  const parsed = _internals.parseArgs(["--json", "--card-id", "card-1"]);
+  const parsed = _internals.parseArgs([
+    "--json",
+    "--card-id",
+    "card-1",
+    "--live",
+    "--allow-apply",
+    "--apply",
+  ]);
 
   assert.equal(parsed.json, true);
   assert.equal(parsed.cardId, "card-1");
+  assert.equal(parsed.live, true);
+  assert.equal(parsed.allowApply, true);
+  assert.equal(parsed.apply, true);
 });
 
 test("board reaction lifecycle sync maps state to expected reactions", () => {
@@ -35,8 +45,9 @@ test("board reaction lifecycle sync reads committed board", async () => {
   assert.equal(result.ok, true);
   assert.equal(result.sendsMessages, false);
   assert.equal(result.callsDiscordApi, false);
+  assert.equal(result.slashCommandsAdmitted, false);
   assert.equal(result.status, "reaction_lifecycle_synced");
-  assert.equal(result.board.cardCount, 35);
+  assert.equal(result.board.cardCount, 40);
   assert.equal(result.mismatchCount, 0);
 });
 
@@ -49,4 +60,36 @@ test("board reaction lifecycle sync renders bounded markdown", async () => {
   assert(rendered.includes("# DiscordOS Board Reaction Lifecycle Sync"));
   assert(rendered.includes("sends messages: `false`"));
   assert(rendered.includes("mismatches: `0`"));
+});
+
+test("board reaction lifecycle sync can live-read custom success reaction", async () => {
+  const result = await _internals.buildBoardReactionLifecycleSync({
+    cardId: "user-facing-music-sesh-status-response",
+    live: true,
+    env: {
+      DISCORDOS_BOT_TOKEN: "bot-token",
+    },
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        reactions: [
+          {
+            emoji: {
+              name: "success",
+              id: "1507384062166302851",
+            },
+            count: 1,
+            me: true,
+          },
+        ],
+      }),
+    }),
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.callsDiscordApi, true);
+  assert.equal(result.liveAttempted, true);
+  assert.equal(result.liveMismatchCount, 0);
+  assert.equal(result.liveReconciledCards[0].readback.currentReactionPresent, true);
 });

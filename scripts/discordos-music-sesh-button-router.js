@@ -3,6 +3,9 @@ const {
 } = require("./discordos-music-sesh-write-adapter-guard");
 
 const BUTTON_ACTIONS = new Map([
+  ["music_sesh:open", {
+    action: "open_session",
+  }],
   ["music_sesh:queue", {
     action: "queue_item",
     itemTitle: "Button Queued Track",
@@ -14,6 +17,9 @@ const BUTTON_ACTIONS = new Map([
   }],
   ["music_sesh:status", {
     action: "open_session",
+  }],
+  ["music_sesh:lock", {
+    action: "lock_session",
   }],
   ["music_sesh:close", {
     action: "close_session",

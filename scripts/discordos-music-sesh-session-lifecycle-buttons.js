@@ -1,9 +1,14 @@
 const {
-  _internals: chatListenerInternals,
-} = require("./discordos-chat-message-listener");
+  _internals: buttonRouterInternals,
+} = require("./discordos-music-sesh-button-router");
 
-const INGEST_ENV = "DISCORDOS_CHAT_MESSAGE_INGEST";
-const INGEST_ENV_VALUE = "enabled";
+const LIFECYCLE_BUTTONS = [
+  "music_sesh:open",
+  "music_sesh:queue",
+  "music_sesh:vote_skip",
+  "music_sesh:lock",
+  "music_sesh:close",
+];
 
 function readValue(args, index, missingCode) {
   const value = args[index + 1];
@@ -16,13 +21,10 @@ function readValue(args, index, missingCode) {
 function parseArgs(args) {
   const options = {
     json: false,
-    content: "computa music queue Ingest Track",
-    authorBot: false,
-    sessionId: "music-sesh-chat-ingest",
-    guildId: null,
-    channelId: null,
-    actorDiscordUserId: null,
-    allowIngest: false,
+    sessionId: "music-sesh-lifecycle-buttons",
+    guildId: "1504668396338413670",
+    channelId: "1508139160853286942",
+    actorDiscordUserId: "1515220075366580224",
     allowStorageWrite: false,
     apply: false,
   };
@@ -31,11 +33,6 @@ function parseArgs(args) {
     const arg = args[index];
     if (arg === "--json") {
       options.json = true;
-    } else if (arg === "--content") {
-      options.content = readValue(args, index, "missing_content_value");
-      index += 1;
-    } else if (arg === "--author-bot") {
-      options.authorBot = true;
     } else if (arg === "--session-id") {
       options.sessionId = readValue(args, index, "missing_session_id_value");
       index += 1;
@@ -48,8 +45,6 @@ function parseArgs(args) {
     } else if (arg === "--actor-user-id") {
       options.actorDiscordUserId = readValue(args, index, "missing_actor_user_id_value");
       index += 1;
-    } else if (arg === "--allow-ingest") {
-      options.allowIngest = true;
     } else if (arg === "--allow-storage-write") {
       options.allowStorageWrite = true;
     } else if (arg === "--apply") {
@@ -64,98 +59,56 @@ function parseArgs(args) {
   return options;
 }
 
-function resolveIngestAdmission({ allowIngest, env }) {
-  const envEnabled = env?.[INGEST_ENV] === INGEST_ENV_VALUE;
-  if (!allowIngest && !envEnabled) {
-    return {
-      requested: false,
-      admitted: false,
-      status: "ingest_guard_not_requested",
-      reasonCodes: [],
-    };
-  }
-  if (allowIngest && envEnabled) {
-    return {
-      requested: true,
-      admitted: true,
-      status: "ingest_admitted",
-      reasonCodes: [],
-    };
-  }
-  return {
-    requested: true,
-    admitted: false,
-    status: "blocked",
-    reasonCodes: ["chat_message_ingest_double_guard_missing"],
-  };
-}
-
-async function buildChatMessageLiveIngest({
+async function buildMusicSeshSessionLifecycleButtons({
   env = process.env,
   fetchImpl = fetch,
-  allowIngest = false,
-  allowStorageWrite = false,
-  apply = false,
   ...input
 } = {}) {
-  const admission = resolveIngestAdmission({ allowIngest, env });
-  let listener = null;
-  const reasonCodes = [...admission.reasonCodes];
-
-  if (!apply || admission.admitted) {
-    listener = await chatListenerInternals.buildChatMessageListener({
+  const routes = [];
+  for (const customId of LIFECYCLE_BUTTONS) {
+    routes.push(await buttonRouterInternals.buildMusicSeshButtonRouter({
       ...input,
-      allowStorageWrite,
-      apply: apply && admission.admitted,
+      customId,
       env,
       fetchImpl,
-    });
-    reasonCodes.push(...listener.reasonCodes);
+    }));
   }
 
-  if (apply && !admission.admitted) {
-    reasonCodes.push("chat_message_ingest_not_admitted");
-  }
-
+  const reasonCodes = [...new Set(routes.flatMap((route) => route.reasonCodes))];
   const result = {
-    ok: reasonCodes.length === 0,
+    ok: routes.every((route) => route.ok) && reasonCodes.length === 0,
     destructive: false,
     sendsMessages: false,
-    writesArtifacts: false,
     callsDiscordApi: false,
     callsMusicProviders: false,
     controlsPlayback: false,
-    executesStorageWrite: listener?.executesStorageWrite === true,
+    executesStorageWrite: routes.some((route) => route.executesStorageWrite),
     slashCommandsAdmitted: false,
-    status: reasonCodes.length === 0
-      ? apply
-        ? "chat_message_ingested"
-        : "dry_run"
-      : "blocked",
-    admission,
-    listener,
-    userResponse: listener?.userResponse || null,
-    statusResponseRoute: listener?.userResponse
-      ? {
-          status: listener.status,
-          content: listener.userResponse.content,
-          allowedMentionsDisabled: listener.userResponse.allowedMentionsDisabled === true,
-          noUnsafeMentions: listener.statusReadModel?.responseReadback?.noUnsafeMentions === true,
-        }
-      : null,
-    reasonCodes: [...new Set(reasonCodes)],
+    status: reasonCodes.length === 0 ? "session_lifecycle_buttons_ready" : "blocked",
+    routeCount: routes.length,
+    actionSequence: routes.map((route) => route.route?.action || "blocked"),
+    routes: routes.map((route) => ({
+      ok: route.ok,
+      customId: route.customId,
+      status: route.status,
+      action: route.route?.action || null,
+      executesStorageWrite: route.executesStorageWrite,
+      reasonCodes: route.reasonCodes,
+    })),
+    reasonCodes,
   };
 
   return {
     ...result,
     event: {
       type: result.ok
-        ? "discordos.chat_message.live_ingest_ready"
-        : "discordos.chat_message.live_ingest_blocked",
+        ? "discordos.music_sesh.session_lifecycle_buttons_ready"
+        : "discordos.music_sesh.session_lifecycle_buttons_blocked",
       severity: result.ok ? "info" : "warning",
-      subject: "discordos.chat_message.live_ingest",
+      subject: "discordos.music_sesh.session_lifecycle_buttons",
       status: result.ok ? "pass" : "fail",
       dimensions: {
+        routeCount: result.routeCount,
         executesStorageWrite: result.executesStorageWrite,
         slashCommandsAdmitted: false,
       },
@@ -165,7 +118,7 @@ async function buildChatMessageLiveIngest({
 
 function renderMarkdown(result) {
   return [
-    "# DiscordOS Chat Message Live Ingest",
+    "# DiscordOS Music Sesh Session Lifecycle Buttons",
     "",
     `- result: \`${result.ok ? "pass" : "fail"}\``,
     `- sends messages: \`${result.sendsMessages ? "true" : "false"}\``,
@@ -175,8 +128,8 @@ function renderMarkdown(result) {
     `- executes storage write: \`${result.executesStorageWrite ? "true" : "false"}\``,
     `- slash commands admitted: \`${result.slashCommandsAdmitted ? "true" : "false"}\``,
     `- status: \`${result.status}\``,
-    `- listener status: \`${result.listener?.status || "none"}\``,
-    `- status response route: \`${result.statusResponseRoute ? "ready" : "none"}\``,
+    `- routes: \`${result.routeCount}\``,
+    `- actions: \`${result.actionSequence.join(",")}\``,
     `- reason codes: \`${result.reasonCodes.join(",") || "none"}\``,
     "",
   ].join("\n");
@@ -185,7 +138,7 @@ function renderMarkdown(result) {
 async function main() {
   try {
     const options = parseArgs(process.argv.slice(2));
-    const result = await buildChatMessageLiveIngest(options);
+    const result = await buildMusicSeshSessionLifecycleButtons(options);
     process.stdout.write(options.json ? `${JSON.stringify(result, null, 2)}\n` : renderMarkdown(result));
     if (!result.ok) {
       process.exitCode = 1;
@@ -202,11 +155,9 @@ if (require.main === module) {
 
 module.exports = {
   _internals: {
-    INGEST_ENV,
-    INGEST_ENV_VALUE,
+    LIFECYCLE_BUTTONS,
     parseArgs,
-    resolveIngestAdmission,
-    buildChatMessageLiveIngest,
+    buildMusicSeshSessionLifecycleButtons,
     renderMarkdown,
   },
 };
