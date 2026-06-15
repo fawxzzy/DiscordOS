@@ -58,6 +58,16 @@
       "targetEnv": "DISCORDOS_RUNTIME_HEALTH_ALERT_CHANNEL_ID",
       "fallbackTargetEnv": "DISCORDOS_ATLAS_HEALTH_ALERT_CHANNEL_ID",
       "enabled": true
+    },
+    {
+      "id": "button-route-audit-critical-alert",
+      "source": "button-route",
+      "type": "discordos.button_route.audit_attention",
+      "minSeverity": "critical",
+      "target": "alerts",
+      "targetEnv": "DISCORDOS_RUNTIME_HEALTH_ALERT_CHANNEL_ID",
+      "fallbackTargetEnv": "DISCORDOS_ATLAS_HEALTH_ALERT_CHANNEL_ID",
+      "enabled": true
     }
   ]
 }

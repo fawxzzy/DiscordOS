@@ -58,6 +58,15 @@ const PRODUCER_SURFACES = [
     state: "attached",
     command: "npm run ops:discordos:board-reaction-drift-alerting",
   },
+  {
+    id: "button-route-audit-alerting",
+    source: "button-route",
+    type: "discordos.button_route.audit_attention",
+    severity: "critical",
+    expectedTarget: "alerts",
+    state: "attached",
+    command: "npm run ops:discordos:button-route-audit-alerting",
+  },
 ];
 
 function parseArgs(args) {

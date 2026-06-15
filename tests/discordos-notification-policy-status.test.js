@@ -63,6 +63,16 @@ const baseRoutes = [
     fallbackTargetEnv: "DISCORDOS_ATLAS_HEALTH_ALERT_CHANNEL_ID",
     enabled: true,
   },
+  {
+    id: "button-route-audit-critical-alert",
+    source: "button-route",
+    type: "discordos.button_route.audit_attention",
+    minSeverity: "critical",
+    target: "alerts",
+    targetEnv: "DISCORDOS_RUNTIME_HEALTH_ALERT_CHANNEL_ID",
+    fallbackTargetEnv: "DISCORDOS_ATLAS_HEALTH_ALERT_CHANNEL_ID",
+    enabled: true,
+  },
 ].map(routerInternals.normalizeRoute);
 
 function config(routes = baseRoutes) {
@@ -101,12 +111,12 @@ test("notification policy status classifies ready routes and attached producers"
   assert.equal(result.destructive, false);
   assert.equal(result.sendsMessages, false);
   assert.equal(result.writesArtifacts, false);
-  assert.equal(result.routeCount, 6);
-  assert.equal(result.enabledRouteCount, 6);
-  assert.equal(result.alertsRouteCount, 4);
+  assert.equal(result.routeCount, 7);
+  assert.equal(result.enabledRouteCount, 7);
+  assert.equal(result.alertsRouteCount, 5);
   assert.equal(result.updatesRouteCount, 2);
-  assert.equal(result.attachedProducerCount, 6);
-  assert.equal(result.readyAttachedProducerCount, 6);
+  assert.equal(result.attachedProducerCount, 7);
+  assert.equal(result.readyAttachedProducerCount, 7);
   assert.equal(result.reservedProducerCount, 0);
   assert.equal(result.event.type, "discordos.notification.policy_ready");
 });
@@ -155,11 +165,12 @@ test("notification policy status renders markdown without secret target values",
   const rendered = _internals.renderMarkdown(result);
 
   assert(rendered.includes("# DiscordOS Notification Policy Status"));
-  assert(rendered.includes("attached producers: `6/6`"));
+  assert(rendered.includes("attached producers: `7/7`"));
   assert(rendered.includes("runtime-health-critical-alert"));
   assert(rendered.includes("discord-update-post"));
   assert(rendered.includes("forum-card-lifecycle"));
   assert(rendered.includes("board-reaction-drift-alerting"));
+  assert(rendered.includes("button-route-audit-alerting"));
   assert(!rendered.includes("bot-secret"));
   assert(!rendered.includes("https://discord.com/api/webhooks"));
 });

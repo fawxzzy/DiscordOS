@@ -79,12 +79,12 @@ test("operator dashboard summarizes next-work result into command hint", async (
   assert.equal(dashboard.console.statusLine, "ready");
   assert.equal(dashboard.console.failingTileCount, 0);
   assert.equal(dashboard.console.healthTiles.length, 5);
-  assert.equal(dashboard.productRuntime.surfaceCount, 64);
-  assert.equal(dashboard.productRuntime.availableCount, 64);
+  assert.equal(dashboard.productRuntime.surfaceCount, 69);
+  assert.equal(dashboard.productRuntime.availableCount, 69);
   assert.equal(dashboard.highestValueCategories.length, 5);
-  assert.equal(dashboard.highestValueCategories[0].id, "music_sesh_host_controls_persisted_state_dashboard");
-  assert.match(dashboard.highestValueCategories[0].why, /guarded host-control storage canary/);
-  assert.match(dashboard.highestValueCategories[0].does, /session, queue, vote/);
+  assert.equal(dashboard.highestValueCategories[0].id, "music_sesh_host_control_live_apply_reconciliation");
+  assert.match(dashboard.highestValueCategories[0].why, /Host-control state is now visible/);
+  assert.match(dashboard.highestValueCategories[0].does, /guarded host-control storage apply/);
   assert.equal(dashboard.console.recommendationGroups[0].category, "operator-env");
   assert.equal(event.type, "discordos.operator.dashboard_ready");
   assert.equal(event.dimensions.topRecommendation, "inspect-operator-command-ergonomics");
@@ -93,7 +93,7 @@ test("operator dashboard summarizes next-work result into command hint", async (
 test("operator dashboard exposes product runtime command tiles", () => {
   const panel = _internals.buildProductRuntimePanel();
 
-  assert.equal(panel.surfaceCount, 64);
+  assert.equal(panel.surfaceCount, 69);
   assert(panel.tiles.some((tile) => tile.id === "board_shadow_persistence"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:board-feature-activation-pilot"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:board-active-admission-canary"));
@@ -108,6 +108,7 @@ test("operator dashboard exposes product runtime command tiles", () => {
   assert(panel.tiles.some((tile) => tile.id === "music_provider_adapter_admission_guard"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-provider-metadata-contract"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-provider-metadata-live-canary"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-provider-queue-selection-button-flow"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-control-post"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-control-post-publish"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-channel-target-status"));
@@ -115,12 +116,14 @@ test("operator dashboard exposes product runtime command tiles", () => {
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-button-router"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-session-lifecycle-buttons"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-queue-conflict-host-controls"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-host-controls-persisted-state-dashboard"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:testing-surface-provision"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:board-lifecycle-event-ingest"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:chat-command-intake"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:chat-message-listener"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:chat-message-live-ingest"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-user-response-delivery-guard"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-response-delivery-policy-dashboard"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:product-workflow-monitor"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:operator-activation-runbook"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-storage-contract"));
@@ -139,6 +142,7 @@ test("operator dashboard exposes product runtime command tiles", () => {
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:signed-interaction-endpoint-smoke"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:button-route-audit-persistence"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:button-route-audit-live-readback"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:button-route-audit-alerting"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:signed-interaction-endpoint-smoke -- --type MESSAGE_COMPONENT --execute-route"));
   assert(panel.tiles.some((tile) => tile.id === "button_route_observability_audit"));
   assert(!panel.tiles.some((tile) => /slash-command-adapter|moderation-review-slash-command|slash-command-registration-preflight|slash-command-registration-apply-guard|slash-command-deactivation-apply-guard/.test(tile.command)));
@@ -149,6 +153,7 @@ test("operator dashboard exposes product runtime command tiles", () => {
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:board-lifecycle-readback-reconciliation"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:board-reaction-lifecycle-sync"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:board-lifecycle-reaction-drift-monitor"));
+  assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:board-reaction-auto-repair-canary"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-feature-card-forum-post"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:music-sesh-feature-card-reactions"));
   assert(panel.tiles.some((tile) => tile.command === "npm run ops:discordos:board-moderation-post-button-conversion"));
@@ -194,7 +199,7 @@ test("operator dashboard exposes ranked highest-value categories", () => {
     categories.map((category) => category.rank),
     [1, 2, 3, 4, 5]
   );
-  assert(categories.some((category) => category.id === "music_provider_queue_selection_button_flow"));
+  assert(categories.some((category) => category.id === "music_provider_selection_to_queue_live_canary"));
   assert(categories.every((category) => category.command.startsWith("npm run ops:discordos:")));
   assert(categories.every((category) => typeof category.why === "string" && category.why.length > 20));
   assert(categories.every((category) => typeof category.does === "string" && category.does.length > 20));
@@ -233,9 +238,9 @@ test("operator dashboard renders compact markdown without target values", () => 
   assert(rendered.includes("command: `npm run ops:discordos:dashboard:prod`"));
   assert(rendered.includes("status line: `ready`"));
   assert(rendered.includes("highest value categories: `5`"));
-  assert(rendered.includes("category 1: `Music Sesh host controls persisted state dashboard`"));
-  assert(rendered.includes("why: The guarded host-control storage canary now proves"));
-  assert(rendered.includes("does: Summarizes recent Music Sesh session"));
+  assert(rendered.includes("category 1: `Music Sesh host control live apply reconciliation`"));
+  assert(rendered.includes("why: Host-control state is now visible"));
+  assert(rendered.includes("does: Runs a guarded host-control storage apply"));
   assert(rendered.includes("group operator-env: `1` top `inspect-operator-command-ergonomics`"));
   assert(rendered.includes("surface board_shadow_persistence: `available`"));
   assert(rendered.includes("surface board_feature_activation_pilot: `available`"));
@@ -251,6 +256,7 @@ test("operator dashboard renders compact markdown without target values", () => 
   assert(rendered.includes("surface music_provider_adapter_admission_guard: `available`"));
   assert(rendered.includes("surface music_provider_metadata_live_canary: `available`"));
   assert(rendered.includes("surface music_provider_metadata_selection_preview: `available`"));
+  assert(rendered.includes("surface music_provider_queue_selection_button_flow: `available`"));
   assert(rendered.includes("surface music_sesh_control_post: `available`"));
   assert(rendered.includes("surface music_sesh_control_post_publish: `available`"));
   assert(rendered.includes("surface music_sesh_channel_target_status: `available`"));
@@ -258,6 +264,7 @@ test("operator dashboard renders compact markdown without target values", () => 
   assert(rendered.includes("surface music_sesh_button_router: `available`"));
   assert(rendered.includes("surface music_sesh_queue_conflict_host_controls: `available`"));
   assert(rendered.includes("surface music_sesh_host_control_live_storage_canary: `available`"));
+  assert(rendered.includes("surface music_sesh_host_controls_persisted_state_dashboard: `available`"));
   assert(rendered.includes("surface testing_surface_provision: `available`"));
   assert(rendered.includes("surface board_lifecycle_event_ingest: `available`"));
   assert(rendered.includes("surface chat_command_intake: `available`"));
@@ -265,6 +272,7 @@ test("operator dashboard renders compact markdown without target values", () => 
   assert(rendered.includes("surface chat_message_live_ingest: `available`"));
   assert(rendered.includes("surface music_sesh_user_response_delivery_guard: `available`"));
   assert(rendered.includes("surface music_sesh_response_delivery_live_canary: `available`"));
+  assert(rendered.includes("surface music_sesh_response_delivery_policy_dashboard: `available`"));
   assert(rendered.includes("surface product_workflow_monitor: `available`"));
   assert(rendered.includes("surface operator_activation_runbook: `available`"));
   assert(rendered.includes("surface music_sesh_storage_contract: `available`"));
@@ -285,6 +293,7 @@ test("operator dashboard renders compact markdown without target values", () => 
   assert(rendered.includes("surface button_route_observability_audit: `available`"));
   assert(rendered.includes("surface button_route_audit_live_readback: `available`"));
   assert(rendered.includes("surface button_route_audit_dashboard: `available`"));
+  assert(rendered.includes("surface button_route_audit_alerting: `available`"));
   assert(rendered.includes("surface interaction_handler_admission: `available`"));
   assert(rendered.includes("surface music_sesh_queue_replay_proof: `available`"));
   assert(rendered.includes("surface product_workflow_alert_delivery_canary: `available`"));
@@ -293,6 +302,7 @@ test("operator dashboard renders compact markdown without target values", () => 
   assert(rendered.includes("surface board_reaction_lifecycle_sync: `available`"));
   assert(rendered.includes("surface board_lifecycle_reaction_drift_monitor: `available`"));
   assert(rendered.includes("surface board_reaction_drift_alerting: `available`"));
+  assert(rendered.includes("surface board_reaction_auto_repair_canary: `available`"));
   assert(rendered.includes("surface music_sesh_feature_card_forum_post: `available`"));
   assert(rendered.includes("surface music_sesh_feature_card_reactions: `available`"));
   assert(rendered.includes("surface board_moderation_post_button_conversion: `available`"));
