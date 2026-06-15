@@ -16,6 +16,7 @@ test("moderation audit write adapter guard parses storage guard flag", () => {
     "1515220075366580224",
     "--guild-id",
     "1515843266946269194",
+    "--apply",
     "--allow-storage-write",
   ]);
 
@@ -23,10 +24,11 @@ test("moderation audit write adapter guard parses storage guard flag", () => {
   assert.equal(parsed.caseId, "MOD 1");
   assert.equal(parsed.action, "warn");
   assert.equal(parsed.allowStorageWrite, true);
+  assert.equal(parsed.apply, true);
 });
 
-test("moderation audit write adapter guard is ready with no-send no-live guard", () => {
-  const result = _internals.buildModerationAuditWriteAdapterGuard({
+test("moderation audit write adapter guard is ready with no-send no-live guard", async () => {
+  const result = await _internals.buildModerationAuditWriteAdapterGuard({
     caseId: "MOD 1",
     action: "warn",
     subjectDiscordUserId: "1504671871512346695",
@@ -55,8 +57,8 @@ test("moderation audit write adapter guard is ready with no-send no-live guard",
   assert.equal(result.event.type, "discordos.moderation.audit_write_adapter_guard_ready");
 });
 
-test("moderation audit write adapter guard blocks partial storage write admission", () => {
-  const result = _internals.buildModerationAuditWriteAdapterGuard({
+test("moderation audit write adapter guard blocks partial storage write admission", async () => {
+  const result = await _internals.buildModerationAuditWriteAdapterGuard({
     caseId: "MOD 1",
     action: "warn",
     subjectDiscordUserId: "1504671871512346695",
@@ -74,8 +76,8 @@ test("moderation audit write adapter guard blocks partial storage write admissio
   assert(result.reasonCodes.includes("storage_write_double_guard_missing"));
 });
 
-test("moderation audit write adapter guard admits plan only when double guarded", () => {
-  const result = _internals.buildModerationAuditWriteAdapterGuard({
+test("moderation audit write adapter guard admits plan only when double guarded", async () => {
+  const result = await _internals.buildModerationAuditWriteAdapterGuard({
     caseId: "MOD 1",
     action: "warn",
     subjectDiscordUserId: "1504671871512346695",
@@ -95,8 +97,44 @@ test("moderation audit write adapter guard admits plan only when double guarded"
   assert.equal(result.storageWriteAdmission.status, "storage_write_plan_admitted");
 });
 
-test("moderation audit write adapter guard renders without raw Discord ids", () => {
-  const result = _internals.buildModerationAuditWriteAdapterGuard({
+test("moderation audit write adapter guard executes storage RPC only when applied and configured", async () => {
+  const calls = [];
+  const result = await _internals.buildModerationAuditWriteAdapterGuard({
+    caseId: "MOD 1",
+    action: "warn",
+    subjectDiscordUserId: "1504671871512346695",
+    actorDiscordUserId: "1515220075366580224",
+    guildId: "1515843266946269194",
+    reason: "review",
+    severity: "medium",
+    allowStorageWrite: true,
+    apply: true,
+    env: {
+      DISCORDOS_MODERATION_AUDIT_WRITE_ADAPTER: "enabled",
+      DISCORDOS_SUPABASE_URL: "https://example.supabase.co",
+      DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: "service-role",
+    },
+    fetchImpl: async (url, init) => {
+      calls.push({ url: String(url), init });
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ caseId: "mod-1", operation: "inserted" }),
+      };
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.executesStorageWrite, true);
+  assert.equal(result.adapterStatus, "storage_write_executed");
+  assert.equal(result.storageWriteResult.status, "written");
+  assert.equal(calls[0].url, "https://example.supabase.co/rest/v1/rpc/discordos_insert_moderation_audit");
+  assert.equal(JSON.parse(calls[0].init.body).payload.case_id, "mod-1");
+  assert.equal(calls[0].init.headers.Authorization, "Bearer service-role");
+});
+
+test("moderation audit write adapter guard renders without raw Discord ids", async () => {
+  const result = await _internals.buildModerationAuditWriteAdapterGuard({
     caseId: "MOD 1",
     action: "close",
     subjectDiscordUserId: "1504671871512346695",

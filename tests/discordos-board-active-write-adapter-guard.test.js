@@ -16,6 +16,7 @@ test("board active write adapter guard parses storage guard flag", () => {
     "in_progress",
     "--actor",
     "zac",
+    "--apply",
     "--allow-storage-write",
   ]);
 
@@ -23,6 +24,7 @@ test("board active write adapter guard parses storage guard flag", () => {
   assert.equal(parsed.cardId, "Board 1");
   assert.equal(parsed.workflow, "Product Board");
   assert.equal(parsed.allowStorageWrite, true);
+  assert.equal(parsed.apply, true);
 });
 
 test("board active write adapter guard is ready with no-send no-live guard", async () => {
@@ -87,6 +89,40 @@ test("board active write adapter guard admits plan only when double guarded", as
   assert.equal(result.storageWritesAllowed, true);
   assert.equal(result.executesStorageWrite, false);
   assert.equal(result.storageWriteAdmission.status, "storage_write_plan_admitted");
+});
+
+test("board active write adapter guard executes storage RPC only when applied and configured", async () => {
+  const calls = [];
+  const result = await _internals.buildBoardActiveWriteAdapterGuard({
+    cardId: "Board 1",
+    workflow: "Product Board",
+    kind: "feature",
+    state: "completed",
+    actor: "zac",
+    allowStorageWrite: true,
+    apply: true,
+    env: {
+      DISCORDOS_BOARD_ACTIVE_WRITE_ADAPTER: "enabled",
+      DISCORDOS_SUPABASE_URL: "https://example.supabase.co",
+      DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: "service-role",
+    },
+    fetchImpl: async (url, init) => {
+      calls.push({ url: String(url), init });
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ cardId: "board-1", operation: "upsert" }),
+      };
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.executesStorageWrite, true);
+  assert.equal(result.adapterStatus, "storage_write_executed");
+  assert.equal(result.storageWriteResult.status, "written");
+  assert.equal(calls[0].url, "https://example.supabase.co/rest/v1/rpc/discordos_upsert_board_card");
+  assert.equal(JSON.parse(calls[0].init.body).payload.card_id, "board-1");
+  assert.equal(calls[0].init.headers.Authorization, "Bearer service-role");
 });
 
 test("board active write adapter guard renders bounded markdown", async () => {

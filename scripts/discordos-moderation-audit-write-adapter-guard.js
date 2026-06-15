@@ -1,9 +1,13 @@
 const {
   _internals: shadowPersistenceInternals,
 } = require("./discordos-moderation-audit-shadow-persistence");
+const {
+  _internals: supabaseRpcInternals,
+} = require("./discordos-supabase-service-rpc");
 
 const STORAGE_WRITE_ENV = "DISCORDOS_MODERATION_AUDIT_WRITE_ADAPTER";
 const STORAGE_WRITE_ENV_VALUE = "enabled";
+const STORAGE_WRITE_RPC = "discordos_insert_moderation_audit";
 const AUDIT_WRITE_GATES = [
   "moderation_preflight_input_valid",
   "sanitized_actor_subject_fingerprints",
@@ -17,11 +21,16 @@ function parseArgs(args) {
   const shadowArgs = [];
   const options = {
     allowStorageWrite: false,
+    apply: false,
   };
 
   for (const arg of args) {
     if (arg === "--allow-storage-write") {
       options.allowStorageWrite = true;
+    } else if (arg === "--apply") {
+      options.apply = true;
+    } else if (arg === "--dry-run") {
+      options.apply = false;
     } else {
       shadowArgs.push(arg);
     }
@@ -88,9 +97,63 @@ function resolveStorageWriteAdmission({ allowStorageWrite, env }) {
   };
 }
 
-function buildModerationAuditWriteAdapterGuard({
+function buildStorageWritePayload(shadowAdmission, input = {}) {
+  return {
+    case_id: shadowAdmission.rowPreview.caseId,
+    action_type: shadowAdmission.rowPreview.actionType,
+    severity: shadowAdmission.rowPreview.severity,
+    actor_discord_user_fingerprint: shadowAdmission.rowPreview.actorFingerprint,
+    subject_discord_user_fingerprint: shadowAdmission.rowPreview.subjectFingerprint,
+    guild_id: input.guildId || null,
+    channel_id: input.channelId || null,
+    reason_present: shadowAdmission.rowPreview.reasonPresent,
+    note_present: shadowAdmission.rowPreview.notePresent,
+    proof_payload: {
+      source: "discordos.moderation_audit_write_adapter_guard",
+      rawDiscordIdsExposed: false,
+      liveModerationAllowed: false,
+    },
+    reason_codes: shadowAdmission.reasonCodes,
+  };
+}
+
+async function executeStorageWrite({ payload, env, fetchImpl }) {
+  const config = supabaseRpcInternals.getServiceRoleRpcConfig(env);
+  if (!config.ok) {
+    return {
+      ok: false,
+      attempted: false,
+      status: "blocked",
+      rpc: STORAGE_WRITE_RPC,
+      httpStatus: null,
+      row: null,
+      reasonCodes: config.reasonCodes,
+    };
+  }
+
+  const rpcResult = await supabaseRpcInternals.callServiceRoleRpc({
+    ...config,
+    functionName: STORAGE_WRITE_RPC,
+    payload: { payload },
+    fetchImpl,
+  });
+
+  return {
+    ok: rpcResult.ok,
+    attempted: true,
+    status: rpcResult.ok ? "written" : "failed",
+    rpc: STORAGE_WRITE_RPC,
+    httpStatus: rpcResult.httpStatus,
+    row: rpcResult.ok ? rpcResult.payload : null,
+    reasonCodes: rpcResult.ok ? [] : ["storage_write_rpc_failed"],
+  };
+}
+
+async function buildModerationAuditWriteAdapterGuard({
   env = process.env,
   allowStorageWrite = false,
+  apply = false,
+  fetchImpl = fetch,
   ...input
 } = {}) {
   const shadowAdmission = shadowPersistenceInternals.buildModerationAuditShadowPersistenceAdmission(input);
@@ -98,19 +161,46 @@ function buildModerationAuditWriteAdapterGuard({
     allowStorageWrite,
     env,
   });
-  const reasonCodes = [...new Set([
+  const initialReasonCodes = [...new Set([
     ...shadowAdmission.reasonCodes,
     ...storageAdmission.reasonCodes,
   ])];
   const storageWritesAllowed = shadowAdmission.ok && storageAdmission.admitted;
+  const storageWritePayload = buildStorageWritePayload(shadowAdmission, input);
+  let storageWriteResult = {
+    ok: false,
+    attempted: false,
+    status: apply ? "blocked" : "not_requested",
+    rpc: STORAGE_WRITE_RPC,
+    httpStatus: null,
+    row: null,
+    reasonCodes: apply && !storageWritesAllowed ? ["storage_write_not_admitted"] : [],
+  };
+
+  if (apply && storageWritesAllowed) {
+    storageWriteResult = await executeStorageWrite({
+      payload: storageWritePayload,
+      env,
+      fetchImpl,
+    });
+  }
+
+  const reasonCodes = [...new Set([
+    ...initialReasonCodes,
+    ...storageWriteResult.reasonCodes,
+  ])];
   const result = {
-    ok: shadowAdmission.ok && storageAdmission.reasonCodes.length === 0,
+    ok: shadowAdmission.ok && storageAdmission.reasonCodes.length === 0 && storageWriteResult.reasonCodes.length === 0,
     destructive: false,
     sendsMessages: false,
     writesArtifacts: false,
-    executesStorageWrite: false,
+    executesStorageWrite: storageWriteResult.attempted,
     status: reasonCodes.length === 0 ? "guard_ready" : "blocked",
-    adapterStatus: storageWritesAllowed ? "storage_write_plan_admitted" : "no_live_no_send_guarded",
+    adapterStatus: storageWriteResult.attempted && storageWriteResult.ok
+      ? "storage_write_executed"
+      : storageWritesAllowed
+        ? "storage_write_plan_admitted"
+        : "no_live_no_send_guarded",
     tableName: shadowAdmission.tableName,
     idempotencyKeyField: shadowAdmission.idempotencyKeyField,
     storageWritesAllowed,
@@ -127,6 +217,8 @@ function buildModerationAuditWriteAdapterGuard({
     },
     rowPreview: shadowAdmission.rowPreview,
     storageWritePreview: buildStorageWritePreview(shadowAdmission),
+    storageWritePayload,
+    storageWriteResult,
     reasonCodes,
   };
 
@@ -149,6 +241,7 @@ function classifyModerationAuditWriteAdapterGuardEvent(result) {
       actionType: result.rowPreview.actionType || "unknown",
       storageWritesAllowed: result.storageWritesAllowed,
       executesStorageWrite: result.executesStorageWrite,
+      storageWriteStatus: result.storageWriteResult.status,
       liveModerationAllowed: result.liveModerationAllowed,
       reasonCodeCount: result.reasonCodes.length,
     },
@@ -169,6 +262,8 @@ function renderMarkdown(result) {
     `- adapter status: \`${result.adapterStatus}\``,
     `- table: \`${result.tableName}\``,
     `- storage writes allowed: \`${result.storageWritesAllowed ? "true" : "false"}\``,
+    `- storage write result: \`${result.storageWriteResult.status}\``,
+    `- storage write rpc: \`${result.storageWriteResult.rpc}\``,
     `- live moderation allowed: \`${result.liveModerationAllowed ? "true" : "false"}\``,
     `- raw Discord ids exposed: \`${result.storageWritePreview.rawDiscordIdsExposed ? "true" : "false"}\``,
     `- storage write admission: \`${result.storageWriteAdmission.status}\``,
@@ -182,10 +277,10 @@ function renderMarkdown(result) {
   ].join("\n");
 }
 
-function main() {
+async function main() {
   try {
     const options = parseArgs(process.argv.slice(2));
-    const result = buildModerationAuditWriteAdapterGuard(options);
+    const result = await buildModerationAuditWriteAdapterGuard(options);
     process.stdout.write(options.json ? `${JSON.stringify(result, null, 2)}\n` : renderMarkdown(result));
     if (!result.ok) {
       process.exitCode = 1;
@@ -204,10 +299,13 @@ module.exports = {
   _internals: {
     STORAGE_WRITE_ENV,
     STORAGE_WRITE_ENV_VALUE,
+    STORAGE_WRITE_RPC,
     AUDIT_WRITE_GATES,
     parseArgs,
     buildStorageWritePreview,
+    buildStorageWritePayload,
     resolveStorageWriteAdmission,
+    executeStorageWrite,
     buildModerationAuditWriteAdapterGuard,
     classifyModerationAuditWriteAdapterGuardEvent,
     renderMarkdown,

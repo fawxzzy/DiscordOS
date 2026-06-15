@@ -356,12 +356,25 @@ Current governed contract surface:
   - sends no Discord messages and writes no artifacts
 - `scripts/discordos-board-active-write-adapter-guard.js`
   - repo-local board/card active write adapter guard
-  - builds a parameterized storage write preview while keeping Discord sends, live behavior, and actual storage execution disabled by default
-  - storage write plan admission requires both `--allow-storage-write` and `DISCORDOS_BOARD_ACTIVE_WRITE_ADAPTER=enabled`
+  - builds a parameterized storage write preview while keeping Discord sends and live behavior disabled
+  - storage write execution requires `--allow-storage-write`, `--apply`, `DISCORDOS_BOARD_ACTIVE_WRITE_ADAPTER=enabled`, and service-role Supabase env
 - `scripts/discordos-moderation-audit-write-adapter-guard.js`
   - repo-local moderation audit write adapter guard
   - builds a sanitized storage write preview while keeping raw Discord ids out of rendered output and live moderation disabled
-  - storage write plan admission requires both `--allow-storage-write` and `DISCORDOS_MODERATION_AUDIT_WRITE_ADAPTER=enabled`
+  - storage write execution requires `--allow-storage-write`, `--apply`, `DISCORDOS_MODERATION_AUDIT_WRITE_ADAPTER=enabled`, and service-role Supabase env
+- `scripts/discordos-supabase-service-rpc.js`
+  - shared service-role Supabase RPC helper for guarded DiscordOS storage/readback commands
+  - supports direct service-role REST or the JWT-protected Supabase Edge bridge when `DISCORDOS_SUPABASE_WORKFLOW_RPC_EDGE=enabled`
+  - validates required env presence and keeps secret values out of command output
+- `scripts/discordos-product-workflow-live-readback.js`
+  - repo-local live readback command for board/card and moderation audit product workflow storage
+  - requires `--live` plus service-role Supabase env before making a network readback call
+- `scripts/discordos-board-lifecycle-sync.js`
+  - repo-local board lifecycle sync command for forum/card-style board state transitions
+  - defaults to no storage write and uses the guarded board write adapter only when explicitly applied
+- `scripts/discordos-moderation-audit-review-search.js`
+  - repo-local sanitized moderation audit review/search command
+  - defaults to a dry query plan and requires `--live` plus service-role Supabase env for live readback
 - `scripts/discordos-storage-migration-rls-proof.js`
   - repo-local static RLS proof command for DiscordOS storage migration drafts
   - verifies private `discordos` schema table posture, RLS enablement, service-role-only grants, and absence of public policies
@@ -422,6 +435,12 @@ Current governed contract surface:
 - `supabase/migrations/20260614232000_discordos_moderation_audit_log.sql`
   - private `discordos.discordos_moderation_audit_log` migration draft
   - enables RLS, revokes public/anon/authenticated access, grants service-role-only access, and stores sanitized audit fingerprints
+- `supabase/migrations/20260615012500_discordos_board_moderation_writer_rpcs.sql`
+  - service-role-only RPC entrypoints for guarded board/card writes, moderation audit writes, product workflow readback, and sanitized moderation audit search
+  - uses invoker permissions, revokes public/anon/authenticated execution, and grants execute only to `service_role`
+- `supabase/functions/discordos-product-workflow-rpc/index.ts`
+  - JWT-protected Supabase Edge bridge for guarded DiscordOS product workflow RPC calls
+  - keeps service-role material inside Supabase runtime while local operator commands use the production anon key as the JWT
 - `supabase/functions/discordos-runtime-health-cron-audit/index.ts`
   - JWT-protected Supabase Edge writer for runtime-health cron receipts
   - keeps the service credential inside the Supabase runtime boundary
@@ -696,6 +715,12 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local DiscordOS board active write adapter guard command
 - `npm run verify:discordos-moderation-audit-write-adapter-guard`
   - Node test coverage for the repo-local DiscordOS moderation audit write adapter guard command
+- `npm run verify:discordos-product-workflow-live-readback`
+  - Node test coverage for the repo-local DiscordOS product workflow live readback command
+- `npm run verify:discordos-board-lifecycle-sync`
+  - Node test coverage for the repo-local DiscordOS board lifecycle sync command
+- `npm run verify:discordos-moderation-audit-review-search`
+  - Node test coverage for the repo-local DiscordOS moderation audit review/search command
 - `npm run verify:discordos-storage-migration-rls-proof`
   - Node test coverage for the repo-local DiscordOS storage migration RLS proof command
 - `npm run verify:discordos-supabase-apply-readback-proof`
@@ -878,9 +903,15 @@ Current repo-local operator surface:
 - `npm run ops:discordos:moderation-audit-shadow-persistence`
   - previews sanitized moderation audit shadow persistence admission without storage writes or live moderation
 - `npm run ops:discordos:board-active-write-adapter-guard`
-  - previews the board/card active storage write adapter path behind no-send, no-live, and double storage-write guards
+  - previews or explicitly executes the board/card active storage write adapter path behind no-send, no-live, apply, service-role, and double storage-write guards
 - `npm run ops:discordos:moderation-audit-write-adapter-guard`
-  - previews the moderation audit storage write adapter path behind no-send, no-live, sanitized-fingerprint, and double storage-write guards
+  - previews or explicitly executes the moderation audit storage write adapter path behind no-send, no-live, sanitized-fingerprint, apply, service-role, and double storage-write guards
+- `npm run ops:discordos:product-workflow-live-readback`
+  - reads live board/card and moderation audit workflow storage only when `--live` and service-role Supabase env are present
+- `npm run ops:discordos:board-lifecycle-sync`
+  - converts forum/card-style lifecycle input into a governed board/card storage sync plan, defaulting to no storage write
+- `npm run ops:discordos:moderation-audit-review-search`
+  - builds or runs a sanitized moderation audit search without exposing raw Discord user ids
 - `npm run ops:discordos:board-card-storage-migration-rls-proof`
   - verifies the board/card storage migration draft keeps RLS and service-role-only posture without applying it
 - `npm run ops:discordos:moderation-storage-migration-rls-proof`

@@ -37,10 +37,10 @@ function buildWorkflowRows(registryDashboard, storageProofs) {
 
 function commandForFeature(featureId) {
   if (featureId === "board") {
-    return "npm run ops:discordos:board-active-write-adapter-guard";
+    return "npm run ops:discordos:board-lifecycle-sync";
   }
   if (featureId === "moderation") {
-    return "npm run ops:discordos:moderation-audit-write-adapter-guard";
+    return "npm run ops:discordos:moderation-audit-review-search";
   }
   if (featureId === "music_sesh") {
     return "npm run ops:discordos:music-sesh-preflight";
@@ -50,10 +50,10 @@ function commandForFeature(featureId) {
 
 function nextGateForFeature(feature, storageProof) {
   if (feature.id === "board" && feature.status === "active" && feature.liveBehaviorAdmitted === false) {
-    return "guarded_storage_write_adapter";
+    return "board_lifecycle_sync";
   }
   if (feature.id === "moderation" && storageProof?.ok && feature.liveBehaviorAdmitted === false) {
-    return "guarded_moderation_audit_adapter";
+    return "moderation_audit_review_search";
   }
   if (storageProof?.ok && feature.status === "contract_only") {
     return "shadow_registry_admission";
@@ -68,8 +68,8 @@ function buildReleaseSummary(workflows) {
   const storageBackedWorkflows = workflows.filter((workflow) => workflow.storageProofReady);
   const liveBehaviorAdmittedWorkflows = workflows.filter((workflow) => workflow.liveBehaviorAdmitted);
   const guardedAdapterWorkflows = workflows.filter((workflow) =>
-    workflow.nextGate === "guarded_storage_write_adapter" ||
-    workflow.nextGate === "guarded_moderation_audit_adapter"
+    workflow.nextGate === "board_lifecycle_sync" ||
+    workflow.nextGate === "moderation_audit_review_search"
   );
 
   return {
@@ -79,8 +79,11 @@ function buildReleaseSummary(workflows) {
     liveBehaviorAdmittedCount: liveBehaviorAdmittedWorkflows.length,
     guardedAdapterWorkflowCount: guardedAdapterWorkflows.length,
     storageApplyReadbackCommand: "npm run ops:discordos:supabase-apply-readback-proof",
+    liveReadbackCommand: "npm run ops:discordos:product-workflow-live-readback -- --live",
+    boardWriterCommand: "npm run ops:discordos:board-active-write-adapter-guard -- --allow-storage-write --apply",
+    moderationWriterCommand: "npm run ops:discordos:moderation-audit-write-adapter-guard -- --allow-storage-write --apply",
     nextReleaseGate: guardedAdapterWorkflows.length > 0
-      ? "guarded_write_adapter_review"
+      ? "lifecycle_sync_and_review_search"
       : "music_sesh_runtime_queue",
   };
 }
@@ -91,6 +94,7 @@ function buildOperatorSummary(workflows) {
     moderationCommand: workflows.find((workflow) => workflow.id === "moderation")?.workflowCommand || null,
     musicCommand: workflows.find((workflow) => workflow.id === "music_sesh")?.workflowCommand || null,
     proofCommand: "npm run ops:discordos:supabase-apply-readback-proof",
+    liveReadbackCommand: "npm run ops:discordos:product-workflow-live-readback -- --live",
     dashboardCommand: "npm run ops:discordos:product-workflow-dashboard",
   };
 }
@@ -180,6 +184,7 @@ function renderMarkdown(result) {
     `- moderation command: \`${result.operatorSummary.moderationCommand || "none"}\``,
     `- music command: \`${result.operatorSummary.musicCommand || "none"}\``,
     `- proof command: \`${result.operatorSummary.proofCommand}\``,
+    `- live readback command: \`${result.operatorSummary.liveReadbackCommand}\``,
     `- dashboard command: \`${result.operatorSummary.dashboardCommand}\``,
     "",
     "## Workflows",
