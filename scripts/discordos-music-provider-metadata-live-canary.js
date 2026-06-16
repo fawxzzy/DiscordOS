@@ -4,6 +4,12 @@ const {
 
 const LIVE_CANARY_ENV = "DISCORDOS_MUSIC_PROVIDER_METADATA_CANARY";
 const LIVE_CANARY_ENV_VALUE = "enabled";
+const DEFAULT_CANARY_BASE_URL = "https://fawxzzy-discordos.vercel.app";
+const DEFAULT_CANARY_PATH = "/api/music-provider-metadata";
+
+function hasValue(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
 
 function readValue(args, index, missingCode) {
   const value = args[index + 1];
@@ -129,11 +135,20 @@ function validateProviderResults(results = [], { resultLimit = 5 } = {}) {
   };
 }
 
+function resolveMusicProviderMetadataCanaryUrl(env = process.env) {
+  if (hasValue(env.DISCORDOS_MUSIC_PROVIDER_METADATA_CANARY_URL)) {
+    return env.DISCORDOS_MUSIC_PROVIDER_METADATA_CANARY_URL.trim();
+  }
+
+  return `${DEFAULT_CANARY_BASE_URL}${DEFAULT_CANARY_PATH}`;
+}
+
 async function fetchLiveProviderMetadata({
   env = process.env,
   fetchImpl = fetch,
   contract,
 } = {}) {
+  const canaryUrl = resolveMusicProviderMetadataCanaryUrl(env);
   if (env.DISCORDOS_MUSIC_PROVIDER_METADATA_SAMPLE) {
     const parsed = JSON.parse(env.DISCORDOS_MUSIC_PROVIDER_METADATA_SAMPLE);
     return {
@@ -141,22 +156,13 @@ async function fetchLiveProviderMetadata({
       attempted: true,
       status: "sample_loaded",
       httpStatus: null,
+      canaryUrl,
       payload: parsed,
       reasonCodes: [],
     };
   }
-  if (!env.DISCORDOS_MUSIC_PROVIDER_METADATA_CANARY_URL) {
-    return {
-      ok: false,
-      attempted: false,
-      status: "blocked",
-      httpStatus: null,
-      payload: null,
-      reasonCodes: ["provider_metadata_canary_url_missing"],
-    };
-  }
 
-  const response = await fetchImpl(env.DISCORDOS_MUSIC_PROVIDER_METADATA_CANARY_URL, {
+  const response = await fetchImpl(canaryUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -174,6 +180,7 @@ async function fetchLiveProviderMetadata({
     attempted: true,
     status: response.ok ? "live_canary_loaded" : "failed",
     httpStatus: response.status,
+    canaryUrl,
     payload,
     reasonCodes: response.ok ? [] : ["provider_metadata_live_canary_fetch_failed"],
   };
@@ -196,6 +203,7 @@ async function buildMusicProviderMetadataLiveCanary({
     attempted: false,
     status: "not_requested",
     httpStatus: null,
+    canaryUrl: null,
     payload: null,
     normalizedResults: [],
     reasonCodes: [],
@@ -233,6 +241,7 @@ async function buildMusicProviderMetadataLiveCanary({
         attempted: fetched.attempted,
         status: fetched.ok && validation.ok ? "live_canary_ready" : "blocked",
         httpStatus: fetched.httpStatus,
+        canaryUrl: fetched.canaryUrl || null,
         payload: fetched.payload,
         normalizedResults: validation.normalizedResults,
         reasonCodes: [...new Set([...fetched.reasonCodes, ...validation.reasonCodes])],
@@ -324,10 +333,13 @@ module.exports = {
   _internals: {
     LIVE_CANARY_ENV,
     LIVE_CANARY_ENV_VALUE,
+    DEFAULT_CANARY_BASE_URL,
+    DEFAULT_CANARY_PATH,
     parseArgs,
     resolveLiveCanaryAdmission,
     normalizeProviderResult,
     validateProviderResults,
+    resolveMusicProviderMetadataCanaryUrl,
     fetchLiveProviderMetadata,
     buildMusicProviderMetadataLiveCanary,
     renderMarkdown,
