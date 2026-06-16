@@ -14,7 +14,7 @@ test("board reaction drift alerting is clear with no drift", async () => {
 
 test("board reaction drift alerting routes drift critical alerts", async () => {
   const result = await _internals.buildBoardReactionDriftAlerting({
-    cardId: "board-reaction-lifecycle-sync",
+    cardId: "music-sesh-phase-8-cross-service-room-sync-simple-controls",
     live: true,
     env: {
       DISCORDOS_BOT_TOKEN: "bot-token",
@@ -25,7 +25,7 @@ test("board reaction drift alerting routes drift critical alerts", async () => {
       json: async () => ({
         reactions: [
           {
-            emoji: { name: "failure", id: "1507384094424694785" },
+            emoji: { name: "success", id: "1507384062166302851" },
             count: 1,
             me: true,
           },

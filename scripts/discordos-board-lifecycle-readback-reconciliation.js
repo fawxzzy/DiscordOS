@@ -5,6 +5,8 @@ const {
   _internals: liveReadbackInternals,
 } = require("./discordos-product-workflow-live-readback");
 
+const DEFAULT_CARD_ID = "music-sesh-phase-8-cross-service-room-sync-simple-controls";
+
 function readValue(args, index, missingCode) {
   const value = args[index + 1];
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -17,7 +19,7 @@ function parseArgs(args) {
   const options = {
     json: false,
     live: false,
-    cardId: "board-lifecycle-sync-apply-readback-hardening",
+    cardId: DEFAULT_CARD_ID,
     boardPath: boardInternals.DEFAULT_BOARD_PATH,
   };
 
@@ -93,7 +95,7 @@ function reconcileCard({ boardCard = null, storageCard = null }) {
 
 async function buildBoardLifecycleReadbackReconciliation({
   boardPath = boardInternals.DEFAULT_BOARD_PATH,
-  cardId = "board-lifecycle-sync-apply-readback-hardening",
+  cardId = DEFAULT_CARD_ID,
   live = false,
   env = process.env,
   fetchImpl = fetch,
@@ -192,6 +194,7 @@ if (require.main === module) {
 module.exports = {
   _internals: {
     parseArgs,
+    DEFAULT_CARD_ID,
     normalizeState,
     summarizeStorageCard,
     reconcileCard,

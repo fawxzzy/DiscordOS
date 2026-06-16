@@ -54,21 +54,22 @@ test("music sesh feedback board reads committed cards", async () => {
 
   assert.equal(result.ok, true);
   assert.equal(result.sendsMessages, false);
-  assert.equal(result.cardCount, 150);
+  assert.equal(result.cardCount, 1);
   assert.equal(result.readyCardCount, 0);
-  assert.equal(result.completedCardCount, 150);
-  assert.equal(result.reactionReadyCardCount, 150);
-  assert.equal(result.nextCard, null);
+  assert.equal(result.completedCardCount, 0);
+  assert.equal(result.blockedCardCount, 1);
+  assert.equal(result.reactionReadyCardCount, 0);
+  assert.equal(result.nextCard.id, "music-sesh-phase-8-cross-service-room-sync-simple-controls");
 });
 
 test("music sesh feedback board renders bounded markdown", async () => {
   const result = await _internals.buildMusicSeshFeedbackBoard({
-    cardId: "music-sesh-feedback-board-read-model",
+    cardId: "music-sesh-phase-8-cross-service-room-sync-simple-controls",
   });
   const rendered = _internals.renderMarkdown(result);
 
   assert(rendered.includes("# DiscordOS Music Sesh Feedback Board"));
   assert(rendered.includes("sends messages: `false`"));
-  assert(rendered.includes("music-sesh-feedback-board-read-model"));
+  assert(rendered.includes("music-sesh-phase-8-cross-service-room-sync-simple-controls"));
   assert(rendered.includes("reaction-ready cards: `"));
 });

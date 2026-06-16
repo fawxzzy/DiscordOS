@@ -63,8 +63,12 @@ function buildLifecyclePreview(card) {
   return {
     workflow: "Music Sesh",
     cardId: card.id,
-    state: card.state === "completed" ? "completed" : "in_progress",
-    title: `Music Sesh Card ${card.id}`,
+    state: card.state === "completed"
+      ? "completed"
+      : card.state === "blocked"
+        ? "blocked"
+        : "in_progress",
+    title: card.title,
     body: `Card ${card.id}: ${card.title}`,
   };
 }

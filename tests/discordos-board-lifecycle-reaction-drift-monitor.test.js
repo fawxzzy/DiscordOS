@@ -24,13 +24,13 @@ test("board lifecycle reaction drift monitor reports committed board clear", asy
   assert.equal(result.callsDiscordApi, false);
   assert.equal(result.slashCommandsAdmitted, false);
   assert.equal(result.status, "reaction_drift_monitor_clear");
-  assert.equal(result.board.cardCount, 150);
+  assert.equal(result.board.cardCount, 1);
   assert.equal(result.drift.driftCount, 0);
 });
 
 test("board lifecycle reaction drift monitor reports live custom reaction drift", async () => {
   const result = await _internals.buildBoardLifecycleReactionDriftMonitor({
-    cardId: "board-reaction-lifecycle-sync",
+    cardId: "music-sesh-phase-8-cross-service-room-sync-simple-controls",
     live: true,
     env: {
       DISCORDOS_BOT_TOKEN: "bot-token",
@@ -42,8 +42,8 @@ test("board lifecycle reaction drift monitor reports live custom reaction drift"
         reactions: [
           {
             emoji: {
-              name: "failure",
-              id: "1507384094424694785",
+              name: "success",
+              id: "1507384062166302851",
             },
             count: 1,
             me: true,
@@ -62,7 +62,7 @@ test("board lifecycle reaction drift monitor reports live custom reaction drift"
 
 test("board lifecycle reaction drift monitor renders bounded markdown", async () => {
   const result = await _internals.buildBoardLifecycleReactionDriftMonitor({
-    cardId: "board-reaction-lifecycle-sync",
+    cardId: "music-sesh-phase-8-cross-service-room-sync-simple-controls",
   });
   const rendered = _internals.renderMarkdown(result);
 

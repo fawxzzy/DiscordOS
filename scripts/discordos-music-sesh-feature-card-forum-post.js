@@ -5,7 +5,6 @@ const {
 const FEATURE_CARD_POST_ENV = "DISCORDOS_MUSIC_SESH_FEATURE_CARD_POST";
 const FEATURE_CARD_POST_ENV_VALUE = "enabled";
 const DEFAULT_MUSIC_SESH_FORUM_CHANNEL_ID = "1508139160853286942";
-const FEATURE_CARD_COLOR = 5763719;
 
 function readValue(args, index, missingCode) {
   const value = args[index + 1];
@@ -104,21 +103,40 @@ function buildFeatureCardThreadPayload({ cardId, title, body }) {
     throw new Error("missing_body");
   }
 
+  const normalizedTitle = title.trim();
+  const normalizedCardId = cardId.trim();
+  const normalizedBody = updatePostInternals.normalizeMarkdownBody(body);
+  const content = [
+    "**Feature Request**",
+    "Type: Feature",
+    "Status: Confirmed",
+    "Points: 0",
+    "Area: Fawx Den / Music Sesh",
+    "Reporter: DiscordOS",
+    `Report ID: \`${normalizedCardId}\``,
+    "Duplicate signals: 0",
+    "",
+    "**Title**",
+    normalizedTitle,
+    "",
+    "**User Story**",
+    normalizedBody || `As a user, I want ${normalizedTitle}, so the Music Sesh flow better matches the requested outcome.`,
+    "",
+    "**Description**",
+    normalizedBody || normalizedTitle,
+    "",
+    "**Acceptance Criteria**",
+    "- The canonical card lives on the Music Sesh board.",
+    "- Users interact through posts, buttons, or chat-message commands.",
+    "",
+    "**Evidence**",
+    "Not provided",
+  ].join("\n");
+
   return {
-    name: title.trim(),
+    name: normalizedTitle,
     message: {
-      content: "",
-      embeds: [
-        {
-          title: title.trim(),
-          description: [
-            `Card: \`${cardId.trim()}\``,
-            "",
-            updatePostInternals.normalizeMarkdownBody(body),
-          ].join("\n"),
-          color: FEATURE_CARD_COLOR,
-        },
-      ],
+      content,
       allowed_mentions: { parse: [] },
     },
   };
@@ -250,15 +268,17 @@ async function buildMusicSeshFeatureCardForumPost({
         fetchImpl,
       });
       const embedTitle = fetched.payload?.embeds?.[0]?.title || null;
+      const content = fetched.payload?.content || "";
+      const plainTitleMatches = content.includes(`**Title**\n${title.trim()}`);
       readback = {
         attempted: true,
         ok: fetched.ok,
         httpStatus: fetched.status,
-        titleMatches: embedTitle === title.trim(),
+        titleMatches: embedTitle === title.trim() || plainTitleMatches,
       };
       if (!fetched.ok) {
         reasonCodes.push("feature_card_forum_post_readback_failed");
-      } else if (embedTitle !== title.trim()) {
+      } else if (!readback.titleMatches) {
         reasonCodes.push("feature_card_forum_post_readback_mismatch");
       }
     }

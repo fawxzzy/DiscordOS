@@ -47,13 +47,13 @@ test("board reaction lifecycle sync reads committed board", async () => {
   assert.equal(result.callsDiscordApi, false);
   assert.equal(result.slashCommandsAdmitted, false);
   assert.equal(result.status, "reaction_lifecycle_synced");
-  assert.equal(result.board.cardCount, 150);
+  assert.equal(result.board.cardCount, 1);
   assert.equal(result.mismatchCount, 0);
 });
 
 test("board reaction lifecycle sync renders bounded markdown", async () => {
   const result = await _internals.buildBoardReactionLifecycleSync({
-    cardId: "user-facing-music-sesh-status-response",
+    cardId: "music-sesh-phase-8-cross-service-room-sync-simple-controls",
   });
   const rendered = _internals.renderMarkdown(result);
 
@@ -64,7 +64,7 @@ test("board reaction lifecycle sync renders bounded markdown", async () => {
 
 test("board reaction lifecycle sync can live-read custom success reaction", async () => {
   const result = await _internals.buildBoardReactionLifecycleSync({
-    cardId: "user-facing-music-sesh-status-response",
+    cardId: "music-sesh-phase-8-cross-service-room-sync-simple-controls",
     live: true,
     env: {
       DISCORDOS_BOT_TOKEN: "bot-token",
@@ -76,8 +76,8 @@ test("board reaction lifecycle sync can live-read custom success reaction", asyn
         reactions: [
           {
             emoji: {
-              name: "success",
-              id: "1507384062166302851",
+              name: "failure",
+              id: "1507384094424694785",
             },
             count: 1,
             me: true,

@@ -101,11 +101,7 @@ test("music sesh feature card forum post creates thread and reads starter", asyn
       return response({
         status: 200,
         payload: {
-          embeds: [
-            {
-              title: "Music Card",
-            },
-          ],
+          content: "**Feature Request**\n\n**Title**\nMusic Card",
         },
       });
     },
@@ -119,6 +115,11 @@ test("music sesh feature card forum post creates thread and reads starter", asyn
   assert.equal(calls[0].method, "POST");
   assert(calls[0].url.endsWith("/channels/1508139160853286942/threads"));
   const payload = JSON.parse(calls[0].body);
+  assert.equal(payload.message.embeds, undefined);
+  assert(payload.message.content.includes("**Feature Request**"));
+  assert(payload.message.content.includes("Area: Fawx Den / Music Sesh"));
+  assert(payload.message.content.includes("Report ID: `music-card`"));
+  assert(payload.message.content.includes("**Acceptance Criteria**"));
   assert.equal(payload.message.allowed_mentions.parse.length, 0);
   assert.equal(calls[1].method, "GET");
 });

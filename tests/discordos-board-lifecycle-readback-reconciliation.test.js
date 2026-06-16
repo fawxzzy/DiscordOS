@@ -68,8 +68,8 @@ test("board lifecycle readback reconciliation loads committed card with live rea
         boardCardCount: 1,
         moderationAuditCount: 0,
         latestBoardCard: {
-          cardId: "board-lifecycle-sync-apply-readback-hardening",
-          currentState: "completed",
+          cardId: "music-sesh-phase-8-cross-service-room-sync-simple-controls",
+          currentState: "blocked",
           updatedAt: "2026-06-15T14:45:00Z",
         },
         generatedAt: "2026-06-15T14:46:00Z",
@@ -96,8 +96,8 @@ test("board lifecycle readback reconciliation renders bounded markdown", async (
       status: 200,
       json: async () => ({
         latestBoardCard: {
-          cardId: "board-lifecycle-sync-apply-readback-hardening",
-          currentState: "completed",
+          cardId: "music-sesh-phase-8-cross-service-room-sync-simple-controls",
+          currentState: "blocked",
         },
       }),
     }),
