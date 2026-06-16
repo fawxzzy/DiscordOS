@@ -11,7 +11,7 @@ test("board reaction auto repair canary previews committed board safely", async 
   assert.equal(result.callsMusicProviders, false);
   assert.equal(result.controlsPlayback, false);
   assert.equal(result.slashCommandsAdmitted, false);
-  assert.equal(result.repairPlan.candidateCount, 140);
+  assert.equal(result.repairPlan.candidateCount, 145);
   assert.equal(result.appliedCount, 0);
 });
 
