@@ -1,0 +1,138 @@
+const {
+  _internals: historyInternals,
+} = require("./discordos-button-route-audit-acknowledgement-alert-delivery-history-alert-delivery-history-alert-delivery-history-alert-delivery-history");
+
+function parseArgs(args) {
+  return historyInternals.parseArgs(args);
+}
+
+function buildAcknowledgementAlertDeliveryHistoryAlertDeliveryHistoryAlertDeliveryHistoryAlertDeliveryHistoryAlerting(historyResult) {
+  const history = historyResult.history;
+  const records = Array.isArray(history.records) ? history.records : [];
+  const firstRecord = records[0] || {};
+  const alertRequired = records.length > 1;
+  return {
+    historyStatus: history.historyStatus,
+    repeatedPatternVisible: history.repeatsTracked === true,
+    recordCount: history.recordCount,
+    alertRequired,
+    alertStatus: alertRequired ? "attention_routed_no_send" : "not_required",
+    redactionStatus: firstRecord.redactionStatus || "unknown",
+    preservesActorRedaction: records.every((record) => record.preservesActorRedaction === true),
+    preservesTokenRedaction: records.every((record) => record.preservesTokenRedaction === true),
+    deliveryDecisionVisible: records.every((record) => record.deliveryDecisionVisible === true),
+    noSendBoundaryConfirmed: records.every((record) => record.noSendBoundaryConfirmed === true),
+    noDiscordApiBoundaryConfirmed: records.every((record) => record.noDiscordApiBoundaryConfirmed === true),
+    noStorageWriteBoundaryConfirmed: records.every((record) => record.noStorageWriteBoundaryConfirmed === true),
+    sendsMessagesInAlerting: false,
+    callsDiscordApi: false,
+    executesStorageWrite: false,
+    slashCommandsAdmitted: false,
+  };
+}
+
+function validateAcknowledgementAlertDeliveryHistoryAlertDeliveryHistoryAlertDeliveryHistoryAlertDeliveryHistoryAlerting({ historyResult, alerting }) {
+  const reasonCodes = [...historyResult.reasonCodes];
+  if (alerting.historyStatus !== "bounded_ready" || !alerting.repeatedPatternVisible || alerting.recordCount < 1) {
+    reasonCodes.push("button_route_audit_ack_alert_delivery_history_alert_delivery_history_alert_delivery_history_alert_delivery_history_alerting_history_invalid");
+  }
+  if (!alerting.deliveryDecisionVisible) {
+    reasonCodes.push("button_route_audit_ack_alert_delivery_history_alert_delivery_history_alert_delivery_history_alert_delivery_history_alerting_visibility_missing");
+  }
+  if (alerting.redactionStatus !== "preserved" || !alerting.preservesActorRedaction || !alerting.preservesTokenRedaction) {
+    reasonCodes.push("button_route_audit_ack_alert_delivery_history_alert_delivery_history_alert_delivery_history_alert_delivery_history_alerting_redaction_failed");
+  }
+  if (!alerting.noSendBoundaryConfirmed || !alerting.noDiscordApiBoundaryConfirmed || alerting.sendsMessagesInAlerting || alerting.callsDiscordApi || historyResult.sendsMessages || historyResult.callsDiscordApi) {
+    reasonCodes.push("button_route_audit_ack_alert_delivery_history_alert_delivery_history_alert_delivery_history_alert_delivery_history_alerting_send_boundary_failed");
+  }
+  if (!alerting.noStorageWriteBoundaryConfirmed || alerting.executesStorageWrite || historyResult.executesStorageWrite) {
+    reasonCodes.push("button_route_audit_ack_alert_delivery_history_alert_delivery_history_alert_delivery_history_alert_delivery_history_alerting_storage_write_attempted");
+  }
+  if (alerting.alertRequired && alerting.alertStatus !== "attention_routed_no_send") {
+    reasonCodes.push("button_route_audit_ack_alert_delivery_history_alert_delivery_history_alert_delivery_history_alert_delivery_history_alerting_route_missing");
+  }
+  if (historyResult.slashCommandsAdmitted || alerting.slashCommandsAdmitted) {
+    reasonCodes.push("button_route_audit_ack_alert_delivery_history_alert_delivery_history_alert_delivery_history_alert_delivery_history_alerting_slash_command_admitted");
+  }
+  return [...new Set(reasonCodes)];
+}
+
+async function buildButtonRouteAuditAcknowledgementAlertDeliveryHistoryAlertDeliveryHistoryAlertDeliveryHistoryAlertDeliveryHistoryAlerting(input = {}) {
+  const historyResult = await historyInternals.buildButtonRouteAuditAcknowledgementAlertDeliveryHistoryAlertDeliveryHistoryAlertDeliveryHistoryAlertDeliveryHistory(input);
+  const alerting = buildAcknowledgementAlertDeliveryHistoryAlertDeliveryHistoryAlertDeliveryHistoryAlertDeliveryHistoryAlerting(historyResult);
+  const reasonCodes = validateAcknowledgementAlertDeliveryHistoryAlertDeliveryHistoryAlertDeliveryHistoryAlertDeliveryHistoryAlerting({ historyResult, alerting });
+  const result = {
+    ok: reasonCodes.length === 0,
+    destructive: false,
+    sendsMessages: false,
+    writesArtifacts: false,
+    callsDiscordApi: false,
+    callsMusicProviders: false,
+    controlsPlayback: false,
+    executesStorageWrite: false,
+    slashCommandsAdmitted: false,
+    status: reasonCodes.length === 0 ? "button_route_audit_acknowledgement_alert_delivery_history_alert_delivery_history_alert_delivery_history_alert_delivery_history_alerting_ready" : "blocked",
+    sourceStatus: historyResult.status,
+    alerting,
+    reasonCodes,
+  };
+
+  return {
+    ...result,
+    event: {
+      type: result.ok
+        ? "discordos.button_route.audit_acknowledgement_alert_delivery_history_alert_delivery_history_alert_delivery_history_alert_delivery_history_alerting_ready"
+        : "discordos.button_route.audit_acknowledgement_alert_delivery_history_alert_delivery_history_alert_delivery_history_alert_delivery_history_alerting_blocked",
+      severity: result.ok ? "info" : "warning",
+      subject: "discordos.button_route.audit_acknowledgement_alert_delivery_history_alert_delivery_history_alert_delivery_history_alert_delivery_history_alerting",
+      status: result.ok ? "pass" : "fail",
+      dimensions: {
+        alertRequired: alerting.alertRequired,
+        alertStatus: alerting.alertStatus,
+        redactionStatus: alerting.redactionStatus,
+      },
+    },
+  };
+}
+
+function renderMarkdown(result) {
+  return [
+    "# DiscordOS Button Route Audit Acknowledgement Alert Delivery History Alert Delivery History Alert Delivery History Alert Delivery History Alerting",
+    "",
+    `- result: \`${result.ok ? "pass" : "fail"}\``,
+    `- sends messages: \`${result.sendsMessages ? "true" : "false"}\``,
+    `- calls Discord API: \`${result.callsDiscordApi ? "true" : "false"}\``,
+    `- slash commands admitted: \`${result.slashCommandsAdmitted ? "true" : "false"}\``,
+    `- status: \`${result.status}\``,
+    `- alert required: \`${result.alerting.alertRequired ? "true" : "false"}\``,
+    `- redaction status: \`${result.alerting.redactionStatus}\``,
+    `- reason codes: \`${result.reasonCodes.join(",") || "none"}\``,
+    "",
+  ].join("\n");
+}
+
+async function main() {
+  try {
+    const options = parseArgs(process.argv.slice(2));
+    const result = await buildButtonRouteAuditAcknowledgementAlertDeliveryHistoryAlertDeliveryHistoryAlertDeliveryHistoryAlertDeliveryHistoryAlerting(options);
+    process.stdout.write(options.json ? `${JSON.stringify(result, null, 2)}\n` : renderMarkdown(result));
+    if (!result.ok) process.exitCode = 1;
+  } catch (error) {
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    process.exitCode = 1;
+  }
+}
+
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  _internals: {
+    parseArgs,
+    buildAcknowledgementAlertDeliveryHistoryAlertDeliveryHistoryAlertDeliveryHistoryAlertDeliveryHistoryAlerting,
+    validateAcknowledgementAlertDeliveryHistoryAlertDeliveryHistoryAlertDeliveryHistoryAlertDeliveryHistoryAlerting,
+    buildButtonRouteAuditAcknowledgementAlertDeliveryHistoryAlertDeliveryHistoryAlertDeliveryHistoryAlertDeliveryHistoryAlerting,
+    renderMarkdown,
+  },
+};
