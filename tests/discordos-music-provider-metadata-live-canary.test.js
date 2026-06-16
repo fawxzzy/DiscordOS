@@ -148,6 +148,22 @@ test("music provider metadata api returns fallback preview results for read-only
   assert.equal(response.payload.results[0].providerTrackId, "music-sesh-live-canary-track-1");
 });
 
+test("music provider metadata api admits read-only search without explicit adapter env", () => {
+  const response = apiInternals.buildMusicProviderMetadataResponse({
+    method: "POST",
+    body: {
+      action: "search",
+      query: "Music Sesh Live Canary",
+      limit: 1,
+    },
+    env: {},
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.payload.ok, true);
+  assert.equal(response.payload.results.length, 1);
+});
+
 test("music provider metadata api rejects non-search actions", () => {
   const response = apiInternals.buildMusicProviderMetadataResponse({
     method: "POST",

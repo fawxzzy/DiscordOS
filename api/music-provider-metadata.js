@@ -125,8 +125,14 @@ function buildMusicProviderMetadataResponse({
   const resultLimit = Number.isFinite(Number(normalizedBody.limit))
     ? Number(normalizedBody.limit)
     : 5;
+  const metadataEnv = {
+    ...env,
+    DISCORDOS_MUSIC_PROVIDER_ADAPTER: hasValue(env.DISCORDOS_MUSIC_PROVIDER_ADAPTER)
+      ? env.DISCORDOS_MUSIC_PROVIDER_ADAPTER
+      : "enabled",
+  };
   const contractResult = contractInternals.buildMusicProviderMetadataContract({
-    env,
+    env: metadataEnv,
     providerAction: normalizedBody.action,
     query: normalizedBody.query,
     resultLimit,
@@ -146,7 +152,7 @@ function buildMusicProviderMetadataResponse({
   }
 
   const providerResults = resolveProviderResults({
-    env,
+    env: metadataEnv,
     contract: contractResult.contract,
   });
 
