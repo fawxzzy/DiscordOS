@@ -29,6 +29,14 @@ function baseOperatorStatus(overrides = {}) {
       alertTargetConfigured: false,
       nextActions: ["capture_first_real_scheduled_cron_run_after_schedule"],
     },
+    messageCommandPoll: {
+      ok: true,
+      workflowState: "active",
+      latestRunAgeMinutes: 4,
+      latestRunStatus: "completed",
+      latestRunConclusion: "success",
+      reasonCodes: [],
+    },
     publication: {
       ok: true,
       eventType: "discordos.publication.status_ready",
@@ -216,6 +224,25 @@ test("next work recommender surfaces atlas health alert readiness blockers expli
   assert.equal(recommendations[0].category, "atlas-health");
   assert.equal(recommendations[0].command, "npm run ops:atlas-health:status:prod");
   assert.deepEqual(recommendations[0].reasonCodes, ["atlas_health_alert_send_env_disabled"]);
+});
+
+test("next work recommender surfaces message-command poll scheduler blockers explicitly", () => {
+  const recommendations = _internals.recommendNextWork(baseOperatorStatus({
+    ok: false,
+    messageCommandPoll: {
+      ok: false,
+      workflowState: "disabled_manually",
+      latestRunAgeMinutes: 33,
+      latestRunStatus: "completed",
+      latestRunConclusion: "failure",
+      reasonCodes: ["workflow_not_active", "latest_run_not_successful"],
+    },
+  }), { max: 3 });
+
+  assert.equal(recommendations[0].id, "repair-message-command-poll-scheduler");
+  assert.equal(recommendations[0].category, "message-commands");
+  assert.equal(recommendations[0].command, "npm run ops:discordos:message-command-poll-status");
+  assert.deepEqual(recommendations[0].reasonCodes, ["workflow_not_active", "latest_run_not_successful"]);
 });
 
 test("next work recommender defers local atlas health env gaps after prod proofs", () => {
@@ -763,6 +790,7 @@ test("next work recommender can build from live-shaped local fixtures", async ()
     limit: 20,
     keepCount: 50,
     keepDays: 30,
+    messageCommandPollMaxStaleMinutes: 100000,
     env: {
       DISCORDOS_ATLAS_HEALTH_WATCH_ENABLED: "enabled",
       DISCORDOS_ATLAS_HEALTH_ALERT_SEND: "enabled",
@@ -808,6 +836,25 @@ test("next work recommender can build from live-shaped local fixtures", async ()
       }
       if (url === "https://example.invalid/atlas-health") {
         return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }
+      if (url === "https://api.github.com/repos/fawxzzy/DiscordOS/actions/workflows/discord-message-command-poll.yml") {
+        return new Response(JSON.stringify({
+          name: "Discord Message Command Poll",
+          state: "active",
+        }), { status: 200 });
+      }
+      if (url === "https://api.github.com/repos/fawxzzy/DiscordOS/actions/workflows/discord-message-command-poll.yml/runs?per_page=5") {
+        return new Response(JSON.stringify({
+          workflow_runs: [{
+            id: 42,
+            run_number: 7,
+            event: "schedule",
+            status: "completed",
+            conclusion: "success",
+            run_started_at: "2026-06-13T03:58:00.000Z",
+            html_url: "https://github.com/fawxzzy/DiscordOS/actions/runs/42",
+          }],
+        }), { status: 200 });
       }
       throw new Error(`unexpected_url:${url}`);
     },

@@ -190,6 +190,7 @@ function summarizeOperatorStatusForNextWork(operatorStatus, receiptState) {
       : operatorStatus.event?.type || "discordos.operator.status_action_required",
     probeLive: operatorStatus.probeLive,
     runtimeOk: operatorStatus.runtime.ok,
+    messageCommandPollOk: operatorStatus.messageCommandPoll?.ok === true,
     publicationOk: operatorStatus.publication.ok,
     publicationAuditOk: operatorStatus.publicationAudit.ok,
     atlasHealthOk: atlasHealthDeferred ? true : operatorStatus.atlasHealth?.ok === true,
@@ -213,6 +214,23 @@ function recommendNextWork(operatorStatus, { max = 5, receiptState = receiptStat
       runtimeEventType: operatorStatus.runtime.eventType,
       posture: operatorStatus.runtime.posture,
       cronPubliclyLocked: operatorStatus.runtime.cronPubliclyLocked,
+    },
+  }));
+
+  addIf(operatorStatus.messageCommandPoll && !operatorStatus.messageCommandPoll.ok, recommendations, buildRecommendation({
+    id: "repair-message-command-poll-scheduler",
+    score: 96,
+    category: "message-commands",
+    title: "Repair DiscordOS hosted message-command polling before relying on chat-style computa commands",
+    command: "npm run ops:discordos:message-command-poll-status",
+    reasonCodes: operatorStatus.messageCommandPoll.reasonCodes.length
+      ? operatorStatus.messageCommandPoll.reasonCodes
+      : ["message_command_poll_not_ready"],
+    evidence: {
+      workflowState: operatorStatus.messageCommandPoll.workflowState,
+      latestRunAgeMinutes: operatorStatus.messageCommandPoll.latestRunAgeMinutes,
+      latestRunStatus: operatorStatus.messageCommandPoll.latestRunStatus,
+      latestRunConclusion: operatorStatus.messageCommandPoll.latestRunConclusion,
     },
   }));
 

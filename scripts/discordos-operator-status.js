@@ -29,6 +29,9 @@ const {
 const {
   _internals: receiptStateInternals,
 } = require("./discordos-receipt-state");
+const {
+  _internals: messageCommandPollInternals,
+} = require("./discordos-message-command-poll-status");
 
 function isOnlyLocalAtlasHealthEnvGap({ runtimeStatus, publicationStatus, publicationAudit, atlasHealthStatus, notificationPolicyStatus }) {
   const allowedReasonCodes = new Set([
@@ -75,6 +78,7 @@ function parseArgs(args) {
     probeLive: false,
     atlasConfigPath: atlasHealthInternals.DEFAULT_CONFIG_PATH,
     atlasTimeoutMs: atlasHealthInternals.DEFAULT_TIMEOUT_MS,
+    messageCommandPollMaxStaleMinutes: messageCommandPollInternals.DEFAULT_MAX_STALE_MINUTES,
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -146,6 +150,13 @@ function parseArgs(args) {
       }
       options.atlasTimeoutMs = value;
       index += 1;
+    } else if (arg === "--message-command-poll-max-stale-minutes") {
+      const value = Number.parseInt(args[index + 1], 10);
+      if (!Number.isInteger(value) || value < 1 || value > 1440) {
+        throw new Error("invalid_message_command_poll_max_stale_minutes");
+      }
+      options.messageCommandPollMaxStaleMinutes = value;
+      index += 1;
     } else {
       throw new Error(`unsupported_argument:${arg}`);
     }
@@ -156,6 +167,7 @@ function parseArgs(args) {
 
 function determineOperatorNextActions({
   runtimeStatus,
+  messageCommandPollStatus = { ok: true },
   publicationStatus,
   publicationAudit,
   atlasHealthStatus = { ok: true, nextActions: [] },
@@ -173,6 +185,10 @@ function determineOperatorNextActions({
 
   if (!runtimeStatus.ok) {
     actions.push("repair_runtime_or_cron_status");
+  }
+
+  if (!messageCommandPollStatus.ok) {
+    actions.push("repair_message_command_poll_scheduler");
   }
 
   if (!publicationStatus.ok) {
@@ -225,6 +241,7 @@ function classifyOperatorStatusEvent(status) {
     status: status.ok ? "pass" : "fail",
     dimensions: {
       runtimeStatus: status.runtime.ok ? "pass" : "fail",
+      messageCommandPollStatus: status.messageCommandPoll.ok ? "pass" : "fail",
       publicationStatus: status.publication.ok ? "pass" : "fail",
       publicationAudit: status.publicationAudit.ok ? "pass" : "fail",
       atlasHealthStatus: status.atlasHealth.ok ? "pass" : "fail",
@@ -245,11 +262,12 @@ async function buildDiscordOSOperatorStatus({
   probeLive = false,
   atlasConfigPath = atlasHealthInternals.DEFAULT_CONFIG_PATH,
   atlasTimeoutMs = atlasHealthInternals.DEFAULT_TIMEOUT_MS,
+  messageCommandPollMaxStaleMinutes = messageCommandPollInternals.DEFAULT_MAX_STALE_MINUTES,
   env = process.env,
   fetchImpl = fetch,
   cwd = process.cwd(),
 } = {}) {
-  const [runtimeStatus, publicationStatus, publicationAudit, atlasHealthStatus, notificationPolicyStatus, receiptState] = await Promise.all([
+  const [runtimeStatus, messageCommandPollStatus, publicationStatus, publicationAudit, atlasHealthStatus, notificationPolicyStatus, receiptState] = await Promise.all([
     runtimeStatusInternals.buildRuntimeHealthStatus({
       baseUrl,
       snapshotDir,
@@ -260,6 +278,10 @@ async function buildDiscordOSOperatorStatus({
       keepDays,
       probeLive,
       env,
+      fetchImpl,
+    }),
+    messageCommandPollInternals.buildDiscordMessageCommandPollStatus({
+      maxStaleMinutes: messageCommandPollMaxStaleMinutes,
       fetchImpl,
     }),
     publicationStatusInternals.buildDiscordPublicationStatus({
@@ -291,7 +313,13 @@ async function buildDiscordOSOperatorStatus({
   const effectiveAtlasHealthOk = deferLocalAtlasHealthEnvGap ? true : atlasHealthStatus.ok;
 
   const status = {
-    ok: runtimeStatus.ok && publicationStatus.ok && publicationAudit.ok && effectiveAtlasHealthOk && notificationPolicyStatus.ok,
+    ok:
+      runtimeStatus.ok
+      && messageCommandPollStatus.ok
+      && publicationStatus.ok
+      && publicationAudit.ok
+      && effectiveAtlasHealthOk
+      && notificationPolicyStatus.ok,
     destructive: false,
     sendsMessages: false,
     writesArtifacts: false,
@@ -305,6 +333,20 @@ async function buildDiscordOSOperatorStatus({
       cronPubliclyLocked: runtimeStatus.cron.publiclyLocked,
       alertTargetConfigured: runtimeStatus.alertTarget.configured,
       nextActions: runtimeStatus.nextActions,
+    },
+    messageCommandPoll: {
+      ok: messageCommandPollStatus.ok,
+      eventType: messageCommandPollStatus.event.type,
+      status: messageCommandPollStatus.status,
+      workflowName: messageCommandPollStatus.workflowName,
+      workflowState: messageCommandPollStatus.workflowState,
+      repoFullName: messageCommandPollStatus.repoFullName,
+      maxStaleMinutes: messageCommandPollStatus.maxStaleMinutes,
+      latestRunAgeMinutes: messageCommandPollStatus.latestRun?.ageMinutes ?? null,
+      latestRunStatus: messageCommandPollStatus.latestRun?.status || null,
+      latestRunConclusion: messageCommandPollStatus.latestRun?.conclusion || null,
+      latestRunUrl: messageCommandPollStatus.latestRun?.url || null,
+      reasonCodes: messageCommandPollStatus.reasonCodes,
     },
     publication: {
       ok: publicationStatus.ok,
@@ -369,10 +411,11 @@ async function buildDiscordOSOperatorStatus({
   };
 
   const nextActions = determineOperatorNextActions({
-    runtimeStatus,
-    publicationStatus,
-    publicationAudit,
-    atlasHealthStatus,
+      runtimeStatus,
+      messageCommandPollStatus,
+      publicationStatus,
+      publicationAudit,
+      atlasHealthStatus,
     notificationPolicyStatus,
     receiptState,
   });
@@ -409,6 +452,21 @@ function renderMarkdown(status) {
     `- cron publicly locked: \`${status.runtime.cronPubliclyLocked ? "true" : "false"}\``,
     `- alert target configured: \`${status.runtime.alertTargetConfigured ? "true" : "false"}\``,
     `- runtime next actions: \`${status.runtime.nextActions.join(",")}\``,
+    "",
+    "## Message Command Poll",
+    "",
+    `- result: \`${status.messageCommandPoll.ok ? "pass" : "fail"}\``,
+    `- event type: \`${status.messageCommandPoll.eventType}\``,
+    `- status: \`${status.messageCommandPoll.status}\``,
+    `- workflow: \`${status.messageCommandPoll.workflowName}\``,
+    `- workflow state: \`${status.messageCommandPoll.workflowState}\``,
+    `- repo: \`${status.messageCommandPoll.repoFullName}\``,
+    `- max stale minutes: \`${status.messageCommandPoll.maxStaleMinutes}\``,
+    `- latest run age minutes: \`${status.messageCommandPoll.latestRunAgeMinutes ?? "none"}\``,
+    `- latest run status: \`${status.messageCommandPoll.latestRunStatus || "none"}\``,
+    `- latest run conclusion: \`${status.messageCommandPoll.latestRunConclusion || "none"}\``,
+    `- latest run url: \`${status.messageCommandPoll.latestRunUrl || "none"}\``,
+    `- reason codes: \`${status.messageCommandPoll.reasonCodes.join(",") || "none"}\``,
     "",
     "## Publication",
     "",

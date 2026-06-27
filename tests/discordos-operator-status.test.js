@@ -82,6 +82,7 @@ test("operator status args default to read-only bundle inputs", () => {
     probeLive: false,
     atlasConfigPath: atlasHealthInternals.DEFAULT_CONFIG_PATH,
     atlasTimeoutMs: atlasHealthInternals.DEFAULT_TIMEOUT_MS,
+    messageCommandPollMaxStaleMinutes: 15,
   });
 });
 
@@ -107,6 +108,8 @@ test("operator status args support json custom paths and live probe", () => {
     ".",
     "--atlas-timeout-ms",
     "5000",
+    "--message-command-poll-max-stale-minutes",
+    "45",
   ]);
 
   assert.equal(parsed.json, true);
@@ -116,6 +119,7 @@ test("operator status args support json custom paths and live probe", () => {
   assert.equal(parsed.keepDays, 4);
   assert.equal(parsed.probeLive, true);
   assert.equal(parsed.atlasTimeoutMs, 5000);
+  assert.equal(parsed.messageCommandPollMaxStaleMinutes, 45);
 });
 
 test("operator status combines runtime, publication, and audit status", async () => {
@@ -134,6 +138,7 @@ test("operator status combines runtime, publication, and audit status", async ()
     limit: 20,
     keepCount: 50,
     keepDays: 30,
+    messageCommandPollMaxStaleMinutes: 100000,
     probeLive: false,
     env: {
       DISCORDOS_ATLAS_HEALTH_WATCH_ENABLED: "enabled",
@@ -181,6 +186,25 @@ test("operator status combines runtime, publication, and audit status", async ()
       if (url === "https://example.invalid/atlas-health") {
         return new Response(JSON.stringify({ ok: true }), { status: 200 });
       }
+      if (url === "https://api.github.com/repos/fawxzzy/DiscordOS/actions/workflows/discord-message-command-poll.yml") {
+        return new Response(JSON.stringify({
+          name: "Discord Message Command Poll",
+          state: "active",
+        }), { status: 200 });
+      }
+      if (url === "https://api.github.com/repos/fawxzzy/DiscordOS/actions/workflows/discord-message-command-poll.yml/runs?per_page=5") {
+        return new Response(JSON.stringify({
+          workflow_runs: [{
+            id: 42,
+            run_number: 7,
+            event: "schedule",
+            status: "completed",
+            conclusion: "success",
+            run_started_at: "2026-06-13T03:58:00.000Z",
+            html_url: "https://github.com/fawxzzy/DiscordOS/actions/runs/42",
+          }],
+        }), { status: 200 });
+      }
       throw new Error(`unexpected_url:${url}`);
     },
   });
@@ -190,6 +214,9 @@ test("operator status combines runtime, publication, and audit status", async ()
   assert.equal(status.sendsMessages, false);
   assert.equal(status.writesArtifacts, false);
   assert.equal(status.runtime.posture, "operational");
+  assert.equal(status.messageCommandPoll.ok, true);
+  assert.equal(status.messageCommandPoll.workflowState, "active");
+  assert.equal(status.messageCommandPoll.latestRunConclusion, "success");
   assert.equal(status.publication.status, "ready");
   assert.equal(status.publicationAudit.publishedReceipts, 1);
   assert.equal(status.publicationAudit.untrackedPublicationReceipts, 0);
@@ -208,6 +235,29 @@ test("operator status combines runtime, publication, and audit status", async ()
   assert.equal(status.notificationPolicy.routeCount, 7);
   assert.equal(status.notificationPolicy.readyAttachedProducerCount, 7);
   assert.equal(status.event.type, "discordos.operator.status_ready");
+});
+
+test("operator status surfaces message-command poll blockers as next actions", () => {
+  const actions = _internals.determineOperatorNextActions({
+    runtimeStatus: { ok: true },
+    messageCommandPollStatus: { ok: false },
+    publicationStatus: { ok: true },
+    publicationAudit: {
+      ok: true,
+      reasonCodes: [],
+      counts: {
+        draftUpdateReceipts: 0,
+        needsBackfill: 0,
+        passNumberCollisions: 0,
+      },
+    },
+    atlasHealthStatus: {
+      ok: true,
+      nextActions: ["continue_atlas_health_monitoring"],
+    },
+  });
+
+  assert.deepEqual(actions, ["repair_message_command_poll_scheduler"]);
 });
 
 test("operator status surfaces publication blockers as next actions", () => {
@@ -398,6 +448,20 @@ test("operator status renders markdown without target secret values", () => {
       channelSeparation: "separated",
       updatesTargetConfigured: true,
       alertsTargetConfigured: true,
+      reasonCodes: [],
+    },
+    messageCommandPoll: {
+      ok: true,
+      eventType: "discordos.message_command_poll.ready",
+      status: "ready",
+      workflowName: "Discord Message Command Poll",
+      workflowState: "active",
+      repoFullName: "fawxzzy/DiscordOS",
+      maxStaleMinutes: 15,
+      latestRunAgeMinutes: 4,
+      latestRunStatus: "completed",
+      latestRunConclusion: "success",
+      latestRunUrl: "https://github.com/fawxzzy/DiscordOS/actions/runs/42",
       reasonCodes: [],
     },
     publicationAudit: {
