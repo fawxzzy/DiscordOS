@@ -11,6 +11,10 @@ on:
         description: Minutes to keep this worker alive before handing off
         required: false
         default: "355"
+      handoff_enabled:
+        description: Dispatch the next worker run before exit
+        required: false
+        default: "true"
 
 concurrency:
   group: discord-message-command-worker
@@ -35,12 +39,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           INPUT_INTERVAL_SECONDS: ${{ inputs.interval_seconds }}
           INPUT_RUN_MINUTES: ${{ inputs.run_minutes }}
+          INPUT_HANDOFF_ENABLED: ${{ inputs.handoff_enabled }}
         shell: bash
         run: |
           set -euo pipefail
 
           interval_seconds="${INPUT_INTERVAL_SECONDS:-300}"
           run_minutes="${INPUT_RUN_MINUTES:-355}"
+          handoff_enabled="${INPUT_HANDOFF_ENABLED:-true}"
 
           if ! [[ "${interval_seconds}" =~ ^[0-9]+$ ]] || [ "${interval_seconds}" -le 0 ]; then
             echo "Invalid interval_seconds: ${interval_seconds}" >&2
@@ -51,6 +57,14 @@ jobs:
             echo "Invalid run_minutes: ${run_minutes}" >&2
             exit 1
           fi
+
+          case "${handoff_enabled}" in
+            true|false) ;;
+            *)
+              echo "Invalid handoff_enabled: ${handoff_enabled}" >&2
+              exit 1
+              ;;
+          esac
 
           separator='?'
           case "${ACTIONS_ID_TOKEN_REQUEST_URL}" in
@@ -90,7 +104,11 @@ jobs:
             sleep "${interval_seconds}"
           done
 
-          dispatch_payload="$(node -e "process.stdout.write(JSON.stringify({ ref: process.argv[1], inputs: { interval_seconds: process.argv[2], run_minutes: process.argv[3] } }))" "${GITHUB_REF_NAME}" "${interval_seconds}" "${run_minutes}")"
+          if [ "${handoff_enabled}" != "true" ]; then
+            exit 0
+          fi
+
+          dispatch_payload="$(node -e "process.stdout.write(JSON.stringify({ ref: process.argv[1], inputs: { interval_seconds: process.argv[2], run_minutes: process.argv[3], handoff_enabled: process.argv[4] } }))" "${GITHUB_REF_NAME}" "${interval_seconds}" "${run_minutes}" "${handoff_enabled}")"
           curl -fsSL -X POST \
             -H "Authorization: Bearer ${GH_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
