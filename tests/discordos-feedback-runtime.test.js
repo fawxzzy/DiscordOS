@@ -33,3 +33,25 @@ test("feedback runtime creates a report modal with DiscordOS-owned custom ids", 
   assert.equal(payload.data.custom_id, "discordos_feedback_report_modal:bug");
   assert.equal(payload.data.components[0].components[0].custom_id, "bug_summary");
 });
+
+test("feedback runtime exposes DiscordOS slash command definitions", () => {
+  const commands = _internals.buildGuildCommandDefinitions();
+  assert.deepEqual(commands.map((command) => command.name), [
+    "setup-feedback",
+    "feedback",
+    "feedback-status",
+    "feedback-completion-review",
+    "feedback-withdraw",
+  ]);
+});
+
+test("feedback runtime admits DiscordOS feedback slash commands", () => {
+  assert.equal(_internals.isFeedbackApplicationCommand({
+    type: 2,
+    data: { name: "feedback" },
+  }), true);
+  assert.equal(_internals.isFeedbackApplicationCommand({
+    type: 2,
+    data: { name: "music" },
+  }), false);
+});

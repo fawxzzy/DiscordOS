@@ -33,6 +33,41 @@ const REPORT_STATUS_LABELS = {
   spam: "Spam",
   withdrawn: "Withdrawn",
 };
+const COMPLETION_REVIEW_LABELS = {
+  approved: "Approved",
+  needs_followup: "Needs Follow-Up",
+  not_required: "Not Required",
+};
+const FEEDBACK_STATUS_CHOICES = [
+  { name: "new", value: "new" },
+  { name: "needs_info", value: "needs_info" },
+  { name: "confirmed", value: "confirmed" },
+  { name: "in_progress", value: "in_progress" },
+  { name: "fixed", value: "fixed" },
+  { name: "closed", value: "closed" },
+  { name: "duplicate", value: "duplicate" },
+  { name: "spam", value: "spam" },
+];
+const FEEDBACK_COMPLETION_REVIEW_CHOICES = [
+  { name: "approved", value: "approved" },
+  { name: "needs_followup", value: "needs_followup" },
+];
+const SETUP_FEEDBACK_COMMAND_NAME = "setup-feedback";
+const FEEDBACK_COMMAND_NAME = "feedback";
+const FEEDBACK_STATUS_COMMAND_NAME = "feedback-status";
+const FEEDBACK_COMPLETION_REVIEW_COMMAND_NAME = "feedback-completion-review";
+const FEEDBACK_WITHDRAW_COMMAND_NAME = "feedback-withdraw";
+const FEEDBACK_REPORT_ID_OPTION_NAME = "report_id";
+const FEEDBACK_STATUS_OPTION_NAME = "status";
+const FEEDBACK_NOTE_OPTION_NAME = "note";
+const FEEDBACK_COMPLETION_REVIEW_DECISION_OPTION_NAME = "decision";
+const FEEDBACK_APPLICATION_COMMAND_NAMES = new Set([
+  SETUP_FEEDBACK_COMMAND_NAME,
+  FEEDBACK_COMMAND_NAME,
+  FEEDBACK_STATUS_COMMAND_NAME,
+  FEEDBACK_COMPLETION_REVIEW_COMMAND_NAME,
+  FEEDBACK_WITHDRAW_COMMAND_NAME,
+]);
 
 const ACTIVE_DUPLICATE_STATUSES = ["new", "needs_info", "confirmed", "in_progress"];
 const STOPWORDS = new Set([
@@ -235,6 +270,126 @@ function canAccessAnyFeedbackReport(permissions) {
     || value & DISCORD_PERMISSION_MANAGE_GUILD
     || value & DISCORD_PERMISSION_MANAGE_THREADS
   );
+}
+
+function hasSetupPermission(permissions) {
+  const value = parsePermissionBigInt(permissions);
+  return Boolean(
+    value & DISCORD_PERMISSION_ADMINISTRATOR
+    || value & DISCORD_PERMISSION_MANAGE_GUILD
+  );
+}
+
+function extractCommandStringOption(options, optionName) {
+  if (!Array.isArray(options)) {
+    return null;
+  }
+  for (const option of options) {
+    if (option?.name === optionName && typeof option.value === "string") {
+      return option.value.trim() || null;
+    }
+  }
+  return null;
+}
+
+function normalizeFeedbackStatus(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(REPORT_STATUS_LABELS, normalized)
+    ? normalized
+    : null;
+}
+
+function normalizeCompletionReviewDecision(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  return normalized === "approved" || normalized === "needs_followup"
+    ? normalized
+    : null;
+}
+
+function buildGuildCommandDefinitions() {
+  const setupDefaultPermissions = String(DISCORD_PERMISSION_MANAGE_GUILD);
+  const feedbackStatusDefaultPermissions = String(
+    DISCORD_PERMISSION_MANAGE_GUILD
+    | DISCORD_PERMISSION_MANAGE_THREADS,
+  );
+
+  return [
+    {
+      name: SETUP_FEEDBACK_COMMAND_NAME,
+      description: "Post or refresh the DiscordOS feedback launcher.",
+      default_member_permissions: setupDefaultPermissions,
+    },
+    {
+      name: FEEDBACK_COMMAND_NAME,
+      description: "Send DiscordOS feedback.",
+      default_member_permissions: setupDefaultPermissions,
+    },
+    {
+      name: FEEDBACK_STATUS_COMMAND_NAME,
+      description: "Update a DiscordOS feedback report status.",
+      default_member_permissions: feedbackStatusDefaultPermissions,
+      options: [
+        {
+          type: 3,
+          name: FEEDBACK_REPORT_ID_OPTION_NAME,
+          description: "Report ID, short ID, thread ID, or forum URL.",
+          required: true,
+        },
+        {
+          type: 3,
+          name: FEEDBACK_STATUS_OPTION_NAME,
+          description: "New feedback report status.",
+          required: true,
+          choices: [...FEEDBACK_STATUS_CHOICES],
+        },
+        {
+          type: 3,
+          name: FEEDBACK_NOTE_OPTION_NAME,
+          description: "Optional status note to add in the forum thread.",
+          required: false,
+        },
+      ],
+    },
+    {
+      name: FEEDBACK_COMPLETION_REVIEW_COMMAND_NAME,
+      description: "Approve or flag follow-up for a completed DiscordOS feedback card.",
+      default_member_permissions: feedbackStatusDefaultPermissions,
+      options: [
+        {
+          type: 3,
+          name: FEEDBACK_REPORT_ID_OPTION_NAME,
+          description: "Report ID, short ID, thread ID, or forum URL.",
+          required: true,
+        },
+        {
+          type: 3,
+          name: FEEDBACK_COMPLETION_REVIEW_DECISION_OPTION_NAME,
+          description: "Completion review decision.",
+          required: true,
+          choices: [...FEEDBACK_COMPLETION_REVIEW_CHOICES],
+        },
+        {
+          type: 3,
+          name: FEEDBACK_NOTE_OPTION_NAME,
+          description: "Optional completion review note.",
+          required: false,
+        },
+      ],
+    },
+    {
+      name: FEEDBACK_WITHDRAW_COMMAND_NAME,
+      description: "Withdraw feedback you submitted.",
+      default_member_permissions: setupDefaultPermissions,
+      options: [
+        {
+          type: 3,
+          name: FEEDBACK_REPORT_ID_OPTION_NAME,
+          description: "Report ID, short ID, thread ID, or forum URL.",
+          required: true,
+        },
+      ],
+    },
+  ];
 }
 
 function buildModalLabelTextInput({
@@ -1463,6 +1618,10 @@ function summarizeFeedbackContentChanges(before, after) {
   return changes.length > 0 ? changes.join("; ") : "content refreshed";
 }
 
+function isFeedbackApplicationCommand(interaction = {}) {
+  return interaction?.type === 2 && FEEDBACK_APPLICATION_COMMAND_NAMES.has(interaction?.data?.name);
+}
+
 async function createFeedbackReport({ interaction, reportType, env = process.env, fetchImpl = fetch }) {
   const requester = resolveInteractionUser(interaction);
   if (!requester.id) {
@@ -1750,6 +1909,130 @@ async function processFeedbackWithdraw(interaction, reportIdOrPrefix, statusNote
     : "Feedback withdrawn. The forum post was removed and we kept a small audit record.";
 }
 
+async function processFeedbackStatusCommand(interaction, { env = process.env, fetchImpl = fetch }) {
+  if (!interactionMatchesGuild(interaction, env)) {
+    return "This feedback flow is only available in the configured server.";
+  }
+
+  const permissions = typeof interaction.member?.permissions === "string" ? interaction.member.permissions : null;
+  if (!canAccessAnyFeedbackReport(permissions)) {
+    return "You do not have permission to update feedback.";
+  }
+
+  const requester = resolveInteractionUser(interaction);
+  const reportIdOrPrefix = extractCommandStringOption(interaction.data?.options, FEEDBACK_REPORT_ID_OPTION_NAME);
+  const nextStatus = normalizeFeedbackStatus(
+    extractCommandStringOption(interaction.data?.options, FEEDBACK_STATUS_OPTION_NAME),
+  );
+  const note = normalizeTextInput(
+    extractCommandStringOption(interaction.data?.options, FEEDBACK_NOTE_OPTION_NAME),
+    500,
+  );
+
+  if (!requester.id || !reportIdOrPrefix || !nextStatus) {
+    return "Could not update that feedback.";
+  }
+
+  const lookup = await findReportByIdOrPrefix(reportIdOrPrefix, { env, fetchImpl });
+  if (!lookup.ok) {
+    return buildLookupFailureMessage(lookup.code);
+  }
+
+  const updated = await updateFeedbackReport(lookup.report.report_id, {
+    status: nextStatus,
+    status_updated_at: new Date().toISOString(),
+    status_updated_by_discord_user_id: requester.id,
+    status_note: note,
+    last_seen_at: new Date().toISOString(),
+  }, { env, fetchImpl });
+  if (!updated) {
+    return "Could not update that feedback right now.";
+  }
+
+  const syncResult = await createOrSyncForumThread(updated, { env, fetchImpl });
+  const finalReport = syncResult.report || updated;
+  const beforeLabel = REPORT_STATUS_LABELS[lookup.report.status] || lookup.report.status;
+  const afterLabel = REPORT_STATUS_LABELS[nextStatus] || nextStatus;
+  const auditNote = note || `Status changed from ${beforeLabel} to ${afterLabel}.`;
+
+  await insertAuditEvent({
+    report_id: finalReport.report_id,
+    action: "status_update",
+    actor_label: requester.username || "staff",
+    include_reporter_mention: false,
+    status_before: lookup.report.status,
+    status_after: nextStatus,
+    note: auditNote,
+  }, { env, fetchImpl });
+  await postAuditComment(
+    finalReport,
+    `Status updated by staff: ${beforeLabel} -> ${afterLabel}.${note ? ` Note: ${note}` : ""}`,
+    { env, fetchImpl },
+  );
+
+  return syncResult.ok
+    ? "Feedback updated."
+    : `Feedback updated, but the forum thread could not be fully synced. (${formatShortId(finalReport.report_id)})`;
+}
+
+async function processFeedbackCompletionReviewCommand(interaction, { env = process.env, fetchImpl = fetch }) {
+  if (!interactionMatchesGuild(interaction, env)) {
+    return "This feedback flow is only available in the configured server.";
+  }
+
+  const permissions = typeof interaction.member?.permissions === "string" ? interaction.member.permissions : null;
+  if (!canAccessAnyFeedbackReport(permissions)) {
+    return "You do not have permission to review completed feedback.";
+  }
+
+  const requester = resolveInteractionUser(interaction);
+  const reportIdOrPrefix = extractCommandStringOption(interaction.data?.options, FEEDBACK_REPORT_ID_OPTION_NAME);
+  const decision = normalizeCompletionReviewDecision(
+    extractCommandStringOption(interaction.data?.options, FEEDBACK_COMPLETION_REVIEW_DECISION_OPTION_NAME),
+  );
+  const note = normalizeTextInput(
+    extractCommandStringOption(interaction.data?.options, FEEDBACK_NOTE_OPTION_NAME),
+    500,
+  );
+
+  if (!requester.id || !reportIdOrPrefix || !decision) {
+    return "Could not update that completion review.";
+  }
+
+  const lookup = await findReportByIdOrPrefix(reportIdOrPrefix, { env, fetchImpl });
+  if (!lookup.ok) {
+    return buildLookupFailureMessage(lookup.code);
+  }
+
+  const updated = await updateFeedbackReport(lookup.report.report_id, {
+    completion_review_status: decision,
+    completion_reviewed_at: new Date().toISOString(),
+    completion_reviewed_by_discord_user_id: requester.id,
+    completion_review_note: note,
+    last_seen_at: new Date().toISOString(),
+  }, { env, fetchImpl });
+  if (!updated) {
+    return "Could not update that completion review right now.";
+  }
+
+  const decisionLabel = COMPLETION_REVIEW_LABELS[decision] || decision;
+  const auditNote = note || `Completion review set to ${decisionLabel}.`;
+  await insertAuditEvent({
+    report_id: updated.report_id,
+    action: "completion_review",
+    actor_label: requester.username || "staff",
+    include_reporter_mention: false,
+    note: auditNote,
+  }, { env, fetchImpl });
+  await postAuditComment(
+    updated,
+    `Completion review updated: ${decisionLabel}.${note ? ` Note: ${note}` : ""}`,
+    { env, fetchImpl },
+  );
+
+  return `Completion review updated. Status: ${decisionLabel}.`;
+}
+
 function isFeedbackInteraction(interaction = {}) {
   const customId = interaction?.data?.custom_id;
   if (interaction?.type === 3 && typeof customId === "string") {
@@ -1908,10 +2191,68 @@ async function handleFeedbackInteraction({ interaction, env = process.env, fetch
   return buildEphemeralMessageResponse("Unsupported DiscordOS feedback interaction.");
 }
 
+async function handleFeedbackApplicationCommand({ interaction, env = process.env, fetchImpl = fetch }) {
+  if (!interactionMatchesGuild(interaction, env)) {
+    return buildEphemeralMessageResponse("This feedback flow is only available in the configured server.");
+  }
+
+  const commandName = interaction?.data?.name;
+  const permissions = typeof interaction.member?.permissions === "string" ? interaction.member.permissions : null;
+
+  if (commandName === SETUP_FEEDBACK_COMMAND_NAME) {
+    if (!hasSetupPermission(permissions)) {
+      return buildEphemeralMessageResponse("You do not have permission to refresh the feedback launcher.");
+    }
+
+    const upsertResult = await computaInternals.upsertFeedbackPanel({
+      targetChannelId: interaction?.channel_id || null,
+      cleanupLegacyPanels: true,
+      env,
+      fetchImpl,
+    });
+    if (!upsertResult.ok) {
+      return buildEphemeralMessageResponse("DiscordOS could not refresh the Feedback launcher right now.");
+    }
+
+    return buildEphemeralMessageResponse(
+      upsertResult.action === "updated" || upsertResult.action === "reposted"
+        ? `Feedback launcher updated in ${upsertResult.channelLabel}.`
+        : `Feedback launcher created in ${upsertResult.channelLabel}.`,
+    );
+  }
+
+  if (commandName === FEEDBACK_COMMAND_NAME) {
+    return buildSubmitPickerResponse("bug");
+  }
+
+  if (commandName === FEEDBACK_WITHDRAW_COMMAND_NAME) {
+    return buildEphemeralMessageResponse(await processFeedbackWithdraw(
+      interaction,
+      extractCommandStringOption(interaction.data?.options, FEEDBACK_REPORT_ID_OPTION_NAME),
+      null,
+      { env, fetchImpl },
+    ));
+  }
+
+  if (commandName === FEEDBACK_STATUS_COMMAND_NAME) {
+    return buildEphemeralMessageResponse(await processFeedbackStatusCommand(interaction, { env, fetchImpl }));
+  }
+
+  if (commandName === FEEDBACK_COMPLETION_REVIEW_COMMAND_NAME) {
+    return buildEphemeralMessageResponse(await processFeedbackCompletionReviewCommand(interaction, { env, fetchImpl }));
+  }
+
+  return buildEphemeralMessageResponse("Unsupported DiscordOS feedback command.");
+}
+
 module.exports = {
   _internals: {
+    FEEDBACK_APPLICATION_COMMAND_NAMES,
+    buildGuildCommandDefinitions,
     isFeedbackInteraction,
+    isFeedbackApplicationCommand,
     handleFeedbackInteraction,
+    handleFeedbackApplicationCommand,
     buildSubmitPickerResponse,
     buildFeedbackReportModalResponse,
     getSupabaseConfig,

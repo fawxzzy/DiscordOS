@@ -1,6 +1,9 @@
 const {
   _internals: computaInternals,
 } = require("./discordos-computa-runtime");
+const {
+  _internals: feedbackInternals,
+} = require("../src/extractions/fitness-feedback-runtime");
 
 function hasValue(value) {
   return typeof value === "string" && value.trim().length > 0;
@@ -36,7 +39,10 @@ async function main() {
         "content-type": "application/json",
         "user-agent": "discordos-computa-runtime/1.0",
       },
-      body: JSON.stringify(computaInternals.buildGuildCommandsDefinition()),
+      body: JSON.stringify([
+        ...computaInternals.buildGuildCommandsDefinition(),
+        ...feedbackInternals.buildGuildCommandDefinitions(),
+      ]),
     },
   );
 
@@ -47,7 +53,7 @@ async function main() {
   }
 
   const count = Array.isArray(body) ? body.length : 0;
-  console.log(`Registered ${count} DiscordOS Computa guild command${count === 1 ? "" : "s"}.`);
+  console.log(`Registered ${count} DiscordOS guild command${count === 1 ? "" : "s"}.`);
 }
 
 main().catch((error) => {

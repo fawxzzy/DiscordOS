@@ -249,6 +249,31 @@ async function buildDiscordInteractionResponse({
       reasonCodes: [],
     };
   }
+  if (feedbackInternals.isFeedbackApplicationCommand(interaction)) {
+    const payload = await feedbackInternals.handleFeedbackApplicationCommand({
+      interaction,
+      env,
+      fetchImpl,
+    });
+    return {
+      ok: true,
+      statusCode: 200,
+      payload,
+      signaturePreflight,
+      admission: {
+        ok: true,
+        executesRoute: false,
+        route: {
+          kind: "application_command",
+          responseType: payload.type,
+          command: interaction?.data?.name || "discordos_feedback",
+        },
+        reasonCodes: [],
+      },
+      execution: null,
+      reasonCodes: [],
+    };
+  }
   if (feedbackInternals.isFeedbackInteraction(interaction)) {
     const payload = await feedbackInternals.handleFeedbackInteraction({
       interaction,

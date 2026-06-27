@@ -140,6 +140,33 @@ test("discord interactions endpoint admits computa application command routes", 
   assert.match(result.payload.data.embeds[0].title, /Computa/);
 });
 
+test("discord interactions endpoint admits feedback application command routes", async () => {
+  const body = JSON.stringify({
+    type: 2,
+    guild_id: "1504668396338413670",
+    data: {
+      name: "feedback",
+    },
+  });
+  const signed = signedRequest(body);
+  const result = await _internals.buildDiscordInteractionResponse({
+    method: "POST",
+    rawBody: body,
+    headers: signed.headers,
+    publicKey: signed.publicKey,
+    nowSeconds: 100,
+    env: {
+      DISCORDOS_GUILD_ID: "1504668396338413670",
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.payload.type, 4);
+  assert.equal(result.admission.route.command, "feedback");
+  assert.equal(result.payload.data.components[0].components[0].custom_id, "discordos_feedback_submit_pick_type");
+});
+
 test("discord interactions endpoint admits DiscordOS feedback launcher buttons", async () => {
   const body = JSON.stringify({
     type: 3,
