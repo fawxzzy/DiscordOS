@@ -130,8 +130,8 @@ test("computa poll processes a greeting command and marks it successful", async 
 test("computa feedback panel payload preserves the launcher buttons", () => {
   const payload = _internals.buildFeedbackPanelPayload();
   assert.equal(payload.embeds[0].title, "Feedback Submission");
-  assert.equal(payload.components[0].components[0].custom_id, "fitness_feedback_submit_open");
-  assert.equal(payload.components[0].components[1].custom_id, "fitness_feedback_update_open");
+  assert.equal(payload.components[0].components[0].custom_id, "discordos_feedback_submit_open");
+  assert.equal(payload.components[0].components[1].custom_id, "discordos_feedback_update_open");
   assert.equal(_internals.discordMessageHasFeedbackPanel(payload), true);
 });
 

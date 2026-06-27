@@ -26,8 +26,10 @@ const OWNER_CARD_MARKER = "discordos-computa-owner-command-menu:v1";
 const RELEASE_CHECK_CARD_MARKER = "fawx-computa-release-check:v1";
 const FEEDBACK_PANEL_CHANNEL_NAME = "feedback-submission";
 const LEGACY_FEEDBACK_PANEL_CHANNEL_NAMES = new Set(["submit-feedback"]);
-const FEEDBACK_PANEL_SUBMIT_BUTTON_CUSTOM_ID = "fitness_feedback_submit_open";
-const FEEDBACK_PANEL_UPDATE_BUTTON_CUSTOM_ID = "fitness_feedback_update_open";
+const FEEDBACK_PANEL_SUBMIT_BUTTON_CUSTOM_ID = "discordos_feedback_submit_open";
+const FEEDBACK_PANEL_UPDATE_BUTTON_CUSTOM_ID = "discordos_feedback_update_open";
+const LEGACY_FEEDBACK_PANEL_SUBMIT_BUTTON_CUSTOM_ID = "fitness_feedback_submit_open";
+const LEGACY_FEEDBACK_PANEL_UPDATE_BUTTON_CUSTOM_ID = "fitness_feedback_update_open";
 const FEEDBACK_PANEL_TITLE = "Feedback Submission";
 const FEEDBACK_PANEL_BODY_LINES = [
   "Use this panel to send bug reports or feature requests without cluttering main chat.",
@@ -392,10 +394,17 @@ function messageHasComponentCustomId(message, customId) {
 }
 
 function discordMessageHasFeedbackPanel(message) {
-  return [
+  const currentPanelCustomIds = [
     FEEDBACK_PANEL_SUBMIT_BUTTON_CUSTOM_ID,
     FEEDBACK_PANEL_UPDATE_BUTTON_CUSTOM_ID,
-  ].every((customId) => messageHasComponentCustomId(message, customId));
+  ];
+  const legacyPanelCustomIds = [
+    LEGACY_FEEDBACK_PANEL_SUBMIT_BUTTON_CUSTOM_ID,
+    LEGACY_FEEDBACK_PANEL_UPDATE_BUTTON_CUSTOM_ID,
+  ];
+  return [currentPanelCustomIds, legacyPanelCustomIds].some((customIds) =>
+    customIds.every((customId) => messageHasComponentCustomId(message, customId))
+  );
 }
 
 function discordMessageHasReleaseCheck(message) {
