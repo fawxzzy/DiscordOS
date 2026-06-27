@@ -112,7 +112,35 @@ test("discord interactions endpoint executes signed music button route when guar
   assert.equal(JSON.parse(calls[0].init.body).payload.action, "queue_item");
 });
 
-test("discord interactions endpoint rejects application command routes", async () => {
+test("discord interactions endpoint admits computa application command routes", async () => {
+  const body = JSON.stringify({
+    type: 2,
+    data: {
+      name: "computa",
+      options: [
+        {
+          type: 1,
+          name: "menu",
+        },
+      ],
+    },
+  });
+  const signed = signedRequest(body);
+  const result = await _internals.buildDiscordInteractionResponse({
+    method: "POST",
+    rawBody: body,
+    headers: signed.headers,
+    publicKey: signed.publicKey,
+    nowSeconds: 100,
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.payload.type, 4);
+  assert.match(result.payload.data.embeds[0].title, /Computa/);
+});
+
+test("discord interactions endpoint still rejects unrelated application command routes", async () => {
   const body = JSON.stringify({
     type: 2,
     data: {

@@ -7,6 +7,9 @@ const {
 const {
   _internals: buttonRouterInternals,
 } = require("../scripts/discordos-music-sesh-button-router");
+const {
+  _internals: computaInternals,
+} = require("../scripts/discordos-computa-runtime");
 
 function normalizeHeader(headers = {}, name) {
   const direct = headers[name] ?? headers[name.toLowerCase()];
@@ -218,6 +221,32 @@ async function buildDiscordInteractionResponse({
   }
 
   const admissionInput = buildAdmissionInput(interaction);
+  if (interaction?.type === 2 && interaction?.data?.name === "computa") {
+    const payload = await computaInternals.handleComputaInteraction({
+      interaction,
+      env,
+      fetchImpl,
+    });
+    return {
+      ok: true,
+      statusCode: 200,
+      payload,
+      signaturePreflight,
+      admission: {
+        ok: true,
+        executesRoute: false,
+        route: {
+          kind: "application_command",
+          responseType: payload.type,
+          command: "computa",
+        },
+        reasonCodes: [],
+      },
+      execution: null,
+      reasonCodes: [],
+    };
+  }
+
   const admission = admissionInternals.buildInteractionHandlerAdmission(admissionInput);
   let execution = null;
   if (shouldExecuteButtonRoute({ env, admission })) {
@@ -247,7 +276,7 @@ module.exports = async function discordInteractions(req, res) {
     method: req.method,
     headers: req.headers,
     rawBody: await readRawBody(req),
-    publicKey: process.env.DISCORDOS_PUBLIC_KEY,
+    publicKey: computaInternals.resolvePublicKey(process.env),
   });
 
   return res.status(result.statusCode).json(result.payload);
