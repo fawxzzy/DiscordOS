@@ -1,6 +1,8 @@
 const DEFAULT_REPO_FULL_NAME = "fawxzzy/DiscordOS";
 const DEFAULT_WORKFLOW_ID = "discord-message-command-poll.yml";
+const DEFAULT_WORKER_WORKFLOW_ID = "discord-message-command-worker.yml";
 const DEFAULT_MAX_STALE_MINUTES = 15;
+const DEFAULT_WORKER_MAX_STALE_MINUTES = 390;
 const DEFAULT_RUNS_PER_PAGE = 5;
 
 function hasValue(value) {
@@ -12,6 +14,7 @@ function parseArgs(args) {
     json: false,
     repoFullName: DEFAULT_REPO_FULL_NAME,
     workflowId: DEFAULT_WORKFLOW_ID,
+    workerWorkflowId: DEFAULT_WORKER_WORKFLOW_ID,
     maxStaleMinutes: DEFAULT_MAX_STALE_MINUTES,
     perPage: DEFAULT_RUNS_PER_PAGE,
   };
@@ -33,6 +36,13 @@ function parseArgs(args) {
         throw new Error("missing_workflow_value");
       }
       options.workflowId = value.trim();
+      index += 1;
+    } else if (arg === "--worker-workflow") {
+      const value = args[index + 1];
+      if (!hasValue(value)) {
+        throw new Error("missing_worker_workflow_value");
+      }
+      options.workerWorkflowId = value.trim();
       index += 1;
     } else if (arg === "--max-stale-minutes") {
       const value = Number.parseInt(args[index + 1], 10);
@@ -132,37 +142,68 @@ function normalizeLatestRun(run, nowMs) {
 function classifyMessageCommandPollStatus({
   workflow = {},
   runs = [],
+  workerWorkflow = {},
+  workerRuns = [],
   repoFullName,
   workflowId,
+  workerWorkflowId,
   maxStaleMinutes,
   nowMs,
 }) {
-  const reasonCodes = [];
   const latestRun = normalizeLatestRun(Array.isArray(runs) ? runs[0] : null, nowMs);
+  const latestWorkerRun = normalizeLatestRun(Array.isArray(workerRuns) ? workerRuns[0] : null, nowMs);
   const workflowState = hasValue(workflow.state) ? workflow.state.trim() : "unknown";
   const workflowName = hasValue(workflow.name) ? workflow.name.trim() : String(workflowId);
+  const workerWorkflowState = hasValue(workerWorkflow.state) ? workerWorkflow.state.trim() : "unknown";
+  const workerWorkflowName = hasValue(workerWorkflow.name) ? workerWorkflow.name.trim() : String(workerWorkflowId);
 
+  const pollReasonCodes = [];
   if (workflowState !== "active") {
-    reasonCodes.push("workflow_not_active");
+    pollReasonCodes.push("workflow_not_active");
   }
-
   if (!latestRun) {
-    reasonCodes.push("workflow_run_missing");
+    pollReasonCodes.push("workflow_run_missing");
   } else {
     if (latestRun.ageMinutes === null || latestRun.ageMinutes > maxStaleMinutes) {
-      reasonCodes.push("latest_run_stale");
+      pollReasonCodes.push("latest_run_stale");
     }
-
     if (latestRun.status === "completed" && latestRun.conclusion !== "success") {
-      reasonCodes.push("latest_run_not_successful");
+      pollReasonCodes.push("latest_run_not_successful");
     }
-
     if (latestRun.status !== "completed" && latestRun.status !== "in_progress" && latestRun.status !== "queued") {
-      reasonCodes.push("latest_run_unexpected_status");
+      pollReasonCodes.push("latest_run_unexpected_status");
     }
   }
 
-  const ok = reasonCodes.length === 0;
+  const workerReasonCodes = [];
+  if (workerWorkflowState !== "active") {
+    workerReasonCodes.push("worker_workflow_not_active");
+  }
+  if (!latestWorkerRun) {
+    workerReasonCodes.push("worker_run_missing");
+  } else {
+    if (latestWorkerRun.ageMinutes === null || latestWorkerRun.ageMinutes > DEFAULT_WORKER_MAX_STALE_MINUTES) {
+      workerReasonCodes.push("worker_run_stale");
+    }
+    if (latestWorkerRun.status !== "in_progress" && latestWorkerRun.status !== "queued") {
+      workerReasonCodes.push("worker_run_not_active");
+    }
+  }
+
+  const pollHealthy = pollReasonCodes.length === 0;
+  const workerHealthy = workerReasonCodes.length === 0;
+  const ok = pollHealthy || workerHealthy;
+  const reasonCodes = ok
+    ? []
+    : [...pollReasonCodes, ...workerReasonCodes];
+  const healthySource = pollHealthy && workerHealthy
+    ? "poll_and_worker"
+    : pollHealthy
+      ? "poll"
+      : workerHealthy
+        ? "worker"
+        : "none";
+
   return {
     ok,
     destructive: false,
@@ -173,8 +214,15 @@ function classifyMessageCommandPollStatus({
     workflowId,
     workflowName,
     workflowState,
+    workerWorkflowId,
+    workerWorkflowName,
+    workerWorkflowState,
     maxStaleMinutes,
     latestRun,
+    latestWorkerRun,
+    healthySource,
+    pollReasonCodes,
+    workerReasonCodes,
     reasonCodes,
     event: {
       type: ok
@@ -184,10 +232,14 @@ function classifyMessageCommandPollStatus({
       subject: "discordos.message_command_poll",
       status: ok ? "pass" : "fail",
       dimensions: {
+        healthySource,
         workflowState,
         latestRunStatus: latestRun?.status || "missing",
         latestRunConclusion: latestRun?.conclusion || "missing",
         latestRunAgeMinutes: latestRun?.ageMinutes ?? -1,
+        workerWorkflowState,
+        latestWorkerRunStatus: latestWorkerRun?.status || "missing",
+        latestWorkerRunAgeMinutes: latestWorkerRun?.ageMinutes ?? -1,
       },
     },
   };
@@ -196,6 +248,7 @@ function classifyMessageCommandPollStatus({
 async function buildDiscordMessageCommandPollStatus({
   repoFullName = DEFAULT_REPO_FULL_NAME,
   workflowId = DEFAULT_WORKFLOW_ID,
+  workerWorkflowId = DEFAULT_WORKER_WORKFLOW_ID,
   maxStaleMinutes = DEFAULT_MAX_STALE_MINUTES,
   perPage = DEFAULT_RUNS_PER_PAGE,
   fetchImpl = fetch,
@@ -203,11 +256,15 @@ async function buildDiscordMessageCommandPollStatus({
 } = {}) {
   const workflowUrl = buildWorkflowApiUrl(repoFullName, workflowId);
   const runsUrl = `${workflowUrl}/runs?per_page=${perPage}`;
+  const workerWorkflowUrl = buildWorkflowApiUrl(repoFullName, workerWorkflowId);
+  const workerRunsUrl = `${workerWorkflowUrl}/runs?per_page=${perPage}`;
 
   try {
-    const [workflowResponse, runsResponse] = await Promise.all([
+    const [workflowResponse, runsResponse, workerWorkflowResponse, workerRunsResponse] = await Promise.all([
       fetchJson(workflowUrl, fetchImpl),
       fetchJson(runsUrl, fetchImpl),
+      fetchJson(workerWorkflowUrl, fetchImpl),
+      fetchJson(workerRunsUrl, fetchImpl),
     ]);
 
     if (!workflowResponse.ok) {
@@ -221,8 +278,15 @@ async function buildDiscordMessageCommandPollStatus({
         workflowId,
         workflowName: String(workflowId),
         workflowState: "unknown",
+        workerWorkflowId,
+        workerWorkflowName: String(workerWorkflowId),
+        workerWorkflowState: "unknown",
         maxStaleMinutes,
         latestRun: null,
+        latestWorkerRun: null,
+        healthySource: "none",
+        pollReasonCodes: ["workflow_lookup_failed"],
+        workerReasonCodes: [],
         reasonCodes: ["workflow_lookup_failed"],
         event: {
           type: "discordos.message_command_poll.api_unavailable",
@@ -247,8 +311,15 @@ async function buildDiscordMessageCommandPollStatus({
         workflowId,
         workflowName: hasValue(workflowResponse.payload?.name) ? workflowResponse.payload.name.trim() : String(workflowId),
         workflowState: hasValue(workflowResponse.payload?.state) ? workflowResponse.payload.state.trim() : "unknown",
+        workerWorkflowId,
+        workerWorkflowName: String(workerWorkflowId),
+        workerWorkflowState: "unknown",
         maxStaleMinutes,
         latestRun: null,
+        latestWorkerRun: null,
+        healthySource: "none",
+        pollReasonCodes: ["workflow_runs_lookup_failed"],
+        workerReasonCodes: [],
         reasonCodes: ["workflow_runs_lookup_failed"],
         event: {
           type: "discordos.message_command_poll.api_unavailable",
@@ -262,11 +333,80 @@ async function buildDiscordMessageCommandPollStatus({
       };
     }
 
+    if (!workerWorkflowResponse.ok) {
+      return {
+        ok: false,
+        destructive: false,
+        sendsMessages: false,
+        writesArtifacts: false,
+        status: "api_unavailable",
+        repoFullName,
+        workflowId,
+        workflowName: hasValue(workflowResponse.payload?.name) ? workflowResponse.payload.name.trim() : String(workflowId),
+        workflowState: hasValue(workflowResponse.payload?.state) ? workflowResponse.payload.state.trim() : "unknown",
+        workerWorkflowId,
+        workerWorkflowName: String(workerWorkflowId),
+        workerWorkflowState: "unknown",
+        maxStaleMinutes,
+        latestRun: null,
+        latestWorkerRun: null,
+        healthySource: "none",
+        pollReasonCodes: [],
+        workerReasonCodes: ["worker_workflow_lookup_failed"],
+        reasonCodes: ["worker_workflow_lookup_failed"],
+        event: {
+          type: "discordos.message_command_poll.api_unavailable",
+          severity: "warning",
+          subject: "discordos.message_command_poll",
+          status: "fail",
+          dimensions: {
+            httpStatus: workerWorkflowResponse.status,
+          },
+        },
+      };
+    }
+
+    if (!workerRunsResponse.ok) {
+      return {
+        ok: false,
+        destructive: false,
+        sendsMessages: false,
+        writesArtifacts: false,
+        status: "api_unavailable",
+        repoFullName,
+        workflowId,
+        workflowName: hasValue(workflowResponse.payload?.name) ? workflowResponse.payload.name.trim() : String(workflowId),
+        workflowState: hasValue(workflowResponse.payload?.state) ? workflowResponse.payload.state.trim() : "unknown",
+        workerWorkflowId,
+        workerWorkflowName: hasValue(workerWorkflowResponse.payload?.name) ? workerWorkflowResponse.payload.name.trim() : String(workerWorkflowId),
+        workerWorkflowState: hasValue(workerWorkflowResponse.payload?.state) ? workerWorkflowResponse.payload.state.trim() : "unknown",
+        maxStaleMinutes,
+        latestRun: null,
+        latestWorkerRun: null,
+        healthySource: "none",
+        pollReasonCodes: [],
+        workerReasonCodes: ["worker_workflow_runs_lookup_failed"],
+        reasonCodes: ["worker_workflow_runs_lookup_failed"],
+        event: {
+          type: "discordos.message_command_poll.api_unavailable",
+          severity: "warning",
+          subject: "discordos.message_command_poll",
+          status: "fail",
+          dimensions: {
+            httpStatus: workerRunsResponse.status,
+          },
+        },
+      };
+    }
+
     return classifyMessageCommandPollStatus({
       workflow: workflowResponse.payload || {},
       runs: Array.isArray(runsResponse.payload?.workflow_runs) ? runsResponse.payload.workflow_runs : [],
+      workerWorkflow: workerWorkflowResponse.payload || {},
+      workerRuns: Array.isArray(workerRunsResponse.payload?.workflow_runs) ? workerRunsResponse.payload.workflow_runs : [],
       repoFullName,
       workflowId,
+      workerWorkflowId,
       maxStaleMinutes,
       nowMs: now(),
     });
@@ -281,8 +421,15 @@ async function buildDiscordMessageCommandPollStatus({
       workflowId,
       workflowName: String(workflowId),
       workflowState: "unknown",
+      workerWorkflowId,
+      workerWorkflowName: String(workerWorkflowId),
+      workerWorkflowState: "unknown",
       maxStaleMinutes,
       latestRun: null,
+      latestWorkerRun: null,
+      healthySource: "none",
+      pollReasonCodes: [],
+      workerReasonCodes: [],
       reasonCodes: ["workflow_api_request_failed"],
       event: {
         type: "discordos.message_command_poll.api_unavailable",
@@ -309,8 +456,11 @@ function renderMarkdown(status) {
     `- event type: \`${status.event.type}\``,
     `- workflow: \`${status.workflowName}\``,
     `- workflow state: \`${status.workflowState}\``,
+    `- worker workflow: \`${status.workerWorkflowName}\``,
+    `- worker workflow state: \`${status.workerWorkflowState}\``,
     `- repo: \`${status.repoFullName}\``,
     `- stale threshold minutes: \`${status.maxStaleMinutes}\``,
+    `- healthy source: \`${status.healthySource}\``,
     `- reason codes: \`${status.reasonCodes.join(",") || "none"}\``,
     "",
     "## Latest Run",
@@ -323,6 +473,17 @@ function renderMarkdown(status) {
     `- age minutes: \`${status.latestRun?.ageMinutes ?? "none"}\``,
     `- started at: \`${status.latestRun?.runStartedAt || "none"}\``,
     `- url: \`${status.latestRun?.url || "none"}\``,
+    "",
+    "## Worker Run",
+    "",
+    `- id: \`${status.latestWorkerRun?.id ?? "none"}\``,
+    `- run number: \`${status.latestWorkerRun?.runNumber ?? "none"}\``,
+    `- event: \`${status.latestWorkerRun?.event || "none"}\``,
+    `- status: \`${status.latestWorkerRun?.status || "none"}\``,
+    `- conclusion: \`${status.latestWorkerRun?.conclusion || "none"}\``,
+    `- age minutes: \`${status.latestWorkerRun?.ageMinutes ?? "none"}\``,
+    `- started at: \`${status.latestWorkerRun?.runStartedAt || "none"}\``,
+    `- url: \`${status.latestWorkerRun?.url || "none"}\``,
   ];
 
   return `${lines.join("\n")}\n`;
@@ -350,7 +511,9 @@ module.exports = {
   _internals: {
     DEFAULT_REPO_FULL_NAME,
     DEFAULT_WORKFLOW_ID,
+    DEFAULT_WORKER_WORKFLOW_ID,
     DEFAULT_MAX_STALE_MINUTES,
+    DEFAULT_WORKER_MAX_STALE_MINUTES,
     DEFAULT_RUNS_PER_PAGE,
     parseArgs,
     buildWorkflowApiUrl,

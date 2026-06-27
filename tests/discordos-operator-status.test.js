@@ -192,6 +192,12 @@ test("operator status combines runtime, publication, and audit status", async ()
           state: "active",
         }), { status: 200 });
       }
+      if (url === "https://api.github.com/repos/fawxzzy/DiscordOS/actions/workflows/discord-message-command-worker.yml") {
+        return new Response(JSON.stringify({
+          name: "Discord Message Command Worker",
+          state: "active",
+        }), { status: 200 });
+      }
       if (url === "https://api.github.com/repos/fawxzzy/DiscordOS/actions/workflows/discord-message-command-poll.yml/runs?per_page=5") {
         return new Response(JSON.stringify({
           workflow_runs: [{
@@ -202,6 +208,19 @@ test("operator status combines runtime, publication, and audit status", async ()
             conclusion: "success",
             run_started_at: "2026-06-13T03:58:00.000Z",
             html_url: "https://github.com/fawxzzy/DiscordOS/actions/runs/42",
+          }],
+        }), { status: 200 });
+      }
+      if (url === "https://api.github.com/repos/fawxzzy/DiscordOS/actions/workflows/discord-message-command-worker.yml/runs?per_page=5") {
+        return new Response(JSON.stringify({
+          workflow_runs: [{
+            id: 41,
+            run_number: 2,
+            event: "workflow_dispatch",
+            status: "in_progress",
+            conclusion: null,
+            run_started_at: "2026-06-27T20:00:00.000Z",
+            html_url: "https://github.com/fawxzzy/DiscordOS/actions/runs/41",
           }],
         }), { status: 200 });
       }
@@ -217,6 +236,7 @@ test("operator status combines runtime, publication, and audit status", async ()
   assert.equal(status.messageCommandPoll.ok, true);
   assert.equal(status.messageCommandPoll.workflowState, "active");
   assert.equal(status.messageCommandPoll.latestRunConclusion, "success");
+  assert.equal(status.messageCommandPoll.healthySource, "poll_and_worker");
   assert.equal(status.publication.status, "ready");
   assert.equal(status.publicationAudit.publishedReceipts, 1);
   assert.equal(status.publicationAudit.untrackedPublicationReceipts, 0);
