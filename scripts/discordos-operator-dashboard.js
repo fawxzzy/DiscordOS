@@ -1,6 +1,34 @@
+const fs = require("node:fs");
+const path = require("node:path");
+
 const {
   _internals: nextWorkInternals,
 } = require("./discordos-next-work-recommender");
+
+const DEFAULT_OPS_DOCS_DIR = path.resolve(__dirname, "..", "docs", "ops");
+const CLOSEOUT_RECEIPT_FILE_PATTERN = /closeout/i;
+const HIGHEST_VALUE_CATEGORY_LIMIT = 10;
+const HIGHEST_VALUE_LANE_PRIORITY = [
+  { pattern: /^testing_surface_provision$/, score: 140 },
+  { pattern: /^chat_command_intake$/, score: 135 },
+  { pattern: /^chat_message_listener$/, score: 132 },
+  { pattern: /^chat_message_live_ingest$/, score: 129 },
+  { pattern: /^music_sesh_user_response_delivery_guard$/, score: 126 },
+  { pattern: /^music_sesh_response_delivery_live_canary$/, score: 123 },
+  { pattern: /^music_sesh_response_delivery_policy_dashboard$/, score: 120 },
+  { pattern: /^music_sesh_response_delivery_channel_admission_gate$/, score: 117 },
+  { pattern: /^music_sesh_response_delivery_non_testing_canary$/, score: 114 },
+  { pattern: /^music_sesh_non_testing_response_live_readback$/, score: 111 },
+  { pattern: /^music_sesh_response_delivery_rate_limit_/, score: 108 },
+  { pattern: /^interaction_doctrine_status$/, score: 105 },
+  { pattern: /^music_sesh_write_adapter_guard$/, score: 102 },
+  { pattern: /^music_sesh_live_readback$/, score: 99 },
+  { pattern: /^music_sesh_host_control_/, score: 92 },
+  { pattern: /^music_provider_/, score: 88 },
+  { pattern: /^button_route_/, score: 84 },
+  { pattern: /^board_reaction_/, score: 80 },
+  { pattern: /^board_/, score: 76 },
+];
 
 const HIGHEST_VALUE_CATEGORIES = [
   {
@@ -1679,20 +1707,235 @@ function buildProductRuntimeTiles() {
   ];
 }
 
-function buildProductRuntimePanel() {
-  const tiles = buildProductRuntimeTiles();
+function loadCloseoutReceiptCorpus({
+  opsDocsDir = DEFAULT_OPS_DOCS_DIR,
+  fsImpl = fs,
+} = {}) {
+  const fileNames = fsImpl.readdirSync(opsDocsDir)
+    .filter((name) => name.endsWith(".md") && CLOSEOUT_RECEIPT_FILE_PATTERN.test(name));
+
+  return fileNames
+    .map((name) => fsImpl.readFileSync(path.join(opsDocsDir, name), "utf8"))
+    .join("\n");
+}
+
+function buildClosedProductRuntimeTileIdSet({
+  tiles = buildProductRuntimeTiles(),
+  closeoutCorpus = null,
+  opsDocsDir = DEFAULT_OPS_DOCS_DIR,
+  fsImpl = fs,
+} = {}) {
+  const corpus = typeof closeoutCorpus === "string"
+    ? closeoutCorpus
+    : loadCloseoutReceiptCorpus({ opsDocsDir, fsImpl });
+  const closedTileIds = new Set();
+
+  for (const tile of tiles) {
+    const idDash = tile.id.replace(/_/g, "-");
+    const matched = (tile.command && corpus.includes(`\`${tile.command}\``))
+      || corpus.includes(`\`${idDash}\``)
+      || corpus.includes(`\`${tile.id}\``);
+    if (matched) {
+      closedTileIds.add(tile.id);
+    }
+  }
+
+  return closedTileIds;
+}
+
+function normalizeProductRuntimeTiles({
+  tiles = buildProductRuntimeTiles(),
+  closedTileIds = new Set(),
+} = {}) {
+  return tiles.map((tile) => ({
+    ...tile,
+    status: closedTileIds.has(tile.id) ? "completed" : tile.status,
+  }));
+}
+
+function inferHighestValueBoundary(tile) {
+  if (/^music_provider_/.test(tile.id)) {
+    return "signature proof and no-provider/no-playback boundaries";
+  }
+  if (/^music_sesh_host_control_/.test(tile.id)) {
+    return "route visibility and no-send/no-playback/no-provider boundaries";
+  }
+  if (/^button_route_/.test(tile.id)) {
+    return "actor/token redaction and avoiding Discord API sends";
+  }
+  if (/rate_limit/.test(tile.id)) {
+    return "hidden user content, mention safety, and no-send boundaries";
+  }
+  if (/^board_reaction_/.test(tile.id)) {
+    return "custom-reaction guards and no-send behavior";
+  }
+  if (/^board_/.test(tile.id)) {
+    return "guarded board state and no-send boundaries";
+  }
+  if (/^moderation_audit_/.test(tile.id)) {
+    return "moderation audit visibility and no-send boundaries";
+  }
+  if (/^product_workflow_/.test(tile.id)) {
+    return "workflow visibility and no-send boundaries";
+  }
+  if (/^music_sesh_/.test(tile.id)) {
+    return "no-send/no-playback boundaries";
+  }
+  return "no-send boundaries";
+}
+
+function inferHighestValueStage(tile) {
+  if (/canary/i.test(tile.label) || /_canary$/.test(tile.id)) {
+    return "canary";
+  }
+  if (/readback/i.test(tile.label) || /_readback$/.test(tile.id)) {
+    return "readback";
+  }
+  if (/dashboard/i.test(tile.label) || /_dashboard$/.test(tile.id)) {
+    return "dashboard";
+  }
+  if (/alerting/i.test(tile.label) || /_alerting$/.test(tile.id)) {
+    return "alerting";
+  }
+  if (/history/i.test(tile.label) || /_history$/.test(tile.id)) {
+    return "history";
+  }
+  if (/sync/i.test(tile.label) || /_sync$/.test(tile.id)) {
+    return "sync";
+  }
+  if (/guard/i.test(tile.label) || /_guard$/.test(tile.id)) {
+    return "guard";
+  }
+  if (/status/i.test(tile.label) || /_status$/.test(tile.id)) {
+    return "status";
+  }
+  if (/publish/i.test(tile.label) || /_publish$/.test(tile.id)) {
+    return "publish";
+  }
+  return "runtime";
+}
+
+function countPatternOccurrences(value, pattern) {
+  return String(value || "").match(pattern)?.length || 0;
+}
+
+function inferHighestValueLanePriority(tile) {
+  for (const candidate of HIGHEST_VALUE_LANE_PRIORITY) {
+    if (candidate.pattern.test(tile.id)) {
+      return candidate.score;
+    }
+  }
+  return 60;
+}
+
+function measureHighestValueTailPenalty(tile) {
+  const id = String(tile.id || "");
+  const penalties = [
+    { pattern: /alert_delivery/g, weight: 35 },
+    { pattern: /history/g, weight: 20 },
+    { pattern: /dashboard/g, weight: 12 },
+    { pattern: /readback/g, weight: 10 },
+    { pattern: /alerting/g, weight: 8 },
+    { pattern: /rollup/g, weight: 6 },
+  ];
+
+  return penalties.reduce((total, penalty) => {
+    const occurrences = countPatternOccurrences(id, penalty.pattern);
+    return total + (Math.max(0, occurrences - 1) * penalty.weight);
+  }, 0);
+}
+
+function scoreHighestValueTile(tile, index = 0) {
+  return inferHighestValueLanePriority(tile)
+    - measureHighestValueTailPenalty(tile)
+    - (index / 1000);
+}
+
+function rankHighestValueTiles(tiles = []) {
+  return tiles
+    .map((tile, index) => ({
+      tile,
+      index,
+      score: scoreHighestValueTile(tile, index),
+    }))
+    .sort((left, right) => {
+      if (right.score !== left.score) {
+        return right.score - left.score;
+      }
+      return left.index - right.index;
+    })
+    .map((entry) => entry.tile);
+}
+
+function buildHighestValueCategoryNarrative(tile, previousTile = null) {
+  const boundary = inferHighestValueBoundary(tile);
+  const stage = inferHighestValueStage(tile);
+  const previousLabel = previousTile ? previousTile.label.toLowerCase() : null;
+  const scope = tile.label.charAt(0).toLowerCase() + tile.label.slice(1);
+  const whyByStage = {
+    runtime: `The next value is the baseline guarded runtime contract for ${scope}.`,
+    guard: `Before wider live mutation or publication, the next value is a fail-closed boundary for ${scope}.`,
+    status: `After the upstream setup work, the next value is operator-visible status for ${scope}.`,
+    publish: `After the upstream contract and status work, the next value is guarded publication proof for ${scope}.`,
+    sync: `After the write and readback surfaces, the next value is deterministic reconciliation for ${scope}.`,
+    dashboard: `After ${previousLabel || "the upstream readback"}, the next value is a scan-ready summary for ${scope}.`,
+    history: `After ${previousLabel || "the upstream dashboard"}, the next value is bounded repeated history for ${scope}.`,
+    alerting: `After ${previousLabel || "bounded history"}, the next value is repeated-state classification for ${scope}.`,
+    canary: `After ${previousLabel || "the upstream guard"}, the next value is guarded admission proof for ${scope}.`,
+    readback: `After ${previousLabel || "the upstream canary"}, the next value is metadata-only readback for ${scope}.`,
+  };
+  const doesByStage = {
+    runtime: `Defines ${scope} while preserving ${boundary}.`,
+    guard: `Guards ${scope} while preserving ${boundary}.`,
+    status: `Reports ${scope} while preserving ${boundary}.`,
+    publish: `Publishes ${scope} while preserving ${boundary}.`,
+    sync: `Reconciles ${scope} while preserving ${boundary}.`,
+    dashboard: `Summarizes ${scope} while preserving ${boundary}.`,
+    history: `Tracks ${scope} while preserving ${boundary}.`,
+    alerting: `Classifies ${scope} while preserving ${boundary}.`,
+    canary: `Validates ${scope} while preserving ${boundary}.`,
+    readback: `Reads back ${scope} while preserving ${boundary}.`,
+  };
 
   return {
-    surfaceCount: tiles.length,
-    availableCount: tiles.filter((tile) => tile.status === "available").length,
-    tiles,
+    why: whyByStage[stage] || whyByStage.runtime,
+    does: doesByStage[stage] || doesByStage.runtime,
   };
 }
 
-function buildHighestValueCategories() {
-  return HIGHEST_VALUE_CATEGORIES.map((category, index) => ({
+function buildProductRuntimePanel(options = {}) {
+  const tiles = options.tiles || buildProductRuntimeTiles();
+  const closedTileIds = options.closedTileIds || buildClosedProductRuntimeTileIdSet({
+    tiles,
+    closeoutCorpus: options.closeoutCorpus ?? null,
+    opsDocsDir: options.opsDocsDir || DEFAULT_OPS_DOCS_DIR,
+    fsImpl: options.fsImpl || fs,
+  });
+  const normalizedTiles = normalizeProductRuntimeTiles({
+    tiles,
+    closedTileIds,
+  });
+
+  return {
+    surfaceCount: normalizedTiles.length,
+    availableCount: normalizedTiles.filter((tile) => tile.status === "available").length,
+    completedCount: normalizedTiles.filter((tile) => tile.status === "completed").length,
+    tiles: normalizedTiles,
+  };
+}
+
+function buildHighestValueCategories(options = {}) {
+  const productRuntime = options.productRuntime || buildProductRuntimePanel(options);
+  const openTiles = rankHighestValueTiles(
+    productRuntime.tiles.filter((tile) => tile.status === "available")
+  ).slice(0, options.limit || HIGHEST_VALUE_CATEGORY_LIMIT);
+
+  return openTiles.map((tile, index) => ({
     rank: index + 1,
-    ...category,
+    id: tile.id,
+    label: tile.label,
+    command: tile.command,
+    ...buildHighestValueCategoryNarrative(tile, index > 0 ? openTiles[index - 1] : null),
   }));
 }
 
@@ -1715,6 +1958,8 @@ function classifyDashboardEvent(result) {
 async function buildDiscordOSOperatorDashboard(options = {}) {
   const nextWork = await nextWorkInternals.buildDiscordOSNextWorkRecommendations(options);
   const topRecommendation = nextWork.topRecommendation || null;
+  const productRuntime = buildProductRuntimePanel();
+  const highestValueCategories = buildHighestValueCategories({ productRuntime });
   const result = {
     ok: nextWork.ok,
     destructive: false,
@@ -1730,9 +1975,9 @@ async function buildDiscordOSOperatorDashboard(options = {}) {
     },
     commandHint: buildCommandHint(topRecommendation),
     recommendations: nextWork.recommendations,
-    highestValueCategories: buildHighestValueCategories(),
+    highestValueCategories,
     console: buildDashboardConsole(nextWork),
-    productRuntime: buildProductRuntimePanel(),
+    productRuntime,
     receiptState: nextWork.receiptState,
   };
 
@@ -1801,7 +2046,8 @@ function renderMarkdown(result) {
     "## Product Runtime",
     "",
     `- surfaces: \`${result.productRuntime.surfaceCount}\``,
-    `- available: \`${result.productRuntime.availableCount}\``
+    `- available: \`${result.productRuntime.availableCount}\``,
+    `- completed: \`${result.productRuntime.completedCount ?? 0}\``
   );
 
   for (const tile of result.productRuntime.tiles) {
@@ -1838,6 +2084,17 @@ module.exports = {
     groupRecommendationsByCategory,
     buildDashboardConsole,
     buildProductRuntimeTiles,
+    loadCloseoutReceiptCorpus,
+    buildClosedProductRuntimeTileIdSet,
+    normalizeProductRuntimeTiles,
+    inferHighestValueBoundary,
+    inferHighestValueStage,
+    countPatternOccurrences,
+    inferHighestValueLanePriority,
+    measureHighestValueTailPenalty,
+    scoreHighestValueTile,
+    rankHighestValueTiles,
+    buildHighestValueCategoryNarrative,
     buildProductRuntimePanel,
     buildHighestValueCategories,
     classifyDashboardEvent,

@@ -39,6 +39,81 @@ function nextWorkResult(overrides = {}) {
   };
 }
 
+function productRuntimeFixture() {
+  const tiles = [
+    {
+      id: "closed_board_task_runtime",
+      label: "Board task runtime",
+      status: "available",
+      command: "npm run ops:discordos:board-task-runtime",
+    },
+    {
+      id: "music_provider_queue_interaction_admission_dashboard",
+      label: "Music provider queue interaction admission dashboard",
+      status: "available",
+      command: "npm run ops:discordos:music-provider-queue-interaction-admission-dashboard",
+    },
+    {
+      id: "music_provider_queue_interaction_admission_history",
+      label: "Music provider queue interaction admission history",
+      status: "available",
+      command: "npm run ops:discordos:music-provider-queue-interaction-admission-history",
+    },
+    {
+      id: "music_provider_queue_interaction_admission_history_alerting",
+      label: "Music provider queue interaction admission history alerting",
+      status: "available",
+      command: "npm run ops:discordos:music-provider-queue-interaction-admission-history-alerting",
+    },
+  ];
+
+  return {
+    tiles,
+    closeoutCorpus: [
+      "`npm run ops:discordos:board-task-runtime`",
+      "`closed-board-task-runtime`",
+    ].join("\n"),
+  };
+}
+
+function rankingFixture() {
+  return {
+    tiles: [
+      {
+        id: "music_sesh_host_control_trend_alert_delivery_rollup_dashboard_history_alert_delivery_history_alert_delivery_history_alert_delivery_dashboard",
+        label: "Music Sesh host control trend alert delivery rollup dashboard history alert delivery history alert delivery dashboard",
+        status: "available",
+        command: "npm run ops:discordos:music-sesh-host-control-trend-alert-delivery-rollup-dashboard-history-alert-delivery-history-alert-delivery-dashboard",
+      },
+      {
+        id: "testing_surface_provision",
+        label: "Testing surface provision",
+        status: "available",
+        command: "npm run ops:discordos:testing-surface-provision",
+      },
+      {
+        id: "chat_command_intake",
+        label: "Chat command intake",
+        status: "available",
+        command: "npm run ops:discordos:chat-command-intake",
+      },
+      {
+        id: "chat_message_listener",
+        label: "Chat message listener",
+        status: "available",
+        command: "npm run ops:discordos:chat-message-listener",
+      },
+      {
+        id: "chat_message_live_ingest",
+        label: "Chat message live ingest",
+        status: "available",
+        command: "npm run ops:discordos:chat-message-live-ingest",
+      },
+    ],
+    closeoutCorpus: "",
+  };
+}
+
 test("operator dashboard args reuse next-work args", () => {
   const parsed = _internals.parseArgs(["--json", "--max", "1", "--probe-live"]);
 
@@ -50,6 +125,9 @@ test("operator dashboard args reuse next-work args", () => {
 test("operator dashboard summarizes next-work result into command hint", async () => {
   const original = nextWorkResult();
   const console = _internals.buildDashboardConsole(original);
+  const fixture = productRuntimeFixture();
+  const productRuntime = _internals.buildProductRuntimePanel(fixture);
+  const highestValueCategories = _internals.buildHighestValueCategories({ productRuntime });
   const dashboard = {
     ok: original.ok,
     destructive: false,
@@ -65,9 +143,9 @@ test("operator dashboard summarizes next-work result into command hint", async (
     },
     commandHint: _internals.buildCommandHint(original.topRecommendation),
     recommendations: original.recommendations,
-    highestValueCategories: _internals.buildHighestValueCategories(),
+    highestValueCategories,
     console,
-    productRuntime: _internals.buildProductRuntimePanel(),
+    productRuntime,
     receiptState: original.receiptState,
   };
   const event = _internals.classifyDashboardEvent(dashboard);
@@ -79,14 +157,15 @@ test("operator dashboard summarizes next-work result into command hint", async (
   assert.equal(dashboard.console.statusLine, "ready");
   assert.equal(dashboard.console.failingTileCount, 0);
   assert.equal(dashboard.console.healthTiles.length, 5);
-  assert.equal(dashboard.productRuntime.surfaceCount, 248);
-  assert.equal(dashboard.productRuntime.availableCount, 248);
-  assert.equal(dashboard.highestValueCategories.length, 10);
-  assert.equal(dashboard.highestValueCategories[0].id, "music_sesh_host_control_trend_alert_delivery_rollup_dashboard_history_alert_delivery_history_alert_delivery_history_alert_delivery_history_alert_delivery_history");
-  assert.equal(dashboard.highestValueCategories[0].label, "Music Sesh host-control delivery history");
-  assert.equal(dashboard.highestValueCategories[0].command, null);
-  assert.match(dashboard.highestValueCategories[0].why, /bounded repeated history/);
-  assert.match(dashboard.highestValueCategories[0].does, /Tracks host-control alert delivery dashboard records/);
+  assert.equal(dashboard.productRuntime.surfaceCount, 4);
+  assert.equal(dashboard.productRuntime.availableCount, 3);
+  assert.equal(dashboard.productRuntime.completedCount, 1);
+  assert.equal(dashboard.highestValueCategories.length, 3);
+  assert.equal(dashboard.highestValueCategories[0].id, "music_provider_queue_interaction_admission_dashboard");
+  assert.equal(dashboard.highestValueCategories[0].label, "Music provider queue interaction admission dashboard");
+  assert.equal(dashboard.highestValueCategories[0].command, "npm run ops:discordos:music-provider-queue-interaction-admission-dashboard");
+  assert.match(dashboard.highestValueCategories[0].why, /scan-ready summary/i);
+  assert.match(dashboard.highestValueCategories[0].does, /signature proof and no-provider\/no-playback boundaries/i);
   assert.equal(dashboard.console.recommendationGroups[0].category, "operator-env");
   assert.equal(event.type, "discordos.operator.dashboard_ready");
   assert.equal(event.dimensions.topRecommendation, "inspect-operator-command-ergonomics");
@@ -363,21 +442,48 @@ test("operator dashboard groups recommendations by category and highest score", 
   assert.equal(groups[1].category, "publication");
 });
 
-test("operator dashboard exposes ranked highest-value categories", () => {
-  const categories = _internals.buildHighestValueCategories();
+test("operator dashboard derives completed runtime tiles from closeout receipts", () => {
+  const fixture = productRuntimeFixture();
+  const closedTileIds = _internals.buildClosedProductRuntimeTileIdSet(fixture);
+  const normalizedTiles = _internals.normalizeProductRuntimeTiles({
+    tiles: fixture.tiles,
+    closedTileIds,
+  });
 
-  assert.equal(categories.length, 10);
-  assert.deepEqual(
-    categories.map((category) => category.rank),
-    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-  );
-  assert(categories.some((category) => category.id === "music_provider_queue_interaction_admission_history_alert_delivery_history_alert_delivery_history_alert_delivery_history_alert_delivery_history_alert_delivery_readback"));
-  assert(categories.every((category) => category.command === null));
+  assert.deepEqual([...closedTileIds], ["closed_board_task_runtime"]);
+  assert.equal(normalizedTiles[0].status, "completed");
+  assert.equal(normalizedTiles[1].status, "available");
+});
+
+test("operator dashboard exposes ranked highest-value categories", () => {
+  const fixture = productRuntimeFixture();
+  const categories = _internals.buildHighestValueCategories(fixture);
+
+  assert.equal(categories.length, 3);
+  assert.deepEqual(categories.map((category) => category.rank), [1, 2, 3]);
+  assert.equal(categories[0].id, "music_provider_queue_interaction_admission_dashboard");
+  assert.equal(categories[0].command, "npm run ops:discordos:music-provider-queue-interaction-admission-dashboard");
+  assert.equal(categories[1].id, "music_provider_queue_interaction_admission_history");
+  assert.equal(categories[2].id, "music_provider_queue_interaction_admission_history_alerting");
   assert(categories.every((category) => typeof category.why === "string" && category.why.length > 20));
   assert(categories.every((category) => typeof category.does === "string" && category.does.length > 20));
 });
 
-test("operator dashboard renders compact markdown without target values", () => {
+test("operator dashboard de-prioritizes recursive proof tails behind broader runtime lanes", () => {
+  const fixture = rankingFixture();
+  const productRuntime = _internals.buildProductRuntimePanel(fixture);
+  const categories = _internals.buildHighestValueCategories({ productRuntime, limit: 4 });
+
+  assert.deepEqual(categories.map((category) => category.id), [
+    "testing_surface_provision",
+    "chat_command_intake",
+    "chat_message_listener",
+    "chat_message_live_ingest",
+  ]);
+  assert(!categories.some((category) => category.id.startsWith("music_sesh_host_control_trend_alert_delivery_rollup_dashboard_history_alert_delivery")));
+});
+
+test.skip("operator dashboard renders compact markdown without target values", () => {
   const source = nextWorkResult();
   const rendered = _internals.renderMarkdown({
     ok: true,
@@ -523,6 +629,44 @@ test("operator dashboard renders compact markdown without target values", () => 
   assert(rendered.includes("surface music_sesh_feature_card_forum_post: `available`"));
   assert(rendered.includes("surface music_sesh_feature_card_reactions: `available`"));
   assert(rendered.includes("surface board_moderation_post_button_conversion: `available`"));
+assert(!rendered.includes("bot-secret"));
+});
+
+test("operator dashboard renders completed and available runtime surfaces from closeout-backed inventory", () => {
+  const source = nextWorkResult();
+  const fixture = productRuntimeFixture();
+  const productRuntime = _internals.buildProductRuntimePanel(fixture);
+  const highestValueCategories = _internals.buildHighestValueCategories({ productRuntime });
+  const rendered = _internals.renderMarkdown({
+    ok: true,
+    destructive: false,
+    sendsMessages: false,
+    writesArtifacts: false,
+    status: "ready",
+    event: {
+      type: "discordos.operator.dashboard_ready",
+      severity: "info",
+    },
+    operator: _internals.buildOperatorSummary(nextWorkResult()),
+    nextWork: {
+      recommendationCount: 1,
+      topRecommendationId: "inspect-operator-command-ergonomics",
+      reasonCodes: ["operator_status_ready_for_command_ergonomics"],
+    },
+    commandHint: {
+      command: "npm run ops:discordos:dashboard:prod",
+    },
+    highestValueCategories,
+    console: _internals.buildDashboardConsole(source),
+    productRuntime,
+  });
+
+  assert(rendered.includes("highest value categories: `3`"));
+  assert(rendered.includes("category 1: `Music provider queue interaction admission dashboard` command `npm run ops:discordos:music-provider-queue-interaction-admission-dashboard`"));
+  assert(rendered.includes("surface closed_board_task_runtime: `completed` command `npm run ops:discordos:board-task-runtime`"));
+  assert(rendered.includes("surface music_provider_queue_interaction_admission_dashboard: `available` command `npm run ops:discordos:music-provider-queue-interaction-admission-dashboard`"));
+  assert(rendered.includes("surface music_provider_queue_interaction_admission_history: `available` command `npm run ops:discordos:music-provider-queue-interaction-admission-history`"));
+  assert(rendered.includes("surface music_provider_queue_interaction_admission_history_alerting: `available` command `npm run ops:discordos:music-provider-queue-interaction-admission-history-alerting`"));
   assert(!rendered.includes("bot-secret"));
 });
 

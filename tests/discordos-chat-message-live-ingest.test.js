@@ -27,6 +27,14 @@ test("chat message live ingest parses guarded args", () => {
   assert.equal(parsed.apply, true);
 });
 
+test("chat message live ingest defaults to committed Music Sesh ids", () => {
+  const parsed = _internals.parseArgs([]);
+
+  assert.equal(parsed.guildId, "1504668396338413670");
+  assert.equal(parsed.channelId, "1516089950787862689");
+  assert.equal(parsed.actorDiscordUserId, "1515220075366580224");
+});
+
 test("chat message live ingest dry run routes without storage", async () => {
   const result = await _internals.buildChatMessageLiveIngest({
     ...VALID_INPUT,

@@ -18,6 +18,14 @@ test("testing surface provision parses guarded apply args", () => {
   assert.equal(parsed.apply, true);
 });
 
+test("testing surface provision defaults to the committed DiscordOS guild", () => {
+  const parsed = _internals.parseArgs([]);
+
+  assert.equal(parsed.guildId, "1504668396338413670");
+  assert.equal(parsed.categoryName, "testing");
+  assert.equal(parsed.channelName, "discordos-testing");
+});
+
 test("testing surface provision dry run does not call Discord", async () => {
   const result = await _internals.buildTestingSurfaceProvision({
     guildId: "1504668396338413670",

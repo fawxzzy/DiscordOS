@@ -26,6 +26,17 @@ test("music sesh button router parses button input", () => {
   assert.equal(parsed.apply, true);
 });
 
+test("music sesh button router defaults to an admitted queue button", () => {
+  const parsed = _internals.parseArgs([]);
+
+  assert.equal(parsed.customId, "music_sesh:queue");
+  assert.equal(parsed.guildId, "1504668396338413670");
+  assert.equal(parsed.channelId, "1516089950787862689");
+  assert.equal(parsed.actorDiscordUserId, "1515220075366580224");
+  assert.equal(parsed.apply, false);
+  assert.equal(parsed.allowStorageWrite, false);
+});
+
 test("music sesh button router maps buttons into guarded actions without sending", async () => {
   const result = await _internals.buildMusicSeshButtonRouter({
     ...VALID_INPUT,

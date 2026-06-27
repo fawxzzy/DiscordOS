@@ -37,11 +37,11 @@ function readValue(args, index, missingCode) {
 function parseArgs(args) {
   const options = {
     json: false,
-    customId: null,
+    customId: "music_sesh:queue",
     sessionId: "music-sesh-button-session",
-    guildId: null,
-    channelId: null,
-    actorDiscordUserId: null,
+    guildId: "1504668396338413670",
+    channelId: "1516089950787862689",
+    actorDiscordUserId: "1515220075366580224",
     itemTitle: null,
     allowStorageWrite: false,
     apply: false,

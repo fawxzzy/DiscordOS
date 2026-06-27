@@ -18,7 +18,7 @@ function readValue(args, index, missingCode) {
 function parseArgs(args) {
   const options = {
     json: false,
-    guildId: null,
+    guildId: "1504668396338413670",
     categoryName: DEFAULT_CATEGORY_NAME,
     channelName: DEFAULT_CHANNEL_NAME,
     allowProvision: false,

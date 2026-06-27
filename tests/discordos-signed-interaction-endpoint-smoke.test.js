@@ -66,6 +66,20 @@ test("signed interaction endpoint smoke can execute guarded button route", async
   assert.equal(result.routeAudit.commandExecuted, false);
 });
 
+test("signed interaction endpoint smoke self-contains execute-route proof when live write config is absent", async () => {
+  const result = await _internals.buildSignedInteractionEndpointSmoke({
+    type: "MESSAGE_COMPONENT",
+    executeRoute: true,
+    env: {},
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.executesRoute, true);
+  assert.equal(result.executionStatus, "button_route_ready");
+  assert.equal(result.routeAudit.storageWriteAttempted, true);
+  assert.equal(result.routeAudit.storageWriteStatus, "written");
+});
+
 test("signed interaction endpoint smoke renders bounded markdown", async () => {
   const result = await _internals.buildSignedInteractionEndpointSmoke({ type: "PING" });
   const rendered = _internals.renderMarkdown(result);

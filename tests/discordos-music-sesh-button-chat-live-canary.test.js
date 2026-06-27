@@ -23,6 +23,15 @@ test("button chat canary parses live input", () => {
   assert.equal(parsed.sessionId, "music-canary-1");
 });
 
+test("button chat canary defaults to committed Music Sesh dry-run ids", () => {
+  const parsed = _internals.parseArgs([]);
+
+  assert.equal(parsed.guildId, "1504668396338413670");
+  assert.equal(parsed.channelId, "1516089950787862689");
+  assert.equal(parsed.actorDiscordUserId, "1515220075366580224");
+  assert.equal(parsed.live, false);
+});
+
 test("button chat canary dry run proves button and chat paths without writes", async () => {
   const result = await _internals.buildButtonChatLiveCanary({
     ...VALID_INPUT,

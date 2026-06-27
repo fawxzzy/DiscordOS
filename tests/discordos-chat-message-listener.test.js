@@ -30,6 +30,14 @@ test("chat message listener parses bot and storage flags", () => {
   assert.equal(parsed.apply, true);
 });
 
+test("chat message listener defaults to committed Music Sesh ids", () => {
+  const parsed = _internals.parseArgs([]);
+
+  assert.equal(parsed.guildId, "1504668396338413670");
+  assert.equal(parsed.channelId, "1516089950787862689");
+  assert.equal(parsed.actorDiscordUserId, "1515220075366580224");
+});
+
 test("chat message listener ignores bot authors", async () => {
   const result = await _internals.buildChatMessageListener({
     ...VALID_INPUT,

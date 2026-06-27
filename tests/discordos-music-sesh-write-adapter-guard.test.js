@@ -37,6 +37,19 @@ test("music sesh write adapter guard parses storage guard flags", () => {
   assert.equal(parsed.apply, true);
 });
 
+test("music sesh write adapter guard defaults to committed Music Sesh dry-run ids", () => {
+  const parsed = _internals.parseArgs([]);
+
+  assert.equal(parsed.sessionId, "music-sesh-write-adapter-session");
+  assert.equal(parsed.action, "queue_item");
+  assert.equal(parsed.guildId, "1504668396338413670");
+  assert.equal(parsed.channelId, "1516089950787862689");
+  assert.equal(parsed.actorDiscordUserId, "1515220075366580224");
+  assert.equal(parsed.itemTitle, "Guard Queued Track");
+  assert.equal(parsed.apply, false);
+  assert.equal(parsed.allowStorageWrite, false);
+});
+
 test("music sesh write adapter guard is ready without live write by default", async () => {
   const result = await _internals.buildMusicSeshWriteAdapterGuard({
     ...VALID_INPUT,

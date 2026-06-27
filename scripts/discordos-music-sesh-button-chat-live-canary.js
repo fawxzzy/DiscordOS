@@ -21,9 +21,9 @@ function parseArgs(args) {
     json: false,
     live: false,
     sessionId: `music-sesh-canary-${Date.now()}`,
-    guildId: null,
-    channelId: null,
-    actorDiscordUserId: null,
+    guildId: "1504668396338413670",
+    channelId: "1516089950787862689",
+    actorDiscordUserId: "1515220075366580224",
   };
 
   for (let index = 0; index < args.length; index += 1) {

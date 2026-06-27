@@ -2,6 +2,12 @@ const crypto = require("node:crypto");
 const {
   _internals: endpointInternals,
 } = require("../api/discord-interactions");
+const {
+  _internals: supabaseRpcInternals,
+} = require("./discordos-supabase-service-rpc");
+
+const SYNTHETIC_SUPABASE_URL = "https://discordos-smoke.invalid";
+const SYNTHETIC_SERVICE_ROLE_KEY = "discordos-smoke-service-role";
 
 function parseArgs(args) {
   const options = {
@@ -114,6 +120,57 @@ function buildRouteAudit(response = {}) {
   };
 }
 
+function buildSyntheticRouteExecutionFetch(fetchImpl = fetch) {
+  return async (url, init) => {
+    const endpoint = String(url);
+    if (endpoint === `${SYNTHETIC_SUPABASE_URL}/rest/v1/rpc/discordos_upsert_music_sesh_event`) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true, synthetic: true }),
+      };
+    }
+    return fetchImpl(url, init);
+  };
+}
+
+function resolveRouteExecutionContext({
+  executeRoute = false,
+  env = process.env,
+  fetchImpl = fetch,
+} = {}) {
+  if (!executeRoute) {
+    return {
+      env,
+      fetchImpl,
+    };
+  }
+
+  const executionEnv = {
+    ...env,
+    DISCORDOS_BUTTON_INTERACTION_EXECUTION: "enabled",
+  };
+  const writeGuardEnabled = executionEnv.DISCORDOS_MUSIC_SESH_WRITE_ADAPTER === "enabled";
+  const rpcConfig = supabaseRpcInternals.getServiceRoleRpcConfig(executionEnv);
+
+  if (writeGuardEnabled && rpcConfig.ok) {
+    return {
+      env: executionEnv,
+      fetchImpl,
+    };
+  }
+
+  return {
+    env: {
+      ...executionEnv,
+      DISCORDOS_MUSIC_SESH_WRITE_ADAPTER: "enabled",
+      DISCORDOS_SUPABASE_URL: SYNTHETIC_SUPABASE_URL,
+      DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: SYNTHETIC_SERVICE_ROLE_KEY,
+    },
+    fetchImpl: buildSyntheticRouteExecutionFetch(fetchImpl),
+  };
+}
+
 async function buildSignedInteractionEndpointSmoke({
   type = "PING",
   nowSeconds = 100,
@@ -135,6 +192,11 @@ async function buildSignedInteractionEndpointSmoke({
   });
   const timestamp = String(nowSeconds);
   const signature = crypto.sign(null, Buffer.from(`${timestamp}${body}`), privateKey).toString("hex");
+  const executionContext = resolveRouteExecutionContext({
+    executeRoute,
+    env,
+    fetchImpl,
+  });
   const response = await endpointInternals.buildDiscordInteractionResponse({
     method: "POST",
     headers: {
@@ -144,13 +206,8 @@ async function buildSignedInteractionEndpointSmoke({
     rawBody: body,
     publicKey: publicKeyHex,
     nowSeconds,
-    env: executeRoute
-      ? {
-          ...env,
-          DISCORDOS_BUTTON_INTERACTION_EXECUTION: "enabled",
-        }
-      : env,
-    fetchImpl,
+    env: executionContext.env,
+    fetchImpl: executionContext.fetchImpl,
   });
   const reasonCodes = [...response.reasonCodes];
   if (!response.signaturePreflight?.signatureVerified) {
@@ -242,6 +299,8 @@ module.exports = {
     discordPublicKeyFromKey,
     buildSmokeBody,
     buildRouteAudit,
+    buildSyntheticRouteExecutionFetch,
+    resolveRouteExecutionContext,
     buildSignedInteractionEndpointSmoke,
     renderMarkdown,
   },

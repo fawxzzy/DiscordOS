@@ -9,6 +9,12 @@ const {
 const STORAGE_WRITE_ENV = "DISCORDOS_MUSIC_SESH_WRITE_ADAPTER";
 const STORAGE_WRITE_ENV_VALUE = "enabled";
 const STORAGE_WRITE_RPC = "discordos_upsert_music_sesh_event";
+const DEFAULT_SESSION_ID = "music-sesh-write-adapter-session";
+const DEFAULT_ACTION = "queue_item";
+const DEFAULT_GUILD_ID = "1504668396338413670";
+const DEFAULT_CHANNEL_ID = "1516089950787862689";
+const DEFAULT_ACTOR_DISCORD_USER_ID = "1515220075366580224";
+const DEFAULT_ITEM_TITLE = "Guard Queued Track";
 const ACTIVE_WRITE_GATES = [
   "music_sesh_runtime_input_valid",
   "music_sesh_storage_schema_admitted",
@@ -21,6 +27,12 @@ const ACTIVE_WRITE_GATES = [
 function parseArgs(args) {
   const runtimeArgs = [];
   const options = {
+    sessionId: DEFAULT_SESSION_ID,
+    action: DEFAULT_ACTION,
+    guildId: DEFAULT_GUILD_ID,
+    channelId: DEFAULT_CHANNEL_ID,
+    actorDiscordUserId: DEFAULT_ACTOR_DISCORD_USER_ID,
+    itemTitle: DEFAULT_ITEM_TITLE,
     allowStorageWrite: false,
     apply: false,
   };
@@ -37,9 +49,17 @@ function parseArgs(args) {
     }
   }
 
+  const runtimeOptions = runtimeInternals.parseArgs(runtimeArgs);
   return {
-    ...runtimeInternals.parseArgs(runtimeArgs),
-    ...options,
+    ...runtimeOptions,
+    sessionId: runtimeOptions.sessionId || options.sessionId,
+    action: runtimeOptions.action || options.action,
+    guildId: runtimeOptions.guildId || options.guildId,
+    channelId: runtimeOptions.channelId || options.channelId,
+    actorDiscordUserId: runtimeOptions.actorDiscordUserId || options.actorDiscordUserId,
+    itemTitle: runtimeOptions.itemTitle || options.itemTitle,
+    allowStorageWrite: options.allowStorageWrite,
+    apply: options.apply,
   };
 }
 
@@ -285,6 +305,12 @@ module.exports = {
     STORAGE_WRITE_ENV,
     STORAGE_WRITE_ENV_VALUE,
     STORAGE_WRITE_RPC,
+    DEFAULT_SESSION_ID,
+    DEFAULT_ACTION,
+    DEFAULT_GUILD_ID,
+    DEFAULT_CHANNEL_ID,
+    DEFAULT_ACTOR_DISCORD_USER_ID,
+    DEFAULT_ITEM_TITLE,
     ACTIVE_WRITE_GATES,
     parseArgs,
     fingerprint,
