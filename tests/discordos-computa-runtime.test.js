@@ -30,6 +30,47 @@ test("computa runtime admits common wake-word typos", () => {
   assert.equal(_internals.resolveMessageCommandKind({ content: "goodmorning comp0uta" }), "grand-rising");
 });
 
+test("computa poll ignores commands already marked by custom emoji id pairs", async () => {
+  const result = await _internals.buildDiscordMessageCommandPollResponse({
+    env: {
+      DISCORDOS_MESSAGE_COMMAND_POLL_SECRET: "secret",
+      DISCORDOS_BOT_TOKEN: "bot-token",
+      DISCORDOS_MAIN_CHANNEL_ID: "1504674484068552784",
+    },
+    headers: {
+      authorization: "Bearer secret",
+    },
+    fetchImpl: async (url) => {
+      if (String(url).includes("/messages?limit=")) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify([
+            {
+              id: "msg-1",
+              channel_id: "1504674484068552784",
+              content: "goodmorning computa",
+              author: { id: "123", bot: false },
+              reactions: [
+                {
+                  emoji: {
+                    id: "1507384062166302851",
+                    name: "success",
+                  },
+                },
+              ],
+            },
+          ]),
+        };
+      }
+      throw new Error(`Unexpected fetch: ${String(url)}`);
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.body.processed, []);
+});
+
 test("computa poll processes a greeting command and marks it successful", async () => {
   const calls = [];
   const result = await _internals.buildDiscordMessageCommandPollResponse({

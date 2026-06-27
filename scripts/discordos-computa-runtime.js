@@ -369,11 +369,21 @@ async function fetchDiscordChannelMessages({ channelId, token, limit = MESSAGE_P
 }
 
 function messageHasReaction(message, emojis = []) {
+  const acceptedIdentifiers = new Set(
+    emojis.flatMap((emoji) => {
+      const normalized = String(emoji || "").trim();
+      if (!normalized) {
+        return [];
+      }
+      const parts = normalized.split(":").map((part) => part.trim()).filter(Boolean);
+      return [normalized, ...parts];
+    }),
+  );
   const reactions = Array.isArray(message?.reactions) ? message.reactions : [];
   return reactions.some((reaction) => {
     const emojiId = reaction?.emoji?.id;
     const emojiName = reaction?.emoji?.name;
-    return emojis.includes(emojiId) || emojis.includes(emojiName);
+    return acceptedIdentifiers.has(emojiId) || acceptedIdentifiers.has(emojiName);
   });
 }
 
