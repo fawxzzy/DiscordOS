@@ -14,6 +14,7 @@ const DEFAULT_TWITCH_URL = "https://www.twitch.tv/fawxzzy";
 const DEFAULT_TIKTOK_URL = "https://www.tiktok.com/@fawxzzy";
 const DEFAULT_GRAND_RISING_EMOJI = "GM:1507443437916524675";
 const DEFAULT_GOODNIGHT_EMOJI = "goodnight:1507597897343041700";
+const DEFAULT_EPIC_REACTION_EMOJI = "epic:1507434865505603757";
 const DEFAULT_MAIN_CHANNEL_ID = "1504674484068552784";
 const DEFAULT_UPDATES_CHANNEL_ID = "1504671871512346695";
 const DEFAULT_FEEDBACK_FORUM_CHANNEL_ID = "1504673475489562744";
@@ -47,6 +48,13 @@ const DISCORD_EMBED_COLOR_SUCCESS = 0x22c55e;
 const DISCORD_EMBED_COLOR_WARNING = 0xf59e0b;
 const MESSAGE_POLL_LIMIT = 25;
 const MESSAGE_COMMAND_MAX_PER_RUN = 3;
+const DEFAULT_BOT_MESSAGE_REACTION_RULES = [
+  {
+    key: "epic",
+    emoji: DEFAULT_EPIC_REACTION_EMOJI,
+    pattern: /(^|[^a-z0-9])epic([^a-z0-9]|$)/i,
+  },
+];
 
 const PENDING_MIGRATION_MESSAGE = "This Computa action has not been fully migrated into DiscordOS yet.";
 
@@ -225,6 +233,21 @@ function isManagedFeedbackPanelChannelName(value) {
 
 function normalizeDiscordMessageCommandContent(content) {
   return String(content || "").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function getRequestedBotMessageReactions(message, rules = DEFAULT_BOT_MESSAGE_REACTION_RULES) {
+  if (!message || typeof message !== "object" || message.author?.bot === true) {
+    return [];
+  }
+
+  const normalizedContent = normalizeDiscordMessageCommandContent(message.content);
+  return rules
+    .filter((rule) => rule?.pattern instanceof RegExp && rule.pattern.test(normalizedContent))
+    .map((rule) => ({
+      key: String(rule.key || "unknown"),
+      emoji: String(rule.emoji || ""),
+    }))
+    .filter((rule) => rule.emoji.length > 0);
 }
 
 function buildGuildCommandsDefinition() {
@@ -1802,6 +1825,46 @@ async function processMessageCommand({ message, env = process.env, fetchImpl = f
   };
 }
 
+async function processBotMessageReactions({ message, env = process.env, fetchImpl = fetch }) {
+  const token = resolveBotToken(env);
+  const channelId = message?.channel_id || resolveMainChannelId(env);
+  const messageId = message?.id || null;
+
+  if (!hasValue(token) || !hasValue(channelId) || !hasValue(messageId)) {
+    return { ok: false, reactionKeys: [], code: "invalid_bot_reaction_target" };
+  }
+
+  const requestedReactions = getRequestedBotMessageReactions(message)
+    .filter((reaction) => !messageHasReaction(message, [reaction.emoji]));
+
+  if (requestedReactions.length === 0) {
+    return { ok: true, reactionKeys: [], code: "no_bot_reactions_requested" };
+  }
+
+  const appliedReactionKeys = [];
+  let failed = false;
+  for (const reaction of requestedReactions) {
+    const result = await addDiscordReaction({
+      channelId,
+      messageId,
+      emoji: reaction.emoji,
+      token,
+      fetchImpl,
+    });
+    if (result.ok) {
+      appliedReactionKeys.push(reaction.key);
+    } else {
+      failed = true;
+    }
+  }
+
+  return {
+    ok: !failed,
+    reactionKeys: appliedReactionKeys,
+    code: failed ? "bot_reaction_failed" : "bot_reaction_applied",
+  };
+}
+
 async function buildDiscordMessageCommandPollResponse({
   env = process.env,
   headers = {},
@@ -1863,29 +1926,43 @@ async function buildDiscordMessageCommandPollResponse({
       if (message?.author?.bot === true) {
         return false;
       }
-      if (!resolveMessageCommandKind(message, env)) {
-        return false;
-      }
-      return !messageHasReaction(message, [
+      const requestedBotReactions = getRequestedBotMessageReactions(message)
+        .filter((reaction) => !messageHasReaction(message, [reaction.emoji]));
+      const hasMessageCommand = Boolean(resolveMessageCommandKind(message, env));
+      const needsCommandProcessing = hasMessageCommand && !messageHasReaction(message, [
         resolveSuccessReaction(env),
         resolveWarningReaction(env),
         "CHECK",
         "WARNING",
       ]);
+      return requestedBotReactions.length > 0 || needsCommandProcessing;
     })
     .slice(0, MESSAGE_COMMAND_MAX_PER_RUN);
 
   for (const message of candidates) {
-    const result = await processMessageCommand({
+    const botReactionResult = await processBotMessageReactions({
       message,
       env,
       fetchImpl,
     });
+    const commandKind = resolveMessageCommandKind(message, env);
+    const result = commandKind
+      ? await processMessageCommand({
+        message,
+        env,
+        fetchImpl,
+      })
+      : {
+        ok: botReactionResult.ok,
+        commandKind: null,
+        code: botReactionResult.code,
+      };
     processed.push({
       messageId: message?.id || null,
       commandKind: result.commandKind,
       ok: result.ok,
       code: result.code,
+      reactionKeys: botReactionResult.reactionKeys,
     });
   }
 
@@ -2043,6 +2120,7 @@ module.exports = {
     parseMessageUpdateCommand,
     parseMessageLiveCommand,
     resolveMessageCommandKind,
+    getRequestedBotMessageReactions,
     messageHasReaction,
     discordMessageHasFeedbackPanel,
     buildReleaseLedgerCheckPayload,

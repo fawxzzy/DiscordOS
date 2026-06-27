@@ -30,6 +30,28 @@ test("computa runtime admits common wake-word typos", () => {
   assert.equal(_internals.resolveMessageCommandKind({ content: "goodmorning comp0uta" }), "grand-rising");
 });
 
+test("computa runtime preserves passive epic auto-reaction detection", () => {
+  assert.deepEqual(
+    _internals.getRequestedBotMessageReactions({
+      content: "that set was epic",
+      author: { bot: false },
+    }),
+    [
+      {
+        key: "epic",
+        emoji: "epic:1507434865505603757",
+      },
+    ],
+  );
+  assert.deepEqual(
+    _internals.getRequestedBotMessageReactions({
+      content: "this is an epicenter update",
+      author: { bot: false },
+    }),
+    [],
+  );
+});
+
 test("computa poll ignores commands already marked by custom emoji id pairs", async () => {
   const result = await _internals.buildDiscordMessageCommandPollResponse({
     env: {
@@ -125,6 +147,60 @@ test("computa poll processes a greeting command and marks it successful", async 
   assert.equal(result.body.processed[0].commandKind, "grand-rising");
   assert(calls.some((call) => call.init.method === "POST"));
   assert(calls.some((call) => call.init.method === "PUT"));
+});
+
+test("computa poll applies passive epic reactions through the hosted poller", async () => {
+  const calls = [];
+  const result = await _internals.buildDiscordMessageCommandPollResponse({
+    env: {
+      DISCORDOS_MESSAGE_COMMAND_POLL_SECRET: "secret",
+      DISCORDOS_BOT_TOKEN: "bot-token",
+      DISCORDOS_MAIN_CHANNEL_ID: "1504674484068552784",
+    },
+    headers: {
+      authorization: "Bearer secret",
+    },
+    fetchImpl: async (url, init = {}) => {
+      calls.push({ url: String(url), init });
+      if (String(url).includes("/messages?limit=")) {
+        return {
+          ok: true,
+          status: 200,
+          text: async () => JSON.stringify([
+            {
+              id: "msg-epic",
+              channel_id: "1504674484068552784",
+              content: "that was epic",
+              author: { id: "123", bot: false },
+              reactions: [],
+            },
+          ]),
+        };
+      }
+      if (init.method === "PUT") {
+        return {
+          ok: true,
+          status: 204,
+          text: async () => "",
+        };
+      }
+      throw new Error(`Unexpected fetch: ${String(url)} ${init.method || "GET"}`);
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.statusCode, 200);
+  assert.deepEqual(result.body.processed, [
+    {
+      messageId: "msg-epic",
+      commandKind: null,
+      ok: true,
+      code: "bot_reaction_applied",
+      reactionKeys: ["epic"],
+    },
+  ]);
+  assert(calls.some((call) => call.init.method === "PUT"));
+  assert(!calls.some((call) => call.init.method === "POST"));
 });
 
 test("computa feedback panel payload preserves the launcher buttons", () => {
