@@ -1,0 +1,98 @@
+name: Discord Message Command Worker
+
+on:
+  workflow_dispatch:
+    inputs:
+      interval_seconds:
+        description: Seconds between hosted DiscordOS poll requests
+        required: false
+        default: "300"
+      run_minutes:
+        description: Minutes to keep this worker alive before handing off
+        required: false
+        default: "355"
+
+concurrency:
+  group: discord-message-command-worker
+  cancel-in-progress: false
+
+permissions:
+  actions: write
+  contents: read
+  id-token: write
+
+jobs:
+  worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      DISCORDOS_MESSAGE_COMMAND_GITHUB_AUDIENCE: discordos-message-command-poll
+      DISCORDOS_MESSAGE_COMMAND_POLL_URL: https://fawxzzy-discordos.vercel.app/api/discord-message-commands-poll
+      DISCORDOS_MESSAGE_COMMAND_WORKER_ID: discord-message-command-worker.yml
+    steps:
+      - name: Poll hosted DiscordOS message commands and hand off
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_INTERVAL_SECONDS: ${{ inputs.interval_seconds }}
+          INPUT_RUN_MINUTES: ${{ inputs.run_minutes }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          interval_seconds="${INPUT_INTERVAL_SECONDS:-300}"
+          run_minutes="${INPUT_RUN_MINUTES:-355}"
+
+          if ! [[ "${interval_seconds}" =~ ^[0-9]+$ ]] || [ "${interval_seconds}" -le 0 ]; then
+            echo "Invalid interval_seconds: ${interval_seconds}" >&2
+            exit 1
+          fi
+
+          if ! [[ "${run_minutes}" =~ ^[0-9]+$ ]] || [ "${run_minutes}" -le 0 ]; then
+            echo "Invalid run_minutes: ${run_minutes}" >&2
+            exit 1
+          fi
+
+          separator='?'
+          case "${ACTIONS_ID_TOKEN_REQUEST_URL}" in
+            *\?*) separator='&' ;;
+          esac
+          token_request_url="${ACTIONS_ID_TOKEN_REQUEST_URL}${separator}audience=${DISCORDOS_MESSAGE_COMMAND_GITHUB_AUDIENCE}"
+          deadline_epoch="$(( $(date +%s) + (run_minutes * 60) ))"
+
+          while true; do
+            echo "::group::poll iteration at $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+            token_response="$(curl -fsSL \
+              -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+              "${token_request_url}")"
+            oidc_token="$(node -p "JSON.parse(process.argv[1]).value" "${token_response}")"
+            echo "::add-mask::${oidc_token}"
+
+            response_status="$(curl -sS -o response.json -w "%{http_code}" \
+              -H "Authorization: Bearer ${oidc_token}" \
+              -H "Cache-Control: no-cache" \
+              "${DISCORDOS_MESSAGE_COMMAND_POLL_URL}")"
+            cat response.json
+            echo
+
+            if [ "${response_status}" -lt 200 ] || [ "${response_status}" -ge 300 ]; then
+              echo "Poll request failed with status ${response_status}" >&2
+              exit 1
+            fi
+
+            rm -f response.json
+            echo "::endgroup::"
+
+            remaining_seconds="$(( deadline_epoch - $(date +%s) ))"
+            if [ "${remaining_seconds}" -le "${interval_seconds}" ]; then
+              break
+            fi
+
+            sleep "${interval_seconds}"
+          done
+
+          dispatch_payload="$(node -e "process.stdout.write(JSON.stringify({ ref: process.argv[1], inputs: { interval_seconds: process.argv[2], run_minutes: process.argv[3] } }))" "${GITHUB_REF_NAME}" "${interval_seconds}" "${run_minutes}")"
+          curl -fsSL -X POST \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/${DISCORDOS_MESSAGE_COMMAND_WORKER_ID}/dispatches \
+            -d "${dispatch_payload}"
