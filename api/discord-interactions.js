@@ -10,6 +10,9 @@ const {
 const {
   _internals: computaInternals,
 } = require("../scripts/discordos-computa-runtime");
+const {
+  _internals: feedbackInternals,
+} = require("../src/extractions/fitness-feedback-runtime");
 
 function normalizeHeader(headers = {}, name) {
   const direct = headers[name] ?? headers[name.toLowerCase()];
@@ -239,6 +242,31 @@ async function buildDiscordInteractionResponse({
           kind: "application_command",
           responseType: payload.type,
           command: "computa",
+        },
+        reasonCodes: [],
+      },
+      execution: null,
+      reasonCodes: [],
+    };
+  }
+  if (feedbackInternals.isFeedbackInteraction(interaction)) {
+    const payload = await feedbackInternals.handleFeedbackInteraction({
+      interaction,
+      env,
+      fetchImpl,
+    });
+    return {
+      ok: true,
+      statusCode: 200,
+      payload,
+      signaturePreflight,
+      admission: {
+        ok: true,
+        executesRoute: false,
+        route: {
+          kind: interaction?.type === 5 ? "modal_submit" : "message_component",
+          responseType: payload.type,
+          command: "discordos_feedback",
         },
         reasonCodes: [],
       },
