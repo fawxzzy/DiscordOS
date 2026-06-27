@@ -16,12 +16,33 @@ const DEFAULT_GRAND_RISING_EMOJI = "GM:1507443437916524675";
 const DEFAULT_GOODNIGHT_EMOJI = "goodnight:1507597897343041700";
 const DEFAULT_MAIN_CHANNEL_ID = "1504674484068552784";
 const DEFAULT_UPDATES_CHANNEL_ID = "1504671871512346695";
+const DEFAULT_FEEDBACK_FORUM_CHANNEL_ID = "1504673475489562744";
 const DEFAULT_APPLICATION_ID = "1504700208251146371";
 const DEFAULT_GUILD_ID = "1504668396338413670";
 const DEFAULT_SUCCESS_REACTION = "fawxzzy:1507384062166302851";
 const DEFAULT_WARNING_REACTION = "fawxzzy:1507384094424694785";
 const COMMAND_CARD_MARKER = "discordos-computa-command-menu:v1";
 const OWNER_CARD_MARKER = "discordos-computa-owner-command-menu:v1";
+const RELEASE_CHECK_CARD_MARKER = "fawx-computa-release-check:v1";
+const FEEDBACK_PANEL_CHANNEL_NAME = "feedback-submission";
+const LEGACY_FEEDBACK_PANEL_CHANNEL_NAMES = new Set(["submit-feedback"]);
+const FEEDBACK_PANEL_SUBMIT_BUTTON_CUSTOM_ID = "fitness_feedback_submit_open";
+const FEEDBACK_PANEL_UPDATE_BUTTON_CUSTOM_ID = "fitness_feedback_update_open";
+const FEEDBACK_PANEL_TITLE = "Feedback Submission";
+const FEEDBACK_PANEL_BODY_LINES = [
+  "Use this panel to send bug reports or feature requests without cluttering main chat.",
+  "",
+  "- Submit: choose Bug or Feature, then create a card.",
+  "- Edit: update or withdraw one of your cards.",
+  "- Public cards stay visible in the feedback board for examples and discussion.",
+  "",
+  "Acceptance Criteria = a plain-language checklist of the outcome you want.",
+  "Do not include passwords, tokens, or private info.",
+];
+const RESOLVED_FEEDBACK_TAG_NAMES = ["Fixed", "Closed", "Resolved", "Done", "Complete", "Completed"];
+const LEGACY_SUCCESS_REACTION = "✅";
+const DISCORD_EMBED_COLOR_SUCCESS = 0x22c55e;
+const DISCORD_EMBED_COLOR_WARNING = 0xf59e0b;
 const MESSAGE_POLL_LIMIT = 25;
 const MESSAGE_COMMAND_MAX_PER_RUN = 3;
 
@@ -141,6 +162,14 @@ function resolveUpdatesChannelId(env = process.env) {
   return readOptionalEnv("DISCORDOS_UPDATES_CHANNEL_ID", env) || DEFAULT_UPDATES_CHANNEL_ID;
 }
 
+function resolveFeedbackForumChannelId(env = process.env) {
+  return readOptionalEnv("DISCORDOS_BUG_REPORT_FORUM_CHANNEL_ID", env) || DEFAULT_FEEDBACK_FORUM_CHANNEL_ID;
+}
+
+function resolveFeedbackPanelChannelId(env = process.env) {
+  return readOptionalEnv("DISCORDOS_FEEDBACK_PANEL_CHANNEL_ID", env);
+}
+
 function resolveBotToken(env = process.env) {
   return readOptionalEnv("DISCORDOS_BOT_TOKEN", env) || readOptionalEnv("DISCORD_BOT_TOKEN", env);
 }
@@ -177,6 +206,19 @@ function resolveSuccessReaction(env = process.env) {
 
 function resolveWarningReaction(env = process.env) {
   return readOptionalEnv("DISCORDOS_MESSAGE_COMMAND_WARNING_REACTION", env) || DEFAULT_WARNING_REACTION;
+}
+
+function normalizeChannelName(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isLegacyFeedbackPanelChannelName(value) {
+  return LEGACY_FEEDBACK_PANEL_CHANNEL_NAMES.has(normalizeChannelName(value));
+}
+
+function isManagedFeedbackPanelChannelName(value) {
+  const normalized = normalizeChannelName(value);
+  return normalized === FEEDBACK_PANEL_CHANNEL_NAME || LEGACY_FEEDBACK_PANEL_CHANNEL_NAMES.has(normalized);
 }
 
 function normalizeDiscordMessageCommandContent(content) {
@@ -273,11 +315,11 @@ function buildOwnerCommandCardPayload() {
           "`computa post live twitch` - Post the saved Twitch live announcement.",
           "`computa post live tiktok` - Post the saved TikTok live announcement.",
           "`computa post live [link]` - Post a custom live announcement.",
-          "`computa setup feedback` - Pending migration to DiscordOS.",
-          "`computa repair feedback launcher` - Pending migration to DiscordOS.",
-          "`computa release check` - Pending migration to DiscordOS.",
-          "`computa archive checked cards` - Pending migration to DiscordOS.",
-          "`computa sync feedback reactions` - Pending migration to DiscordOS.",
+          "`computa setup feedback` - Refresh the Feedback launcher.",
+          "`computa repair feedback launcher` - Repost the Feedback launcher.",
+          "`computa release check` - Audit feedback release state.",
+          "`computa archive checked cards` - Archive resolved feedback cards.",
+          "`computa sync feedback reactions` - Sync resolved-card reactions.",
         ].join("\n"),
         color: 5763719,
         footer: { text: OWNER_CARD_MARKER },
@@ -306,6 +348,59 @@ function buildEphemeralInteractionResponse(content) {
 
 function buildPendingMigrationResponse(actionLabel) {
   return `${actionLabel} is still pending full DiscordOS migration.`;
+}
+
+function buildFeedbackPanelPayload() {
+  return {
+    content: "",
+    allowed_mentions: { parse: [] },
+    embeds: [
+      {
+        title: FEEDBACK_PANEL_TITLE,
+        description: FEEDBACK_PANEL_BODY_LINES.join("\n"),
+        color: DISCORD_EMBED_COLOR_SUCCESS,
+      },
+    ],
+    components: [
+      {
+        type: 1,
+        components: [
+          {
+            type: 2,
+            style: 1,
+            custom_id: FEEDBACK_PANEL_SUBMIT_BUTTON_CUSTOM_ID,
+            label: "Submit",
+          },
+          {
+            type: 2,
+            style: 2,
+            custom_id: FEEDBACK_PANEL_UPDATE_BUTTON_CUSTOM_ID,
+            label: "Edit",
+          },
+        ],
+      },
+    ],
+  };
+}
+
+function messageHasComponentCustomId(message, customId) {
+  const components = Array.isArray(message?.components) ? message.components : [];
+  return components.some((actionRow) => {
+    const rowComponents = Array.isArray(actionRow?.components) ? actionRow.components : [];
+    return rowComponents.some((component) => component?.custom_id === customId);
+  });
+}
+
+function discordMessageHasFeedbackPanel(message) {
+  return [
+    FEEDBACK_PANEL_SUBMIT_BUTTON_CUSTOM_ID,
+    FEEDBACK_PANEL_UPDATE_BUTTON_CUSTOM_ID,
+  ].every((customId) => messageHasComponentCustomId(message, customId));
+}
+
+function discordMessageHasReleaseCheck(message) {
+  const embeds = Array.isArray(message?.embeds) ? message.embeds : [];
+  return embeds.some((embed) => embed?.footer?.text === RELEASE_CHECK_CARD_MARKER || embed?.title === "Computa Release Check");
 }
 
 async function sendDiscordMessage({ channelId, token, payload, fetchImpl = fetch, method = "POST", messageId = null }) {
@@ -350,6 +445,192 @@ async function addDiscordReaction({ channelId, messageId, emoji, token, fetchImp
     },
   );
   return { ok: response.ok, status: response.status };
+}
+
+async function discordRequest({ token, path, method = "GET", body = null, fetchImpl = fetch }) {
+  const response = await fetchImpl(`${DISCORD_API_BASE}${path}`, {
+    method,
+    headers: {
+      authorization: `Bot ${token}`,
+      "content-type": "application/json",
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const text = typeof response.text === "function" ? await response.text() : "";
+  let payload = null;
+  if (hasValue(text)) {
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      payload = text;
+    }
+  }
+  return {
+    ok: response.ok,
+    status: response.status,
+    payload,
+    code: payload && typeof payload === "object" && "code" in payload && payload.code != null
+      ? String(payload.code)
+      : null,
+    message: payload && typeof payload === "object" && typeof payload.message === "string"
+      ? payload.message
+      : null,
+  };
+}
+
+async function fetchDiscordChannel({ channelId, token, fetchImpl = fetch }) {
+  const response = await discordRequest({
+    token,
+    path: `/channels/${channelId}`,
+    fetchImpl,
+  });
+  return {
+    ok: response.ok,
+    status: response.status,
+    code: response.code,
+    message: response.message,
+    channel: response.payload,
+  };
+}
+
+async function fetchDiscordChannelMessage({ channelId, messageId, token, fetchImpl = fetch }) {
+  const response = await discordRequest({
+    token,
+    path: `/channels/${channelId}/messages/${messageId}`,
+    fetchImpl,
+  });
+  return {
+    ok: response.ok,
+    status: response.status,
+    code: response.code,
+    message: response.message,
+    messageBody: response.payload,
+  };
+}
+
+async function fetchDiscordGuildChannels({ guildId, token, fetchImpl = fetch }) {
+  const response = await discordRequest({
+    token,
+    path: `/guilds/${guildId}/channels`,
+    fetchImpl,
+  });
+  return {
+    ok: response.ok,
+    status: response.status,
+    code: response.code,
+    message: response.message,
+    channels: Array.isArray(response.payload) ? response.payload : [],
+  };
+}
+
+async function createDiscordGuildChannel({
+  guildId,
+  token,
+  name,
+  type = 0,
+  parentId = null,
+  position = null,
+  fetchImpl = fetch,
+}) {
+  const response = await discordRequest({
+    token,
+    path: `/guilds/${guildId}/channels`,
+    method: "POST",
+    body: {
+      name,
+      type,
+      ...(hasValue(parentId) ? { parent_id: parentId } : {}),
+      ...(typeof position === "number" ? { position } : {}),
+    },
+    fetchImpl,
+  });
+  return {
+    ok: response.ok,
+    status: response.status,
+    code: response.code,
+    message: response.message,
+    channel: response.payload,
+  };
+}
+
+async function updateDiscordChannel({ channelId, token, body, fetchImpl = fetch }) {
+  const response = await discordRequest({
+    token,
+    path: `/channels/${channelId}`,
+    method: "PATCH",
+    body,
+    fetchImpl,
+  });
+  return {
+    ok: response.ok,
+    status: response.status,
+    code: response.code,
+    message: response.message,
+    channel: response.payload,
+  };
+}
+
+async function fetchDiscordGuildActiveThreads({ guildId, token, fetchImpl = fetch }) {
+  const response = await discordRequest({
+    token,
+    path: `/guilds/${guildId}/threads/active`,
+    fetchImpl,
+  });
+  return {
+    ok: response.ok,
+    status: response.status,
+    code: response.code,
+    message: response.message,
+    threads: Array.isArray(response.payload?.threads) ? response.payload.threads : [],
+  };
+}
+
+async function fetchDiscordChannelArchivedPublicThreads({ channelId, token, fetchImpl = fetch }) {
+  const response = await discordRequest({
+    token,
+    path: `/channels/${channelId}/threads/archived/public?limit=100`,
+    fetchImpl,
+  });
+  return {
+    ok: response.ok,
+    status: response.status,
+    code: response.code,
+    message: response.message,
+    threads: Array.isArray(response.payload?.threads) ? response.payload.threads : [],
+  };
+}
+
+async function fetchDiscordChannelArchivedPrivateThreads({ channelId, token, fetchImpl = fetch }) {
+  const response = await discordRequest({
+    token,
+    path: `/channels/${channelId}/threads/archived/private?limit=100`,
+    fetchImpl,
+  });
+  return {
+    ok: response.ok,
+    status: response.status,
+    code: response.code,
+    message: response.message,
+    threads: Array.isArray(response.payload?.threads) ? response.payload.threads : [],
+  };
+}
+
+async function deleteDiscordOwnMessageReaction({ channelId, messageId, emoji, token, fetchImpl = fetch }) {
+  return discordRequest({
+    token,
+    path: `/channels/${channelId}/messages/${messageId}/reactions/${encodeURIComponent(emoji)}/@me`,
+    method: "DELETE",
+    fetchImpl,
+  });
+}
+
+async function deleteDiscordMessageReactionEmoji({ channelId, messageId, emoji, token, fetchImpl = fetch }) {
+  return discordRequest({
+    token,
+    path: `/channels/${channelId}/messages/${messageId}/reactions/${encodeURIComponent(emoji)}/@me`,
+    method: "DELETE",
+    fetchImpl,
+  });
 }
 
 async function fetchDiscordChannelMessages({ channelId, token, limit = MESSAGE_POLL_LIMIT, fetchImpl = fetch }) {
@@ -397,6 +678,15 @@ function findBotMessageByFooter(messages, applicationId, footerMarker) {
   }) || null;
 }
 
+function findBotMessage(messages, applicationId, matchesMessage) {
+  return messages.find((message) => {
+    if (String(message?.author?.id || "") !== String(applicationId || "")) {
+      return false;
+    }
+    return matchesMessage(message);
+  }) || null;
+}
+
 async function upsertCommandCard({
   channelId,
   token,
@@ -439,6 +729,729 @@ async function upsertCommandCard({
     fetchImpl,
   });
   return sendDiscordMessage({ channelId, token, payload, fetchImpl });
+}
+
+async function replaceSingleBotChannelPost({
+  channelId,
+  token,
+  applicationId,
+  payload,
+  matchesMessage,
+  fetchImpl = fetch,
+}) {
+  const recentMessages = await fetchDiscordChannelMessages({
+    channelId,
+    token,
+    limit: 25,
+    fetchImpl,
+  });
+  if (!recentMessages.ok) {
+    return recentMessages;
+  }
+
+  const existing = findBotMessage(recentMessages.messages, applicationId, matchesMessage);
+  if (!existing?.id) {
+    return sendDiscordMessage({ channelId, token, payload, fetchImpl });
+  }
+
+  const updateResult = await sendDiscordMessage({
+    channelId,
+    token,
+    payload,
+    fetchImpl,
+    method: "PATCH",
+    messageId: existing.id,
+  });
+  if (updateResult.ok) {
+    return updateResult;
+  }
+
+  await deleteDiscordMessage({
+    channelId,
+    messageId: existing.id,
+    token,
+    fetchImpl,
+  });
+  return sendDiscordMessage({ channelId, token, payload, fetchImpl });
+}
+
+async function maybeRenameFeedbackPanelChannel({ channel, token, fetchImpl = fetch }) {
+  if (!channel?.id || !isLegacyFeedbackPanelChannelName(channel?.name)) {
+    return {
+      ok: true,
+      channel,
+      renamed: false,
+    };
+  }
+
+  const renameResult = await updateDiscordChannel({
+    channelId: channel.id,
+    token,
+    body: { name: FEEDBACK_PANEL_CHANNEL_NAME },
+    fetchImpl,
+  });
+  if (!renameResult.ok) {
+    return renameResult;
+  }
+
+  return {
+    ok: true,
+    channel: renameResult.channel,
+    renamed: true,
+  };
+}
+
+async function findExistingFeedbackPanelChannel({ token, env = process.env, fetchImpl = fetch }) {
+  const guildChannelsResult = await fetchDiscordGuildChannels({
+    guildId: resolveGuildId(env),
+    token,
+    fetchImpl,
+  });
+  if (!guildChannelsResult.ok) {
+    return guildChannelsResult;
+  }
+
+  const canonical = guildChannelsResult.channels.find((channel) => (
+    channel?.id
+    && channel?.type === 0
+    && normalizeChannelName(channel?.name) === FEEDBACK_PANEL_CHANNEL_NAME
+  ));
+  if (canonical?.id) {
+    return {
+      ok: true,
+      channelId: canonical.id,
+      channelLabel: `<#${canonical.id}>`,
+    };
+  }
+
+  const legacy = guildChannelsResult.channels.find((channel) => (
+    channel?.id
+    && channel?.type === 0
+    && isLegacyFeedbackPanelChannelName(channel?.name)
+  ));
+  if (!legacy?.id) {
+    return { ok: true, channelId: null, channelLabel: null };
+  }
+
+  const renameResult = await maybeRenameFeedbackPanelChannel({
+    channel: legacy,
+    token,
+    fetchImpl,
+  });
+  if (!renameResult.ok) {
+    return renameResult;
+  }
+
+  return {
+    ok: true,
+    channelId: legacy.id,
+    channelLabel: `<#${legacy.id}>`,
+  };
+}
+
+async function ensureFeedbackPanelChannel({ targetChannelId = null, token, env = process.env, fetchImpl = fetch }) {
+  const configuredChannelId = resolveFeedbackPanelChannelId(env);
+  if (configuredChannelId) {
+    const configuredChannel = await fetchDiscordChannel({
+      channelId: configuredChannelId,
+      token,
+      fetchImpl,
+    });
+    if (!configuredChannel.ok) {
+      return configuredChannel;
+    }
+
+    const renameResult = await maybeRenameFeedbackPanelChannel({
+      channel: configuredChannel.channel,
+      token,
+      fetchImpl,
+    });
+    if (!renameResult.ok) {
+      return renameResult;
+    }
+
+    return {
+      ok: true,
+      channelId: configuredChannelId,
+      channelLabel: `<#${configuredChannelId}>`,
+    };
+  }
+
+  const existingChannel = await findExistingFeedbackPanelChannel({
+    token,
+    env,
+    fetchImpl,
+  });
+  if (!existingChannel.ok) {
+    return existingChannel;
+  }
+  if (hasValue(existingChannel.channelId)) {
+    return existingChannel;
+  }
+  if (!hasValue(targetChannelId)) {
+    return {
+      ok: false,
+      code: "feedback_panel_channel_missing",
+      message: "DiscordOS could not resolve a source channel for the feedback launcher.",
+    };
+  }
+
+  const sourceChannelResult = await fetchDiscordChannel({
+    channelId: targetChannelId,
+    token,
+    fetchImpl,
+  });
+  if (!sourceChannelResult.ok) {
+    return sourceChannelResult;
+  }
+
+  const sourceChannel = sourceChannelResult.channel;
+  if (sourceChannel?.id && sourceChannel?.type === 0 && isManagedFeedbackPanelChannelName(sourceChannel?.name)) {
+    const renameResult = await maybeRenameFeedbackPanelChannel({
+      channel: sourceChannel,
+      token,
+      fetchImpl,
+    });
+    if (!renameResult.ok) {
+      return renameResult;
+    }
+    return {
+      ok: true,
+      channelId: sourceChannel.id,
+      channelLabel: `<#${sourceChannel.id}>`,
+    };
+  }
+
+  const createResult = await createDiscordGuildChannel({
+    guildId: resolveGuildId(env),
+    token,
+    name: FEEDBACK_PANEL_CHANNEL_NAME,
+    type: 0,
+    parentId: sourceChannel?.parent_id || null,
+    position: typeof sourceChannel?.position === "number" ? sourceChannel.position + 1 : null,
+    fetchImpl,
+  });
+  if (!createResult.ok || !createResult.channel?.id) {
+    return createResult.ok
+      ? { ok: false, code: "feedback_panel_channel_create_failed" }
+      : createResult;
+  }
+
+  return {
+    ok: true,
+    channelId: createResult.channel.id,
+    channelLabel: `<#${createResult.channel.id}>`,
+  };
+}
+
+async function collectLegacyFeedbackPanelChannels({ targetChannelId, token, env = process.env, fetchImpl = fetch }) {
+  const channels = new Map();
+  const configuredChannelId = resolveFeedbackPanelChannelId(env);
+  if (configuredChannelId && configuredChannelId !== targetChannelId) {
+    channels.set(configuredChannelId, { id: configuredChannelId });
+  }
+
+  const guildChannelsResult = await fetchDiscordGuildChannels({
+    guildId: resolveGuildId(env),
+    token,
+    fetchImpl,
+  });
+  if (!guildChannelsResult.ok) {
+    return Array.from(channels.values());
+  }
+
+  for (const channel of guildChannelsResult.channels) {
+    if (!channel?.id || channel.id === targetChannelId || channel.type !== 0) {
+      continue;
+    }
+    if (channels.has(channel.id)) {
+      channels.set(channel.id, { id: channel.id, name: channel.name || null });
+      continue;
+    }
+    if (isLegacyFeedbackPanelChannelName(channel?.name)) {
+      channels.set(channel.id, { id: channel.id, name: channel.name || null });
+    }
+  }
+
+  return Array.from(channels.values());
+}
+
+async function deleteFeedbackPanelMessagesInChannel({ channelId, keepMessageIds = [], token, fetchImpl = fetch }) {
+  const messagesResult = await fetchDiscordChannelMessages({
+    channelId,
+    token,
+    limit: 50,
+    fetchImpl,
+  });
+  if (!messagesResult.ok) {
+    return;
+  }
+
+  const keepIds = new Set(keepMessageIds);
+  const staleMessages = messagesResult.messages.filter((message) => (
+    message?.id
+    && !keepIds.has(message.id)
+    && discordMessageHasFeedbackPanel(message)
+  ));
+
+  for (const message of staleMessages) {
+    await deleteDiscordMessage({
+      channelId,
+      messageId: message.id,
+      token,
+      fetchImpl,
+    });
+  }
+}
+
+async function upsertFeedbackPanel({
+  targetChannelId = null,
+  cleanupLegacyPanels = false,
+  env = process.env,
+  fetchImpl = fetch,
+}) {
+  const token = resolveBotToken(env);
+  const applicationId = resolveApplicationId(env);
+  if (!hasValue(token)) {
+    return { ok: false, code: "bot_token_missing" };
+  }
+
+  const panelChannel = await ensureFeedbackPanelChannel({
+    targetChannelId,
+    token,
+    env,
+    fetchImpl,
+  });
+  if (!panelChannel.ok || !hasValue(panelChannel.channelId)) {
+    return panelChannel;
+  }
+
+  const payload = buildFeedbackPanelPayload();
+  const messagesResult = await fetchDiscordChannelMessages({
+    channelId: panelChannel.channelId,
+    token,
+    limit: 50,
+    fetchImpl,
+  });
+  if (!messagesResult.ok) {
+    return messagesResult;
+  }
+
+  const existingMessage = findBotMessage(
+    messagesResult.messages,
+    applicationId,
+    discordMessageHasFeedbackPanel,
+  );
+  if (existingMessage?.id) {
+    await deleteDiscordMessage({
+      channelId: panelChannel.channelId,
+      messageId: existingMessage.id,
+      token,
+      fetchImpl,
+    });
+  }
+
+  const createResult = await sendDiscordMessage({
+    channelId: panelChannel.channelId,
+    token,
+    payload,
+    fetchImpl,
+  });
+  if (!createResult.ok) {
+    return createResult;
+  }
+
+  if (cleanupLegacyPanels) {
+    await deleteFeedbackPanelMessagesInChannel({
+      channelId: panelChannel.channelId,
+      keepMessageIds: createResult.body?.id ? [createResult.body.id] : [],
+      token,
+      fetchImpl,
+    });
+
+    const legacyChannels = await collectLegacyFeedbackPanelChannels({
+      targetChannelId: panelChannel.channelId,
+      token,
+      env,
+      fetchImpl,
+    });
+    for (const channel of legacyChannels) {
+      await deleteFeedbackPanelMessagesInChannel({
+        channelId: channel.id,
+        token,
+        fetchImpl,
+      });
+    }
+  }
+
+  return {
+    ok: true,
+    action: existingMessage?.id ? "reposted" : "created",
+    channelLabel: panelChannel.channelLabel,
+  };
+}
+
+function resolveForumTagIdsByNames(channel, tagNames) {
+  const tags = Array.isArray(channel?.available_tags) ? channel.available_tags : [];
+  const wantedNames = new Set(tagNames.map((tagName) => tagName.toLowerCase()));
+  return tags
+    .filter((tag) => typeof tag?.id === "string" && typeof tag?.name === "string" && wantedNames.has(tag.name.toLowerCase()))
+    .map((tag) => tag.id);
+}
+
+function mapThreadForSync(thread, forumChannelId, syncSource = "active") {
+  return {
+    id: typeof thread?.id === "string" ? thread.id : null,
+    parent_id: typeof thread?.parent_id === "string" ? thread.parent_id : forumChannelId,
+    archived: thread?.archived === true || thread?.thread_metadata?.archived === true,
+    applied_tags: Array.isArray(thread?.applied_tags)
+      ? thread.applied_tags.filter((tagId) => typeof tagId === "string")
+      : [],
+    syncSource,
+  };
+}
+
+async function listFeedbackThreadsForReactionSync({ forumChannelId, token, env = process.env, fetchImpl = fetch }) {
+  const activeThreadsResult = await fetchDiscordGuildActiveThreads({
+    guildId: resolveGuildId(env),
+    token,
+    fetchImpl,
+  });
+  if (!activeThreadsResult.ok) {
+    return activeThreadsResult;
+  }
+
+  const threadMap = new Map();
+  for (const thread of activeThreadsResult.threads) {
+    if (thread?.parent_id !== forumChannelId) {
+      continue;
+    }
+    const mapped = mapThreadForSync(thread, forumChannelId, "active");
+    if (mapped.id) {
+      threadMap.set(mapped.id, mapped);
+    }
+  }
+
+  let skippedArchivedPublic = false;
+  const archivedPublic = await fetchDiscordChannelArchivedPublicThreads({
+    channelId: forumChannelId,
+    token,
+    fetchImpl,
+  });
+  if (archivedPublic.ok) {
+    for (const thread of archivedPublic.threads) {
+      const mapped = mapThreadForSync(thread, forumChannelId, "archived-public");
+      if (mapped.id) {
+        threadMap.set(mapped.id, mapped);
+      }
+    }
+  } else {
+    skippedArchivedPublic = true;
+  }
+
+  let skippedArchivedPrivate = false;
+  const archivedPrivate = await fetchDiscordChannelArchivedPrivateThreads({
+    channelId: forumChannelId,
+    token,
+    fetchImpl,
+  });
+  if (archivedPrivate.ok) {
+    for (const thread of archivedPrivate.threads) {
+      const mapped = mapThreadForSync(thread, forumChannelId, "archived-private");
+      if (mapped.id) {
+        threadMap.set(mapped.id, mapped);
+      }
+    }
+  } else {
+    skippedArchivedPrivate = true;
+  }
+
+  return {
+    ok: true,
+    threads: Array.from(threadMap.values()).slice(0, 100),
+    skippedArchivedPublic,
+    skippedArchivedPrivate,
+  };
+}
+
+function discordMessageHasCustomSuccessReaction(message, env = process.env) {
+  return messageHasReaction(message, [resolveSuccessReaction(env)]);
+}
+
+function discordMessageHasLegacySuccessReaction(message) {
+  const reactions = Array.isArray(message?.reactions) ? message.reactions : [];
+  return reactions.some((reaction) => reaction?.emoji?.name === LEGACY_SUCCESS_REACTION);
+}
+
+async function archiveCheckedFeedbackThreads({ env = process.env, fetchImpl = fetch }) {
+  const forumChannelId = resolveFeedbackForumChannelId(env);
+  const token = resolveBotToken(env);
+  if (!hasValue(forumChannelId) || !hasValue(token)) {
+    return { ok: false, code: "feedback_forum_not_configured" };
+  }
+
+  const activeThreadsResult = await fetchDiscordGuildActiveThreads({
+    guildId: resolveGuildId(env),
+    token,
+    fetchImpl,
+  });
+  if (!activeThreadsResult.ok) {
+    return activeThreadsResult;
+  }
+
+  const feedbackThreads = activeThreadsResult.threads
+    .filter((thread) => thread?.parent_id === forumChannelId && thread?.archived !== true && thread?.thread_metadata?.archived !== true)
+    .slice(0, 50);
+
+  let checkedCount = 0;
+  let archivedCount = 0;
+  for (const thread of feedbackThreads) {
+    const starterMessage = await fetchDiscordChannelMessage({
+      channelId: thread.id,
+      messageId: thread.id,
+      token,
+      fetchImpl,
+    });
+    if (!starterMessage.ok) {
+      continue;
+    }
+    if (!discordMessageHasCustomSuccessReaction(starterMessage.messageBody, env)) {
+      continue;
+    }
+
+    checkedCount += 1;
+    const archiveResult = await updateDiscordChannel({
+      channelId: thread.id,
+      token,
+      body: {
+        archived: true,
+        locked: true,
+      },
+      fetchImpl,
+    });
+    if (!archiveResult.ok) {
+      return archiveResult;
+    }
+    archivedCount += 1;
+  }
+
+  return {
+    ok: true,
+    scannedCount: feedbackThreads.length,
+    checkedCount,
+    archivedCount,
+  };
+}
+
+async function syncFeedbackResolvedReactions({ env = process.env, fetchImpl = fetch }) {
+  const forumChannelId = resolveFeedbackForumChannelId(env);
+  const token = resolveBotToken(env);
+  if (!hasValue(forumChannelId) || !hasValue(token)) {
+    return { ok: false, code: "feedback_forum_not_configured" };
+  }
+
+  const forumResult = await fetchDiscordChannel({
+    channelId: forumChannelId,
+    token,
+    fetchImpl,
+  });
+  if (!forumResult.ok) {
+    return forumResult;
+  }
+
+  const resolvedTagIds = new Set(resolveForumTagIdsByNames(forumResult.channel, RESOLVED_FEEDBACK_TAG_NAMES));
+  if (resolvedTagIds.size === 0) {
+    return { ok: false, code: "feedback_resolved_tags_not_found" };
+  }
+
+  const threadsResult = await listFeedbackThreadsForReactionSync({
+    forumChannelId,
+    token,
+    env,
+    fetchImpl,
+  });
+  if (!threadsResult.ok) {
+    return threadsResult;
+  }
+
+  let addedCount = 0;
+  let removedCount = 0;
+  let skippedCount = 0;
+  let legacyRemovedCount = 0;
+
+  for (const thread of threadsResult.threads) {
+    const starterMessage = await fetchDiscordChannelMessage({
+      channelId: thread.id,
+      messageId: thread.id,
+      token,
+      fetchImpl,
+    });
+    if (!starterMessage.ok) {
+      skippedCount += 1;
+      continue;
+    }
+
+    const shouldHaveReaction = thread.applied_tags.some((tagId) => resolvedTagIds.has(tagId));
+    const hasCustomSuccess = discordMessageHasCustomSuccessReaction(starterMessage.messageBody, env);
+    const hasLegacySuccess = discordMessageHasLegacySuccessReaction(starterMessage.messageBody);
+
+    if (shouldHaveReaction && !hasCustomSuccess) {
+      const addResult = await addDiscordReaction({
+        channelId: thread.id,
+        messageId: thread.id,
+        emoji: resolveSuccessReaction(env),
+        token,
+        fetchImpl,
+      });
+      if (!addResult.ok) {
+        return addResult;
+      }
+      addedCount += 1;
+    }
+
+    if (hasLegacySuccess) {
+      const deleteLegacyResult = await deleteDiscordMessageReactionEmoji({
+        channelId: thread.id,
+        messageId: thread.id,
+        emoji: LEGACY_SUCCESS_REACTION,
+        token,
+        fetchImpl,
+      });
+      if (deleteLegacyResult.ok) {
+        legacyRemovedCount += 1;
+      }
+    }
+
+    if (!shouldHaveReaction && hasCustomSuccess) {
+      const deleteResult = await deleteDiscordOwnMessageReaction({
+        channelId: thread.id,
+        messageId: thread.id,
+        emoji: resolveSuccessReaction(env),
+        token,
+        fetchImpl,
+      });
+      if (!deleteResult.ok) {
+        return deleteResult;
+      }
+      removedCount += 1;
+    }
+  }
+
+  return {
+    ok: true,
+    scannedCount: threadsResult.threads.length,
+    addedCount,
+    removedCount,
+    legacyRemovedCount,
+    skippedCount,
+    skippedArchivedPublic: threadsResult.skippedArchivedPublic,
+    skippedArchivedPrivate: threadsResult.skippedArchivedPrivate,
+  };
+}
+
+async function buildReleaseLedgerCheckPayload({ env = process.env, fetchImpl = fetch }) {
+  const forumChannelId = resolveFeedbackForumChannelId(env);
+  const token = resolveBotToken(env);
+  if (!hasValue(forumChannelId) || !hasValue(token)) {
+    return { ok: false, code: "feedback_forum_not_configured" };
+  }
+
+  const forumResult = await fetchDiscordChannel({
+    channelId: forumChannelId,
+    token,
+    fetchImpl,
+  });
+  if (!forumResult.ok) {
+    return forumResult;
+  }
+
+  const resolvedTagIds = new Set(resolveForumTagIdsByNames(forumResult.channel, RESOLVED_FEEDBACK_TAG_NAMES));
+  if (resolvedTagIds.size === 0) {
+    return { ok: false, code: "feedback_resolved_tags_not_found" };
+  }
+
+  const threadsResult = await listFeedbackThreadsForReactionSync({
+    forumChannelId,
+    token,
+    env,
+    fetchImpl,
+  });
+  if (!threadsResult.ok) {
+    return threadsResult;
+  }
+
+  let resolvedCount = 0;
+  let missingSuccessCount = 0;
+  let unresolvedWithSuccessCount = 0;
+  let legacyReactionCount = 0;
+  let skippedCount = 0;
+
+  for (const thread of threadsResult.threads) {
+    const starterMessage = await fetchDiscordChannelMessage({
+      channelId: thread.id,
+      messageId: thread.id,
+      token,
+      fetchImpl,
+    });
+    if (!starterMessage.ok) {
+      skippedCount += 1;
+      continue;
+    }
+
+    const isResolved = thread.applied_tags.some((tagId) => resolvedTagIds.has(tagId));
+    const hasCustomSuccess = discordMessageHasCustomSuccessReaction(starterMessage.messageBody, env);
+    const hasLegacySuccess = discordMessageHasLegacySuccessReaction(starterMessage.messageBody);
+
+    if (isResolved) {
+      resolvedCount += 1;
+      if (!hasCustomSuccess) {
+        missingSuccessCount += 1;
+      }
+    } else if (hasCustomSuccess) {
+      unresolvedWithSuccessCount += 1;
+    }
+
+    if (hasLegacySuccess) {
+      legacyReactionCount += 1;
+    }
+  }
+
+  const issueCount = missingSuccessCount + unresolvedWithSuccessCount + legacyReactionCount;
+  const scanNotes = [
+    threadsResult.skippedArchivedPublic ? "- Archived public scan was skipped by Discord permissions." : null,
+    threadsResult.skippedArchivedPrivate ? "- Archived private scan was skipped by Discord permissions." : null,
+    skippedCount > 0 ? `- ${skippedCount} starter post(s) could not be inspected.` : null,
+  ].filter(Boolean);
+
+  return {
+    ok: true,
+    issueCount,
+    body: {
+      content: "",
+      allowed_mentions: { parse: [] },
+      embeds: [
+        {
+          title: "Computa Release Check",
+          description: [
+            issueCount === 0
+              ? "Feedback release ledger checks are clean."
+              : "Feedback release ledger checks need attention.",
+            "",
+            `Resolved cards scanned: ${resolvedCount}`,
+            `Missing success reaction: ${missingSuccessCount}`,
+            `Unresolved cards with success reaction: ${unresolvedWithSuccessCount}`,
+            `Legacy white-checkmark reactions: ${legacyReactionCount}`,
+            `Total forum cards scanned: ${threadsResult.threads.length}`,
+            ...(scanNotes.length > 0 ? ["", ...scanNotes] : []),
+          ].join("\n"),
+          color: issueCount === 0 ? DISCORD_EMBED_COLOR_SUCCESS : DISCORD_EMBED_COLOR_WARNING,
+          footer: {
+            text: RELEASE_CHECK_CARD_MARKER,
+          },
+        },
+      ],
+    },
+  };
 }
 
 function resolveDiscordInteractionUserId(interaction) {
@@ -691,6 +1704,69 @@ async function processMessageCommand({ message, env = process.env, fetchImpl = f
     } else {
       result = await postMusicSeshPanel({ env, fetchImpl });
     }
+  } else if (commandKind === "setup-feedback" || commandKind === "repair-feedback-launcher") {
+    if (!owner) {
+      result = await respondToPendingMigration({
+        message,
+        token,
+        env,
+        fetchImpl,
+        actionLabel: `Only the configured Computa owner can run \`${message.content}\``,
+      });
+    } else {
+      result = await upsertFeedbackPanel({
+        targetChannelId: channelId,
+        cleanupLegacyPanels: true,
+        env,
+        fetchImpl,
+      });
+    }
+  } else if (commandKind === "release-check") {
+    if (!owner) {
+      result = await respondToPendingMigration({
+        message,
+        token,
+        env,
+        fetchImpl,
+        actionLabel: "Only the configured Computa owner can run `computa release check`",
+      });
+    } else {
+      const payloadResult = await buildReleaseLedgerCheckPayload({ env, fetchImpl });
+      result = payloadResult.ok
+        ? await replaceSingleBotChannelPost({
+          channelId,
+          token,
+          applicationId,
+          payload: payloadResult.body,
+          matchesMessage: discordMessageHasReleaseCheck,
+          fetchImpl,
+        })
+        : payloadResult;
+    }
+  } else if (commandKind === "archive-checked-cards") {
+    if (!owner) {
+      result = await respondToPendingMigration({
+        message,
+        token,
+        env,
+        fetchImpl,
+        actionLabel: "Only the configured Computa owner can run `computa archive checked cards`",
+      });
+    } else {
+      result = await archiveCheckedFeedbackThreads({ env, fetchImpl });
+    }
+  } else if (commandKind === "sync-feedback-reactions") {
+    if (!owner) {
+      result = await respondToPendingMigration({
+        message,
+        token,
+        env,
+        fetchImpl,
+        actionLabel: "Only the configured Computa owner can run `computa sync feedback reactions`",
+      });
+    } else {
+      result = await syncFeedbackResolvedReactions({ env, fetchImpl });
+    }
   } else {
     result = await respondToPendingMigration({
       message,
@@ -877,6 +1953,58 @@ async function handleComputaInteraction({
       ? buildEphemeralInteractionResponse("Music Sesh panel refreshed from DiscordOS.")
       : buildEphemeralInteractionResponse("DiscordOS could not refresh the Music Sesh panel right now.");
   }
+  if (subcommand.name === "setup-feedback" || subcommand.name === "repair-feedback-launcher") {
+    const result = await upsertFeedbackPanel({
+      targetChannelId: interaction?.channel_id || null,
+      cleanupLegacyPanels: true,
+      env,
+      fetchImpl,
+    });
+    return result.ok
+      ? buildEphemeralInteractionResponse(
+        result.action === "reposted"
+          ? `Feedback launcher updated in ${result.channelLabel}.`
+          : `Feedback launcher created in ${result.channelLabel}.`,
+      )
+      : buildEphemeralInteractionResponse("DiscordOS could not refresh the Feedback launcher right now.");
+  }
+  if (subcommand.name === "release-check") {
+    const payloadResult = await buildReleaseLedgerCheckPayload({ env, fetchImpl });
+    if (!payloadResult.ok) {
+      return buildEphemeralInteractionResponse("DiscordOS could not run the release check right now.");
+    }
+    const result = await replaceSingleBotChannelPost({
+      channelId: interaction?.channel_id || resolveMainChannelId(env),
+      token: resolveBotToken(env),
+      applicationId: resolveApplicationId(env),
+      payload: payloadResult.body,
+      matchesMessage: discordMessageHasReleaseCheck,
+      fetchImpl,
+    });
+    return result.ok
+      ? buildEphemeralInteractionResponse(
+        payloadResult.issueCount === 0
+          ? "Release check is clean. Card refreshed in this channel."
+          : `Release check found ${payloadResult.issueCount} issue(s). Card refreshed in this channel.`,
+      )
+      : buildEphemeralInteractionResponse("DiscordOS could not refresh the release check card right now.");
+  }
+  if (subcommand.name === "archive-checked-cards") {
+    const result = await archiveCheckedFeedbackThreads({ env, fetchImpl });
+    return result.ok
+      ? buildEphemeralInteractionResponse(
+        `Archived ${result.archivedCount}/${result.checkedCount} checked feedback card(s). Scanned ${result.scannedCount} active card(s).`,
+      )
+      : buildEphemeralInteractionResponse("Archive checked cards failed. Check feedback forum configuration and bot permissions.");
+  }
+  if (subcommand.name === "sync-feedback-reactions") {
+    const result = await syncFeedbackResolvedReactions({ env, fetchImpl });
+    return result.ok
+      ? buildEphemeralInteractionResponse(
+        `Feedback reactions synced. Added ${result.addedCount}, removed ${result.removedCount}, and cleared ${result.legacyRemovedCount} legacy reaction(s).`,
+      )
+      : buildEphemeralInteractionResponse("Feedback reaction sync failed. Check feedback forum configuration.");
+  }
 
   return buildEphemeralInteractionResponse(buildPendingMigrationResponse(`/computa ${subcommand.name}`));
 }
@@ -886,6 +2014,7 @@ module.exports = {
     DISCORD_API_BASE,
     DEFAULT_MAIN_CHANNEL_ID,
     DEFAULT_UPDATES_CHANNEL_ID,
+    DEFAULT_FEEDBACK_FORUM_CHANNEL_ID,
     DEFAULT_APPLICATION_ID,
     DEFAULT_GUILD_ID,
     MESSAGE_COMMAND_MAX_PER_RUN,
@@ -893,16 +2022,24 @@ module.exports = {
     resolveGuildId,
     resolveMainChannelId,
     resolveUpdatesChannelId,
+    resolveFeedbackForumChannelId,
     resolveBotToken,
     resolvePublicKey,
     normalizeDiscordMessageCommandContent,
     buildGuildCommandsDefinition,
     buildCommandCardPayload,
     buildOwnerCommandCardPayload,
+    buildFeedbackPanelPayload,
     buildLiveAnnouncementContent,
     parseMessageUpdateCommand,
     parseMessageLiveCommand,
     resolveMessageCommandKind,
+    messageHasReaction,
+    discordMessageHasFeedbackPanel,
+    buildReleaseLedgerCheckPayload,
+    upsertFeedbackPanel,
+    archiveCheckedFeedbackThreads,
+    syncFeedbackResolvedReactions,
     buildDiscordMessageCommandPollResponse,
     handleComputaInteraction,
   },
