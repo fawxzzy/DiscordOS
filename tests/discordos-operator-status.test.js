@@ -140,6 +140,7 @@ test("operator status combines runtime, publication, and audit status", async ()
     keepDays: 30,
     messageCommandPollMaxStaleMinutes: 100000,
     probeLive: false,
+    now: () => Date.parse("2026-06-27T21:45:00Z"),
     env: {
       DISCORDOS_ATLAS_HEALTH_WATCH_ENABLED: "enabled",
       DISCORDOS_ATLAS_HEALTH_ALERT_SEND: "enabled",
@@ -219,7 +220,7 @@ test("operator status combines runtime, publication, and audit status", async ()
             event: "workflow_dispatch",
             status: "in_progress",
             conclusion: null,
-            run_started_at: "2026-06-27T20:00:00.000Z",
+            run_started_at: "2026-06-27T21:30:00.000Z",
             html_url: "https://github.com/fawxzzy/DiscordOS/actions/runs/41",
           }],
         }), { status: 200 });

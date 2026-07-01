@@ -266,6 +266,7 @@ async function buildDiscordOSOperatorStatus({
   env = process.env,
   fetchImpl = fetch,
   cwd = process.cwd(),
+  now,
 } = {}) {
   const [runtimeStatus, messageCommandPollStatus, publicationStatus, publicationAudit, atlasHealthStatus, notificationPolicyStatus, receiptState] = await Promise.all([
     runtimeStatusInternals.buildRuntimeHealthStatus({
@@ -283,6 +284,7 @@ async function buildDiscordOSOperatorStatus({
     messageCommandPollInternals.buildDiscordMessageCommandPollStatus({
       maxStaleMinutes: messageCommandPollMaxStaleMinutes,
       fetchImpl,
+      now,
     }),
     publicationStatusInternals.buildDiscordPublicationStatus({
       env,
