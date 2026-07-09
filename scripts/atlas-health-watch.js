@@ -152,7 +152,14 @@ function normalizeServiceName(value) {
   return String(value || "")
     .trim()
     .toLowerCase()
-    .replace(/[\s_-]+/g, "-");
+    .replace(/[\s-]+/g, "_");
+}
+
+function normalizeStatusToken(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, "-");
 }
 
 function normalizeServiceList(value) {
@@ -169,6 +176,14 @@ function normalizeServiceList(value) {
   }
 
   return services.length > 0 ? services : null;
+}
+
+function buildSupabaseProjectHealthUrl(projectRef, services) {
+  const url = new URL(`${SUPABASE_API_BASE}/v1/projects/${encodeURIComponent(projectRef)}/health`);
+  if (Array.isArray(services) && services.length > 0) {
+    url.searchParams.set("services", services.join(","));
+  }
+  return url;
 }
 
 function normalizeTarget(entry) {
@@ -653,6 +668,8 @@ function extractSupabaseProjectServices(body) {
 
   const candidates = Array.isArray(body)
     ? body
+    : Array.isArray(body.value)
+      ? body.value
     : Array.isArray(body.services)
       ? body.services
       : typeof body.services === "object" && body.services
@@ -687,7 +704,7 @@ function extractSupabaseProjectServices(body) {
 }
 
 function isSupabaseServiceHealthy(status) {
-  return normalizeServiceName(status) === "active-healthy";
+  return normalizeStatusToken(status) === "active-healthy";
 }
 
 async function checkSupabaseProjectHealthTarget(
@@ -695,7 +712,7 @@ async function checkSupabaseProjectHealthTarget(
   { env = process.env, fetchImpl = fetch, timeoutMs = DEFAULT_TIMEOUT_MS } = {}
 ) {
   const accessToken = cleanEnvLookup(env, target.accessTokenEnv);
-  const url = `${SUPABASE_API_BASE}/v1/projects/${encodeURIComponent(target.projectRef)}/health`;
+  const url = buildSupabaseProjectHealthUrl(target.projectRef, target.services);
   if (!accessToken) {
     return {
       id: target.id,
@@ -764,6 +781,9 @@ async function checkSupabaseProjectHealthTarget(
     }
 
     const details = [];
+    if (!parseError && typeof body?.message === "string" && body.message.trim()) {
+      details.push(`message: ${body.message.trim()}`);
+    }
     if (missingServices.length > 0) {
       details.push(`missing services: ${missingServices.join(",")}`);
     }

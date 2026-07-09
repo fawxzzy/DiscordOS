@@ -56,6 +56,37 @@
       "critical": true
     },
     {
+      "id": "vercel-project-readiness",
+      "label": "Vercel project readiness",
+      "owner": "ATLAS",
+      "kind": "vercel-projects-ready",
+      "teamId": "team_CMJn7MvzFZZBnhNnjVUZF2RD",
+      "tokenEnv": "DISCORDOS_VERCEL_API_TOKEN",
+      "projects": [
+        {
+          "id": "prj_C2RSEa34OblHfhuEpVChRQQZSjuG",
+          "name": "fawxzzy-discordos"
+        },
+        {
+          "id": "prj_o37CPLlESB6Zybe8GB74BX3wrkpy",
+          "name": "fawxzzy-foundation"
+        },
+        {
+          "id": "prj_rtlFVOMFAWCRoJ3SQjHloi89881K",
+          "name": "fawxzzy-fitness"
+        },
+        {
+          "id": "prj_vhUyajI4AL6BgCF40VnKtdxrBLuV",
+          "name": "fawxzzy-trove"
+        },
+        {
+          "id": "prj_t3zothbtj9DExrh3FjMsH98hwwSZ",
+          "name": "fawxzzy-mazer"
+        }
+      ],
+      "critical": true
+    },
+    {
       "id": "discordos-supabase-auth",
       "label": "DiscordOS Supabase auth",
       "owner": "DiscordOS",
@@ -89,7 +120,7 @@
       "kind": "supabase-project-health",
       "projectRef": "nwexsktuuenfdegzrbut",
       "accessTokenEnv": "SUPABASE_ACCESS_TOKEN",
-      "services": ["api", "db", "auth", "realtime", "storage", "functions"],
+      "services": ["auth", "db", "rest", "storage", "pooler"],
       "critical": true
     },
     {
@@ -99,7 +130,7 @@
       "kind": "supabase-project-health",
       "projectRef": "lpswxoyfniocuhljgzbc",
       "accessTokenEnv": "SUPABASE_ACCESS_TOKEN",
-      "services": ["api", "db", "auth", "realtime", "storage", "functions"],
+      "services": ["auth", "db", "rest", "storage", "pooler"],
       "critical": true
     },
     {
@@ -109,7 +140,7 @@
       "kind": "supabase-project-health",
       "projectRef": "geknvnrmktchljnyddwp",
       "accessTokenEnv": "SUPABASE_ACCESS_TOKEN",
-      "services": ["api", "db", "auth", "realtime", "storage", "functions"],
+      "services": ["auth", "db", "rest", "storage", "pooler"],
       "critical": true
     }
   ]

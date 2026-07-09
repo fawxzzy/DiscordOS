@@ -421,19 +421,19 @@ test("atlas health watch supports Supabase project platform health targets", asy
           kind: "supabase-project-health",
           projectRef: "nwexsktuuenfdegzrbut",
           accessTokenEnv: "SUPABASE_ACCESS_TOKEN",
-          services: ["api", "db", "auth"],
+          services: ["auth", "db", "rest"],
         },
       ]),
       SUPABASE_ACCESS_TOKEN: "sbp_token",
     },
     fetchImpl: async (url, options) => {
-      assert.equal(String(url), "https://api.supabase.com/v1/projects/nwexsktuuenfdegzrbut/health");
+      assert.equal(String(url), "https://api.supabase.com/v1/projects/nwexsktuuenfdegzrbut/health?services=auth%2Cdb%2Crest");
       assert.equal(options.headers.Authorization, "Bearer sbp_token");
       return new Response(JSON.stringify({
-        services: [
-          { name: "api", status: "ACTIVE_HEALTHY" },
-          { name: "db", status: "ACTIVE_HEALTHY" },
+        value: [
           { name: "auth", status: "ACTIVE_HEALTHY" },
+          { name: "db", status: "ACTIVE_HEALTHY" },
+          { name: "rest", status: "ACTIVE_HEALTHY" },
           { name: "storage", status: "ACTIVE_HEALTHY" },
         ],
       }), { status: 200 });
@@ -455,16 +455,16 @@ test("atlas health watch fails when Supabase project services are not healthy", 
           kind: "supabase-project-health",
           projectRef: "lpswxoyfniocuhljgzbc",
           accessTokenEnv: "SUPABASE_ACCESS_TOKEN",
-          services: ["api", "db", "auth"],
+          services: ["auth", "db", "rest"],
         },
       ]),
       SUPABASE_ACCESS_TOKEN: "sbp_token",
     },
     fetchImpl: async () => new Response(JSON.stringify({
-      services: [
-        { name: "api", status: "ACTIVE_HEALTHY" },
-        { name: "db", status: "INACTIVE" },
+      value: [
         { name: "auth", status: "ACTIVE_HEALTHY" },
+        { name: "db", status: "INACTIVE" },
+        { name: "rest", status: "ACTIVE_HEALTHY" },
       ],
     }), { status: 200 }),
   });
@@ -472,6 +472,35 @@ test("atlas health watch fails when Supabase project services are not healthy", 
   assert.equal(result.ok, false);
   assert.deepEqual(result.criticalTargets[0].reasonCodes, ["supabase_project_service_not_healthy"]);
   assert.deepEqual(result.criticalTargets[0].details, ["db: INACTIVE"]);
+});
+
+test("atlas health watch reports missing required Supabase project services", async () => {
+  const result = await _internals.buildAtlasHealthWatch({
+    env: {
+      ...configEnv([
+        {
+          id: "supabase-platform-foundation",
+          label: "Foundation Supabase platform",
+          owner: "Foundation",
+          kind: "supabase-project-health",
+          projectRef: "foundationref",
+          accessTokenEnv: "SUPABASE_ACCESS_TOKEN",
+          services: ["auth", "db", "pooler"],
+        },
+      ]),
+      SUPABASE_ACCESS_TOKEN: "sbp_token",
+    },
+    fetchImpl: async () => new Response(JSON.stringify({
+      value: [
+        { name: "auth", status: "ACTIVE_HEALTHY" },
+        { name: "db", status: "ACTIVE_HEALTHY" },
+      ],
+    }), { status: 200 }),
+  });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.criticalTargets[0].reasonCodes, ["supabase_project_service_missing"]);
+  assert.deepEqual(result.criticalTargets[0].details, ["missing services: pooler"]);
 });
 
 test("atlas health watch marks missing Supabase management token as critical", async () => {
