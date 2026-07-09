@@ -9,6 +9,23 @@ const CRITICAL_EMBED_COLOR = 14233637;
 const DEFAULT_CONFIG_PATH = path.resolve(__dirname, "..", "config", "atlas-health-targets.json");
 const DEFAULT_SUPPRESSION_DIR = path.join(os.tmpdir(), "discordos-atlas-health-watch");
 const DEFAULT_TIMEOUT_MS = 8000;
+const HTTP_TARGET_KINDS = new Set(["http-ok", "json-ok"]);
+const SUPABASE_AUTH_TARGET_KINDS = new Set(["supabase-auth-health"]);
+const SUPABASE_PROJECT_TARGET_KINDS = new Set(["supabase-project-health"]);
+const SUPABASE_TARGET_KINDS = new Set([
+  ...SUPABASE_AUTH_TARGET_KINDS,
+  ...SUPABASE_PROJECT_TARGET_KINDS,
+]);
+const VERCEL_TARGET_KINDS = new Set(["vercel-projects-ready"]);
+const STATUSPAGE_TARGET_KINDS = new Set(["statuspage-summary-ok"]);
+const SUPPORTED_TARGET_KINDS = new Set([
+  ...HTTP_TARGET_KINDS,
+  ...SUPABASE_TARGET_KINDS,
+  ...VERCEL_TARGET_KINDS,
+  ...STATUSPAGE_TARGET_KINDS,
+]);
+const VERCEL_API_BASE = "https://api.vercel.com";
+const SUPABASE_API_BASE = "https://api.supabase.com";
 const DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
 const DAY_ALIASES = {
   "0": "sunday",
@@ -59,6 +76,14 @@ function parseTargetIdList(value) {
     .filter(Boolean))];
 }
 
+function parseInlineConfig(value) {
+  return normalizeConfig(JSON.parse(cleanEnvValue(value)));
+}
+
+function parseBase64InlineConfig(value) {
+  return parseInlineConfig(Buffer.from(cleanEnvValue(value), "base64").toString("utf8"));
+}
+
 function parseArgs(args) {
   const options = {
     json: false,
@@ -106,30 +131,136 @@ function parseArgs(args) {
   return options;
 }
 
-function normalizeTarget(entry) {
-  const id = typeof entry?.id === "string" ? entry.id.trim() : "";
-  const label = typeof entry?.label === "string" ? entry.label.trim() : id;
-  const owner = typeof entry?.owner === "string" ? entry.owner.trim() : "unknown";
-  const url = typeof entry?.url === "string" ? entry.url.trim() : "";
-  const kind = typeof entry?.kind === "string" ? entry.kind.trim() : "http-ok";
-  const critical = entry?.critical !== false;
-  const enabled = entry?.enabled !== false;
+function cleanUrl(value) {
+  return String(value || "").replace(/\/+$/, "");
+}
 
-  if (!id || !label || !url) {
-    throw new Error("invalid_atlas_health_target");
-  }
-  if (kind !== "http-ok" && kind !== "json-ok") {
-    throw new Error(`unsupported_atlas_health_target_kind:${kind}`);
+function normalizeVercelProject(entry) {
+  const id = typeof entry?.id === "string" ? entry.id.trim() : "";
+  const name = typeof entry?.name === "string" ? entry.name.trim() : "";
+  if (!id || !name) {
+    throw new Error("invalid_atlas_health_target_vercel_project");
   }
 
   return {
     id,
+    name,
+  };
+}
+
+function normalizeServiceName(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, "-");
+}
+
+function normalizeServiceList(value) {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const services = [];
+  for (const entry of value) {
+    const normalized = normalizeServiceName(entry);
+    if (normalized && !services.includes(normalized)) {
+      services.push(normalized);
+    }
+  }
+
+  return services.length > 0 ? services : null;
+}
+
+function normalizeTarget(entry) {
+  const id = typeof entry?.id === "string" ? entry.id.trim() : "";
+  const label = typeof entry?.label === "string" ? entry.label.trim() : id;
+  const owner = typeof entry?.owner === "string" ? entry.owner.trim() : "unknown";
+  const kind = typeof entry?.kind === "string" ? entry.kind.trim() : "http-ok";
+  const critical = entry?.critical !== false;
+  const enabled = entry?.enabled !== false;
+
+  if (!id || !label) {
+    throw new Error("invalid_atlas_health_target");
+  }
+  if (!SUPPORTED_TARGET_KINDS.has(kind)) {
+    throw new Error(`unsupported_atlas_health_target_kind:${kind}`);
+  }
+
+  const baseTarget = {
+    id,
     label,
     owner,
-    url,
     kind,
     critical,
     enabled,
+  };
+
+  if (HTTP_TARGET_KINDS.has(kind)) {
+    const url = typeof entry?.url === "string" ? entry.url.trim() : "";
+    if (!url) {
+      throw new Error("invalid_atlas_health_target");
+    }
+
+    return {
+      ...baseTarget,
+      url,
+    };
+  }
+
+  if (SUPABASE_AUTH_TARGET_KINDS.has(kind)) {
+    const projectRef = typeof entry?.projectRef === "string" ? entry.projectRef.trim() : "";
+    const publishableKeyEnv = typeof entry?.publishableKeyEnv === "string" ? entry.publishableKeyEnv.trim() : "";
+    if (!projectRef || !publishableKeyEnv) {
+      throw new Error("invalid_atlas_health_target_supabase_auth_health");
+    }
+
+    return {
+      ...baseTarget,
+      projectRef,
+      publishableKeyEnv,
+    };
+  }
+
+  if (SUPABASE_PROJECT_TARGET_KINDS.has(kind)) {
+    const projectRef = typeof entry?.projectRef === "string" ? entry.projectRef.trim() : "";
+    const accessTokenEnv = typeof entry?.accessTokenEnv === "string" ? entry.accessTokenEnv.trim() : "";
+    const services = normalizeServiceList(entry?.services);
+    if (!projectRef || !accessTokenEnv) {
+      throw new Error("invalid_atlas_health_target_supabase_project_health");
+    }
+
+    return {
+      ...baseTarget,
+      projectRef,
+      accessTokenEnv,
+      services,
+    };
+  }
+
+  if (STATUSPAGE_TARGET_KINDS.has(kind)) {
+    const url = typeof entry?.url === "string" ? entry.url.trim() : "";
+    if (!url) {
+      throw new Error("invalid_atlas_health_target_statuspage_summary_ok");
+    }
+
+    return {
+      ...baseTarget,
+      url,
+    };
+  }
+
+  const teamId = typeof entry?.teamId === "string" ? entry.teamId.trim() : "";
+  const tokenEnv = typeof entry?.tokenEnv === "string" ? entry.tokenEnv.trim() : "";
+  const projects = Array.isArray(entry?.projects) ? entry.projects.map(normalizeVercelProject) : [];
+  if (!teamId || !tokenEnv || projects.length === 0) {
+    throw new Error("invalid_atlas_health_target_vercel_projects_ready");
+  }
+
+  return {
+    ...baseTarget,
+    teamId,
+    tokenEnv,
+    projects,
   };
 }
 
@@ -278,8 +409,10 @@ function applyTargetFilters(config, env = process.env) {
 
 async function loadConfig({ configPath = DEFAULT_CONFIG_PATH, env = process.env, fsImpl = fs } = {}) {
   let config;
-  if (hasValue(env.DISCORDOS_ATLAS_HEALTH_TARGETS_JSON)) {
-    config = normalizeConfig(JSON.parse(env.DISCORDOS_ATLAS_HEALTH_TARGETS_JSON));
+  if (hasValue(env.DISCORDOS_ATLAS_HEALTH_TARGETS_BASE64)) {
+    config = parseBase64InlineConfig(env.DISCORDOS_ATLAS_HEALTH_TARGETS_BASE64);
+  } else if (hasValue(env.DISCORDOS_ATLAS_HEALTH_TARGETS_JSON)) {
+    config = parseInlineConfig(env.DISCORDOS_ATLAS_HEALTH_TARGETS_JSON);
   } else {
     const raw = await fsImpl.readFile(configPath, "utf8");
     config = normalizeConfig(JSON.parse(raw));
@@ -335,17 +468,26 @@ function safeUrlLabel(value) {
   }
 }
 
-async function fetchWithTimeout(url, { fetchImpl = fetch, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
+async function fetchWithTimeout(
+  url,
+  {
+    fetchImpl = fetch,
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+    method = "GET",
+    headers = {},
+  } = {}
+) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetchImpl(url, {
-      method: "GET",
+      method,
       redirect: "follow",
       signal: controller.signal,
       headers: {
         Accept: "application/json,text/html;q=0.9,*/*;q=0.8",
         "User-Agent": "DiscordOS-ATLAS-Health-Watch/1.0",
+        ...headers,
       },
     });
   } finally {
@@ -353,7 +495,11 @@ async function fetchWithTimeout(url, { fetchImpl = fetch, timeoutMs = DEFAULT_TI
   }
 }
 
-async function checkTarget(target, { fetchImpl = fetch, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
+function cleanEnvLookup(env, name) {
+  return hasValue(name) && hasValue(env?.[name]) ? cleanEnvValue(env[name]) : "";
+}
+
+async function checkHttpTarget(target, { fetchImpl = fetch, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
   const startedAt = Date.now();
   try {
     const response = await fetchWithTimeout(target.url, { fetchImpl, timeoutMs });
@@ -392,6 +538,7 @@ async function checkTarget(target, { fetchImpl = fetch, timeoutMs = DEFAULT_TIME
       httpStatus: status,
       durationMs,
       reasonCodes,
+      details: [],
     };
   } catch (error) {
     const reason = error?.name === "AbortError" ? "request_timeout" : "request_failed";
@@ -406,8 +553,469 @@ async function checkTarget(target, { fetchImpl = fetch, timeoutMs = DEFAULT_TIME
       httpStatus: null,
       durationMs: Date.now() - startedAt,
       reasonCodes: [reason],
+      details: [],
     };
   }
+}
+
+async function checkSupabaseAuthHealthTarget(
+  target,
+  { env = process.env, fetchImpl = fetch, timeoutMs = DEFAULT_TIMEOUT_MS } = {}
+) {
+  const publishableKey = cleanEnvLookup(env, target.publishableKeyEnv);
+  const url = `https://${target.projectRef}.supabase.co/auth/v1/health`;
+  if (!publishableKey) {
+    return {
+      id: target.id,
+      label: target.label,
+      owner: target.owner,
+      kind: target.kind,
+      urlLabel: safeUrlLabel(url),
+      ok: false,
+      critical: target.critical,
+      httpStatus: null,
+      durationMs: 0,
+      reasonCodes: ["supabase_publishable_key_missing"],
+      details: [`env: ${target.publishableKeyEnv}`],
+    };
+  }
+
+  const startedAt = Date.now();
+  try {
+    const response = await fetchWithTimeout(url, {
+      fetchImpl,
+      timeoutMs,
+      headers: {
+        apikey: publishableKey,
+      },
+    });
+    const durationMs = Date.now() - startedAt;
+    let body = null;
+    let parseError = null;
+
+    try {
+      body = await response.json();
+    } catch (error) {
+      parseError = error;
+    }
+
+    const reasonCodes = [];
+    if (!response.ok) {
+      reasonCodes.push("http_status_not_ok");
+    }
+    if (parseError) {
+      reasonCodes.push("json_parse_failed");
+    }
+
+    const details = [];
+    if (!parseError && typeof body?.name === "string") {
+      details.push(`service: ${body.name}`);
+    }
+    if (!parseError && typeof body?.version === "string") {
+      details.push(`version: ${body.version}`);
+    }
+
+    return {
+      id: target.id,
+      label: target.label,
+      owner: target.owner,
+      kind: target.kind,
+      urlLabel: safeUrlLabel(url),
+      ok: reasonCodes.length === 0,
+      critical: target.critical && reasonCodes.length > 0,
+      httpStatus: response.status,
+      durationMs,
+      reasonCodes,
+      details,
+    };
+  } catch (error) {
+    const reason = error?.name === "AbortError" ? "request_timeout" : "request_failed";
+    return {
+      id: target.id,
+      label: target.label,
+      owner: target.owner,
+      kind: target.kind,
+      urlLabel: safeUrlLabel(url),
+      ok: false,
+      critical: target.critical,
+      httpStatus: null,
+      durationMs: Date.now() - startedAt,
+      reasonCodes: [reason],
+      details: [],
+    };
+  }
+}
+
+function extractSupabaseProjectServices(body) {
+  if (!body || typeof body !== "object") {
+    return [];
+  }
+
+  const candidates = Array.isArray(body)
+    ? body
+    : Array.isArray(body.services)
+      ? body.services
+      : typeof body.services === "object" && body.services
+        ? Object.entries(body.services).map(([name, value]) => ({
+            name,
+            ...(typeof value === "object" && value ? value : { status: value }),
+          }))
+        : Object.entries(body).map(([name, value]) => ({
+            name,
+            ...(typeof value === "object" && value ? value : { status: value }),
+          }));
+
+  return candidates
+    .map((entry) => {
+      const name = normalizeServiceName(entry?.name || entry?.service || entry?.service_name);
+      const status = typeof entry?.status === "string"
+        ? entry.status.trim()
+        : typeof entry?.state === "string"
+          ? entry.state.trim()
+          : typeof entry?.health === "string"
+            ? entry.health.trim()
+            : "";
+
+      return name && status
+        ? {
+            name,
+            status,
+          }
+        : null;
+    })
+    .filter(Boolean);
+}
+
+function isSupabaseServiceHealthy(status) {
+  return normalizeServiceName(status) === "active-healthy";
+}
+
+async function checkSupabaseProjectHealthTarget(
+  target,
+  { env = process.env, fetchImpl = fetch, timeoutMs = DEFAULT_TIMEOUT_MS } = {}
+) {
+  const accessToken = cleanEnvLookup(env, target.accessTokenEnv);
+  const url = `${SUPABASE_API_BASE}/v1/projects/${encodeURIComponent(target.projectRef)}/health`;
+  if (!accessToken) {
+    return {
+      id: target.id,
+      label: target.label,
+      owner: target.owner,
+      kind: target.kind,
+      urlLabel: safeUrlLabel(url),
+      ok: false,
+      critical: target.critical,
+      httpStatus: null,
+      durationMs: 0,
+      reasonCodes: ["supabase_access_token_missing"],
+      details: [`env: ${target.accessTokenEnv}`],
+    };
+  }
+
+  const startedAt = Date.now();
+  try {
+    const response = await fetchWithTimeout(url, {
+      fetchImpl,
+      timeoutMs,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+    });
+    const durationMs = Date.now() - startedAt;
+    let body = null;
+    let parseError = null;
+
+    try {
+      body = await response.json();
+    } catch (error) {
+      parseError = error;
+    }
+
+    const reasonCodes = [];
+    if (!response.ok) {
+      reasonCodes.push("http_status_not_ok");
+    }
+    if (parseError) {
+      reasonCodes.push("json_parse_failed");
+    }
+
+    const reportedServices = parseError ? [] : extractSupabaseProjectServices(body);
+    const serviceMap = new Map(reportedServices.map((service) => [service.name, service.status]));
+    const requiredServices = target.services || reportedServices.map((service) => service.name);
+
+    if (!parseError && requiredServices.length === 0) {
+      reasonCodes.push("supabase_project_services_missing");
+    }
+
+    const missingServices = requiredServices.filter((service) => !serviceMap.has(service));
+    if (missingServices.length > 0) {
+      reasonCodes.push("supabase_project_service_missing");
+    }
+
+    const unhealthyServices = requiredServices
+      .map((service) => ({
+        service,
+        status: serviceMap.get(service) || "missing",
+      }))
+      .filter(({ status }) => status !== "missing" && !isSupabaseServiceHealthy(status));
+    if (unhealthyServices.length > 0) {
+      reasonCodes.push("supabase_project_service_not_healthy");
+    }
+
+    const details = [];
+    if (missingServices.length > 0) {
+      details.push(`missing services: ${missingServices.join(",")}`);
+    }
+    for (const { service, status } of unhealthyServices.slice(0, 4)) {
+      details.push(`${service}: ${status}`);
+    }
+    if (details.length === 0) {
+      details.push(`services checked: ${requiredServices.length}`);
+    }
+
+    return {
+      id: target.id,
+      label: target.label,
+      owner: target.owner,
+      kind: target.kind,
+      urlLabel: safeUrlLabel(url),
+      ok: reasonCodes.length === 0,
+      critical: target.critical && reasonCodes.length > 0,
+      httpStatus: response.status,
+      durationMs,
+      reasonCodes,
+      details,
+    };
+  } catch (error) {
+    const reason = error?.name === "AbortError" ? "request_timeout" : "request_failed";
+    return {
+      id: target.id,
+      label: target.label,
+      owner: target.owner,
+      kind: target.kind,
+      urlLabel: safeUrlLabel(url),
+      ok: false,
+      critical: target.critical,
+      httpStatus: null,
+      durationMs: Date.now() - startedAt,
+      reasonCodes: [reason],
+      details: [],
+    };
+  }
+}
+
+async function fetchVercelProject(target, project, { token, fetchImpl, timeoutMs }) {
+  const response = await fetchWithTimeout(
+    `${VERCEL_API_BASE}/v9/projects/${encodeURIComponent(project.id)}?teamId=${encodeURIComponent(target.teamId)}`,
+    {
+      fetchImpl,
+      timeoutMs,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+  const body = await response.json().catch(() => null);
+  return {
+    response,
+    body,
+  };
+}
+
+function resolveLatestVercelDeployment(body) {
+  if (!body || typeof body !== "object") {
+    return null;
+  }
+
+  if (body.latestDeployment && typeof body.latestDeployment === "object") {
+    return body.latestDeployment;
+  }
+
+  if (body.targets?.production && typeof body.targets.production === "object") {
+    return body.targets.production;
+  }
+
+  if (Array.isArray(body.latestDeployments)) {
+    return body.latestDeployments.find((deployment) => deployment?.target === "production")
+      || body.latestDeployments[0]
+      || null;
+  }
+
+  return null;
+}
+
+async function checkStatuspageSummaryTarget(
+  target,
+  { fetchImpl = fetch, timeoutMs = DEFAULT_TIMEOUT_MS } = {}
+) {
+  const startedAt = Date.now();
+  try {
+    const response = await fetchWithTimeout(target.url, { fetchImpl, timeoutMs });
+    const durationMs = Date.now() - startedAt;
+    let body = null;
+    let parseError = null;
+
+    try {
+      body = await response.json();
+    } catch (error) {
+      parseError = error;
+    }
+
+    const reasonCodes = [];
+    if (!response.ok) {
+      reasonCodes.push("http_status_not_ok");
+    }
+    if (parseError) {
+      reasonCodes.push("json_parse_failed");
+    }
+
+    const indicator = body?.status?.indicator || null;
+    if (!parseError && indicator !== "none") {
+      reasonCodes.push("statuspage_indicator_not_operational");
+    }
+
+    const details = [];
+    if (!parseError && typeof body?.status?.description === "string") {
+      details.push(`status: ${body.status.description}`);
+    }
+    if (!parseError && Array.isArray(body?.incidents) && body.incidents.length > 0) {
+      details.push(`unresolved incidents: ${body.incidents.length}`);
+    }
+
+    return {
+      id: target.id,
+      label: target.label,
+      owner: target.owner,
+      kind: target.kind,
+      urlLabel: safeUrlLabel(target.url),
+      ok: reasonCodes.length === 0,
+      critical: target.critical && reasonCodes.length > 0,
+      httpStatus: response.status,
+      durationMs,
+      reasonCodes,
+      details,
+    };
+  } catch (error) {
+    const reason = error?.name === "AbortError" ? "request_timeout" : "request_failed";
+    return {
+      id: target.id,
+      label: target.label,
+      owner: target.owner,
+      kind: target.kind,
+      urlLabel: safeUrlLabel(target.url),
+      ok: false,
+      critical: target.critical,
+      httpStatus: null,
+      durationMs: Date.now() - startedAt,
+      reasonCodes: [reason],
+      details: [],
+    };
+  }
+}
+
+async function checkVercelProjectsReadyTarget(
+  target,
+  { env = process.env, fetchImpl = fetch, timeoutMs = DEFAULT_TIMEOUT_MS } = {}
+) {
+  const token = cleanEnvLookup(env, target.tokenEnv);
+  if (!token) {
+    return {
+      id: target.id,
+      label: target.label,
+      owner: target.owner,
+      kind: target.kind,
+      urlLabel: "api.vercel.com/v9/projects",
+      ok: false,
+      critical: target.critical,
+      httpStatus: null,
+      durationMs: 0,
+      reasonCodes: ["vercel_api_token_missing"],
+      details: [`env: ${target.tokenEnv}`],
+    };
+  }
+
+  const startedAt = Date.now();
+  const results = await Promise.all(target.projects.map(async (project) => {
+    try {
+      const { response, body } = await fetchVercelProject(target, project, { token, fetchImpl, timeoutMs });
+      const latestDeployment = resolveLatestVercelDeployment(body);
+      const reasonCodes = [];
+      if (!response.ok) {
+        reasonCodes.push("http_status_not_ok");
+      }
+      if (!latestDeployment) {
+        reasonCodes.push("vercel_latest_deployment_missing");
+      } else {
+        if (latestDeployment.target !== "production") {
+          reasonCodes.push("vercel_latest_deployment_not_production");
+        }
+        if (latestDeployment.readyState !== "READY") {
+          reasonCodes.push("vercel_latest_deployment_not_ready");
+        }
+      }
+
+      return {
+        ok: reasonCodes.length === 0,
+        project,
+        httpStatus: response.status,
+        reasonCodes,
+        latestDeployment,
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        project,
+        httpStatus: error?.name === "AbortError" ? 408 : null,
+        reasonCodes: [error?.name === "AbortError" ? "request_timeout" : "request_failed"],
+        latestDeployment: null,
+      };
+    }
+  }));
+
+  const failingProjects = results.filter((result) => !result.ok);
+  const reasonCodes = [...new Set(failingProjects.flatMap((result) => result.reasonCodes))];
+  const details = failingProjects.length > 0
+    ? failingProjects.slice(0, 4).map((result) => {
+        const latestState = result.latestDeployment?.readyState || "unknown";
+        const latestTarget = result.latestDeployment?.target || "unknown";
+        return `${result.project.name}: state=${latestState} target=${latestTarget} reasons=${result.reasonCodes.join(",")}`;
+      })
+    : [`projects checked: ${results.length}`];
+
+  return {
+    id: target.id,
+    label: target.label,
+    owner: target.owner,
+    kind: target.kind,
+    urlLabel: "api.vercel.com/v9/projects",
+    ok: failingProjects.length === 0,
+    critical: target.critical && failingProjects.length > 0,
+    httpStatus: failingProjects[0]?.httpStatus || 200,
+    durationMs: Date.now() - startedAt,
+    reasonCodes,
+    details,
+  };
+}
+
+async function checkTarget(
+  target,
+  { env = process.env, fetchImpl = fetch, timeoutMs = DEFAULT_TIMEOUT_MS } = {}
+) {
+  if (HTTP_TARGET_KINDS.has(target.kind)) {
+    return checkHttpTarget(target, { fetchImpl, timeoutMs });
+  }
+  if (SUPABASE_AUTH_TARGET_KINDS.has(target.kind)) {
+    return checkSupabaseAuthHealthTarget(target, { env, fetchImpl, timeoutMs });
+  }
+  if (SUPABASE_PROJECT_TARGET_KINDS.has(target.kind)) {
+    return checkSupabaseProjectHealthTarget(target, { env, fetchImpl, timeoutMs });
+  }
+  if (STATUSPAGE_TARGET_KINDS.has(target.kind)) {
+    return checkStatuspageSummaryTarget(target, { fetchImpl, timeoutMs });
+  }
+  return checkVercelProjectsReadyTarget(target, { env, fetchImpl, timeoutMs });
 }
 
 function buildSuppressionFingerprint(result) {
@@ -567,6 +1175,7 @@ function buildDiscordAlertPayload(result) {
       `surface: \`${target.urlLabel}\``,
       `status: \`${target.httpStatus ?? "none"}\``,
       `reasons: \`${target.reasonCodes.join(",") || "unknown"}\``,
+      ...((Array.isArray(target.details) ? target.details : []).slice(0, 3).map((detail) => `detail: \`${detail}\``)),
     ].join("\n"),
     inline: false,
   }));
@@ -821,7 +1430,7 @@ async function buildAtlasHealthWatch({
   }
 
   const checks = await Promise.all(
-    config.targets.map((target) => checkTarget(target, { fetchImpl, timeoutMs }))
+    config.targets.map((target) => checkTarget(target, { env, fetchImpl, timeoutMs }))
   );
   const criticalTargets = checks.filter((check) => check.critical);
   const result = {
@@ -921,6 +1530,8 @@ module.exports = {
     DEFAULT_TIMEOUT_MS,
     parseArgs,
     parseTargetIdList,
+    parseInlineConfig,
+    parseBase64InlineConfig,
     normalizeTarget,
     normalizeDayToken,
     runDaysFromCron,
@@ -932,6 +1543,15 @@ module.exports = {
     safeUrlLabel,
     fetchWithTimeout,
     checkTarget,
+    checkHttpTarget,
+    checkSupabaseAuthHealthTarget,
+    checkSupabaseProjectHealthTarget,
+    checkStatuspageSummaryTarget,
+    checkVercelProjectsReadyTarget,
+    resolveLatestVercelDeployment,
+    normalizeVercelProject,
+    normalizeServiceName,
+    cleanUrl,
     buildSuppressionFingerprint,
     buildSuppressionKey,
     suppressionPath,

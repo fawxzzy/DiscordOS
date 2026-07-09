@@ -212,6 +212,9 @@ Current governed contract surface:
   - defaults to public HTTP/JSON availability checks only; deeper project checks can be supplied through `DISCORDOS_ATLAS_HEALTH_TARGETS_JSON`
   - target sweeps can be reduced at runtime with `DISCORDOS_ATLAS_HEALTH_TARGET_ALLOWLIST` or `DISCORDOS_ATLAS_HEALTH_TARGET_EXCLUDE`
   - defaults ATLAS cross-project sweeps to weekdays at `0 16 * * 1-5`, while the DiscordOS runtime cron remains daily
+- `config/atlas-health-targets.providers-example.json`
+  - provider-aware example target set for Vercel project readiness, per-project Supabase auth checks, and optional Supabase Management API project-health checks
+  - Supabase Management API targets require `SUPABASE_ACCESS_TOKEN` and add only one management API request per project per scheduled sweep
 - `config/discordos-notification-routes.json`
   - committed no-secret notification route policy for DiscordOS runtime/product notification intents
   - maps source/type/severity to target classes such as `alerts` and `updates`
@@ -223,6 +226,7 @@ Current governed contract surface:
   - can share the existing `#alerts` target or use dedicated `DISCORDOS_ATLAS_HEALTH_ALERT_*` env values
   - skips target fetches when the configured ATLAS sweep schedule is not due
   - reports active target filters and estimates monthly checks from the filtered target count
+  - supports optional `supabase-project-health` targets backed by `GET /v1/projects/{ref}/health` through the Supabase Management API
 - `scripts/atlas-health-status.js`
   - repo-local read-only status command for ATLAS health watch posture and alert readiness
   - checks current configured target health, local/process env arming flags, alert target shape, active target filters, and usage estimate without sending Discord messages

@@ -16,6 +16,19 @@ function configEnv(targets, schedule = null) {
   };
 }
 
+function configEnvBase64(targets, schedule = null) {
+  return {
+    DISCORDOS_ATLAS_HEALTH_TARGETS_BASE64: Buffer.from(
+      JSON.stringify({
+        version: 1,
+        ...(schedule ? { schedule } : {}),
+        targets,
+      }),
+      "utf8"
+    ).toString("base64"),
+  };
+}
+
 test("atlas health watch args default to dry run config", () => {
   assert.deepEqual(_internals.parseArgs([]), {
     json: false,
@@ -71,6 +84,25 @@ test("atlas health watch passes when all targets are healthy", async () => {
   assert.equal(result.passCount, 2);
   assert.equal(result.alertDelivery.status, "skipped_clear");
   assert.equal(result.usageEstimate.targetChecksPerMonth, 60);
+});
+
+test("atlas health watch loads base64 inline config", async () => {
+  const result = await _internals.buildAtlasHealthWatch({
+    env: configEnvBase64([
+      {
+        id: "runtime",
+        label: "Runtime",
+        owner: "DiscordOS",
+        url: "https://example.test/api/runtime-health",
+        kind: "json-ok",
+      },
+    ]),
+    fetchImpl: async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.targetCount, 1);
+  assert.equal(result.passCount, 1);
 });
 
 test("atlas health watch estimates monthly checks from configured schedule", () => {
@@ -328,6 +360,305 @@ test("atlas health watch suppresses repeated critical fingerprint", async () => 
   assert.equal(second.alertDelivery.status, "suppressed_repeat");
   assert.equal(second.alertDelivery.sent, false);
   assert.deepEqual(second.alertDelivery.reasonCodes, ["atlas_health_repeat_suppressed"]);
+});
+
+test("atlas health watch supports supabase auth health targets", async () => {
+  const result = await _internals.buildAtlasHealthWatch({
+    env: {
+      ...configEnv([
+        {
+          id: "supabase-discordos",
+          label: "DiscordOS Supabase",
+          owner: "DiscordOS",
+          kind: "supabase-auth-health",
+          projectRef: "nwexsktuuenfdegzrbut",
+          publishableKeyEnv: "DISCORDOS_SUPABASE_PUBLISHABLE_KEY",
+        },
+      ]),
+      DISCORDOS_SUPABASE_PUBLISHABLE_KEY: "sb_publishable",
+    },
+    fetchImpl: async (url, options) => {
+      assert.equal(String(url), "https://nwexsktuuenfdegzrbut.supabase.co/auth/v1/health");
+      assert.equal(options.headers.apikey, "sb_publishable");
+      return new Response(JSON.stringify({
+        name: "GoTrue",
+        version: "v2.60.7",
+      }), { status: 200 });
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.targetCount, 1);
+  assert.deepEqual(result.checks[0].details, ["service: GoTrue", "version: v2.60.7"]);
+});
+
+test("atlas health watch marks missing supabase publishable key as critical", async () => {
+  const result = await _internals.buildAtlasHealthWatch({
+    env: configEnv([
+      {
+        id: "supabase-discordos",
+        label: "DiscordOS Supabase",
+        owner: "DiscordOS",
+        kind: "supabase-auth-health",
+        projectRef: "nwexsktuuenfdegzrbut",
+        publishableKeyEnv: "DISCORDOS_SUPABASE_PUBLISHABLE_KEY",
+      },
+    ]),
+  });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.criticalTargets[0].reasonCodes, ["supabase_publishable_key_missing"]);
+});
+
+test("atlas health watch supports Supabase project platform health targets", async () => {
+  const result = await _internals.buildAtlasHealthWatch({
+    env: {
+      ...configEnv([
+        {
+          id: "supabase-platform-discordos",
+          label: "DiscordOS Supabase platform",
+          owner: "DiscordOS",
+          kind: "supabase-project-health",
+          projectRef: "nwexsktuuenfdegzrbut",
+          accessTokenEnv: "SUPABASE_ACCESS_TOKEN",
+          services: ["api", "db", "auth"],
+        },
+      ]),
+      SUPABASE_ACCESS_TOKEN: "sbp_token",
+    },
+    fetchImpl: async (url, options) => {
+      assert.equal(String(url), "https://api.supabase.com/v1/projects/nwexsktuuenfdegzrbut/health");
+      assert.equal(options.headers.Authorization, "Bearer sbp_token");
+      return new Response(JSON.stringify({
+        services: [
+          { name: "api", status: "ACTIVE_HEALTHY" },
+          { name: "db", status: "ACTIVE_HEALTHY" },
+          { name: "auth", status: "ACTIVE_HEALTHY" },
+          { name: "storage", status: "ACTIVE_HEALTHY" },
+        ],
+      }), { status: 200 });
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.checks[0].details, ["services checked: 3"]);
+});
+
+test("atlas health watch fails when Supabase project services are not healthy", async () => {
+  const result = await _internals.buildAtlasHealthWatch({
+    env: {
+      ...configEnv([
+        {
+          id: "supabase-platform-fitness",
+          label: "Fitness Supabase platform",
+          owner: "Fitness",
+          kind: "supabase-project-health",
+          projectRef: "lpswxoyfniocuhljgzbc",
+          accessTokenEnv: "SUPABASE_ACCESS_TOKEN",
+          services: ["api", "db", "auth"],
+        },
+      ]),
+      SUPABASE_ACCESS_TOKEN: "sbp_token",
+    },
+    fetchImpl: async () => new Response(JSON.stringify({
+      services: [
+        { name: "api", status: "ACTIVE_HEALTHY" },
+        { name: "db", status: "INACTIVE" },
+        { name: "auth", status: "ACTIVE_HEALTHY" },
+      ],
+    }), { status: 200 }),
+  });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.criticalTargets[0].reasonCodes, ["supabase_project_service_not_healthy"]);
+  assert.deepEqual(result.criticalTargets[0].details, ["db: INACTIVE"]);
+});
+
+test("atlas health watch marks missing Supabase management token as critical", async () => {
+  const result = await _internals.buildAtlasHealthWatch({
+    env: configEnv([
+      {
+        id: "supabase-platform-mazer",
+        label: "Mazer Supabase platform",
+        owner: "Mazer",
+        kind: "supabase-project-health",
+        projectRef: "geknvnrmktchljnyddwp",
+        accessTokenEnv: "SUPABASE_ACCESS_TOKEN",
+      },
+    ]),
+  });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.criticalTargets[0].reasonCodes, ["supabase_access_token_missing"]);
+});
+
+test("atlas health watch supports statuspage summary targets", async () => {
+  const result = await _internals.buildAtlasHealthWatch({
+    env: configEnv([
+      {
+        id: "vercel-status",
+        label: "Vercel status",
+        owner: "Vercel",
+        kind: "statuspage-summary-ok",
+        url: "https://www.vercel-status.com/api/v2/summary.json",
+      },
+    ]),
+    fetchImpl: async () => new Response(JSON.stringify({
+      status: {
+        indicator: "none",
+        description: "All Systems Operational",
+      },
+      incidents: [],
+    }), { status: 200 }),
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.checks[0].details, ["status: All Systems Operational"]);
+});
+
+test("atlas health watch flags non-operational statuspage indicators", async () => {
+  const result = await _internals.buildAtlasHealthWatch({
+    env: configEnv([
+      {
+        id: "vercel-status",
+        label: "Vercel status",
+        owner: "Vercel",
+        kind: "statuspage-summary-ok",
+        url: "https://www.vercel-status.com/api/v2/summary.json",
+      },
+    ]),
+    fetchImpl: async () => new Response(JSON.stringify({
+      status: {
+        indicator: "minor",
+        description: "Minor Service Outage",
+      },
+      incidents: [{ id: "incident-1" }],
+    }), { status: 200 }),
+  });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.criticalTargets[0].reasonCodes, ["statuspage_indicator_not_operational"]);
+  assert.deepEqual(result.criticalTargets[0].details, [
+    "status: Minor Service Outage",
+    "unresolved incidents: 1",
+  ]);
+});
+
+test("atlas health watch supports vercel project readiness targets", async () => {
+  const result = await _internals.buildAtlasHealthWatch({
+    env: {
+      ...configEnv([
+        {
+          id: "vercel-platform",
+          label: "Vercel platform",
+          owner: "ATLAS",
+          kind: "vercel-projects-ready",
+          teamId: "team_CMJn7MvzFZZBnhNnjVUZF2RD",
+          tokenEnv: "DISCORDOS_VERCEL_API_TOKEN",
+          projects: [
+            {
+              id: "prj_C2RSEa34OblHfhuEpVChRQQZSjuG",
+              name: "fawxzzy-discordos",
+            },
+            {
+              id: "prj_rtlFVOMFAWCRoJ3SQjHloi89881K",
+              name: "fawxzzy-fitness",
+            },
+          ],
+        },
+      ]),
+      DISCORDOS_VERCEL_API_TOKEN: "vercel-token",
+    },
+    fetchImpl: async (url, options) => {
+      assert.equal(options.headers.Authorization, "Bearer vercel-token");
+      return new Response(JSON.stringify({
+        latestDeployment: {
+          readyState: "READY",
+          target: "production",
+        },
+      }), { status: 200 });
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.targetCount, 1);
+  assert.deepEqual(result.checks[0].details, ["projects checked: 2"]);
+});
+
+test("atlas health watch accepts raw Vercel project API deployment shape", async () => {
+  const result = await _internals.buildAtlasHealthWatch({
+    env: {
+      ...configEnv([
+        {
+          id: "vercel-platform",
+          label: "Vercel platform",
+          owner: "ATLAS",
+          kind: "vercel-projects-ready",
+          teamId: "team_CMJn7MvzFZZBnhNnjVUZF2RD",
+          tokenEnv: "DISCORDOS_VERCEL_API_TOKEN",
+          projects: [
+            {
+              id: "prj_C2RSEa34OblHfhuEpVChRQQZSjuG",
+              name: "fawxzzy-discordos",
+            },
+          ],
+        },
+      ]),
+      DISCORDOS_VERCEL_API_TOKEN: "vercel-token",
+    },
+    fetchImpl: async () => new Response(JSON.stringify({
+      targets: {
+        production: {
+          readyState: "READY",
+          target: "production",
+        },
+      },
+      latestDeployments: [
+        {
+          readyState: "READY",
+          target: "production",
+        },
+      ],
+    }), { status: 200 }),
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.targetCount, 1);
+  assert.deepEqual(result.checks[0].details, ["projects checked: 1"]);
+});
+
+test("atlas health watch reports failing vercel projects in alert details", async () => {
+  const result = await _internals.buildAtlasHealthWatch({
+    env: {
+      ...configEnv([
+        {
+          id: "vercel-platform",
+          label: "Vercel platform",
+          owner: "ATLAS",
+          kind: "vercel-projects-ready",
+          teamId: "team_CMJn7MvzFZZBnhNnjVUZF2RD",
+          tokenEnv: "DISCORDOS_VERCEL_API_TOKEN",
+          projects: [
+            {
+              id: "prj_t3zothbtj9DExrh3FjMsH98hwwSZ",
+              name: "fawxzzy-mazer",
+            },
+          ],
+        },
+      ]),
+      DISCORDOS_VERCEL_API_TOKEN: "vercel-token",
+    },
+    fetchImpl: async () => new Response(JSON.stringify({
+      latestDeployment: {
+        readyState: "ERROR",
+        target: "production",
+      },
+    }), { status: 200 }),
+  });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.criticalTargets[0].reasonCodes, ["vercel_latest_deployment_not_ready"]);
+  assert.match(result.criticalTargets[0].details[0], /fawxzzy-mazer/);
 });
 
 test("atlas health watch renders markdown without full target URLs", () => {
