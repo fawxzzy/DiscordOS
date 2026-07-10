@@ -26,7 +26,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-10T17:42:56.464Z"
+    "liveSyncedAt": "2026-07-10T18:18:19.222Z"
   },
   "cards": [
     {
@@ -81,7 +81,7 @@
       "completionPercent": 98,
       "summary": "Replace solver-like behavior with a human-style runner that perceives, classifies, commits, doubts, recovers, and learns without secretly routing through the full maze graph.",
       "whyItMatters": "The AI is the game's tuning dummy. If it knows the end or receives a hidden full-floor route, score, rank, maze difficulty, and player-facing complexity all become misleading.",
-      "currentStatus": "The hidden full-floor emergency fallback is removed; A*/shortest-path data is a post-run benchmark; and the AI exposes thought, choice, confidence, remembered options, and a non-goal target. Human-memory recovery can cross a previously exhausted but remembered corridor to reach a verified unexplored frontier, while dead ends remain excluded from new branch selection. Generated menu AI no longer emits ai-path-exhausted or regenerates before goal; focused 30-maze proof and a 60-case E-rank calibration both reached goal in every case with zero target leaks and zero pre-goal regenerations. The rank controller now has a real D-through-S local cognition ladder instead of sharing D behavior: local lookahead grows, confidence noise/split uncertainty decrease, and wrap mental cost drops without granting a solver route. The maintained E-to-S sweep is monotonic, moving average score 65.2 to 80.8 and route-efficiency pressure 61.98 to 25.937. Long E-rank searches remain intentionally fallible and score poorly through route-efficiency pressure; reducing their route overhead is the next tuning slice.",
+      "currentStatus": "The hidden full-floor emergency fallback is removed; A*/shortest-path data is a post-run benchmark; and the AI exposes thought, choice, confidence, remembered options, and a non-goal target. Human-memory recovery can cross a previously exhausted but remembered corridor to reach a verified unexplored frontier, while dead ends remain excluded from new branch selection. Generated menu AI no longer emits ai-path-exhausted or regenerates before goal; focused 30-maze proof and a 60-case E-rank calibration both reached goal in every case with zero target leaks and zero pre-goal regenerations. The rank controller now has a real D-through-S local cognition ladder instead of sharing D behavior: local lookahead grows, confidence noise/split uncertainty decrease, and wrap mental cost drops without granting a solver route. The maintained E-to-S sweep is monotonic, moving average score 65.2 to 80.8 and route-efficiency pressure 61.98 to 25.937. The latest recovery tuning pass rejected E local-progress scoring, a bounded endpoint-discovery prototype, and recovery penalties 0.8 and 0.3 because each worsened the 60-case route-efficiency baseline; all changes were reverted. Decision-level recovery diagnostics now record source/split/target, known-route length, confidence, choice class, and thought state for every recovery. The restored 60-case E baseline reports 1,239 frontier recoveries, 120 optional retargets, 11.586 average known-route steps, and a 105-step maximum. Long E-rank searches remain intentionally fallible and score poorly through route-efficiency pressure; the next controller change must be ledger-driven.",
       "workBreakdown": [
         "Use a noisy vision model: clear corridors are trusted more than dense intersections, wraps, and near-overlapping paths.",
         "Separate perception from route choice by labeling branches as promising, risky, dead-end-looking, shortcut-looking, or unclear before selecting a move.",
@@ -97,7 +97,7 @@
         "Add richer UI visualization beyond the amber target tile, including branch labels, remembered options, target confidence, and current thought state."
       ],
       "nextActions": [
-        "Tune low-rank frontier selection and recovery travel so poor searches stay visibly human but do not spend excessive time revisiting remembered corridors.",
+        "Use the recovery ledger to isolate the long-tail frontier pattern, then tune one measured low-rank frontier/recovery factor at a time without repeating the rejected global-vision or path-penalty experiments.",
         "Retain the no-cutoff invariant: pre-goal local-memory exhaustion must not reset, regenerate, teleport, or target the end.",
         "Expose the now-distinct rank cognition in a compact player-facing thought/skill legend without overwhelming normal UI.",
         "Keep default E-rank calibration near the healthier challenge/ease/hold mix while reducing regeneration count through route-quality improvements.",
