@@ -142,13 +142,13 @@ test("mazer feedback board reads committed cards", async () => {
   assert.equal(result.placement.forumChannelId, "1524889569475170478");
   assert.equal(result.liveForumChannelId, "1524889569475170478");
   assert.equal(result.legacyForumChannelId, "1524844302981926972");
-  assert.equal(result.cardCount, 30);
-  assert.equal(result.openCardCount, 21);
+  assert.equal(result.cardCount, 35);
+  assert.equal(result.openCardCount, 22);
   assert.equal(result.readyCardCount, 0);
   assert.equal(result.completedCardCount, 0);
   assert.equal(result.blockedCardCount, 0);
-  assert.equal(result.backlogCardCount, 9);
-  assert.equal(result.reactionReadyCardCount, 30);
+  assert.equal(result.backlogCardCount, 13);
+  assert.equal(result.reactionReadyCardCount, 35);
   assert.equal(result.nextCard.id, "mazer-ai-level-rank-progression");
   assert(result.cards.some((card) => card.id === "mazer-account-scoped-settings-persistence"));
   assert(result.cards.some((card) => card.id === "mazer-player-input-movement-correctness"));
@@ -161,6 +161,10 @@ test("mazer feedback board reads committed cards", async () => {
   assert(result.cards.some((card) => card.id === "mazer-diagonal-path-graph-contract"));
   assert(result.cards.some((card) => card.id === "mazer-discordos-board-discipline"));
   assert(result.cards.some((card) => card.id === "mazer-ai-token-assisted-maze-completion" && card.state === "backlog"));
+  assert(result.cards.some((card) => card.id === "mazer-invisibility-cloak-item" && card.state === "backlog"));
+  assert(result.cards.some((card) => card.id === "mazer-multiplayer-foundation" && card.state === "backlog"));
+  assert(result.cards.some((card) => card.id === "mazer-endless-multiplayer-survival-mode" && card.state === "backlog"));
+  assert(result.cards.some((card) => card.id === "mazer-moving-procedural-maze-mode" && card.state === "backlog"));
   assert(result.averageCompletionPercent > 0);
 });
 

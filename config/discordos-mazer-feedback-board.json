@@ -26,7 +26,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-10T08:57:23.991Z"
+    "liveSyncedAt": "2026-07-10T13:54:49.583Z"
   },
   "cards": [
     {
@@ -39,7 +39,7 @@
       "completionPercent": 72,
       "summary": "Define how player level, player rank, AI level, AI rank, maze level, and maze complexity influence each other without making the loop feel arbitrary.",
       "whyItMatters": "This is the backbone of the endless Mazer loop. If level, rank, complexity, and AI skill are vague, the game cannot scale fairly or feed useful learning receipts into Atlas.",
-      "currentStatus": "Level/rank still derive from target complexity at 72%, while the adjacent AI/playbook lane is at 82%; current proof covers target-derived bands, level-99 ceiling, difficulty profiles, fresh player seeds, score terms, and compact AI decision receipts.",
+      "currentStatus": "Level/rank still derive from target complexity at 72%, while the adjacent AI/playbook lane is at 97%; current proof covers target-derived bands, level-99 ceiling, difficulty profiles, fresh player seeds, score terms, compact AI decision receipts, rank-scaled AI perception profiles, human bias profiles, local human-lookahead scoring, non-chaotic AI exhaustion holds, and summary calibration that exposes whether AI score/signal movement actually changes level/rank.",
       "workBreakdown": [
         "Reset AI progression defaults to level 1 unless account-backed saved value is intentionally loaded.",
         "Define player level, AI level, rank, maze level, floor, and score in one player-facing and Atlas-facing contract.",
@@ -48,7 +48,7 @@
         "Keep rank S as top rank while target complexity and visible level keep moving toward level 99."
       ],
       "nextActions": [
-        "Run longer AI/player samples after the level-99 cap change.",
+        "Use the summary calibration output to tune why the default AI sample remains too ease-heavy.",
         "Tune floor/rank scaling and progression pacing from real receipt bands.",
         "Wire Atlas-side consumer ratchets from validated cycle-learning receipts."
       ],
@@ -70,6 +70,60 @@
       "reactionStatus": "failure",
       "reactionEmojiName": "failure",
       "reactionEmojiId": "1507384094424694785"
+    },
+    {
+      "id": "mazer-human-configured-ai-runner",
+      "title": "mazer: human-configured AI runner",
+      "state": "open",
+      "priority": "high",
+      "category": "mazer",
+      "markerName": "AI/playbook progression contracts",
+      "completionPercent": 97,
+      "summary": "Replace solver-like behavior with a human-style runner that perceives, classifies, commits, doubts, recovers, and learns without secretly routing through the full maze graph.",
+      "whyItMatters": "The AI is the game's tuning dummy. If it knows the end or receives a hidden full-floor route, score, rank, maze difficulty, and player-facing complexity all become misleading.",
+      "currentStatus": "The hidden full-floor emergency fallback has been removed, and A*/shortest-path data remains a post-run scoring benchmark instead of the movement controller. The AI exposes thought state, choice class, confidence, remembered option points, and a non-goal target point for diagnostics and overlay visualization. Rank and level drive local lookahead depth, optional retarget budget, split uncertainty, wrap mental cost, confidence noise, and diagnostics-only solve-preview budget. The latest focused and full rank sweeps both pass goalTargetLeakPass, monotonicAverageScorePass, and monotonicRouteEfficiencyPass. Full sweep proof: score rises E/D/C/B/A/S = 59.033 / 60.5 / 60.767 / 61.583 / 61.583 / 61.583, route pressure drops E/D/C/B/A/S = 65.811 / 64.579 / 64.576 / 63.163 / 63.163 / 63.163, and leaks remain 0. A/S currently share the B-grade controller floor while retaining higher solve-preview diagnostics for future richer high-rank distinction.",
+      "workBreakdown": [
+        "Use a noisy vision model: clear corridors are trusted more than dense intersections, wraps, and near-overlapping paths.",
+        "Separate perception from route choice by labeling branches as promising, risky, dead-end-looking, shortcut-looking, or unclear before selecting a move.",
+        "Keep A*/shortest path only as an internal benchmark for scoring after a run.",
+        "Add rank-based lookahead budgets from low-rank local junction checks to high-rank partial top-down planning.",
+        "Use implemented human bias profiles such as direct-chaser, wall-follower, shortcut-gambler, cautious mapper, and speedrunner.",
+        "Use confidence to decide whether to commit, doubt, retarget to a remembered split, or recover from a bad branch.",
+        "Apply mental cost to wrap paths so folded-world shortcuts become easier only as skill/rank improves.",
+        "Expose clean visible thought states: exploring, committing, doubting, recovering, shortcut-testing, and goal-confirming.",
+        "Replace any route-to-end fallback with known-frontier expansion.",
+        "Color active non-goal target tiles by current thought state while keeping remembered options visible as distinct memory markers.",
+        "Maintain npm run ai:calibrate, npm run ai:calibrate:ranks, and npm run ai:calibrate:biases as repeatable generated-seed proof for route ratio, reach/regeneration counts, invalid moves, goal-target leaks, thought states, choice classes, resolved perception profile, rank-sweep average-score comparison, route-efficiency-pressure comparison, and bias-profile separation.",
+        "Add richer UI visualization beyond the amber target tile, including branch labels, remembered options, target confidence, and current thought state."
+      ],
+      "nextActions": [
+        "Add richer high-rank distinction beyond the current B-grade controller floor without reintroducing hidden solver behavior.",
+        "Keep default E-rank calibration near the healthier challenge/ease/hold mix while reducing regeneration count through route-quality improvements.",
+        "Run longer rank samples after each controller/generator tuning pass and compare goalTargetLeakPass, monotonicAverageScorePass, and monotonicRouteEfficiencyPass.",
+        "Add a compact player-facing legend for the thought-state colors and target-confidence visualization."
+      ],
+      "acceptanceCriteria": [
+        "The AI cannot use a hidden full-floor route to reach the end after local memory fails.",
+        "The AI never exposes the end as its target before it has actually confirmed or reached it.",
+        "AI scoring compares against shortest viable path after the run without using that route to control movement.",
+        "The maintained calibration command reports zero goal-target leaks and zero invalid moves across the default generated-seed sample.",
+        "Visible thought overlays explain why the AI is exploring, committing, doubting, recovering, or testing a shortcut.",
+        "Runtime diagnostics expose thought state, choice class, confidence, option points, and non-goal target point for screenshot QA.",
+        "Low-rank AI remains fallible while high-rank AI can plan larger chunks without becoming a perfect solver."
+      ],
+      "proofPlan": [
+        "Run focused demo-walker tests for no hidden goal target and no full-floor fallback.",
+        "Run npm run ai:calibrate -- --summary-only and inspect route ratio, leak, reach, regeneration, score, signal, level, rank, thought-state, and choice-class summaries.",
+        "Run generated multi-seed AI samples and inspect score/progression movement.",
+        "Capture menu AI screenshots showing remembered options, non-goal targets, and thought-state visualization."
+      ],
+      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-human-configured-ai-runner",
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1525128584602058874",
+      "liveMessageId": "1525128584602058874"
     },
     {
       "id": "mazer-player-facing-options-guide",
@@ -118,7 +172,7 @@
       "priority": "high",
       "category": "mazer",
       "markerName": "Maze complexity/path topology",
-      "completionPercent": 28,
+      "completionPercent": 43,
       "summary": "Make wrapped border paths a real graph contract, keep start/goal/navigation aware of wrap edges, and prevent maze path visuals from entering border cutouts.",
       "whyItMatters": "Wrap paths and border notches change both visuals and navigation. They must be graph-owned, not just visual tricks, or AI distance, player movement, and difficulty scoring drift apart.",
       "currentStatus": "Wrap navigation exists and can snap visually, but generation, fill near triangular border cutouts, and difficulty scoring still need contract-level hardening.",
@@ -157,7 +211,7 @@
       "priority": "high",
       "category": "mazer",
       "markerName": "High-tech crisp graphics/art pass",
-      "completionPercent": 45,
+      "completionPercent": 46,
       "summary": "Raise the full game visual system toward a crisp 2026 cyber-arcade target: sharper tiles, cleaner borders, less blur, stronger material consistency.",
       "whyItMatters": "The game feel depends heavily on the maze being readable and premium on mobile. Blurry tiles or inconsistent materials make the app feel older than the current design target.",
       "currentStatus": "HiDPI backing and several green/cyan material passes have landed, but the visual language still needs one consistent high-tech arcade material system across all surfaces.",
@@ -235,7 +289,7 @@
       "priority": "high",
       "category": "mazer",
       "markerName": "Fluid path/player/control feel",
-      "completionPercent": 39,
+      "completionPercent": 41,
       "summary": "Replace snappy tile jumps and hard-coded stick segments with smoother player motion and dynamic directional intent handling.",
       "whyItMatters": "Fast timed play will fail if the controls feel segmented, sticky, or jumpy. The player should feel like they are steering through a path, not stepping through a debug grid.",
       "currentStatus": "Tap/hold parity and wrap snap improvements exist, but the stick still needs a true intent resolver and player motion still needs smoother interpolation.",
@@ -359,7 +413,7 @@
       "priority": "medium",
       "category": "mazer",
       "markerName": "Unified player-facing message system",
-      "completionPercent": 74,
+      "completionPercent": 78,
       "summary": "Move auth and gameplay notices into the same clean player-facing message system instead of leaving raw status text on screen.",
       "whyItMatters": "Raw technical messages break the game feel. Errors, auth notices, and offline states should appear as intentional in-game messages, not development leftovers.",
       "currentStatus": "The need is identified and some auth messages have been touched, but every error/status path still needs to route through one consistent message surface.",
@@ -632,10 +686,10 @@
       "priority": "medium",
       "category": "mazer",
       "markerName": "DiscordOS Mazer feedback board",
-      "completionPercent": 85,
+      "completionPercent": 90,
       "summary": "Keep exactly one live Mazer board in Project Feedback Boards, keep cards richly formatted, and update card state/reactions as implementation work lands.",
       "whyItMatters": "The board is only useful if it mirrors real work. Thin cards, wrong placement, missing reactions, or stale completion state break the planning loop.",
-      "currentStatus": "The live mazer forum exists in Project Feedback Boards with rich card readback. Future work still needs disciplined card updates and completed-state movement.",
+      "currentStatus": "The live mazer forum exists in Project Feedback Boards with rich card readback. Visibility drift usually happens when a chat updates local board JSON or Mazer marker docs without running the guarded DiscordOS live sync and readback, or leaves DiscordOS changes uncommitted for the next chat.",
       "workBreakdown": [
         "Use one forum named mazer under Project Feedback Boards.",
         "Keep each card formatted with purpose, current state, work breakdown, next actions, acceptance criteria, and proof plan.",
@@ -643,9 +697,9 @@
         "Move completed work to the completed workflow surface only after proof-backed closure."
       ],
       "nextActions": [
-        "Use the board card id in each Mazer implementation closeout.",
-        "Update completionPercent and state after each proof-backed pass.",
-        "Run live readback before claiming DiscordOS card changes."
+        "After any board JSON change, run env readiness, guarded live sync, live readback, and reconciliation in DiscordOS.",
+        "Commit DiscordOS board changes after successful live readback so other chats see the same state.",
+        "Keep Mazer marker changes and DiscordOS board cards reconciled before claiming card movement."
       ],
       "acceptanceCriteria": [
         "The live board name is mazer and is placed under Project Feedback Boards.",
@@ -671,7 +725,7 @@
       "priority": "high",
       "category": "mazer",
       "markerName": "Account-scoped settings persistence",
-      "completionPercent": 64,
+      "completionPercent": 70,
       "summary": "Make changed game settings become the authenticated account's saved defaults instead of one global browser preference.",
       "whyItMatters": "Mazer now has real accounts. If control mode, pause-facing settings, visual toggles, or movement speed leak between accounts, auth-backed progression will feel unreliable.",
       "currentStatus": "The repo now scopes local game-toggle storage through the existing auth-scoped storage helper, reloads settings on account changes, and has guest/user isolation tests. Browser auth-flow proof and legacy unscoped preference migration remain open.",
@@ -755,7 +809,7 @@
       "priority": "high",
       "category": "mazer",
       "markerName": "Procedural difficulty generator shaping",
-      "completionPercent": 46,
+      "completionPercent": 61,
       "summary": "Turn player and AI skill into generated maze structure instead of only badge text.",
       "whyItMatters": "The endless progression loop needs mazes that actually match the active target complexity, not just UI labels that say the skill changed.",
       "currentStatus": "Difficulty profiles now map target complexity into scale, checkpoint pressure, shortcut pressure, route-quality reinforcement, required opposite-border wraps, and perimeter feeder pressure; generation requests carry target complexity and bounded seed selection chooses the closest candidate, but deeper retry/search and long-run calibration remain open.",
@@ -798,7 +852,7 @@
       "priority": "medium",
       "category": "mazer",
       "markerName": "Mobile shell and device harness",
-      "completionPercent": 20,
+      "completionPercent": 24,
       "summary": "Decide and prove the phone-shell path for mobile view, portrait behavior, and real-device confidence.",
       "whyItMatters": "Mazer is playable in browser emulation, but hard portrait guarantees and real-device trust need an explicit shell/device harness decision.",
       "currentStatus": "The app remains a web/PWA runtime with local mobile emulation proof; 405x958 captures cover guest menu, auth, play, pause, mobile Options, scroll rails, and phone HUD spacing, but true hard portrait lock requires a native/PWA install context or wrapper decision.",
@@ -1138,18 +1192,20 @@
       "category": "mazer",
       "summary": "Add deterministic enemy navigation that pursues the player's current position instead of the maze endpoint.",
       "whyItMatters": "Enemies are a major difficulty and urgency layer, but they need a testable movement contract before combat or item systems are added.",
-      "currentStatus": "Backlog only. Enemy spawn rules, counts, difficulty scaling, visual design, and balancing remain unresolved design decisions.",
+      "currentStatus": "Backlog only. Enemy spawn rules, counts, difficulty scaling, visual design, balancing, and item interactions remain unresolved; future pursuit must respect cloak masking, frozen-enemy duration windows, and multiplayer target ownership.",
       "workBreakdown": [
         "Reuse existing player-AI compass/navigation concepts where they fit.",
-        "Use A* pathfinding toward the player's current position.",
+        "Use pathfinding toward the visible, targetable player position rather than the maze endpoint.",
         "Recalculate or invalidate route as the player moves.",
+        "Respect item effects such as cloak masking, frozen enemy movement, and temporary pass-through collision.",
         "Match enemy cadence with player movement unless future balance overrides it.",
-        "End the game on enemy collision or contact."
+        "End the game on enemy collision or contact when no pass-through effect is active."
       ],
       "nextActions": [
         "Define spawn and count rules.",
         "Decide how enemy difficulty scales by maze level and player rank.",
-        "Link enemy updates to the turn-synchronous simulation contract."
+        "Link enemy updates to the turn-synchronous simulation contract and cloak duration rules.",
+        "Define enemy target ownership for multiplayer sessions."
       ],
       "acceptanceCriteria": [
         "Enemy pathfinding is deterministic and testable.",
@@ -1163,7 +1219,10 @@
         "Run play-mode collision proof."
       ],
       "relatedCardIds": [
-        "mazer-turn-synchronous-world-simulation"
+        "mazer-turn-synchronous-world-simulation",
+        "mazer-invisibility-cloak-item",
+        "mazer-endless-multiplayer-survival-mode",
+        "mazer-multiplayer-foundation"
       ],
       "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-enemy-pursuit-ai",
@@ -1181,18 +1240,19 @@
       "category": "mazer",
       "summary": "Move gameplay-affecting entities onto a centralized turn command so the world advances only when accepted player movement advances the turn.",
       "whyItMatters": "Enemies, projectiles, pickups, and collisions need predictable ordering and should not run ahead while the player is stopped.",
-      "currentStatus": "Backlog only. Cosmetic animation rules during gameplay pause remain an explicit design decision.",
+      "currentStatus": "Backlog only. Cosmetic animation rules during gameplay pause remain explicit; future item durations, frozen enemies, pass-through collisions, multiplayer conflict resolution, and moving-maze panning all need this central turn contract.",
       "workBreakdown": [
-        "Advance gameplay simulation only after accepted player movement.",
-        "Stop enemies, projectiles, and gameplay-affecting moving entities when the player stops.",
+        "Advance gameplay simulation only after accepted player movement or an explicit timed-mode tick.",
+        "Stop enemies, projectiles, and gameplay-affecting moving entities when the player stops unless the mode defines a timed tick.",
         "Use one centralized simulation tick or turn command.",
-        "Define ordering for player movement, enemy movement, projectile movement, pickups, and collisions.",
+        "Define ordering for player movement, enemy movement, projectile movement, pickups, item effects, duration expiry, and collisions.",
+        "Support duration effects such as cloak enemy-freeze and pass-through collision windows.",
         "Document inspiration at a high level without copying third-party assets or implementation."
       ],
       "nextActions": [
         "Draft the central turn command contract.",
         "Decide which cosmetic animations continue while gameplay simulation is paused.",
-        "Make enemies and projectile-based items depend on this contract."
+        "Make enemies, projectile-based items, cloak duration, multiplayer conflicts, and moving-maze panning depend on this contract."
       ],
       "acceptanceCriteria": [
         "Gameplay-affecting state changes only advance through the central turn command.",
@@ -1211,7 +1271,13 @@
       "reactionEmojiName": "failure",
       "reactionEmojiId": "1507384094424694785",
       "liveThreadId": "1525045186361692170",
-      "liveMessageId": "1525045186361692170"
+      "liveMessageId": "1525045186361692170",
+      "relatedCardIds": [
+        "mazer-invisibility-cloak-item",
+        "mazer-endless-multiplayer-survival-mode",
+        "mazer-moving-procedural-maze-mode",
+        "mazer-multiplayer-foundation"
+      ]
     },
     {
       "id": "mazer-mystery-box-usable-item-system",
@@ -1221,17 +1287,19 @@
       "category": "mazer",
       "summary": "Add mystery-box pickups that grant one held usable item with a visible action button and deterministic bounded AI evaluation.",
       "whyItMatters": "Items create tactical variation, but they must be tied to enemy/combat and turn-simulation contracts before implementation.",
-      "currentStatus": "Backlog only. Combat, projectile targeting, duration, probability, and balance rules remain unresolved.",
+      "currentStatus": "Backlog only. Combat, projectile targeting, duration, probability, cloak behavior, pass-through collision, and balance rules remain unresolved.",
       "workBreakdown": [
         "Render a one-tile mystery box with yellow question mark, blue body, animated sheen, and a three-second blue-to-light-blue pulse.",
         "Collect the box by reaching its tile and randomly select one held item.",
         "Show a slot-machine-style cycling animation in the bottom-right Use Item action button.",
-        "Support bullets, shield, timed speed boost, undetermined power-up, and random valid teleport as initial concepts.",
-        "Allow AI-controlled player to remember a useful nearby mystery box without always overriding its primary route."
+        "Support bullets, shield, timed speed boost, invisibility cloak, undetermined power-up, and random valid teleport as initial concepts.",
+        "Allow AI-controlled player to remember a useful nearby mystery box without always overriding its primary route.",
+        "Keep item effects deterministic enough for survival and multiplayer proof."
       ],
       "nextActions": [
         "Resolve item probabilities, duration, targeting, and balance.",
         "Define how one held item replaces another.",
+        "Link cloak behavior to enemy pursuit and turn-synchronous simulation.",
         "Link bullets and shields to enemy/combat work and movement effects to turn simulation."
       ],
       "acceptanceCriteria": [
@@ -1247,7 +1315,9 @@
       ],
       "relatedCardIds": [
         "mazer-turn-synchronous-world-simulation",
-        "mazer-enemy-pursuit-ai"
+        "mazer-enemy-pursuit-ai",
+        "mazer-invisibility-cloak-item",
+        "mazer-endless-multiplayer-survival-mode"
       ],
       "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-mystery-box-usable-item-system",
@@ -1256,6 +1326,193 @@
       "reactionEmojiId": "1507384094424694785",
       "liveThreadId": "1525045190841339985",
       "liveMessageId": "1525045190841339985"
+    },
+    {
+      "id": "mazer-invisibility-cloak-item",
+      "title": "mazer: invisibility cloak item",
+      "state": "backlog",
+      "priority": "medium",
+      "category": "mazer",
+      "summary": "Add a timed cloak item that masks the player from enemy tracking, freezes enemy movement, and lets the player pass through enemies during the effect.",
+      "whyItMatters": "A stealth item creates a readable emergency escape tool without changing the core maze graph or making enemies permanently harmless.",
+      "currentStatus": "Backlog only. Duration, spawn source, visual language, cooldown, stacking, and multiplayer fairness rules still need design before implementation.",
+      "workBreakdown": [
+        "Represent cloak duration as turn/time bounded state on the player.",
+        "Mask the cloaked player from enemy compass, tracker, pursuit targeting, and retarget scoring while active.",
+        "Freeze all enemy movement in the maze until the cloak duration completes.",
+        "Allow the cloaked player to pass through enemies without collision failure during the active window.",
+        "Show clear activation, remaining duration, and expiry feedback without exposing debug terms.",
+        "Define whether AI-controlled players can use the cloak and how enemy AI reacts after expiry."
+      ],
+      "nextActions": [
+        "Choose duration units and whether duration decrements by real time, accepted turns, or game ticks.",
+        "Define pickup source: mystery box, item inventory, direct spawn, or game-mode-specific grant.",
+        "Design player/enemy visual states for cloaked, frozen, pass-through, and expiry frames.",
+        "Write collision and enemy-targeting rules before adding art."
+      ],
+      "acceptanceCriteria": [
+        "Enemy tracker and compass cannot target a cloaked player during the active duration.",
+        "Enemy movement stays frozen for the whole cloak duration and resumes deterministically after expiry.",
+        "Player/enemy collision is pass-through while cloaked and returns to normal after expiry.",
+        "The cloak effect is bounded, visible to the player, and covered by deterministic tests."
+      ],
+      "proofPlan": [
+        "Run turn/duration unit tests for activation, countdown, expiry, and enemy resume.",
+        "Run enemy targeting tests proving cloaked players are excluded from pursuit decisions.",
+        "Run collision tests proving pass-through only applies during the active cloak window.",
+        "Run visual proof for activation, countdown, frozen enemies, and expiry."
+      ],
+      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-invisibility-cloak-item",
+      "relatedCardIds": [
+        "mazer-mystery-box-usable-item-system",
+        "mazer-enemy-pursuit-ai",
+        "mazer-turn-synchronous-world-simulation"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1525136076317134938",
+      "liveMessageId": "1525136076317134938"
+    },
+    {
+      "id": "mazer-multiplayer-foundation",
+      "title": "mazer: multiplayer foundation",
+      "state": "backlog",
+      "priority": "medium",
+      "category": "mazer",
+      "summary": "Add the session, identity, color, visibility, and sync contracts needed for two-player Mazer without assuming a final game mode.",
+      "whyItMatters": "Multiplayer changes progression, rendering, trails, collisions, and network truth; it needs a foundation before survival or moving-maze modes depend on it.",
+      "currentStatus": "Backlog only. The intended local presentation is self-is-green and other-player-is-red on each device, with the other player trail hidden or always short-fading.",
+      "workBreakdown": [
+        "Define multiplayer session creation, joining, identity, reconnect, and leave behavior.",
+        "Render the current user as green on their own device and the other participant as red.",
+        "Render the other participant as green on their device and this user as red there.",
+        "Hide the other player trail by default or show only a short fading trail.",
+        "Define latency, input authority, collision, item ownership, enemy targeting, and progression receipt boundaries.",
+        "Keep player-one/player-two labels local to each device instead of treating one device as globally primary."
+      ],
+      "nextActions": [
+        "Choose network transport and state authority model.",
+        "Define how multiplayer receipts differ from solo and AI-runner receipts.",
+        "Design color/trail rules for accessibility and colorblind alternatives.",
+        "Decide whether multiplayer is account-only, guest-compatible, or mixed."
+      ],
+      "acceptanceCriteria": [
+        "Each device sees itself as green and the other player as red.",
+        "Other-player trail is hidden or short-fading and cannot clutter route readability.",
+        "Session state survives reasonable reconnects or reports a clean leave/fail state.",
+        "Items, enemy targeting, collisions, and receipts have explicit multiplayer ownership rules."
+      ],
+      "proofPlan": [
+        "Run two-client session state tests with mirrored color roles.",
+        "Run trail-visibility tests for self and other player views.",
+        "Run deterministic conflict tests for simultaneous movement, item pickup, and enemy targeting."
+      ],
+      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-multiplayer-foundation",
+      "relatedCardIds": [
+        "mazer-endless-multiplayer-survival-mode",
+        "mazer-invisibility-cloak-item"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1525136082193223720",
+      "liveMessageId": "1525136082193223720"
+    },
+    {
+      "id": "mazer-endless-multiplayer-survival-mode",
+      "title": "mazer: endless multiplayer survival mode",
+      "state": "backlog",
+      "priority": "medium",
+      "category": "mazer",
+      "summary": "Add an endless survival game mode where enemies and items spawn over time and players survive as long as possible, with solo and multiplayer settings.",
+      "whyItMatters": "Mazer needs a long-form mode that uses enemies, items, and multiplayer as a survival loop instead of only endpoint completion.",
+      "currentStatus": "Backlog only. The mode should support solo first if needed, then multiplayer where each device treats its own user as green and the other participant as red.",
+      "workBreakdown": [
+        "Create a no-end survival objective with duration, score, wave, or survival-time tracking.",
+        "Spawn enemies over time with bounded density and difficulty scaling.",
+        "Spawn usable items over time, including future cloak and mystery-box items.",
+        "Support multiplayer role mirroring with self green and other player red on each device.",
+        "Keep other-player trail hidden or short-fading so survival readability stays clean.",
+        "Define whether players cooperate, compete, revive, collide, or share enemy pressure."
+      ],
+      "nextActions": [
+        "Define survival scoring and fail conditions.",
+        "Choose spawn pacing for enemies and items by elapsed time, maze pressure, and player count.",
+        "Design HUD for survival time, wave pressure, item slot, and teammate/opponent state.",
+        "Prototype solo survival before enabling multiplayer if network foundation is not ready."
+      ],
+      "acceptanceCriteria": [
+        "The mode has no endpoint clear condition and measures survival duration or score.",
+        "Enemy and item spawn rates stay bounded and readable over long sessions.",
+        "Multiplayer rendering follows local self-green/other-red rules on both devices.",
+        "The mode has deterministic tests for spawn cadence, collision/failure, item pickup, and multiplayer visibility."
+      ],
+      "proofPlan": [
+        "Run survival-mode state-machine tests for spawn, scoring, and fail transitions.",
+        "Run long-session simulation tests for enemy and item density caps.",
+        "Run two-client visual proof for mirrored player colors and trail behavior."
+      ],
+      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-endless-multiplayer-survival-mode",
+      "relatedCardIds": [
+        "mazer-multiplayer-foundation",
+        "mazer-enemy-pursuit-ai",
+        "mazer-mystery-box-usable-item-system",
+        "mazer-invisibility-cloak-item"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1525136087725641865",
+      "liveMessageId": "1525136087725641865"
+    },
+    {
+      "id": "mazer-moving-procedural-maze-mode",
+      "title": "mazer: moving procedural maze mode",
+      "state": "backlog",
+      "priority": "medium",
+      "category": "mazer",
+      "summary": "Add a mode where the maze pans in one or more directions while new maze space procedurally generates ahead of the player.",
+      "whyItMatters": "A moving maze can create pressure without a fixed endpoint, but it requires streaming topology, camera, AI, trail, and spawn rules to agree.",
+      "currentStatus": "Backlog only. Direction policy, generation window, wrap behavior, enemy/item spawn ownership, and fail conditions are unresolved.",
+      "workBreakdown": [
+        "Define whether the maze pans in one fixed direction, changes direction, or supports multiple simultaneous directional pressures.",
+        "Stream procedural maze cells ahead of the pan while retiring or locking cells behind the player.",
+        "Keep player movement, enemy movement, items, compass, trails, and camera aligned with the moving world frame.",
+        "Define failure when the player is pushed out, trapped, caught, or falls behind the generated safe region.",
+        "Make panning speed scale separately from maze difficulty and survival pressure."
+      ],
+      "nextActions": [
+        "Design the world-window data structure before rendering the panning effect.",
+        "Decide if this is solo, multiplayer, or a variant of endless survival.",
+        "Prototype deterministic generated chunks with stable joins and no disconnected safe path.",
+        "Define enemy and item spawn rules for newly generated maze bands."
+      ],
+      "acceptanceCriteria": [
+        "New maze space generates before it is needed and remains connected to the playable region.",
+        "Panning movement does not desync player, enemies, trails, items, or camera bounds.",
+        "Failure and scoring rules are explicit and deterministic.",
+        "The mode can be tested with fixed seeds and panning schedules."
+      ],
+      "proofPlan": [
+        "Run chunk-generation tests for continuity across pan boundaries.",
+        "Run camera/world-frame tests proving player/enemy/item positions stay aligned.",
+        "Run visual proof for one-direction and direction-change panning schedules."
+      ],
+      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-moving-procedural-maze-mode",
+      "relatedCardIds": [
+        "mazer-endless-multiplayer-survival-mode",
+        "mazer-procedural-difficulty-generator-shaping"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1525136091839991940",
+      "liveMessageId": "1525136091839991940"
     }
   ]
 }

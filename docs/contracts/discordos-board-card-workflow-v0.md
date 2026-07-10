@@ -114,7 +114,7 @@ The reconciler must report inspected cards, title repairs required/applied, reac
 
 Mazer live board readback after the shared contract migration and local app state refresh:
 
-- inspected cards: 30
+- inspected cards: 35
 - title repairs required: 0
 - reaction repairs required: 0
 - duplicate stable identities: 0

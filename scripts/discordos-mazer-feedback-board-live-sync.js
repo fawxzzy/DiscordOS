@@ -194,9 +194,17 @@ function normalizeThreadTitle(value) {
   return cardContract.normalizeThreadTitle(value);
 }
 
-function formatLimitedBullets(items, limit = 2) {
+function formatLimitedText(value, maxLength = 280) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (text.length <= maxLength) {
+    return text;
+  }
+  return `${text.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...`;
+}
+
+function formatLimitedBullets(items, limit = 1, itemMaxLength = 100) {
   const safeItems = Array.isArray(items) ? items.filter(hasText) : [];
-  const lines = safeItems.slice(0, limit).map((item) => `- ${item}`);
+  const lines = safeItems.slice(0, limit).map((item) => `- ${formatLimitedText(item, itemMaxLength)}`);
   const remaining = safeItems.length - lines.length;
   if (remaining > 0) {
     lines.push(`- +${remaining} more tracked in source board config.`);
@@ -256,13 +264,13 @@ function buildCardThreadPayload(cardOrSpec) {
     ...statusLines,
     "",
     "**Purpose**",
-    `${card.summary}`,
+    formatLimitedText(card.summary, 160),
     "",
     "**Why This Matters**",
-    `${card.whyItMatters}`,
+    formatLimitedText(card.whyItMatters, 160),
     "",
     "**Current State**",
-    `${card.currentStatus}`,
+    formatLimitedText(card.currentStatus, 320),
     "",
     "**Work Breakdown**",
     ...formatLimitedBullets(card.workBreakdown),
