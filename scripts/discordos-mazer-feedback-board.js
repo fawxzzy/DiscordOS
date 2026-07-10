@@ -2,7 +2,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 
 const DEFAULT_BOARD_PATH = path.resolve(process.cwd(), "config", "discordos-mazer-feedback-board.json");
-const STATES = new Set(["open", "ready", "blocked", "completed"]);
+const STATES = new Set(["open", "ready", "blocked", "completed", "backlog"]);
 const PRIORITIES = new Set(["low", "medium", "high"]);
 const REACTION_STATUSES = new Set(["success", "failure"]);
 const STATUS_REACTIONS = {
@@ -82,11 +82,21 @@ function classifyCard(card) {
   if (!hasText(card.category)) {
     reasonCodes.push("card_category_missing");
   }
-  if (!hasText(card.markerName)) {
-    reasonCodes.push("card_marker_name_missing");
-  }
-  if (!Number.isFinite(card.completionPercent) || card.completionPercent < 0 || card.completionPercent > 100) {
-    reasonCodes.push("card_completion_percent_invalid");
+  const isBacklogCard = card?.state === "backlog";
+  if (isBacklogCard) {
+    if (hasText(card.markerName)) {
+      reasonCodes.push("card_backlog_marker_name_present");
+    }
+    if (Object.prototype.hasOwnProperty.call(card, "completionPercent")) {
+      reasonCodes.push("card_backlog_completion_percent_present");
+    }
+  } else {
+    if (!hasText(card.markerName)) {
+      reasonCodes.push("card_marker_name_missing");
+    }
+    if (!Number.isFinite(card.completionPercent) || card.completionPercent < 0 || card.completionPercent > 100) {
+      reasonCodes.push("card_completion_percent_invalid");
+    }
   }
   if (!hasText(card.reference)) {
     reasonCodes.push("card_reference_missing");
@@ -143,6 +153,7 @@ function classifyCard(card) {
     state: card?.state || null,
     priority: card?.priority || null,
     category: card?.category || null,
+    classification: card?.state === "backlog" ? "backlog" : "active",
     markerName: card?.markerName || null,
     completionPercent: Number.isFinite(card?.completionPercent) ? card.completionPercent : null,
     summary: card?.summary || null,
@@ -216,6 +227,7 @@ function buildMazerFeedbackBoardReadModel(board, { cardId = null, state = null }
     openCardCount: cards.filter((card) => card.state === "open").length,
     completedCardCount: cards.filter((card) => card.state === "completed").length,
     blockedCardCount: cards.filter((card) => card.state === "blocked").length,
+    backlogCardCount: cards.filter((card) => card.state === "backlog").length,
     reactionReadyCardCount: cards.filter((card) => {
       const expectedStatus = card.state === "completed" ? "success" : "failure";
       const expectedReaction = STATUS_REACTIONS[expectedStatus];
@@ -223,8 +235,13 @@ function buildMazerFeedbackBoardReadModel(board, { cardId = null, state = null }
         && card.reactionEmojiName === expectedReaction.name
         && card.reactionEmojiId === expectedReaction.id;
     }).length,
-    averageCompletionPercent: cards.length
-      ? Math.round(cards.reduce((sum, card) => sum + (card.completionPercent || 0), 0) / cards.length)
+    averageCompletionPercent: cards.filter((card) => card.state !== "backlog").length
+      ? Math.round(
+        cards
+          .filter((card) => card.state !== "backlog")
+          .reduce((sum, card) => sum + (card.completionPercent || 0), 0)
+        / cards.filter((card) => card.state !== "backlog").length
+      )
       : 0,
     nextCard: nextEligibleCards.find((card) => card.priority === "high") || nextEligibleCards[0] || null,
     cards: filteredCards,
@@ -262,6 +279,7 @@ async function buildMazerFeedbackBoard({
         openCardCount: result.openCardCount,
         completedCardCount: result.completedCardCount,
         blockedCardCount: result.blockedCardCount,
+        backlogCardCount: result.backlogCardCount,
         reactionReadyCardCount: result.reactionReadyCardCount,
         averageCompletionPercent: result.averageCompletionPercent,
       },
@@ -290,6 +308,7 @@ function renderMarkdown(result) {
     `- open cards: \`${result.openCardCount}\``,
     `- completed cards: \`${result.completedCardCount}\``,
     `- blocked cards: \`${result.blockedCardCount}\``,
+    `- backlog cards: \`${result.backlogCardCount}\``,
     `- reaction-ready cards: \`${result.reactionReadyCardCount}\``,
     `- average marker: \`${result.averageCompletionPercent}%\``,
     `- next card: \`${result.nextCard?.id || "none"}\``,
@@ -297,7 +316,10 @@ function renderMarkdown(result) {
   ];
 
   for (const card of result.cards) {
-    lines.push(`- card ${card.id}: state \`${card.state}\`, priority \`${card.priority}\`, marker \`${card.markerName}\` \`${card.completionPercent}%\`, reaction \`${card.reactionStatus || "none"}\`, command \`${card.nextCommand}\``);
+    const markerSummary = card.state === "backlog"
+      ? "backlog `no active marker`"
+      : `marker \`${card.markerName}\` \`${card.completionPercent}%\``;
+    lines.push(`- card ${card.id}: state \`${card.state}\`, priority \`${card.priority}\`, ${markerSummary}, reaction \`${card.reactionStatus || "none"}\`, command \`${card.nextCommand}\``);
   }
 
   return `${lines.join("\n")}\n`;

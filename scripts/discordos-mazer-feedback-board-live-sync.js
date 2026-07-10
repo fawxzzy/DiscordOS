@@ -6,6 +6,9 @@ const {
 const {
   _internals: updatePostInternals,
 } = require("./discord-update-post");
+const {
+  _internals: cardContract,
+} = require("./discordos-board-card-contract");
 
 const LIVE_SYNC_ENV = "DISCORDOS_MAZER_FEEDBACK_BOARD_SYNC";
 const LIVE_SYNC_ENV_VALUE = "enabled";
@@ -188,7 +191,7 @@ async function fetchArchivedThreads({ forumChannelId, token, fetchImpl = fetch }
 }
 
 function normalizeThreadTitle(value) {
-  return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+  return cardContract.normalizeThreadTitle(value);
 }
 
 function formatLimitedBullets(items, limit = 2) {
@@ -220,21 +223,37 @@ function isForumChannel(channel) {
   return channel?.type === 15;
 }
 
-function buildCardThreadPayload(card) {
+function buildCardThreadPayload(cardOrSpec) {
+  const spec = cardOrSpec?.canonicalTitle ? cardOrSpec : null;
+  const card = spec?.card || cardOrSpec;
+  const title = spec?.canonicalTitle || card.title;
   const stateLabel = card.state === "completed" ? "done" : "not done";
+  const statusLines = [
+    `- card id: \`${card.id}\``,
+    `- state: \`${card.state}\``,
+    `- classification: \`${card.state === "backlog" ? "backlog" : "active"}\``,
+  ];
+  if (card.state !== "backlog") {
+    statusLines.push(
+      `- completion marker: \`${card.completionPercent}%\``,
+      `- marker: \`${card.markerName}\``,
+    );
+  }
+  statusLines.push(
+    `- done marker: \`${stateLabel}\``,
+    `- priority: \`${card.priority}\``,
+    `- reaction: \`${card.reactionStatus}\``,
+  );
+  const relatedCardLines = Array.isArray(card.relatedCardIds) && card.relatedCardIds.length > 0
+    ? ["", "**Dependencies / Related Cards**", ...formatLimitedBullets(card.relatedCardIds)]
+    : [];
   const content = [
     "# mazer",
     "",
-    `**${card.title}**`,
+    `**${title}**`,
     "",
     "## Status",
-    `- card id: \`${card.id}\``,
-    `- state: \`${card.state}\``,
-    `- completion marker: \`${card.completionPercent}%\``,
-    `- done marker: \`${stateLabel}\``,
-    `- priority: \`${card.priority}\``,
-    `- marker: \`${card.markerName}\``,
-    `- reaction: \`${card.reactionStatus}\``,
+    ...statusLines,
     "",
     "**Purpose**",
     `${card.summary}`,
@@ -256,72 +275,19 @@ function buildCardThreadPayload(card) {
     "",
     "**Proof Plan**",
     ...formatLimitedBullets(card.proofPlan),
+    ...relatedCardLines,
     "",
     "_Full reference path, command, and expanded checklist live in the source board config._",
   ].join("\n");
 
   return {
-    name: card.title,
+    name: title,
     auto_archive_duration: DEFAULT_AUTO_ARCHIVE_DURATION,
     message: {
       content,
       allowed_mentions: { parse: [] },
     },
   };
-}
-
-async function createForumThread({
-  forumChannelId,
-  token,
-  payload,
-  fetchImpl = fetch,
-}) {
-  return discordRequest({
-    path: `/channels/${forumChannelId}/threads`,
-    token,
-    method: "POST",
-    body: payload,
-    fetchImpl,
-  });
-}
-
-function encodeReaction({ name, id }) {
-  return encodeURIComponent(`${name}:${id}`);
-}
-
-async function updateThreadMessage({
-  threadId,
-  messageId,
-  token,
-  payload,
-  fetchImpl = fetch,
-}) {
-  return discordRequest({
-    path: `/channels/${threadId}/messages/${messageId}`,
-    token,
-    method: "PATCH",
-    body: payload.message,
-    fetchImpl,
-  });
-}
-
-async function addMessageReaction({
-  threadId,
-  messageId,
-  token,
-  reactionEmojiName,
-  reactionEmojiId,
-  fetchImpl = fetch,
-}) {
-  return discordRequest({
-    path: `/channels/${threadId}/messages/${messageId}/reactions/${encodeReaction({
-      name: reactionEmojiName,
-      id: reactionEmojiId,
-    })}/@me`,
-    token,
-    method: "PUT",
-    fetchImpl,
-  });
 }
 
 function summarizeThread(thread) {
@@ -724,79 +690,38 @@ async function buildMazerFeedbackBoardLiveSync({
 
   if (canSync && threadInventory.ok) {
     for (const card of readModel.cards) {
-      const existing = threadInventory.threads.find((thread) =>
-        normalizeThreadTitle(thread.name) === normalizeThreadTitle(card.title)
-      );
-      if (existing) {
-        const payload = buildCardThreadPayload(card);
-        const updated = await updateThreadMessage({
-          threadId: existing.id,
-          messageId: existing.messageId || existing.id,
-          token: normalizeEnvValue(env.DISCORDOS_BOT_TOKEN),
-          payload,
-          fetchImpl,
-        });
-        const reacted = await addMessageReaction({
-          threadId: existing.id,
-          messageId: existing.messageId || existing.id,
-          token: normalizeEnvValue(env.DISCORDOS_BOT_TOKEN),
-          reactionEmojiName: card.reactionEmojiName,
-          reactionEmojiId: card.reactionEmojiId,
-          fetchImpl,
-        });
-        cardSyncResults.push({
-          cardId: card.id,
-          title: card.title,
-          action: "existing",
-          ok: updated.ok && reacted.ok,
-          httpStatus: updated.status,
-          reactionStatus: reacted.status,
-          threadId: existing.id,
-          messageId: existing.messageId || existing.id,
-        });
-        if (!updated.ok) {
-          reasonCodes.push("mazer_card_thread_update_failed");
-        }
-        if (!reacted.ok) {
-          reasonCodes.push("mazer_card_reaction_apply_failed");
-        }
-        continue;
-      }
-
-      const payload = buildCardThreadPayload(card);
-      const created = await createForumThread({
+      const spec = {
+        ...cardContract.buildCanonicalCardSpec({
+          board,
+          card,
+          sourceWorkflow: "discordos.mazer.feedback_board_live_sync",
+        }),
+        card,
+      };
+      const existing = cardContract.findExistingThreadForSpec(threadInventory.threads, spec);
+      const upserted = await cardContract.upsertDiscordForumCard({
+        spec,
+        existingThread: existing,
         forumChannelId: forumTarget.forumChannelId,
         token: normalizeEnvValue(env.DISCORDOS_BOT_TOKEN),
-        payload,
+        apply: true,
         fetchImpl,
+        buildPayload: buildCardThreadPayload,
       });
-      const threadId = created.payload?.id || null;
-      const messageId = created.payload?.message?.id || threadId;
-      const reacted = created.ok && threadId && messageId
-        ? await addMessageReaction({
-          threadId,
-          messageId,
-          token: normalizeEnvValue(env.DISCORDOS_BOT_TOKEN),
-          reactionEmojiName: card.reactionEmojiName,
-          reactionEmojiId: card.reactionEmojiId,
-          fetchImpl,
-        })
-        : { ok: false, status: null };
       cardSyncResults.push({
         cardId: card.id,
-        title: card.title,
-        action: "created",
-        ok: created.ok && reacted.ok,
-        httpStatus: created.status,
-        reactionStatus: reacted.status,
-        threadId,
-        messageId,
+        title: spec.canonicalTitle,
+        action: upserted.action === "created" ? "created" : "existing",
+        ok: upserted.ok,
+        httpStatus: upserted.httpStatus,
+        reactionStatus: upserted.reactionResult?.addHttpStatus || upserted.reactionResult?.afterHttpStatus || null,
+        reactionReadbackStatus: upserted.reactionResult?.status || null,
+        threadId: upserted.threadId,
+        messageId: upserted.messageId,
+        reasonCodes: upserted.reasonCodes,
       });
-      if (!created.ok) {
-        reasonCodes.push("mazer_card_thread_create_failed");
-      }
-      if (!reacted.ok) {
-        reasonCodes.push("mazer_card_reaction_apply_failed");
+      if (!upserted.ok) {
+        reasonCodes.push(...upserted.reasonCodes.map((reasonCode) => `mazer_${reasonCode}`));
       }
     }
   }
@@ -941,7 +866,6 @@ module.exports = {
     resolveSyncAdmission,
     normalizeEnvValue,
     buildCardThreadPayload,
-    encodeReaction,
     resolveForumTarget,
     listForumThreads,
     buildMazerFeedbackBoardLiveSync,

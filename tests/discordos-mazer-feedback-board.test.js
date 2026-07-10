@@ -45,6 +45,61 @@ test("mazer feedback board classifies planned marker cards", () => {
   assert.equal(card.completionPercent, 28);
 });
 
+test("mazer feedback board classifies backlog cards without active markers", () => {
+  const card = _internals.classifyCard({
+    id: "mazer-backlog-card",
+    title: "mazer: backlog card",
+    state: "backlog",
+    priority: "medium",
+    category: "mazer",
+    summary: "Backlog-only future Mazer work.",
+    whyItMatters: "It keeps future scope visible without implying active work.",
+    currentStatus: "Backlog only.",
+    workBreakdown: ["Record the future scope without active implementation claims."],
+    nextActions: ["Wait for explicit prioritization before implementation."],
+    acceptanceCriteria: ["No active current-work marker is assigned."],
+    proofPlan: ["Run the board verifier."],
+    reference: "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+    nextCommand: "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-backlog-card",
+    reactionStatus: "failure",
+    reactionEmojiName: "failure",
+    reactionEmojiId: "1507384094424694785",
+  });
+
+  assert.equal(card.ok, true);
+  assert.equal(card.classification, "backlog");
+  assert.equal(card.markerName, null);
+  assert.equal(card.completionPercent, null);
+});
+
+test("mazer feedback board rejects backlog cards that carry active markers", () => {
+  const card = _internals.classifyCard({
+    id: "mazer-backlog-card",
+    title: "mazer: backlog card",
+    state: "backlog",
+    priority: "medium",
+    category: "mazer",
+    markerName: "Future Marker",
+    completionPercent: 0,
+    summary: "Backlog-only future Mazer work.",
+    whyItMatters: "It keeps future scope visible without implying active work.",
+    currentStatus: "Backlog only.",
+    workBreakdown: ["Record the future scope without active implementation claims."],
+    nextActions: ["Wait for explicit prioritization before implementation."],
+    acceptanceCriteria: ["No active current-work marker is assigned."],
+    proofPlan: ["Run the board verifier."],
+    reference: "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+    nextCommand: "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-backlog-card",
+    reactionStatus: "failure",
+    reactionEmojiName: "failure",
+    reactionEmojiId: "1507384094424694785",
+  });
+
+  assert.equal(card.ok, false);
+  assert(card.reasonCodes.includes("card_backlog_marker_name_present"));
+  assert(card.reasonCodes.includes("card_backlog_completion_percent_present"));
+});
+
 test("mazer feedback board rejects incomplete card contract", () => {
   const card = _internals.classifyCard({
     id: "",
@@ -87,17 +142,22 @@ test("mazer feedback board reads committed cards", async () => {
   assert.equal(result.placement.forumChannelId, "1524889569475170478");
   assert.equal(result.liveForumChannelId, "1524889569475170478");
   assert.equal(result.legacyForumChannelId, "1524844302981926972");
-  assert.equal(result.cardCount, 15);
-  assert.equal(result.openCardCount, 15);
+  assert.equal(result.cardCount, 27);
+  assert.equal(result.openCardCount, 18);
   assert.equal(result.readyCardCount, 0);
   assert.equal(result.completedCardCount, 0);
   assert.equal(result.blockedCardCount, 0);
-  assert.equal(result.reactionReadyCardCount, 15);
+  assert.equal(result.backlogCardCount, 9);
+  assert.equal(result.reactionReadyCardCount, 27);
   assert.equal(result.nextCard.id, "mazer-ai-level-rank-progression");
+  assert(result.cards.some((card) => card.id === "mazer-account-scoped-settings-persistence"));
+  assert(result.cards.some((card) => card.id === "mazer-player-input-movement-correctness"));
   assert(result.cards.some((card) => card.id === "mazer-icon-quality-2026-visual-target"));
   assert(result.cards.some((card) => card.id === "mazer-play-mode-perpetual-loop"));
+  assert(result.cards.some((card) => card.id === "mazer-play-camera-zoom-minimap"));
   assert(result.cards.some((card) => card.id === "mazer-diagonal-path-graph-contract"));
   assert(result.cards.some((card) => card.id === "mazer-discordos-board-discipline"));
+  assert(result.cards.some((card) => card.id === "mazer-ai-token-assisted-maze-completion" && card.state === "backlog"));
   assert(result.averageCompletionPercent > 0);
 });
 

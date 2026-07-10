@@ -143,6 +143,17 @@ test("mazer feedback board live sync uses project feedback category and creates 
           },
         });
       }
+      if (url.endsWith("/channels/thread-1/messages/message-1") && init.method === "GET") {
+        const reactionApplied = calls.some((call) => call.url.includes("/reactions/failure%3A1507384094424694785/@me"));
+        return response({
+          payload: {
+            id: "message-1",
+            reactions: reactionApplied
+              ? [{ emoji: { name: "failure", id: "1507384094424694785" }, count: 1, me: true }]
+              : [],
+          },
+        });
+      }
       if (url.endsWith("/channels/thread-1/messages/message-1/reactions/failure%3A1507384094424694785/@me")) {
         assert.equal(init.method, "PUT");
         return response({ status: 204, payload: null });
@@ -164,6 +175,7 @@ test("mazer feedback board live sync uses project feedback category and creates 
 
 test("mazer feedback board live sync reuses existing card thread", async () => {
   const boardPath = await writeBoard();
+  const calls = [];
   const result = await _internals.buildMazerFeedbackBoardLiveSync({
     boardPath,
     allowSync: true,
@@ -175,6 +187,7 @@ test("mazer feedback board live sync reuses existing card thread", async () => {
       DISCORDOS_MAZER_FORUM_CHANNEL_ID: "forum-1",
     },
     fetchImpl: async (url, init) => {
+      calls.push({ url, method: init.method, body: init.body });
       if (url.endsWith("/channels/forum-1")) {
         return response({ payload: { id: "forum-1", name: "mazer", type: 15, guild_id: "guild-1" } });
       }
@@ -199,12 +212,22 @@ test("mazer feedback board live sync reuses existing card thread", async () => {
         assert.fail("existing card should not create another thread");
       }
       if (url.endsWith("/channels/thread-1/messages/thread-1")) {
-        assert.equal(init.method, "PATCH");
-        const body = JSON.parse(init.body);
-        assert(body.content.includes("# mazer"));
-        assert(body.content.includes("**Work Breakdown**"));
-        assert(body.content.includes("**Next Actions**"));
-        return response({ payload: { id: "thread-1" } });
+        if (init.method === "PATCH") {
+          const body = JSON.parse(init.body);
+          assert(body.content.includes("# mazer"));
+          assert(body.content.includes("**Work Breakdown**"));
+          assert(body.content.includes("**Next Actions**"));
+          return response({ payload: { id: "thread-1" } });
+        }
+        const reactionApplied = calls.some((call) => call.url.includes("/reactions/failure%3A1507384094424694785/@me"));
+        return response({
+          payload: {
+            id: "thread-1",
+            reactions: reactionApplied
+              ? [{ emoji: { name: "failure", id: "1507384094424694785" }, count: 1, me: true }]
+              : [],
+          },
+        });
       }
       if (url.endsWith("/channels/thread-1/messages/thread-1/reactions/failure%3A1507384094424694785/@me")) {
         assert.equal(init.method, "PUT");
@@ -243,4 +266,33 @@ test("mazer feedback board live sync keeps Discord card messages under content l
     assert(payload.message.content.includes("**Work Breakdown**"));
     assert(payload.message.content.includes("_Full reference path, command, and expanded checklist live in the source board config._"));
   }
+});
+
+test("mazer feedback board live sync omits completion markers from backlog cards", () => {
+  const payload = _internals.buildCardThreadPayload({
+    id: "mazer-backlog-card",
+    title: "mazer: backlog card",
+    state: "backlog",
+    priority: "medium",
+    category: "mazer",
+    summary: "Backlog-only future Mazer work.",
+    whyItMatters: "It keeps future scope visible without implying active work.",
+    currentStatus: "Backlog only.",
+    workBreakdown: ["Record the future scope."],
+    nextActions: ["Wait for explicit prioritization."],
+    acceptanceCriteria: ["The card stays backlog-only."],
+    proofPlan: ["Run the board verifier."],
+    relatedCardIds: ["mazer-related-card"],
+    reference: "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+    nextCommand: "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-backlog-card",
+    reactionStatus: "failure",
+    reactionEmojiName: "failure",
+    reactionEmojiId: "1507384094424694785",
+  });
+
+  assert(payload.message.content.includes("- classification: `backlog`"));
+  assert(!payload.message.content.includes("completion marker"));
+  assert(!payload.message.content.includes("\n- marker: `"));
+  assert(payload.message.content.includes("**Dependencies / Related Cards**"));
+  assert(payload.message.content.includes("mazer-related-card"));
 });
