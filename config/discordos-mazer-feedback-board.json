@@ -26,7 +26,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-10T19:22:12.376Z"
+    "liveSyncedAt": "2026-07-10T20:01:02.714Z"
   },
   "cards": [
     {
@@ -136,10 +136,10 @@
       "priority": "high",
       "category": "mazer",
       "markerName": "Player-facing Options info guide",
-      "completionPercent": 68,
+      "completionPercent": 82,
       "summary": "Turn the Options menu into a clean player guide that explains controls, compass, toggles, level/rank, and current progression without exposing internal diagnostics.",
       "whyItMatters": "Players should understand the game without seeing internal debug language. The Options screen is the correct place for concise, branded explanations.",
-      "currentStatus": "Options and play pause now start with a centered Player Guide for Compass, Start, End, Player, Skill Lvl, Score, Runs, and Maze Lvl. The guide reuses the same compass/start/end renderers as the board, replaces the redundant player picture with clear bullets, hides developer-only scale controls, and has DPR-2 authenticated Options proof.",
+      "currentStatus": "Options and played-game Pause now start with a centered Player Guide for Compass, Start, End, Player, Skill Lvl, Score, Runs, and Maze Lvl. The guide reuses the same compass/start/end renderers as the board, replaces the redundant player picture with clear bullets, hides developer-only scale controls, and was reworked at 360x720 DPR-2 so copy remains inside the guide while toggles scroll beneath it. The proof now captures both overlay top and lower controls through real scroll-rail drag input.",
       "workBreakdown": [
         "Move the guide to the top of main-menu Options.",
         "Reuse the guide inside played-game Pause before controls.",
@@ -149,19 +149,19 @@
       ],
       "nextActions": [
         "Keep literal board-renderer glyphs in the guide when those assets evolve; do not duplicate their drawing contracts.",
-        "Run broader authenticated mobile Options and Pause soak.",
+        "Run a physical-device authenticated Options and Pause soak at iPhone safe-area dimensions.",
         "Keep target-complexity and raw diagnostic fields out of normal player Options."
       ],
       "acceptanceCriteria": [
-        "The player guide explains every visible badge field without clipping.",
-        "Normal Options and played-game Pause both expose a clear scroll affordance on phone layouts.",
+        "The player guide explains every visible badge field without clipping or escaping its card.",
+        "Normal Options and played-game Pause both expose a clear scroll affordance and reachable lower controls on phone layouts.",
         "Developer-only scale and complexity diagnostics stay hidden from normal player Options."
       ],
       "proofPlan": [
-        "Open Options on menu and play screens at desktop and mobile sizes.",
-        "Screenshot the exact Options surface before claiming visual completion."
+        "Run authenticated `npm run visual:ui-surfaces` at 360x720 DPR-2 and inspect Options/Pause top plus bottom screenshots.",
+        "Confirm screenContract.pass, scroll offset=maxOffset, and lower controls before claiming visual completion."
       ],
-      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "reference": "repos/mazer/docs/research/MAZER_MECHANICS_MOBILE_COMPLETION_MARKER.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-player-facing-options-guide",
       "liveThreadId": "1524889574092963902",
       "liveMessageId": "1524889574092963902",
@@ -651,10 +651,10 @@
       "priority": "medium",
       "category": "mazer",
       "markerName": "Visual proof verification discipline",
-      "completionPercent": 98,
+      "completionPercent": 99,
       "summary": "Require screenshots and visual claims to prove they are on the intended route, mode, overlay, and viewport before being accepted.",
       "whyItMatters": "Several visual passes were weakened by vague screenshots. Mazer needs route-aware proof so fixes are validated on the exact surface the user asked about.",
-      "currentStatus": "Screen contracts exist across capture scripts, and live-play QA now models opposite-border wrapped steps instead of using a stale flat-grid route solver. Authenticated surface fixture proof and adoption discipline remain open.",
+      "currentStatus": "Screen contracts exist across capture scripts, and authenticated surface proof now captures menu, Options top/bottom, play, and Pause top/bottom at 360x720 DPR-2. The capture script drives the real Phaser scroll rail by drag input, requires scroll offset=maxOffset for bottom proof, and fails on route/mode/overlay mismatch, text escape, text collision, or unreachable lower controls. Physical-device adoption remains open.",
       "workBreakdown": [
         "Fail captures when route, mode, overlay, or viewport contract does not match.",
         "Record actual URL, diagnostics mode, surface, and viewport beside screenshots.",
@@ -662,7 +662,7 @@
         "Add authenticated surface fixtures where needed."
       ],
       "nextActions": [
-        "Extend proof workflow to any remaining auth-only surfaces.",
+        "Run the same contract on a maintained physical-device harness with real safe-area insets.",
         "Require visual closeouts to cite screenContract.pass.",
         "Keep screenshots tied to the exact requested surface."
       ],
@@ -672,10 +672,10 @@
         "Future DiscordOS card updates cite proof paths or blockers."
       ],
       "proofPlan": [
-        "Run capture matrix and edge-live screenshot workflows.",
-        "Verify generated metadata includes screenContract.pass for each proof."
+        "Run the authenticated 360x720 DPR-2 UI-surface matrix including top and bottom overlay states.",
+        "Verify generated metadata includes screenContract.pass plus bottom-scroll reachability for each proof."
       ],
-      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "reference": "repos/mazer/docs/research/MAZER_MECHANICS_MOBILE_COMPLETION_MARKER.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-visual-proof-discipline",
       "reactionStatus": "failure",
       "reactionEmojiName": "failure",
@@ -857,10 +857,10 @@
       "priority": "medium",
       "category": "mazer",
       "markerName": "Mobile shell and device harness",
-      "completionPercent": 24,
+      "completionPercent": 38,
       "summary": "Decide and prove the phone-shell path for mobile view, portrait behavior, and real-device confidence.",
       "whyItMatters": "Mazer is playable in browser emulation, but hard portrait guarantees and real-device trust need an explicit shell/device harness decision.",
-      "currentStatus": "The app remains a web/PWA runtime with local mobile emulation proof; 405x958 captures cover guest menu, auth, play, pause, mobile Options, scroll rails, and phone HUD spacing, but true hard portrait lock requires a native/PWA install context or wrapper decision.",
+      "currentStatus": "The app remains a web/PWA runtime with local mobile emulation proof. Authenticated 360x720 DPR-2 captures now cover menu, Options top/bottom, play, Pause top/bottom, guide containment, scroll rails, phone HUD spacing, and lower-control reachability through real drag input. True hard portrait lock and physical-device safe-area confidence still require a native/PWA install context or wrapper decision.",
       "workBreakdown": [
         "Keep phone-size UI-surface proof at 405x958 for guest, auth, play, and pause surfaces.",
         "Assert active labels fit and progression badge text stays inside its chrome.",
@@ -868,7 +868,7 @@
         "Reserve the phone play top lane for centered skill badge and far-right pause action."
       ],
       "nextActions": [
-        "Run broader authenticated mobile soak on a real or maintained device harness.",
+        "Run broader authenticated mobile soak on a real or maintained device harness with safe-area insets.",
         "Choose best-effort web orientation handling versus Capacitor/Tauri/native wrapper support.",
         "Prove play controls, pause scroll, auth native inputs, and longer animation cycles under DPR-2."
       ],
@@ -879,10 +879,10 @@
       ],
       "proofPlan": [
         "Run UI surface capture at 405x958.",
-        "Run authenticated Options and played-game Pause screenshots with scroll rail diagnostics.",
+        "Run authenticated Options and played-game Pause top/bottom screenshots with scroll rail and max-offset diagnostics.",
         "Run high-DPI mobile smoke for play controls, pause, and auth fields."
       ],
-      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "reference": "repos/mazer/docs/research/MAZER_MECHANICS_MOBILE_COMPLETION_MARKER.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-mobile-shell-device-harness",
       "reactionStatus": "failure",
       "reactionEmojiName": "failure",
@@ -900,10 +900,10 @@
       "priority": "high",
       "category": "mazer",
       "markerName": "Visual defaults and menu controls",
-      "completionPercent": 85,
+      "completionPercent": 90,
       "summary": "Lock the fresh-session defaults, menu control placement, and player-safe menu/play control language.",
       "whyItMatters": "A stable default experience keeps new sessions readable and avoids leaking diagnostics or confusing settings into the first-play flow.",
-      "currentStatus": "Fresh sessions default to dark mode, animated background, stick controls, trail fade off, trail pulse on, camera follow off, 30% move speed, green action/player/trail/level palette, guest Login-only, a notch compass, and scroll-rail Options/Pause. Main-menu Options omits Move Speed; played-game Pause retains it, adds on/off toggle descriptions, and includes confirmed Reset Progress.",
+      "currentStatus": "Fresh sessions default to dark mode, animated background, stick controls, trail fade off, trail pulse on, camera follow off, 30% move speed, green action/player/trail/level palette, guest Login-only, a notch compass, and scroll-rail Options/Pause. Main-menu Options omits Move Speed; played-game Pause retains it, adds concise on/off toggle descriptions, and includes confirmed Reset Progress. Compact Start/Options labels now reserve phone-button breathing room, and 360x720 DPR-2 proof covers both overlay top and lower-control states.",
       "workBreakdown": [
         "Keep the canonical fresh-session default contract aligned with current runtime behavior.",
         "Keep guest entry Login-only and authenticated Start/Options spacing clean.",
@@ -912,21 +912,21 @@
         "Keep the visible play timer owned by the skill badge instead of a duplicate timer panel."
       ],
       "nextActions": [
-        "Run longer mobile menu soak across guest, authenticated, Options, play, and pause states.",
+        "Run longer physical-device mobile soak across guest, authenticated, Options, play, and pause states.",
         "Keep Start, player, trail, and level colors aligned to the green action language.",
         "Recheck defaults whenever new settings or controls are added."
       ],
       "acceptanceCriteria": [
         "Fresh sessions resolve to the documented defaults without stale browser preference leakage.",
         "Menu and play controls are player-safe and do not expose internal diagnostics.",
-        "Mobile and desktop layouts show Start/Options, badge, pause, and maze with clear spacing."
+        "Mobile and desktop layouts show Start/Options, badge, pause, and maze with clear spacing and no text/card escape."
       ],
       "proofPlan": [
         "Run menu layout and render-frame tests.",
-        "Capture guest, authenticated, Options, play, and pause surfaces at phone and desktop sizes.",
-        "Read diagnostics for text fit, scroll affordance, and no-overlap state."
+        "Capture guest, authenticated, Options top/bottom, play, and Pause top/bottom surfaces at phone and desktop sizes.",
+        "Read diagnostics for text fit, scroll affordance, lower-control reachability, and no-overlap state."
       ],
-      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "reference": "repos/mazer/docs/research/MAZER_MECHANICS_MOBILE_COMPLETION_MARKER.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-visual-defaults-menu-controls",
       "reactionStatus": "failure",
       "reactionEmojiName": "failure",
