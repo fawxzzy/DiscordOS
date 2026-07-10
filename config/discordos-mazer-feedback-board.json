@@ -81,7 +81,7 @@
       "completionPercent": 98,
       "summary": "Replace solver-like behavior with a human-style runner that perceives, classifies, commits, doubts, recovers, and learns without secretly routing through the full maze graph.",
       "whyItMatters": "The AI is the game's tuning dummy. If it knows the end or receives a hidden full-floor route, score, rank, maze difficulty, and player-facing complexity all become misleading.",
-      "currentStatus": "The hidden full-floor emergency fallback is removed; A*/shortest-path data is a post-run benchmark; and the AI exposes thought, choice, confidence, remembered options, and a non-goal target. Human-memory recovery can cross a previously exhausted but remembered corridor to reach a verified unexplored frontier, while dead ends remain excluded from new branch selection. Generated menu AI no longer emits ai-path-exhausted or regenerates before goal; focused 30-maze proof and a 60-case E-rank calibration both reached goal in every case with zero target leaks and zero pre-goal regenerations. The rank controller now has a real D-through-S local cognition ladder instead of sharing D behavior: local lookahead grows, confidence noise/split uncertainty decrease, and wrap mental cost drops without granting a solver route. The maintained E-to-S sweep is monotonic, moving average score 65.2 to 80.8 and route-efficiency pressure 61.98 to 25.937. The latest recovery tuning pass rejected E local-progress scoring, a bounded endpoint-discovery prototype, and recovery penalties 0.8 and 0.3 because each worsened the 60-case route-efficiency baseline; all changes were reverted. Decision-level recovery diagnostics now record source/split/target, known-route length, confidence, choice class, and thought state for every recovery. The restored 60-case E baseline reports 1,239 frontier recoveries, 120 optional retargets, 11.586 average known-route steps, and a 105-step maximum. Long E-rank searches remain intentionally fallible and score poorly through route-efficiency pressure; the next controller change must be ledger-driven.",
+      "currentStatus": "The hidden full-floor emergency fallback is removed; A*/shortest-path data is a post-run benchmark; and the AI exposes thought, choice, confidence, remembered options, and a non-goal target. Human-memory recovery can cross a previously exhausted but remembered corridor to reach a verified unexplored frontier, while dead ends remain excluded from new branch selection. Generated menu AI no longer emits ai-path-exhausted or regenerates before goal; focused 30-maze proof and a 60-case E-rank calibration both reached goal in every case with zero target leaks and zero pre-goal regenerations. The rank controller now has a real D-through-S local cognition ladder instead of sharing D behavior: local lookahead grows, confidence noise/split uncertainty decrease, and wrap mental cost drops without granting a solver route. The maintained E-to-S sweep is monotonic, moving average score 65.2 to 80.8 and route-efficiency pressure 61.98 to 25.937. The latest recovery tuning pass rejected E local-progress scoring, a bounded endpoint-discovery prototype, and recovery penalties 0.8 and 0.3 because each worsened the 60-case route-efficiency baseline; all changes were reverted. Decision-level recovery diagnostics now record source/split/target, known-route length, confidence, choice class, and thought state for every recovery. The restored 60-case E baseline reports 1,239 frontier recoveries, 120 optional retargets, 11.586 average known-route steps, and a 105-step maximum. Built-in scale summaries isolate the long tail in the scale-75 stress band: route ratio 6.05, 13.668 recovery steps, and p90 ratio 14.059. The tutorial profile currently targets scale 29, so this is a future progression handoff threshold rather than an early-game assignment. Long E-rank searches remain intentionally fallible and score poorly through route-efficiency pressure; the next controller change must be ledger-driven and coordinated with skill-to-scale generation shaping.",
       "workBreakdown": [
         "Use a noisy vision model: clear corridors are trusted more than dense intersections, wraps, and near-overlapping paths.",
         "Separate perception from route choice by labeling branches as promising, risky, dead-end-looking, shortcut-looking, or unclear before selecting a move.",
@@ -97,7 +97,7 @@
         "Add richer UI visualization beyond the amber target tile, including branch labels, remembered options, target confidence, and current thought state."
       ],
       "nextActions": [
-        "Use the recovery ledger to isolate the long-tail frontier pattern, then tune one measured low-rank frontier/recovery factor at a time without repeating the rejected global-vision or path-penalty experiments.",
+        "Use the recovery ledger to isolate the scale-75 long-tail frontier pattern, then tune one measured low-rank frontier/recovery factor at a time without repeating the rejected global-vision or path-penalty experiments.",
         "Retain the no-cutoff invariant: pre-goal local-memory exhaustion must not reset, regenerate, teleport, or target the end.",
         "Expose the now-distinct rank cognition in a compact player-facing thought/skill legend without overwhelming normal UI.",
         "Keep default E-rank calibration near the healthier challenge/ease/hold mix while reducing regeneration count through route-quality improvements.",
@@ -814,7 +814,7 @@
       "completionPercent": 61,
       "summary": "Turn player and AI skill into generated maze structure instead of only badge text.",
       "whyItMatters": "The endless progression loop needs mazes that actually match the active target complexity, not just UI labels that say the skill changed.",
-      "currentStatus": "Difficulty profiles now map target complexity into scale, checkpoint pressure, shortcut pressure, route-quality reinforcement, required opposite-border wraps, and perimeter feeder pressure; generation requests carry target complexity and bounded seed selection chooses the closest candidate, but deeper retry/search and long-run calibration remain open.",
+      "currentStatus": "Difficulty profiles now map target complexity into scale, checkpoint pressure, shortcut pressure, route-quality reinforcement, required opposite-border wraps, and perimeter feeder pressure; generation requests carry target complexity and bounded seed selection chooses the closest candidate, but deeper retry/search and long-run calibration remain open. The AI recovery ledger identifies scale 75 as an E-rank stress band: route ratio averages 2.715 at scale 37, 3.885 at scale 50, and 6.05 at scale 75. The current tutorial profile targets scale 29, so this card must define the future skill-to-scale handoff for high progression bands rather than patch an already-routine early-game assignment.",
       "workBreakdown": [
         "Define tutorial, starter, explorer, navigator, architect, and mythic difficulty profiles.",
         "Map the active player or AI track into executable generation pressure terms.",
@@ -822,7 +822,7 @@
         "Select from a bounded seed window instead of blindly accepting the first generated maze."
       ],
       "nextActions": [
-        "Add deeper generator retry/search when the whole candidate window misses target.",
+        "Define and prove the future skill-to-scale handoff that admits scale-75 topology only when the matching player/AI progression band can support its recovery pressure.",
         "Tune branch, fill, dead-end, and wrap-path pressure against longer samples.",
         "Prove the endless progression loop can rise and fall smoothly across player and AI runs."
       ],
@@ -842,7 +842,8 @@
       "reactionEmojiName": "failure",
       "reactionEmojiId": "1507384094424694785",
       "relatedCardIds": [
-        "mazer-ai-level-rank-progression"
+        "mazer-ai-level-rank-progression",
+        "mazer-human-configured-ai-runner"
       ],
       "liveThreadId": "1525063353716834354",
       "liveMessageId": "1525063353716834354"
