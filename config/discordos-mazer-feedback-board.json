@@ -26,7 +26,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-10T13:54:49.583Z"
+    "liveSyncedAt": "2026-07-10T16:40:06.875Z"
   },
   "cards": [
     {
@@ -81,7 +81,7 @@
       "completionPercent": 97,
       "summary": "Replace solver-like behavior with a human-style runner that perceives, classifies, commits, doubts, recovers, and learns without secretly routing through the full maze graph.",
       "whyItMatters": "The AI is the game's tuning dummy. If it knows the end or receives a hidden full-floor route, score, rank, maze difficulty, and player-facing complexity all become misleading.",
-      "currentStatus": "The hidden full-floor emergency fallback has been removed, and A*/shortest-path data remains a post-run scoring benchmark instead of the movement controller. The AI exposes thought state, choice class, confidence, remembered option points, and a non-goal target point for diagnostics and overlay visualization. Rank and level drive local lookahead depth, optional retarget budget, split uncertainty, wrap mental cost, confidence noise, and diagnostics-only solve-preview budget. The latest focused and full rank sweeps both pass goalTargetLeakPass, monotonicAverageScorePass, and monotonicRouteEfficiencyPass. Full sweep proof: score rises E/D/C/B/A/S = 59.033 / 60.5 / 60.767 / 61.583 / 61.583 / 61.583, route pressure drops E/D/C/B/A/S = 65.811 / 64.579 / 64.576 / 63.163 / 63.163 / 63.163, and leaks remain 0. A/S currently share the B-grade controller floor while retaining higher solve-preview diagnostics for future richer high-rank distinction.",
+      "currentStatus": "The hidden full-floor emergency fallback is removed; A*/shortest-path data is a post-run benchmark; and the AI exposes thought, choice, confidence, remembered options, and a non-goal target. Rank and level drive local lookahead, retarget budget, uncertainty, wrap mental cost, and diagnostics-only solve preview. Rank sweeps show zero goal-target leaks, but finite local-route exhaustion still reaches reset/regeneration instead of expanding from a remembered unexplored frontier. That recovery replacement is the selected next slice.",
       "workBreakdown": [
         "Use a noisy vision model: clear corridors are trusted more than dense intersections, wraps, and near-overlapping paths.",
         "Separate perception from route choice by labeling branches as promising, risky, dead-end-looking, shortcut-looking, or unclear before selecting a move.",
@@ -97,13 +97,15 @@
         "Add richer UI visualization beyond the amber target tile, including branch labels, remembered options, target confidence, and current thought state."
       ],
       "nextActions": [
+        "Replace finite-route exhaustion with persistent known-frontier expansion: persist seen splits, select the nearest verified unexplored frontier, and replan without injecting the unseen goal.",
+        "Prove pre-goal exhaustion cannot reset, regenerate, teleport, or target the end; expose recovering in diagnostics.",
         "Add richer high-rank distinction beyond the current B-grade controller floor without reintroducing hidden solver behavior.",
         "Keep default E-rank calibration near the healthier challenge/ease/hold mix while reducing regeneration count through route-quality improvements.",
         "Run longer rank samples after each controller/generator tuning pass and compare goalTargetLeakPass, monotonicAverageScorePass, and monotonicRouteEfficiencyPass.",
         "Add a compact player-facing legend for the thought-state colors and target-confidence visualization."
       ],
       "acceptanceCriteria": [
-        "The AI cannot use a hidden full-floor route to reach the end after local memory fails.",
+        "The AI cannot use a hidden full-floor route or reset/regenerate shortcut to reach the end after local memory fails.",
         "The AI never exposes the end as its target before it has actually confirmed or reached it.",
         "AI scoring compares against shortest viable path after the run without using that route to control movement.",
         "The maintained calibration command reports zero goal-target leaks and zero invalid moves across the default generated-seed sample.",
@@ -132,10 +134,10 @@
       "priority": "high",
       "category": "mazer",
       "markerName": "Player-facing Options info guide",
-      "completionPercent": 64,
+      "completionPercent": 68,
       "summary": "Turn the Options menu into a clean player guide that explains controls, compass, toggles, level/rank, and current progression without exposing internal diagnostics.",
       "whyItMatters": "Players should understand the game without seeing internal debug language. The Options screen is the correct place for concise, branded explanations.",
-      "currentStatus": "Options and play pause now start with a compact Player Guide for Compass, Start, End, Player, Skill Lvl, Score, Runs, and Maze Lvl; normal mobile Options uses the scroll-rail contract and hides developer-only scale controls.",
+      "currentStatus": "Options and play pause now start with a centered Player Guide for Compass, Start, End, Player, Skill Lvl, Score, Runs, and Maze Lvl. The guide reuses the same compass/start/end renderers as the board, replaces the redundant player picture with clear bullets, hides developer-only scale controls, and has DPR-2 authenticated Options proof.",
       "workBreakdown": [
         "Move the guide to the top of main-menu Options.",
         "Reuse the guide inside played-game Pause before controls.",
@@ -144,7 +146,7 @@
         "Give mobile Options the same scroll viewport and rail affordance as Pause."
       ],
       "nextActions": [
-        "Add richer mini-illustrations beyond the current glyph legend.",
+        "Keep literal board-renderer glyphs in the guide when those assets evolve; do not duplicate their drawing contracts.",
         "Run broader authenticated mobile Options and Pause soak.",
         "Keep target-complexity and raw diagnostic fields out of normal player Options."
       ],
@@ -898,12 +900,12 @@
       "completionPercent": 85,
       "summary": "Lock the fresh-session defaults, menu control placement, and player-safe menu/play control language.",
       "whyItMatters": "A stable default experience keeps new sessions readable and avoids leaking diagnostics or confusing settings into the first-play flow.",
-      "currentStatus": "Fresh sessions now default to dark mode, animated background, stick controls, trail fade off, trail pulse on, camera follow off, 30% move speed, green action/player/trail/level palette, guest Login-only, cleaner authenticated Start/Options layout, menu compass in the notch, scroll-rail Options/Pause, and player-safe Reset/Menu pause actions; longer mobile soak remains.",
+      "currentStatus": "Fresh sessions default to dark mode, animated background, stick controls, trail fade off, trail pulse on, camera follow off, 30% move speed, green action/player/trail/level palette, guest Login-only, a notch compass, and scroll-rail Options/Pause. Main-menu Options omits Move Speed; played-game Pause retains it, adds on/off toggle descriptions, and includes confirmed Reset Progress.",
       "workBreakdown": [
         "Keep the canonical fresh-session default contract aligned with current runtime behavior.",
         "Keep guest entry Login-only and authenticated Start/Options spacing clean.",
         "Keep Account/Log out on main-menu account surfaces, not played-game Pause.",
-        "Use Reset for current-maze restart and Menu for explicit opt-out from the perpetual loop.",
+        "Use Reset for current-maze restart, Reset Progress for a confirmed player-progression-only reset, and Menu for explicit opt-out from the perpetual loop.",
         "Keep the visible play timer owned by the skill badge instead of a duplicate timer panel."
       ],
       "nextActions": [

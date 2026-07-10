@@ -12,7 +12,7 @@
 - forum channel id: `1524889569475170478`
 - guild id: `1504668396338413670`
 - forum created: `false`
-- discovered threads: `35`
+- discovered threads: `36`
 - synced cards: `35`
 - created threads: `0`
 - existing threads: `35`
