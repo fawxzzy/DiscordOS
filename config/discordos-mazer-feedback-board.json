@@ -1,0 +1,606 @@
+{
+  "version": 1,
+  "board": {
+    "id": "mazer",
+    "label": "mazer",
+    "source": "discordos-feedback-board",
+    "placement": {
+      "channelFamily": "project-feedback",
+      "forumChannelId": "1524889569475170478",
+      "sortKey": "project:mazer",
+      "displayName": "mazer"
+    },
+    "sendsMessages": true,
+    "liveForumChannelId": "1524889569475170478",
+    "legacyForumChannelId": "1524844302981926972",
+    "liveGuildId": "1504668396338413670",
+    "liveSyncedAt": "2026-07-10T03:04:33.698Z"
+  },
+  "cards": [
+    {
+      "id": "mazer-ai-level-rank-progression",
+      "title": "mazer: AI level, rank, and maze progression contract",
+      "state": "open",
+      "priority": "high",
+      "category": "mazer",
+      "markerName": "Level/rank/complexity contract",
+      "completionPercent": 32,
+      "summary": "Define how player level, player rank, AI level, AI rank, maze level, and maze complexity influence each other without making the loop feel arbitrary.",
+      "whyItMatters": "This is the backbone of the endless Mazer loop. If level, rank, complexity, and AI skill are vague, the game cannot scale fairly or feed useful learning receipts into Atlas.",
+      "currentStatus": "Local progression concepts exist, but the contract still needs a single source of truth for how player performance changes maze level and how AI progression stays separate.",
+      "workBreakdown": [
+        "Reset AI progression defaults to level 1 unless an account-backed saved value is intentionally loaded.",
+        "Define player level, player rank, AI level, AI rank, maze level, floor, and pace score in one player-facing and Atlas-facing contract.",
+        "Tie maze generation inputs to level bands without changing the physical screen size of the maze.",
+        "Score wrap paths as both shortcuts and topology complexity so easy teleports do not inflate difficulty incorrectly."
+      ],
+      "nextActions": [
+        "Audit the current Mazer progression code and receipt payloads.",
+        "Write the level/rank formula table with change-per-level rules.",
+        "Add tests proving good, slow, failed, and wrap-heavy runs produce expected level movement."
+      ],
+      "acceptanceCriteria": [
+        "Player performance can raise or lower the next maze level through a documented numeric contract.",
+        "AI progression remains separate from player progression and can be reset or tuned independently.",
+        "Bleed-off edge paths are scored as both traversal shortcuts and topology complexity, not ignored."
+      ],
+      "proofPlan": [
+        "Run the Mazer progression guide locally and verify the level box wording matches the contract.",
+        "Generate a cycle receipt and confirm it contains player, AI, maze, and complexity fields."
+      ],
+      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-ai-level-rank-progression",
+      "liveThreadId": "1524889572415377519",
+      "liveMessageId": "1524889572415377519",
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785"
+    },
+    {
+      "id": "mazer-player-facing-options-guide",
+      "title": "mazer: player-facing options and info guide",
+      "state": "open",
+      "priority": "high",
+      "category": "mazer",
+      "markerName": "Player-facing Options info guide",
+      "completionPercent": 35,
+      "summary": "Turn the Options menu into a clean player guide that explains controls, compass, toggles, level/rank, and current progression without exposing internal diagnostics.",
+      "whyItMatters": "Players should understand the game without seeing internal debug language. The Options screen is the correct place for concise, branded explanations.",
+      "currentStatus": "A guide section exists, but it still needs visual polish, tighter hierarchy, and complete copy for level, rank, compass, controls, toggles, and account state.",
+      "workBreakdown": [
+        "Replace dense explanatory blocks with short labeled cards.",
+        "Explain level, rank, maze level, pace score, compass, controller modes, trail fade, pulse, and animated background.",
+        "Keep developer-only telemetry, seeds, diagnostics, and internal receipt language hidden from normal players.",
+        "Validate menu and play pause screens separately on mobile and desktop."
+      ],
+      "nextActions": [
+        "Redesign the Options info section into compact rows/cards.",
+        "Add copy review rules for player-facing wording.",
+        "Capture route-aware screenshots from both menu Options and play Pause."
+      ],
+      "acceptanceCriteria": [
+        "Options includes a compact info section for level, rank, maze level, compass, controls, and toggles.",
+        "All user-facing labels match the current state and avoid overlapping text on mobile.",
+        "Non-player-needed diagnostics remain hidden."
+      ],
+      "proofPlan": [
+        "Open Options on menu and play screens at desktop and mobile sizes.",
+        "Screenshot the exact Options surface before claiming visual completion."
+      ],
+      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-player-facing-options-guide",
+      "liveThreadId": "1524889574092963902",
+      "liveMessageId": "1524889574092963902",
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785"
+    },
+    {
+      "id": "mazer-edge-wrap-topology-and-notch-fill",
+      "title": "mazer: edge-wrap topology, border fill, and notch safety",
+      "state": "open",
+      "priority": "high",
+      "category": "mazer",
+      "markerName": "Maze complexity/path topology",
+      "completionPercent": 28,
+      "summary": "Make wrapped border paths a real graph contract, keep start/goal/navigation aware of wrap edges, and prevent maze path visuals from entering border cutouts.",
+      "whyItMatters": "Wrap paths and border notches change both visuals and navigation. They must be graph-owned, not just visual tricks, or AI distance, player movement, and difficulty scoring drift apart.",
+      "currentStatus": "Wrap navigation exists and can snap visually, but generation, fill near triangular border cutouts, and difficulty scoring still need contract-level hardening.",
+      "workBreakdown": [
+        "Guarantee at least one horizontal and one vertical wrap candidate only when legal for the current maze bounds.",
+        "Represent wrap neighbors in the graph so AI, player movement, compass, trail, and complexity formulas all agree.",
+        "Keep generated paths out of title/compass notches and folded-corner voids.",
+        "Improve bottom and corner fill so paths reach usable border edges without clipping into decorative cutouts."
+      ],
+      "nextActions": [
+        "Add topology diagnostics for wrap-pair validity.",
+        "Add notch-safe render masks or generator constraints.",
+        "Capture visual proof for top notch, bottom notch, and all four folded corners."
+      ],
+      "acceptanceCriteria": [
+        "At least one horizontal and one vertical wrap candidate can be generated when complexity allows it.",
+        "AI distance and route choice account for wrap neighbors instead of treating them as visual-only paths.",
+        "Path rendering respects the folded border notches and fills toward edges without leaking into cutout voids."
+      ],
+      "proofPlan": [
+        "Run topology diagnostics against generated mazes with wrap paths enabled.",
+        "Capture a visual proof where paths reach the border edges but do not enter the top notch."
+      ],
+      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-edge-wrap-topology-and-notch-fill",
+      "liveThreadId": "1524889576651620382",
+      "liveMessageId": "1524889576651620382",
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785"
+    },
+    {
+      "id": "mazer-crisp-cyber-arcade-graphics",
+      "title": "mazer: crisp cyber-arcade graphics and art consistency",
+      "state": "open",
+      "priority": "high",
+      "category": "mazer",
+      "markerName": "High-tech crisp graphics/art pass",
+      "completionPercent": 45,
+      "summary": "Raise the full game visual system toward a crisp 2026 cyber-arcade target: sharper tiles, cleaner borders, less blur, stronger material consistency.",
+      "whyItMatters": "The game feel depends heavily on the maze being readable and premium on mobile. Blurry tiles or inconsistent materials make the app feel older than the current design target.",
+      "currentStatus": "HiDPI backing and several green/cyan material passes have landed, but the visual language still needs one consistent high-tech arcade material system across all surfaces.",
+      "workBreakdown": [
+        "Remove accidental blur/fuzz from canvas scaling, tile seams, title pieces, and UI text.",
+        "Unify path, trail, pulse, player, title, border, buttons, compass, and background under one material palette.",
+        "Use actual mobile screenshots as proof, not desktop-only visual checks.",
+        "Track the approved icon image as the current visual quality target."
+      ],
+      "nextActions": [
+        "Audit every draw layer for fractional pixels and scaling mismatches.",
+        "Create a visual comparison sheet for icon target versus current menu/play screen.",
+        "Add screenshot proof gates for 390-430px mobile widths."
+      ],
+      "acceptanceCriteria": [
+        "Canvas backing scale and camera scale stay crisp at mobile and desktop sizes.",
+        "Path, trail, title, border, buttons, compass, and background share a coherent material language.",
+        "Visual QA includes screenshots from the actual target screen, not vague route captures."
+      ],
+      "proofPlan": [
+        "Run desktop and mobile screenshot checks with route/version labels visible.",
+        "Compare against the approved Mazer icon image as the art target."
+      ],
+      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-crisp-cyber-arcade-graphics",
+      "liveThreadId": "1524889578408771696",
+      "liveMessageId": "1524889578408771696",
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785"
+    },
+    {
+      "id": "mazer-icon-quality-2026-visual-target",
+      "title": "mazer: icon-quality 2026 visual target",
+      "state": "open",
+      "priority": "high",
+      "category": "mazer",
+      "markerName": "Icon-quality 2026 visual target",
+      "completionPercent": 5,
+      "summary": "Use the new app icon as the north-star for sharper glow, material depth, palette, and shape language across the game.",
+      "whyItMatters": "The icon now communicates the target style better than the in-game visuals. The game should inherit that crisp cyan/green glow, deep glass, and arcade geometry instead of drifting into muddy retro blur.",
+      "currentStatus": "The icon has been provided as a reference, but the game has not fully absorbed its material quality, contrast, or depth.",
+      "workBreakdown": [
+        "Save canonical app icon assets for favicon, browser, install surfaces, and future Atlas/link/Stripe references.",
+        "Extract the icon palette into a reusable Mazer visual target note.",
+        "Translate icon material rules into game draw-layer rules.",
+        "Use the icon as the art QA baseline for future screenshots."
+      ],
+      "nextActions": [
+        "Verify the current icon assets are wired everywhere expected.",
+        "Add Atlas-facing visual reference documentation.",
+        "Start material parity work for title, border, path, player, trail, and buttons."
+      ],
+      "acceptanceCriteria": [
+        "App icon assets are saved and wired for browser, Vercel, and app surfaces.",
+        "Game materials adopt the icon's crisp cyan/green glow, dark glass, and high-contrast arcade geometry.",
+        "Atlas keeps the icon reference available for later Stripe/link/auth surfaces."
+      ],
+      "proofPlan": [
+        "Verify favicon and app icon assets resolve locally.",
+        "Capture menu and play screenshots showing icon-inspired palette and crispness improvements."
+      ],
+      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-icon-quality-2026-visual-target",
+      "liveThreadId": "1524889580338151594",
+      "liveMessageId": "1524889580338151594",
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785"
+    },
+    {
+      "id": "mazer-fluid-controls-and-motion",
+      "title": "mazer: fluid controls, player motion, and path feel",
+      "state": "open",
+      "priority": "high",
+      "category": "mazer",
+      "markerName": "Fluid path/player/control feel",
+      "completionPercent": 39,
+      "summary": "Replace snappy tile jumps and hard-coded stick segments with smoother player motion and dynamic directional intent handling.",
+      "whyItMatters": "Fast timed play will fail if the controls feel segmented, sticky, or jumpy. The player should feel like they are steering through a path, not stepping through a debug grid.",
+      "currentStatus": "Tap/hold parity and wrap snap improvements exist, but the stick still needs a true intent resolver and player motion still needs smoother interpolation.",
+      "workBreakdown": [
+        "Make stick angle represent movement intent rather than hard-coded segment commands.",
+        "Resolve intent against legal graph neighbors dynamically every movement step.",
+        "Smooth visual player motion while preserving exact maze-cell legality.",
+        "Keep single-click, hold, keyboard, on-screen arrows, and stick behavior consistent."
+      ],
+      "nextActions": [
+        "Design the dynamic intent resolver before changing input visuals again.",
+        "Add QA scripts for tap, hold, diagonal-ish intent, blocked wall, release, and wrap snap cases.",
+        "Tune movement speed with pace/level formulas instead of one fixed feel."
+      ],
+      "acceptanceCriteria": [
+        "Single presses move exactly once while holds continue only while active.",
+        "Stick direction is interpreted as intent, then resolved against legal path neighbors dynamically.",
+        "Wrap transitions snap cleanly instead of dragging the player across the whole screen."
+      ],
+      "proofPlan": [
+        "Run live play QA for quick taps, holds, stick drags, and wrap paths.",
+        "Confirm no phantom movement remains after release."
+      ],
+      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-fluid-controls-and-motion",
+      "liveThreadId": "1524889582590496798",
+      "liveMessageId": "1524889582590496798",
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785"
+    },
+    {
+      "id": "mazer-auth-remote-playbook-sync",
+      "title": "mazer: auth, remote receipts, Atlas, and playbook sync",
+      "state": "open",
+      "priority": "medium",
+      "category": "mazer",
+      "markerName": "Remote progression and cycle receipts",
+      "completionPercent": 79,
+      "summary": "Finish the account-backed progression loop, remote cycle receipts, and Atlas/playbook handoff without exposing internal debug surfaces to players.",
+      "whyItMatters": "Mazer needs continuity. Account-backed progress, cycle receipts, and Atlas reports are what let the game learn, tune difficulty, and preserve user/AI history across sessions.",
+      "currentStatus": "Supabase auth and local proof paths exist, but remote QA, receipt validation, and Atlas consumer contracts still need to be finished before calling the loop complete.",
+      "workBreakdown": [
+        "QA signup, login, logout, reload persistence, and remote progression read/write through browser-safe RLS.",
+        "Keep the game playable UI clean while internal receipt details flow behind the scenes.",
+        "Separate player progression from AI progression in storage and reports.",
+        "Define Atlas/playbook receipt validation so learning reports are not just raw logs."
+      ],
+      "nextActions": [
+        "Run real auth UI QA with success and failure states.",
+        "Verify Supabase rows for player progression, AI progression, and cycle receipts.",
+        "Add Atlas-side schema validation for Mazer cycle-learning reports."
+      ],
+      "acceptanceCriteria": [
+        "Signup, login, logout, reload persistence, and remote progression read/write are QA-proven.",
+        "Cycle receipts are compact, privacy-safe, and stored locally/remotely according to auth state.",
+        "Atlas can consume a stable Mazer receipt/report shape."
+      ],
+      "proofPlan": [
+        "Run auth UI QA with intentional failure and success states.",
+        "Verify Supabase rows for progression and cycle receipt readback through browser-safe RLS."
+      ],
+      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-auth-remote-playbook-sync",
+      "liveThreadId": "1524889586021699684",
+      "liveMessageId": "1524889586021699684",
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785"
+    },
+    {
+      "id": "mazer-unified-player-message-system",
+      "title": "mazer: unified player-facing message system",
+      "state": "open",
+      "priority": "medium",
+      "category": "mazer",
+      "markerName": "Unified player-facing message system",
+      "completionPercent": 74,
+      "summary": "Move auth and gameplay notices into the same clean player-facing message system instead of leaving raw status text on screen.",
+      "whyItMatters": "Raw technical messages break the game feel. Errors, auth notices, and offline states should appear as intentional in-game messages, not development leftovers.",
+      "currentStatus": "The need is identified and some auth messages have been touched, but every error/status path still needs to route through one consistent message surface.",
+      "workBreakdown": [
+        "Route login/create/fetch/auth failures through the shared message system.",
+        "Remove raw setup and network text from visible game menus.",
+        "Standardize severity, duration, placement, and animation.",
+        "Make the message style match the existing Fawxzzy app notification pattern while staying Mazer-themed."
+      ],
+      "nextActions": [
+        "Inventory every visible status/error string in menu, auth, Options, and play Pause.",
+        "Replace inline status labels with message events.",
+        "Add visual QA for failed login, failed create, fetch failure, success, and logout."
+      ],
+      "acceptanceCriteria": [
+        "Login/create/fetch/auth failures route through the player-facing message surface.",
+        "Messages use consistent style, duration, severity, and placement across menu and play screens.",
+        "No raw 'failed to fetch' or setup strings remain embedded in the login menu."
+      ],
+      "proofPlan": [
+        "Trigger failed login, failed create, successful login, logout, and offline/fetch failure.",
+        "Screenshot each state and verify no text overlap."
+      ],
+      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-unified-player-message-system",
+      "liveThreadId": "1524889587699290288",
+      "liveMessageId": "1524889587699290288",
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785"
+    },
+    {
+      "id": "mazer-auth-gate-persistent-login",
+      "title": "mazer: auth gate and persistent login parity",
+      "state": "open",
+      "priority": "high",
+      "category": "mazer",
+      "markerName": "Player-facing auth gate",
+      "completionPercent": 94,
+      "summary": "Finish the player-facing account gate and persistent-login behavior so Mazer matches the useful Fitness app login continuity without exposing auth internals.",
+      "whyItMatters": "The game needs account continuity for progression, AI-runner history, and remote receipts, but the login flow still has to feel like a game surface instead of a debug form.",
+      "currentStatus": "Native inputs, remembered identity, local-only sign-out, and real account proof exist. Remaining risk is longer mobile/form soak plus production env parity checks.",
+      "workBreakdown": [
+        "Keep guests on the animated menu with Login as the only gated action.",
+        "Preserve signed-in sessions across reloads without storing tokens in local app state.",
+        "Route auth errors through the unified player message system.",
+        "Verify local and production Supabase env parity."
+      ],
+      "nextActions": [
+        "Run a mobile auth soak for login, reload persistence, logout, and re-login.",
+        "Verify production env uses only browser-safe Supabase keys.",
+        "Keep account logout available only from main-menu account surfaces."
+      ],
+      "acceptanceCriteria": [
+        "A returning signed-in user lands on the normal main menu without re-entering credentials.",
+        "A signed-out or guest user sees the animated menu with Login only.",
+        "No raw auth/network text appears in the login surface."
+      ],
+      "proofPlan": [
+        "Run visible browser QA for failed login, successful login, reload persistence, and logout.",
+        "Read diagnostics only for auth state and never expose hidden technical detail to users."
+      ],
+      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-auth-gate-persistent-login",
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1524974571059675198",
+      "liveMessageId": "1524974571059675198"
+    },
+    {
+      "id": "mazer-animation-smoothness-lifecycle",
+      "title": "mazer: animation smoothness and lifecycle cadence",
+      "state": "open",
+      "priority": "high",
+      "category": "mazer",
+      "markerName": "Animation smoothness",
+      "completionPercent": 40,
+      "summary": "Remove visible pauses, loop resets, and buffered animation stalls across title orbit, scanner, background, border glimmer, trail pulse, build, and deconstruct.",
+      "whyItMatters": "Mazer depends on continuous motion. Any hitch during build/deconstruct or title/background loops makes the whole app feel laggy even when gameplay logic is correct.",
+      "currentStatus": "Several frame cadence fixes landed, but mobile soak and lifecycle-boundary jitter review remain open.",
+      "workBreakdown": [
+        "Keep title, compass, background, and border animations alive during deconstruct pauses.",
+        "Make scanner/orbit loops bounce or wrap without visible reset jumps.",
+        "Profile mobile frame cadence during build, deconstruct, and pause overlays.",
+        "Record animation proof with actual route and viewport contracts."
+      ],
+      "nextActions": [
+        "Run a long mobile menu loop soak.",
+        "Capture lifecycle handoff frames around goal, deconstruct, empty pause, and rebuild.",
+        "Patch any remaining timer or tween coupling that pauses global animations."
+      ],
+      "acceptanceCriteria": [
+        "No visible title, compass, or background freeze occurs during maze handoff.",
+        "Build and deconstruct keep crisp staged motion on mobile and desktop.",
+        "Runtime diagnostics show stable frame timing during lifecycle transitions."
+      ],
+      "proofPlan": [
+        "Record route-aware screenshots or video frames through a full menu and play lifecycle.",
+        "Compare frame timing before and after animation handoff changes."
+      ],
+      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-animation-smoothness-lifecycle",
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1524974573303627878",
+      "liveMessageId": "1524974573303627878"
+    },
+    {
+      "id": "mazer-play-mode-perpetual-loop",
+      "title": "mazer: play-mode perpetual completion loop",
+      "state": "open",
+      "priority": "high",
+      "category": "mazer",
+      "markerName": "Play-mode completion lifecycle",
+      "completionPercent": 60,
+      "summary": "Keep players locked into play after reaching the end by recording the cycle, deconstructing cleanly, rebuilding a fresh maze, then restarting play without returning to menu.",
+      "whyItMatters": "The core game loop should be endless and progression-backed. Completion should feel like a polished arcade handoff, not a reset or dead stop.",
+      "currentStatus": "First lifecycle pass works and QA can drive to goal, but title parity, timing polish, and longer held-control soak remain.",
+      "workBreakdown": [
+        "Record completion and shortest-path comparison before the next maze starts.",
+        "Lock input during deconstruct/build while keeping compass and ambient motion active.",
+        "Generate each next player maze from current skill, score, and target complexity.",
+        "Keep Reset/Menu in pause as explicit player choices."
+      ],
+      "nextActions": [
+        "Polish deconstruct timing after player goal contact.",
+        "Decide whether play mode gets the Mazer title above the maze.",
+        "Run longer held-stick tests across lifecycle boundaries."
+      ],
+      "acceptanceCriteria": [
+        "After reaching the end, play mode deconstructs and rebuilds a fresh procedural maze.",
+        "The timer excludes build time and restarts only when the new maze is playable.",
+        "Player progress is saved before returning to menu or closing the app."
+      ],
+      "proofPlan": [
+        "Drive a real play maze to the goal with runtime QA.",
+        "Verify post-goal lifecycle pass, fresh seed, locked input during build, and timer reset."
+      ],
+      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-play-mode-perpetual-loop",
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1524974575182545016",
+      "liveMessageId": "1524974575182545016"
+    },
+    {
+      "id": "mazer-iridescent-player-trail-material",
+      "title": "mazer: iridescent player, trail, and pulse material",
+      "state": "open",
+      "priority": "medium",
+      "category": "mazer",
+      "markerName": "Shifting color player/trail/pulse material",
+      "completionPercent": 50,
+      "summary": "Design and tune a midnight-rainbow material for player halo, trail, and pulse while keeping the core player readable and separated from path color.",
+      "whyItMatters": "The player and trail need to communicate progression and AI thinking without blending into pale path tiles or becoming visually noisy.",
+      "currentStatus": "Runtime material helpers and tests exist. Screenshots, saturation tuning, and dense-maze visual QA remain.",
+      "workBreakdown": [
+        "Keep the player core locked to a high-contrast green readability anchor.",
+        "Shift halo, accent, trail, and pulse through a controlled midnight-rainbow palette.",
+        "Prevent trail/player colors from closely matching maze path colors.",
+        "Use AI memory/target overlays without confusing them with the active trail."
+      ],
+      "nextActions": [
+        "Capture dense-maze screenshots with player, trail, memory, and target overlays visible.",
+        "Tune alpha and saturation for mobile readability.",
+        "Document material rules for future progression color tiers."
+      ],
+      "acceptanceCriteria": [
+        "Player and trail stay visible against every path material tier.",
+        "Trail, pulse, memory, and target colors remain semantically distinct.",
+        "Visual diagnostics expose enough material samples for regression checks."
+      ],
+      "proofPlan": [
+        "Run material unit tests and visual smoke on dense menu/play mazes.",
+        "Compare screenshots at mobile and desktop widths."
+      ],
+      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-iridescent-player-trail-material",
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1524974577178906714",
+      "liveMessageId": "1524974577178906714"
+    },
+    {
+      "id": "mazer-diagonal-path-graph-contract",
+      "title": "mazer: diagonal path graph contract",
+      "state": "open",
+      "priority": "medium",
+      "category": "mazer",
+      "markerName": "Diagonal paths and true diagonal travel",
+      "completionPercent": 8,
+      "summary": "Design diagonal tiles and true diagonal travel as a real graph feature before any visual-only diagonal paths are shipped.",
+      "whyItMatters": "Diagonal routes can unlock spirals and richer maze shapes, but only if generation, movement, AI distance, compass, trail, and telemetry all agree.",
+      "currentStatus": "The concept is intentionally deferred. Current diagonal controls are directional intent helpers over a cardinal graph, not true diagonal topology.",
+      "workBreakdown": [
+        "Define diagonal neighbor legality and collision rules.",
+        "Design diagonal render joins that fill corner-touching gaps cleanly.",
+        "Update AI distance, shortest path, compass, trail, and receipts for diagonal edges.",
+        "Resolve diagonal interaction with edge-wrap paths."
+      ],
+      "nextActions": [
+        "Write a graph contract spike before UI implementation.",
+        "Add generator and solver tests for diagonal neighbors.",
+        "Only then prototype diagonal tile art."
+      ],
+      "acceptanceCriteria": [
+        "Diagonal paths are represented in the same graph used by player movement and AI.",
+        "Shortest-path and complexity metrics count diagonal edges correctly.",
+        "Diagonal visuals do not imply illegal movement."
+      ],
+      "proofPlan": [
+        "Run topology tests for diagonal movement legality.",
+        "Capture visual proof only after graph tests pass."
+      ],
+      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-diagonal-path-graph-contract",
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1524974579292966983",
+      "liveMessageId": "1524974579292966983"
+    },
+    {
+      "id": "mazer-visual-proof-discipline",
+      "title": "mazer: route-aware visual proof discipline",
+      "state": "open",
+      "priority": "medium",
+      "category": "mazer",
+      "markerName": "Visual proof verification discipline",
+      "completionPercent": 90,
+      "summary": "Require screenshots and visual claims to prove they are on the intended route, mode, overlay, and viewport before being accepted.",
+      "whyItMatters": "Several visual passes were weakened by vague screenshots. Mazer needs route-aware proof so fixes are validated on the exact surface the user asked about.",
+      "currentStatus": "Screen contracts exist across capture scripts. Authenticated surface fixture proof and adoption discipline remain open.",
+      "workBreakdown": [
+        "Fail captures when route, mode, overlay, or viewport contract does not match.",
+        "Record actual URL, diagnostics mode, surface, and viewport beside screenshots.",
+        "Use proof artifacts before claiming visual completion.",
+        "Add authenticated surface fixtures where needed."
+      ],
+      "nextActions": [
+        "Extend proof workflow to any remaining auth-only surfaces.",
+        "Require visual closeouts to cite screenContract.pass.",
+        "Keep screenshots tied to the exact requested surface."
+      ],
+      "acceptanceCriteria": [
+        "Visual proof includes actual route, mode, overlay, viewport, and diagnostics contract.",
+        "Wrong-screen screenshots fail the capture step.",
+        "Future DiscordOS card updates cite proof paths or blockers."
+      ],
+      "proofPlan": [
+        "Run capture matrix and edge-live screenshot workflows.",
+        "Verify generated metadata includes screenContract.pass for each proof."
+      ],
+      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-visual-proof-discipline",
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1524974580870025338",
+      "liveMessageId": "1524974580870025338"
+    },
+    {
+      "id": "mazer-discordos-board-discipline",
+      "title": "mazer: DiscordOS board discipline and completion movement",
+      "state": "open",
+      "priority": "medium",
+      "category": "mazer",
+      "markerName": "DiscordOS Mazer feedback board",
+      "completionPercent": 85,
+      "summary": "Keep exactly one live Mazer board in Project Feedback Boards, keep cards richly formatted, and update card state/reactions as implementation work lands.",
+      "whyItMatters": "The board is only useful if it mirrors real work. Thin cards, wrong placement, missing reactions, or stale completion state break the planning loop.",
+      "currentStatus": "The live mazer forum exists in Project Feedback Boards with rich card readback. Future work still needs disciplined card updates and completed-state movement.",
+      "workBreakdown": [
+        "Use one forum named mazer under Project Feedback Boards.",
+        "Keep each card formatted with purpose, current state, work breakdown, next actions, acceptance criteria, and proof plan.",
+        "Apply failure reaction for not-done cards and success reaction for completed cards.",
+        "Move completed work to the completed workflow surface only after proof-backed closure."
+      ],
+      "nextActions": [
+        "Use the board card id in each Mazer implementation closeout.",
+        "Update completionPercent and state after each proof-backed pass.",
+        "Run live readback before claiming DiscordOS card changes."
+      ],
+      "acceptanceCriteria": [
+        "The live board name is mazer and is placed under Project Feedback Boards.",
+        "Every active Mazer work lane has a richly formatted card.",
+        "Completed cards receive success reaction/state only after proof."
+      ],
+      "proofPlan": [
+        "Run live sync and live readback against the mazer forum.",
+        "Read back channel inventory proving the forum parent is Project Feedback Boards."
+      ],
+      "reference": "docs/ops/discordos-mazer-board-correction-2026-07-09.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-discordos-board-discipline",
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1524974583348858880",
+      "liveMessageId": "1524974583348858880"
+    }
+  ]
+}

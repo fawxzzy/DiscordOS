@@ -1,0 +1,36 @@
+# DiscordOS Mazer Feedback Board Live Sync
+
+- result: `pass`
+- sends messages: `true`
+- writes artifacts: `true`
+- calls Discord API: `true`
+- status: `live_board_synced`
+- board: `mazer`
+- cards: `15`
+- ready cards: `0`
+- sync admission: `sync_admitted`
+- forum channel id: `1524889569475170478`
+- guild id: `1504668396338413670`
+- forum created: `false`
+- discovered threads: `8`
+- synced cards: `15`
+- created threads: `7`
+- existing threads: `8`
+- board config written: `true`
+- receipt written: `true`
+- reason codes: `none`
+- card mazer-ai-level-rank-progression: `existing` thread `1524889572415377519` status `200` reaction `204`
+- card mazer-player-facing-options-guide: `existing` thread `1524889574092963902` status `200` reaction `204`
+- card mazer-edge-wrap-topology-and-notch-fill: `existing` thread `1524889576651620382` status `200` reaction `204`
+- card mazer-crisp-cyber-arcade-graphics: `existing` thread `1524889578408771696` status `200` reaction `204`
+- card mazer-icon-quality-2026-visual-target: `existing` thread `1524889580338151594` status `200` reaction `204`
+- card mazer-fluid-controls-and-motion: `existing` thread `1524889582590496798` status `200` reaction `204`
+- card mazer-auth-remote-playbook-sync: `existing` thread `1524889586021699684` status `200` reaction `204`
+- card mazer-unified-player-message-system: `existing` thread `1524889587699290288` status `200` reaction `204`
+- card mazer-auth-gate-persistent-login: `created` thread `1524974571059675198` status `201` reaction `204`
+- card mazer-animation-smoothness-lifecycle: `created` thread `1524974573303627878` status `201` reaction `204`
+- card mazer-play-mode-perpetual-loop: `created` thread `1524974575182545016` status `201` reaction `204`
+- card mazer-iridescent-player-trail-material: `created` thread `1524974577178906714` status `201` reaction `204`
+- card mazer-diagonal-path-graph-contract: `created` thread `1524974579292966983` status `201` reaction `204`
+- card mazer-visual-proof-discipline: `created` thread `1524974580870025338` status `201` reaction `204`
+- card mazer-discordos-board-discipline: `created` thread `1524974583348858880` status `201` reaction `204`

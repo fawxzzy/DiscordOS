@@ -462,6 +462,15 @@ Current governed contract surface:
 - `scripts/discordos-music-sesh-feedback-board.js`
   - repo-local Music Sesh feedback board and feature-card read model
   - reads committed card metadata from `config/discordos-music-sesh-feedback-board.json` without Discord sends or artifact writes
+- `scripts/discordos-mazer-feedback-board.js`
+  - repo-local Mazer feedback board and marker-card read model
+  - reads committed card metadata from `config/discordos-mazer-feedback-board.json` without Discord sends or artifact writes
+- `scripts/discordos-mazer-feedback-board-live-sync.js`
+  - guarded Mazer feedback board live sync
+  - syncs marker cards into the existing project-feedback forum board named `mazer`, updates card starter messages, and records readback ids without exposing bot secrets
+- `scripts/discordos-mazer-feedback-board-live-readback.js`
+  - no-send live readback for the Mazer feedback board
+  - checks actual Discord starter messages for required card sections and content-limit safety before DiscordOS claims live board formatting is correct
 - `api/cron/runtime-health.js`
   - Vercel Cron guarded runtime-health proof endpoint
   - requires `Authorization: Bearer $CRON_SECRET`
@@ -812,6 +821,12 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local DiscordOS Music Sesh activation ratchet
 - `npm run verify:discordos-music-sesh-feedback-board`
   - Node test coverage for the repo-local DiscordOS Music Sesh feedback board
+- `npm run verify:discordos-mazer-feedback-board`
+  - Node test coverage for the repo-local DiscordOS Mazer feedback board
+- `npm run verify:discordos-mazer-feedback-board-live-sync`
+  - Node test coverage for guarded Mazer feedback board live sync and idempotent thread reuse
+- `npm run verify:discordos-mazer-feedback-board-live-readback`
+  - Node test coverage for no-send live Discord message readback and thin-card rejection
 - `npm run verify`
   - runs the full repo-local verification surface, then prunes repo-local `.vercel` and `node_modules` residue before exit
 
@@ -1031,6 +1046,12 @@ Current repo-local operator surface:
   - proves Music Sesh registry posture is shadow-ready with live behavior disabled
 - `npm run ops:discordos:music-sesh-feedback-board`
   - reads the committed Music Sesh feedback board and current feature-card metadata
+- `npm run ops:discordos:mazer-feedback-board`
+  - reads the committed Mazer feedback board and current marker-card metadata
+- `npm run ops:discordos:mazer-feedback-board-live-sync`
+  - guarded live sync for the Mazer Discord forum board; requires `DISCORDOS_MAZER_FEEDBACK_BOARD_SYNC=enabled` plus `--allow-sync --apply`
+- `npm run ops:discordos:mazer-feedback-board-live-readback`
+  - no-send live readback for the Mazer Discord forum board; validates actual starter message sections and content length through the bot API
 - `npm run ops:runtime-health:scheduled-proof`
   - runs the full cron-ready proof loop: live health capture, fresh summary check, durable alert decision, fail-closed exit
 - `npm run ops:runtime-health:scheduled-proof:json`
