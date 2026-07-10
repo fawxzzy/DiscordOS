@@ -26,7 +26,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-10T08:22:12.579Z"
+    "liveSyncedAt": "2026-07-10T08:57:23.991Z"
   },
   "cards": [
     {
@@ -39,7 +39,7 @@
       "completionPercent": 72,
       "summary": "Define how player level, player rank, AI level, AI rank, maze level, and maze complexity influence each other without making the loop feel arbitrary.",
       "whyItMatters": "This is the backbone of the endless Mazer loop. If level, rank, complexity, and AI skill are vague, the game cannot scale fairly or feed useful learning receipts into Atlas.",
-      "currentStatus": "Progression now derives visible level/rank from target complexity, keeps player and AI tracks separate, blends run score with AI decision reliability, and no longer plateaus at the old S/44 cap.",
+      "currentStatus": "Level/rank still derive from target complexity at 72%, while the adjacent AI/playbook lane is at 82%; current proof covers target-derived bands, level-99 ceiling, difficulty profiles, fresh player seeds, score terms, and compact AI decision receipts.",
       "workBreakdown": [
         "Reset AI progression defaults to level 1 unless account-backed saved value is intentionally loaded.",
         "Define player level, AI level, rank, maze level, floor, and score in one player-facing and Atlas-facing contract.",
@@ -49,8 +49,8 @@
       ],
       "nextActions": [
         "Run longer AI/player samples after the level-99 cap change.",
-        "Tune floor/rank scaling so S-rank has meaningful sub-progression.",
-        "Wire Atlas-side consumer ratchets from real receipt trends."
+        "Tune floor/rank scaling and progression pacing from real receipt bands.",
+        "Wire Atlas-side consumer ratchets from validated cycle-learning receipts."
       ],
       "acceptanceCriteria": [
         "Player performance can raise or lower next maze level through a documented numeric contract.",
@@ -78,25 +78,26 @@
       "priority": "high",
       "category": "mazer",
       "markerName": "Player-facing Options info guide",
-      "completionPercent": 35,
+      "completionPercent": 64,
       "summary": "Turn the Options menu into a clean player guide that explains controls, compass, toggles, level/rank, and current progression without exposing internal diagnostics.",
       "whyItMatters": "Players should understand the game without seeing internal debug language. The Options screen is the correct place for concise, branded explanations.",
-      "currentStatus": "A guide section exists, but it still needs visual polish, tighter hierarchy, and complete copy for level, rank, compass, controls, toggles, and account state.",
+      "currentStatus": "Options and play pause now start with a compact Player Guide for Compass, Start, End, Player, Skill Lvl, Score, Runs, and Maze Lvl; normal mobile Options uses the scroll-rail contract and hides developer-only scale controls.",
       "workBreakdown": [
-        "Replace dense explanatory blocks with short labeled cards.",
-        "Explain level, rank, maze level, pace score, compass, controller modes, trail fade, pulse, and animated background.",
-        "Keep developer-only telemetry, seeds, diagnostics, and internal receipt language hidden from normal players.",
-        "Validate menu and play pause screens separately on mobile and desktop."
+        "Move the guide to the top of main-menu Options.",
+        "Reuse the guide inside played-game Pause before controls.",
+        "Remove the extra Game Toggles heading while preserving the controls.",
+        "Explain public badge fields without debug shorthand or internal complexity diagnostics.",
+        "Give mobile Options the same scroll viewport and rail affordance as Pause."
       ],
       "nextActions": [
-        "Redesign the Options info section into compact rows/cards.",
-        "Add copy review rules for player-facing wording.",
-        "Capture route-aware screenshots from both menu Options and play Pause."
+        "Add richer mini-illustrations beyond the current glyph legend.",
+        "Run broader authenticated mobile Options and Pause soak.",
+        "Keep target-complexity and raw diagnostic fields out of normal player Options."
       ],
       "acceptanceCriteria": [
-        "Options includes a compact info section for level, rank, maze level, compass, controls, and toggles.",
-        "All user-facing labels match the current state and avoid overlapping text on mobile.",
-        "Non-player-needed diagnostics remain hidden."
+        "The player guide explains every visible badge field without clipping.",
+        "Normal Options and played-game Pause both expose a clear scroll affordance on phone layouts.",
+        "Developer-only scale and complexity diagnostics stay hidden from normal player Options."
       ],
       "proofPlan": [
         "Open Options on menu and play screens at desktop and mobile sizes.",
@@ -318,25 +319,26 @@
       "priority": "medium",
       "category": "mazer",
       "markerName": "Remote progression and cycle receipts",
-      "completionPercent": 79,
+      "completionPercent": 85,
       "summary": "Finish the account-backed progression loop, remote cycle receipts, and Atlas/playbook handoff without exposing internal debug surfaces to players.",
       "whyItMatters": "Mazer needs continuity. Account-backed progress, cycle receipts, and Atlas reports are what let the game learn, tune difficulty, and preserve user/AI history across sessions.",
-      "currentStatus": "Supabase auth and local proof paths exist, but remote QA, receipt validation, and Atlas consumer contracts still need to be finished before calling the loop complete.",
+      "currentStatus": "Remote cycle receipts, player progression, AI progression, Supabase read/write proof, Atlas-safe reports, compact AI decision scores, shortest-path comparison fields, render-safety pressure, and bounded AI reset proof are in place; Atlas-side consumer wiring remains open.",
       "workBreakdown": [
-        "QA signup, login, logout, reload persistence, and remote progression read/write through browser-safe RLS.",
-        "Keep the game playable UI clean while internal receipt details flow behind the scenes.",
-        "Separate player progression from AI progression in storage and reports.",
-        "Define Atlas/playbook receipt validation so learning reports are not just raw logs."
+        "Keep compact remote cycle receipts behind the opt-in env flag and authenticated guard.",
+        "Preserve player and AI progression tracks independently.",
+        "Normalize direct Supabase row exports into Atlas-safe cycle-learning reports.",
+        "Carry AI decision score, route-efficiency pressure, shortest-path overrun, and render-safety pressure in compact receipts.",
+        "Bound account AI reset work to the AI progression table only."
       ],
       "nextActions": [
-        "Run real auth UI QA with success and failure states.",
-        "Verify Supabase rows for player progression, AI progression, and cycle receipts.",
-        "Add Atlas-side schema validation for Mazer cycle-learning reports."
+        "Wire the validator-gated consumer receipt into an Atlas-side process.",
+        "Calibrate report trends from longer player and AI sample bands.",
+        "Keep remote sync player-safe and non-noisy for guest, missing-client, disabled, and failure outcomes."
       ],
       "acceptanceCriteria": [
-        "Signup, login, logout, reload persistence, and remote progression read/write are QA-proven.",
-        "Cycle receipts are compact, privacy-safe, and stored locally/remotely according to auth state.",
-        "Atlas can consume a stable Mazer receipt/report shape."
+        "Remote receipts and progression states remain account-scoped and table-bounded.",
+        "Atlas reports omit raw path history while preserving tuning context.",
+        "A real Atlas-side consumer can read the report and produce bounded next-work guidance without silent auto-tuning."
       ],
       "proofPlan": [
         "Run auth UI QA with intentional failure and success states.",
@@ -745,6 +747,137 @@
       "reactionEmojiId": "1507384094424694785",
       "liveThreadId": "1525045147769770085",
       "liveMessageId": "1525045147769770085"
+    },
+    {
+      "id": "mazer-procedural-difficulty-generator-shaping",
+      "title": "mazer: procedural difficulty generator shaping",
+      "state": "open",
+      "priority": "high",
+      "category": "mazer",
+      "markerName": "Procedural difficulty generator shaping",
+      "completionPercent": 46,
+      "summary": "Turn player and AI skill into generated maze structure instead of only badge text.",
+      "whyItMatters": "The endless progression loop needs mazes that actually match the active target complexity, not just UI labels that say the skill changed.",
+      "currentStatus": "Difficulty profiles now map target complexity into scale, checkpoint pressure, shortcut pressure, route-quality reinforcement, required opposite-border wraps, and perimeter feeder pressure; generation requests carry target complexity and bounded seed selection chooses the closest candidate, but deeper retry/search and long-run calibration remain open.",
+      "workBreakdown": [
+        "Define tutorial, starter, explorer, navigator, architect, and mythic difficulty profiles.",
+        "Map the active player or AI track into executable generation pressure terms.",
+        "Expose generationReview with under-target, on-target, and over-target classification.",
+        "Select from a bounded seed window instead of blindly accepting the first generated maze."
+      ],
+      "nextActions": [
+        "Add deeper generator retry/search when the whole candidate window misses target.",
+        "Tune branch, fill, dead-end, and wrap-path pressure against longer samples.",
+        "Prove the endless progression loop can rise and fall smoothly across player and AI runs."
+      ],
+      "acceptanceCriteria": [
+        "Generated maze complexity tracks the active player or AI target band within a bounded search cost.",
+        "Diagnostics explain whether each maze under-delivered, matched, or overshot the target.",
+        "Long-run proof shows difficulty changes remain readable and stable instead of jumping or stalling."
+      ],
+      "proofPlan": [
+        "Run progression and generation tests for difficulty profile selection.",
+        "Run cycle telemetry reports across representative player and AI sample bands.",
+        "Read back generationReview diagnostics for low, mid, and high target complexity runs."
+      ],
+      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-procedural-difficulty-generator-shaping",
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "relatedCardIds": [
+        "mazer-ai-level-rank-progression"
+      ],
+      "liveThreadId": "1525063353716834354",
+      "liveMessageId": "1525063353716834354"
+    },
+    {
+      "id": "mazer-mobile-shell-device-harness",
+      "title": "mazer: mobile shell, portrait lock, and device harness",
+      "state": "open",
+      "priority": "medium",
+      "category": "mazer",
+      "markerName": "Mobile shell and device harness",
+      "completionPercent": 20,
+      "summary": "Decide and prove the phone-shell path for mobile view, portrait behavior, and real-device confidence.",
+      "whyItMatters": "Mazer is playable in browser emulation, but hard portrait guarantees and real-device trust need an explicit shell/device harness decision.",
+      "currentStatus": "The app remains a web/PWA runtime with local mobile emulation proof; 405x958 captures cover guest menu, auth, play, pause, mobile Options, scroll rails, and phone HUD spacing, but true hard portrait lock requires a native/PWA install context or wrapper decision.",
+      "workBreakdown": [
+        "Keep phone-size UI-surface proof at 405x958 for guest, auth, play, and pause surfaces.",
+        "Assert active labels fit and progression badge text stays inside its chrome.",
+        "Render visible scroll rails for mobile Options and played-game Pause.",
+        "Reserve the phone play top lane for centered skill badge and far-right pause action."
+      ],
+      "nextActions": [
+        "Run broader authenticated mobile soak on a real or maintained device harness.",
+        "Choose best-effort web orientation handling versus Capacitor/Tauri/native wrapper support.",
+        "Prove play controls, pause scroll, auth native inputs, and longer animation cycles under DPR-2."
+      ],
+      "acceptanceCriteria": [
+        "Phone portrait layouts keep text, HUD, controls, and maze bounds non-overlapping.",
+        "Orientation behavior is honestly documented as web best-effort or shell-enforced.",
+        "A repeatable device harness can prove the mobile app without relying only on desktop emulation."
+      ],
+      "proofPlan": [
+        "Run UI surface capture at 405x958.",
+        "Run authenticated Options and played-game Pause screenshots with scroll rail diagnostics.",
+        "Run high-DPI mobile smoke for play controls, pause, and auth fields."
+      ],
+      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-mobile-shell-device-harness",
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "relatedCardIds": [
+        "mazer-player-facing-options-guide"
+      ],
+      "liveThreadId": "1525063357575593995",
+      "liveMessageId": "1525063357575593995"
+    },
+    {
+      "id": "mazer-visual-defaults-menu-controls",
+      "title": "mazer: visual defaults and menu controls",
+      "state": "open",
+      "priority": "high",
+      "category": "mazer",
+      "markerName": "Visual defaults and menu controls",
+      "completionPercent": 85,
+      "summary": "Lock the fresh-session defaults, menu control placement, and player-safe menu/play control language.",
+      "whyItMatters": "A stable default experience keeps new sessions readable and avoids leaking diagnostics or confusing settings into the first-play flow.",
+      "currentStatus": "Fresh sessions now default to dark mode, animated background, stick controls, trail fade off, trail pulse on, camera follow off, 30% move speed, green action/player/trail/level palette, guest Login-only, cleaner authenticated Start/Options layout, menu compass in the notch, scroll-rail Options/Pause, and player-safe Reset/Menu pause actions; longer mobile soak remains.",
+      "workBreakdown": [
+        "Keep the canonical fresh-session default contract aligned with current runtime behavior.",
+        "Keep guest entry Login-only and authenticated Start/Options spacing clean.",
+        "Keep Account/Log out on main-menu account surfaces, not played-game Pause.",
+        "Use Reset for current-maze restart and Menu for explicit opt-out from the perpetual loop.",
+        "Keep the visible play timer owned by the skill badge instead of a duplicate timer panel."
+      ],
+      "nextActions": [
+        "Run longer mobile menu soak across guest, authenticated, Options, play, and pause states.",
+        "Keep Start, player, trail, and level colors aligned to the green action language.",
+        "Recheck defaults whenever new settings or controls are added."
+      ],
+      "acceptanceCriteria": [
+        "Fresh sessions resolve to the documented defaults without stale browser preference leakage.",
+        "Menu and play controls are player-safe and do not expose internal diagnostics.",
+        "Mobile and desktop layouts show Start/Options, badge, pause, and maze with clear spacing."
+      ],
+      "proofPlan": [
+        "Run menu layout and render-frame tests.",
+        "Capture guest, authenticated, Options, play, and pause surfaces at phone and desktop sizes.",
+        "Read diagnostics for text fit, scroll affordance, and no-overlap state."
+      ],
+      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-visual-defaults-menu-controls",
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "relatedCardIds": [
+        "mazer-player-facing-options-guide",
+        "mazer-auth-gate-persistent-login"
+      ],
+      "liveThreadId": "1525063361887338527",
+      "liveMessageId": "1525063361887338527"
     },
     {
       "id": "mazer-ai-token-assisted-maze-completion",

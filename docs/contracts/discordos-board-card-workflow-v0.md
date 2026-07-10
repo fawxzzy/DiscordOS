@@ -112,9 +112,9 @@ The reconciler must report inspected cards, title repairs required/applied, reac
 
 ## 2026-07-10 Readback Baseline
 
-Mazer live board readback after the shared contract migration:
+Mazer live board readback after the shared contract migration and local app state refresh:
 
-- inspected cards: 27
+- inspected cards: 30
 - title repairs required: 0
 - reaction repairs required: 0
 - duplicate stable identities: 0

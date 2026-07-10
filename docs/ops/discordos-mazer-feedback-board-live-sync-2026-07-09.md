@@ -1,22 +1,51 @@
 # DiscordOS Mazer Feedback Board Live Sync
 
 - result: `pass`
-- sends messages: `false`
+- sends messages: `true`
 - writes artifacts: `true`
 - calls Discord API: `true`
 - status: `live_board_synced`
 - board: `mazer`
-- cards: `27`
+- cards: `30`
 - ready cards: `0`
 - sync admission: `sync_admitted`
 - forum channel id: `1524889569475170478`
 - guild id: `1504668396338413670`
 - forum created: `false`
 - discovered threads: `27`
-- synced cards: `1`
-- created threads: `0`
-- existing threads: `1`
+- synced cards: `30`
+- created threads: `3`
+- existing threads: `27`
 - board config written: `true`
 - receipt written: `true`
 - reason codes: `none`
 - card mazer-ai-level-rank-progression: `existing` thread `1524889572415377519` status `200` reaction `200`
+- card mazer-player-facing-options-guide: `existing` thread `1524889574092963902` status `200` reaction `200`
+- card mazer-edge-wrap-topology-and-notch-fill: `existing` thread `1524889576651620382` status `200` reaction `200`
+- card mazer-crisp-cyber-arcade-graphics: `existing` thread `1524889578408771696` status `200` reaction `200`
+- card mazer-icon-quality-2026-visual-target: `existing` thread `1524889580338151594` status `200` reaction `200`
+- card mazer-fluid-controls-and-motion: `existing` thread `1524889582590496798` status `200` reaction `200`
+- card mazer-play-camera-zoom-minimap: `existing` thread `1525041184274124860` status `200` reaction `200`
+- card mazer-auth-remote-playbook-sync: `existing` thread `1524889586021699684` status `200` reaction `200`
+- card mazer-unified-player-message-system: `existing` thread `1524889587699290288` status `200` reaction `200`
+- card mazer-auth-gate-persistent-login: `existing` thread `1524974571059675198` status `200` reaction `200`
+- card mazer-animation-smoothness-lifecycle: `existing` thread `1524974573303627878` status `200` reaction `200`
+- card mazer-play-mode-perpetual-loop: `existing` thread `1524974575182545016` status `200` reaction `200`
+- card mazer-iridescent-player-trail-material: `existing` thread `1524974577178906714` status `200` reaction `200`
+- card mazer-diagonal-path-graph-contract: `existing` thread `1524974579292966983` status `200` reaction `200`
+- card mazer-visual-proof-discipline: `existing` thread `1524974580870025338` status `200` reaction `200`
+- card mazer-discordos-board-discipline: `existing` thread `1524974583348858880` status `200` reaction `200`
+- card mazer-account-scoped-settings-persistence: `existing` thread `1525045144225841257` status `200` reaction `200`
+- card mazer-player-input-movement-correctness: `existing` thread `1525045147769770085` status `200` reaction `200`
+- card mazer-procedural-difficulty-generator-shaping: `created` thread `1525063353716834354` status `201` reaction `204`
+- card mazer-mobile-shell-device-harness: `created` thread `1525063357575593995` status `201` reaction `204`
+- card mazer-visual-defaults-menu-controls: `created` thread `1525063361887338527` status `201` reaction `204`
+- card mazer-ai-token-assisted-maze-completion: `existing` thread `1525045152077582367` status `200` reaction `200`
+- card mazer-first-time-tutorial-system: `existing` thread `1525045155147550720` status `200` reaction `200`
+- card mazer-customization-inventory-cosmetic-unlocks: `existing` thread `1525045158385811527` status `200` reaction `200`
+- card mazer-maze-coin-pickups-cosmetic-currency: `existing` thread `1525045162559017021` status `200` reaction `200`
+- card mazer-data-driven-cosmetic-theme-catalog: `existing` thread `1525045165608271923` status `200` reaction `200`
+- card mazer-handcrafted-asset-authoring-import-workflow: `existing` thread `1525045176588828682` status `200` reaction `200`
+- card mazer-enemy-pursuit-ai: `existing` thread `1525045182272376942` status `200` reaction `200`
+- card mazer-turn-synchronous-world-simulation: `existing` thread `1525045186361692170` status `200` reaction `200`
+- card mazer-mystery-box-usable-item-system: `existing` thread `1525045190841339985` status `200` reaction `200`
