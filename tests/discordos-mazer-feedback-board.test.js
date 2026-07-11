@@ -149,10 +149,10 @@ test("mazer feedback board reads committed cards", async () => {
   assert.equal(result.blockedCardCount, 0);
   assert.equal(result.backlogCardCount, 13);
   assert.equal(result.reactionReadyCardCount, 42);
-  assert.equal(result.nextCard.id, "mazer-cross-viewport-ui-reliability");
+  assert.equal(result.nextCard.id, "mazer-player-input-movement-correctness");
   assert.deepEqual(result.planning, {
     ok: true,
-    activeCardId: "mazer-cross-viewport-ui-reliability",
+    activeCardId: "mazer-player-input-movement-correctness",
     epicCount: 9,
     mappedCardCount: 42,
     dependencyCount: 15,
