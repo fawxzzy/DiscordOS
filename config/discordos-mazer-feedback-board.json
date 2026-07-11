@@ -26,7 +26,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-11T07:27:49.744Z"
+    "liveSyncedAt": "2026-07-11T07:40:17.610Z"
   },
   "cards": [
     {
@@ -36,10 +36,10 @@
       "priority": "high",
       "category": "mazer",
       "markerName": "AI run corpus quality and calibration",
-      "completionPercent": 0,
+      "completionPercent": 13,
       "summary": "Turn account-scoped AI run receipts into versioned, quality-gated calibration cohorts without deleting raw evidence or automatically changing live progression.",
       "whyItMatters": "The Fawxzzy account has more than 1,300 completed AI cycles, enough to reveal repeatable navigation, generator, and progression behavior. Mixed receipt schemas, incomplete remote coverage, wrapped-route benchmark drift, and duplicated scoring formulas can produce incorrect tuning unless the corpus is governed first.",
-      "currentStatus": "A 2026-07-11 read-only audit found 1,341 completed AI cycles and 1,139 durable receipts: 1,122 menu-demo and 17 play. There are no exact duplicates and storage is about 2.2 MB. The imported audit identified a 202-cycle receipt-coverage gap, 46 zero-frame rows, multiple implicit schema eras, 916 behavior-ready AI receipts, 540 route-calibration-ready receipts, and wrapped-path benchmark inconsistencies in which actual paths can be shorter than the recorded canonical solution. Raw receipts remain immutable evidence; no production formula, account progression, or Supabase receipt row has been changed.",
+      "currentStatus": "A 2026-07-11 read-only audit found 1,341 completed AI cycles and 1,139 durable receipts: 1,122 menu-demo and 17 play. There are no exact duplicates and storage is about 2.2 MB. The imported audit identified a 202-cycle receipt-coverage gap, 46 zero-frame rows, multiple implicit schema eras, 916 behavior-ready AI receipts, 540 route-calibration-ready receipts, and wrapped-path benchmark inconsistencies in which actual paths can be shorter than the recorded canonical solution. Wave 1 is implemented on Mazer PR #37: `npm run ai:corpus:audit` accepts an explicit export and emits a redacted `mazer.ai-run-corpus-audit.v1` quality report with purpose-specific readiness, coverage, cohort, missing-field, and benchmark-mismatch aggregates. Its fixtures, proof-spine registration, TypeScript check, and full Mazer verification pass. Raw receipts remain immutable evidence; no production formula, account progression, or Supabase receipt row has been changed.",
       "workBreakdown": [
         "Create a versioned corpus audit that assigns analytical quality states and reason codes without modifying raw receipts.",
         "Add receipt schema, build, AI algorithm, generator, benchmark-graph, run-origin, cycle-sequence, and progression-context metadata to future receipts.",
@@ -75,7 +75,7 @@
         "Run counterfactual progression simulations without writing Supabase or local progression state.",
         "Publish a bounded Atlas-safe report with no user id, secret, or unbounded path data."
       ],
-      "reference": "docs/ops/mazer-ai-run-corpus-quality-calibration-plan-2026-07-11.md",
+      "reference": "repos/mazer/docs/ops/MAZER-AI-RUN-CORPUS-WAVE-1-PACKET-2026-07-11.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-ai-run-corpus-quality-calibration",
       "relatedCardIds": [
         "mazer-auth-remote-playbook-sync",
