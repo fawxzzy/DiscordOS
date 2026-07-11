@@ -212,6 +212,9 @@ Current governed contract surface:
   - defaults to public HTTP/JSON availability checks only; deeper project checks can be supplied through `DISCORDOS_ATLAS_HEALTH_TARGETS_JSON`
   - target sweeps can be reduced at runtime with `DISCORDOS_ATLAS_HEALTH_TARGET_ALLOWLIST` or `DISCORDOS_ATLAS_HEALTH_TARGET_EXCLUDE`
   - defaults ATLAS cross-project sweeps to weekdays at `0 16 * * 1-5`, while the DiscordOS runtime cron remains daily
+- `config/atlas-health-targets.providers-example.json`
+  - provider-aware example target set for Vercel project readiness, per-project Supabase auth checks, and optional Supabase Management API project-health checks
+  - Supabase Management API targets require `SUPABASE_ACCESS_TOKEN`, send a single `services=` query per project per scheduled sweep, and should use supported service names such as `auth`, `db`, `rest`, `storage`, `pooler`, `realtime`, `db_postgres_user`, and `pg_bouncer`
 - `config/discordos-notification-routes.json`
   - committed no-secret notification route policy for DiscordOS runtime/product notification intents
   - maps source/type/severity to target classes such as `alerts` and `updates`
@@ -223,6 +226,7 @@ Current governed contract surface:
   - can share the existing `#alerts` target or use dedicated `DISCORDOS_ATLAS_HEALTH_ALERT_*` env values
   - skips target fetches when the configured ATLAS sweep schedule is not due
   - reports active target filters and estimates monthly checks from the filtered target count
+  - supports optional `supabase-project-health` targets backed by `GET /v1/projects/{ref}/health?services=...` through the Supabase Management API
 - `scripts/atlas-health-status.js`
   - repo-local read-only status command for ATLAS health watch posture and alert readiness
   - checks current configured target health, local/process env arming flags, alert target shape, active target filters, and usage estimate without sending Discord messages
@@ -458,6 +462,15 @@ Current governed contract surface:
 - `scripts/discordos-music-sesh-feedback-board.js`
   - repo-local Music Sesh feedback board and feature-card read model
   - reads committed card metadata from `config/discordos-music-sesh-feedback-board.json` without Discord sends or artifact writes
+- `scripts/discordos-mazer-feedback-board.js`
+  - repo-local Mazer feedback board and marker-card read model
+  - reads committed card metadata from `config/discordos-mazer-feedback-board.json` without Discord sends or artifact writes
+- `scripts/discordos-mazer-feedback-board-live-sync.js`
+  - guarded Mazer feedback board live sync
+  - syncs marker cards into the existing project-feedback forum board named `mazer`, updates card starter messages, and records readback ids without exposing bot secrets
+- `scripts/discordos-mazer-feedback-board-live-readback.js`
+  - no-send live readback for the Mazer feedback board
+  - checks actual Discord starter messages for required card sections and content-limit safety before DiscordOS claims live board formatting is correct
 - `api/cron/runtime-health.js`
   - Vercel Cron guarded runtime-health proof endpoint
   - requires `Authorization: Bearer $CRON_SECRET`
@@ -808,6 +821,12 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local DiscordOS Music Sesh activation ratchet
 - `npm run verify:discordos-music-sesh-feedback-board`
   - Node test coverage for the repo-local DiscordOS Music Sesh feedback board
+- `npm run verify:discordos-mazer-feedback-board`
+  - Node test coverage for the repo-local DiscordOS Mazer feedback board
+- `npm run verify:discordos-mazer-feedback-board-live-sync`
+  - Node test coverage for guarded Mazer feedback board live sync and idempotent thread reuse
+- `npm run verify:discordos-mazer-feedback-board-live-readback`
+  - Node test coverage for no-send live Discord message readback and thin-card rejection
 - `npm run verify`
   - runs the full repo-local verification surface, then prunes repo-local `.vercel` and `node_modules` residue before exit
 
@@ -1027,6 +1046,12 @@ Current repo-local operator surface:
   - proves Music Sesh registry posture is shadow-ready with live behavior disabled
 - `npm run ops:discordos:music-sesh-feedback-board`
   - reads the committed Music Sesh feedback board and current feature-card metadata
+- `npm run ops:discordos:mazer-feedback-board`
+  - reads the committed Mazer feedback board and current marker-card metadata
+- `npm run ops:discordos:mazer-feedback-board-live-sync`
+  - guarded live sync for the Mazer Discord forum board; requires `DISCORDOS_MAZER_FEEDBACK_BOARD_SYNC=enabled` plus `--allow-sync --apply`
+- `npm run ops:discordos:mazer-feedback-board-live-readback`
+  - no-send live readback for the Mazer Discord forum board; validates actual starter message sections and content length through the bot API
 - `npm run ops:runtime-health:scheduled-proof`
   - runs the full cron-ready proof loop: live health capture, fresh summary check, durable alert decision, fail-closed exit
 - `npm run ops:runtime-health:scheduled-proof:json`

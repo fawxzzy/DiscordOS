@@ -1,0 +1,147 @@
+{
+  "version": 1,
+  "schedule": {
+    "cron": "0 16 * * 1-5",
+    "timezone": "America/New_York",
+    "runDays": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+    "note": "Example extension target set for provider-aware monitoring. Adopt through DISCORDOS_ATLAS_HEALTH_TARGETS_JSON or by replacing the default config only after the referenced env values are present in production."
+  },
+  "targets": [
+    {
+      "id": "discordos-runtime",
+      "label": "DiscordOS runtime",
+      "owner": "DiscordOS",
+      "url": "https://fawxzzy-discordos.vercel.app/api/runtime-health",
+      "kind": "json-ok",
+      "critical": true
+    },
+    {
+      "id": "foundation-web",
+      "label": "Foundation console",
+      "owner": "Foundation",
+      "url": "https://fawxzzy-foundation.vercel.app",
+      "kind": "http-ok",
+      "critical": true
+    },
+    {
+      "id": "fitness-web",
+      "label": "Fitness app",
+      "owner": "Fitness",
+      "url": "https://fawxzzy-fitness-local.vercel.app",
+      "kind": "http-ok",
+      "critical": true
+    },
+    {
+      "id": "trove-web",
+      "label": "Trove app",
+      "owner": "Trove",
+      "url": "https://fawxzzy-trove.vercel.app",
+      "kind": "http-ok",
+      "critical": true
+    },
+    {
+      "id": "mazer-web",
+      "label": "Mazer app",
+      "owner": "Mazer",
+      "url": "https://fawxzzy-mazer.vercel.app",
+      "kind": "http-ok",
+      "critical": true
+    },
+    {
+      "id": "vercel-platform-status",
+      "label": "Vercel platform status",
+      "owner": "Vercel",
+      "kind": "statuspage-summary-ok",
+      "url": "https://www.vercel-status.com/api/v2/summary.json",
+      "critical": true
+    },
+    {
+      "id": "vercel-project-readiness",
+      "label": "Vercel project readiness",
+      "owner": "ATLAS",
+      "kind": "vercel-projects-ready",
+      "teamId": "team_CMJn7MvzFZZBnhNnjVUZF2RD",
+      "tokenEnv": "DISCORDOS_VERCEL_API_TOKEN",
+      "projects": [
+        {
+          "id": "prj_C2RSEa34OblHfhuEpVChRQQZSjuG",
+          "name": "fawxzzy-discordos"
+        },
+        {
+          "id": "prj_o37CPLlESB6Zybe8GB74BX3wrkpy",
+          "name": "fawxzzy-foundation"
+        },
+        {
+          "id": "prj_rtlFVOMFAWCRoJ3SQjHloi89881K",
+          "name": "fawxzzy-fitness"
+        },
+        {
+          "id": "prj_vhUyajI4AL6BgCF40VnKtdxrBLuV",
+          "name": "fawxzzy-trove"
+        },
+        {
+          "id": "prj_t3zothbtj9DExrh3FjMsH98hwwSZ",
+          "name": "fawxzzy-mazer"
+        }
+      ],
+      "critical": true
+    },
+    {
+      "id": "discordos-supabase-auth",
+      "label": "DiscordOS Supabase auth",
+      "owner": "DiscordOS",
+      "kind": "supabase-auth-health",
+      "projectRef": "nwexsktuuenfdegzrbut",
+      "publishableKeyEnv": "DISCORDOS_SUPABASE_ANON_KEY",
+      "critical": true
+    },
+    {
+      "id": "fitness-supabase-auth",
+      "label": "Fitness Supabase auth",
+      "owner": "Fitness",
+      "kind": "supabase-auth-health",
+      "projectRef": "lpswxoyfniocuhljgzbc",
+      "publishableKeyEnv": "ATLAS_FITNESS_SUPABASE_PUBLISHABLE_KEY",
+      "critical": true
+    },
+    {
+      "id": "mazer-supabase-auth",
+      "label": "Mazer Supabase auth",
+      "owner": "Mazer",
+      "kind": "supabase-auth-health",
+      "projectRef": "geknvnrmktchljnyddwp",
+      "publishableKeyEnv": "ATLAS_MAZER_SUPABASE_PUBLISHABLE_KEY",
+      "critical": true
+    },
+    {
+      "id": "discordos-supabase-platform",
+      "label": "DiscordOS Supabase platform",
+      "owner": "DiscordOS",
+      "kind": "supabase-project-health",
+      "projectRef": "nwexsktuuenfdegzrbut",
+      "accessTokenEnv": "SUPABASE_ACCESS_TOKEN",
+      "services": ["auth", "db", "rest", "storage", "pooler"],
+      "critical": true
+    },
+    {
+      "id": "fitness-supabase-platform",
+      "label": "Fitness Supabase platform",
+      "owner": "Fitness",
+      "kind": "supabase-project-health",
+      "projectRef": "lpswxoyfniocuhljgzbc",
+      "accessTokenEnv": "SUPABASE_ACCESS_TOKEN",
+      "services": ["auth", "db", "rest", "storage", "pooler"],
+      "critical": true
+    },
+    {
+      "id": "mazer-supabase-platform",
+      "label": "Mazer Supabase platform",
+      "owner": "Mazer",
+      "kind": "supabase-project-health",
+      "projectRef": "geknvnrmktchljnyddwp",
+      "accessTokenEnv": "SUPABASE_ACCESS_TOKEN",
+      "services": ["auth", "db", "rest", "storage", "pooler"],
+      "critical": true
+    }
+  ]
+}
