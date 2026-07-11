@@ -247,6 +247,15 @@ function buildCardThreadPayload(cardOrSpec) {
       `- marker: \`${card.markerName}\``,
     );
   }
+  if (card.primaryEpicId) {
+    statusLines.push(`- primary epic: \`${card.primaryEpicId}\``);
+  }
+  if (Array.isArray(card.supportingEpicIds) && card.supportingEpicIds.length > 0) {
+    statusLines.push(`- supporting epics: \`${card.supportingEpicIds.join(", ")}\``);
+  }
+  if (Array.isArray(card.dependsOnCardIds) && card.dependsOnCardIds.length > 0) {
+    statusLines.push(`- depends on: \`${card.dependsOnCardIds.join(", ")}\``);
+  }
   statusLines.push(
     `- done marker: \`${stateLabel}\``,
     `- priority: \`${card.priority}\``,

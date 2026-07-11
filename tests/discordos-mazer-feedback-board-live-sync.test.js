@@ -6,6 +6,18 @@ const test = require("node:test");
 
 const { _internals } = require("../scripts/discordos-mazer-feedback-board-live-sync");
 
+const EPIC_IDS = [
+  "core-gameplay",
+  "feel-and-polish",
+  "progression-systems",
+  "maze-systems",
+  "player-systems",
+  "online-and-social",
+  "telemetry-and-analytics",
+  "ai-systems",
+  "dev-platform-integration",
+];
+
 function response({ ok = true, status = 200, payload = null } = {}) {
   return {
     ok,
@@ -23,6 +35,20 @@ async function writeBoard() {
       id: "mazer",
       label: "mazer",
       source: "discordos-feedback-board",
+      planning: {
+        version: 1,
+        activeCardId: "mazer-card-1",
+        epics: EPIC_IDS.map((id, index) => ({
+          id,
+          title: id,
+          order: index + 1,
+          criticalPath: true,
+          primaryCardIds: index === 0 ? ["mazer-card-1"] : [],
+          supportingCardIds: [],
+        })),
+        dependencies: [],
+        parallelTracks: [],
+      },
       placement: {
         channelFamily: "project-feedback",
         forumChannelId: "project-feedback-forum-1",
@@ -264,6 +290,7 @@ test("mazer feedback board live sync keeps Discord card messages under content l
     assert(payload.message.content.length < 2000, `${card.id} exceeded Discord content limit`);
     assert(payload.message.content.includes("**Why This Matters**"));
     assert(payload.message.content.includes("**Work Breakdown**"));
+    assert(payload.message.content.includes(`- primary epic: \`${card.primaryEpicId}\``));
     assert(payload.message.content.includes("_Full reference path, command, and expanded checklist live in the source board config._"));
   }
 });

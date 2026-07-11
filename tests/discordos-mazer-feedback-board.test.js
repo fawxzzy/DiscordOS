@@ -142,14 +142,22 @@ test("mazer feedback board reads committed cards", async () => {
   assert.equal(result.placement.forumChannelId, "1524889569475170478");
   assert.equal(result.liveForumChannelId, "1524889569475170478");
   assert.equal(result.legacyForumChannelId, "1524844302981926972");
-  assert.equal(result.cardCount, 41);
-  assert.equal(result.openCardCount, 28);
+  assert.equal(result.cardCount, 42);
+  assert.equal(result.openCardCount, 29);
   assert.equal(result.readyCardCount, 0);
   assert.equal(result.completedCardCount, 0);
   assert.equal(result.blockedCardCount, 0);
   assert.equal(result.backlogCardCount, 13);
-  assert.equal(result.reactionReadyCardCount, 41);
-  assert.equal(result.nextCard.id, "mazer-ai-run-corpus-quality-calibration");
+  assert.equal(result.reactionReadyCardCount, 42);
+  assert.equal(result.nextCard.id, "mazer-cross-viewport-ui-reliability");
+  assert.deepEqual(result.planning, {
+    ok: true,
+    activeCardId: "mazer-cross-viewport-ui-reliability",
+    epicCount: 9,
+    mappedCardCount: 42,
+    dependencyCount: 15,
+    parallelTrackCount: 1,
+  });
   assert(result.cards.some((card) => card.id === "mazer-account-scoped-settings-persistence"));
   assert(result.cards.some((card) => card.id === "mazer-player-input-movement-correctness"));
   assert(result.cards.some((card) => card.id === "mazer-procedural-difficulty-generator-shaping"));
@@ -166,6 +174,11 @@ test("mazer feedback board reads committed cards", async () => {
   assert(result.cards.some((card) => card.id === "mazer-browser-layout-persistence"));
   assert(result.cards.some((card) => card.id === "mazer-maze-feature-progression-parity"));
   assert(result.cards.some((card) => card.id === "mazer-player-trail-readability-lock"));
+  assert(result.cards.some((card) => card.id === "mazer-auth-ui-flow-hardening"));
+  const authCard = result.cards.find((card) => card.id === "mazer-auth-ui-flow-hardening");
+  assert.equal(authCard.primaryEpicId, "player-systems");
+  assert(authCard.supportingEpicIds.includes("feel-and-polish"));
+  assert(authCard.dependsOnCardIds.includes("mazer-cross-viewport-ui-reliability"));
   assert(result.cards.some((card) => card.id === "mazer-ai-token-assisted-maze-completion" && card.state === "backlog"));
   assert(result.cards.some((card) => card.id === "mazer-invisibility-cloak-item" && card.state === "backlog"));
   assert(result.cards.some((card) => card.id === "mazer-multiplayer-foundation" && card.state === "backlog"));

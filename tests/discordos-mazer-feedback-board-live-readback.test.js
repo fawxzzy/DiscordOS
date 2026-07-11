@@ -6,6 +6,18 @@ const test = require("node:test");
 
 const { _internals } = require("../scripts/discordos-mazer-feedback-board-live-readback");
 
+const EPIC_IDS = [
+  "core-gameplay",
+  "feel-and-polish",
+  "progression-systems",
+  "maze-systems",
+  "player-systems",
+  "online-and-social",
+  "telemetry-and-analytics",
+  "ai-systems",
+  "dev-platform-integration",
+];
+
 function response({ ok = true, status = 200, payload = null } = {}) {
   return {
     ok,
@@ -23,6 +35,20 @@ async function writeBoard() {
       id: "mazer",
       label: "mazer",
       source: "discordos-feedback-board",
+      planning: {
+        version: 1,
+        activeCardId: "card-1",
+        epics: EPIC_IDS.map((id, index) => ({
+          id,
+          title: id,
+          order: index + 1,
+          criticalPath: true,
+          primaryCardIds: index === 0 ? ["card-1"] : [],
+          supportingCardIds: [],
+        })),
+        dependencies: [],
+        parallelTracks: [],
+      },
       placement: {
         channelFamily: "project-feedback",
         forumChannelId: "forum-1",
