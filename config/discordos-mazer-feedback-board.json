@@ -24,8 +24,8 @@
     },
     "planning": {
       "version": 1,
-      "activeCardId": "mazer-cross-viewport-ui-reliability",
-      "activeSelectionReason": "Operator explicitly selected the cross-platform UI follow-up before epic-order execution resumes.",
+      "activeCardId": "mazer-player-input-movement-correctness",
+      "activeSelectionReason": "The operator-selected cross-platform UI follow-up merged in Mazer PR #39; epic-order execution resumes with the first open primary card in core gameplay.",
       "executionPolicy": "Finish the earliest execution-ready critical-path epic before taking later product work. Advanced AI research stays parallel and cannot block the critical path.",
       "epics": [
         {
@@ -334,7 +334,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-11T22:51:29.687Z"
+    "liveSyncedAt": "2026-07-11T23:12:49.173Z"
   },
   "cards": [
     {
@@ -1083,7 +1083,7 @@
       "completionPercent": 99,
       "summary": "Require screenshots and visual claims to prove they are on the intended route, mode, overlay, and viewport before being accepted.",
       "whyItMatters": "Several visual passes were weakened by vague screenshots. Mazer needs route-aware proof so fixes are validated on the exact surface the user asked about.",
-      "currentStatus": "Screen contracts exist across capture scripts, and merged Mazer PR #36 captured authenticated menu, Options top/bottom, play, and Pause top/bottom at 390x844 DPR-2 after a real local-server transition. The capture script drives the real Phaser scroll rail by drag input and fails on route/mode/overlay mismatch, text escape, collision, or unreachable controls. The next UI lane must add route-aware proof for skinny/wide desktop transitions, Windows and macOS browser matrices, iPhone camera/Dynamic Island safe areas, Android cutouts/browser chrome, portrait-only phone behavior, and title/maze/rank/action lane spacing. Existing percentage stays unchanged because this pass records requirements rather than new proof.",
+      "currentStatus": "Merged Mazer PR #39 adds route-aware phone menu/play proof, exact 390x844 -> 1440x900 -> 390x844 bounds restoration, and a four-target iPhone/Android/macOS/Windows matrix. All four screen contracts passed with zero overlap/offscreen violations and no warning/error logs; full verification passed 42 files / 325 tests plus build. The marker remains 99 because physical-device safe-area proof and the remaining authenticated overlay endpoints are still open.",
       "workBreakdown": [
         "Fail captures when route, mode, overlay, or viewport contract does not match.",
         "Record actual URL, diagnostics mode, surface, and viewport beside screenshots.",
@@ -1104,7 +1104,7 @@
         "Run the authenticated 360x720 DPR-2 UI-surface matrix including top and bottom overlay states.",
         "Verify generated metadata includes screenContract.pass plus bottom-scroll reachability for each proof."
       ],
-      "reference": "repos/mazer/docs/ops/MAZER-VIEWPORT-LAYOUT-CONTRACT-PACKET-2026-07-11.md",
+      "reference": "repos/mazer/docs/ops/MAZER-CROSS-PLATFORM-UI-FOLLOWUP-PACKET-2026-07-11.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-visual-proof-discipline",
       "reactionStatus": "failure",
       "reactionEmojiName": "failure",
@@ -1295,10 +1295,10 @@
       "priority": "medium",
       "category": "mazer",
       "markerName": "Mobile shell and device harness",
-      "completionPercent": 38,
+      "completionPercent": 62,
       "summary": "Prove the phone-shell path for mobile view, safe-area handling, portrait behavior, and real-device confidence without letting browser chrome or device intrusions cover game UI.",
       "whyItMatters": "Mazer is canvas-driven and can pass desktop emulation while still clipping text, controls, HUD, or scrollable overlays behind mobile browser chrome, the Dynamic Island, and home indicators.",
-      "currentStatus": "The app remains a web/PWA runtime with local mobile emulation proof. Merged Mazer PR #36 centralizes safe-area and viewport geometry, removes CSS app rotation, and safely blocks/sleeps phone landscape with an accessible rotate-device shell. The next UI lane must reserve top/bottom play lanes, bound maze growth to remaining usable content, and prove iPhone camera/Dynamic Island, Android cutouts/browser chrome, home-indicator clearance, software browser chrome changes, and portrait-only behavior. Real-device proof remains open and the percentage does not move for requirement intake.",
+      "currentStatus": "Merged Mazer PR #39 anchors the app to visual-viewport plus safe-area origins, reserves top rank/Pause and bottom control lanes before sizing the play maze, and adds iPhone Dynamic Island plus Android cutout fixtures and matrix dimensions. Side-tab phone menu/play diagnostics reported zero overlap/offscreen violations. Real-device inset, browser-chrome, installed-PWA, and auth-keyboard proof remains open, so this card advances to 62 rather than closing.",
       "workBreakdown": [
         "Keep phone-size UI-surface proof at 405x958 for guest, auth, play, and pause surfaces.",
         "Assert active labels fit and progression badge text stays inside its chrome.",
@@ -1325,7 +1325,7 @@
         "Run authenticated Options and played-game Pause top/bottom screenshots with scroll rail and max-offset diagnostics.",
         "Run high-DPI mobile smoke for play controls, pause, and auth fields."
       ],
-      "reference": "repos/mazer/docs/ops/MAZER-VIEWPORT-LAYOUT-CONTRACT-PACKET-2026-07-11.md",
+      "reference": "repos/mazer/docs/ops/MAZER-CROSS-PLATFORM-UI-FOLLOWUP-PACKET-2026-07-11.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-mobile-shell-device-harness",
       "reactionStatus": "failure",
       "reactionEmojiName": "failure",
@@ -2019,10 +2019,10 @@
       "priority": "high",
       "category": "mazer",
       "markerName": "Cross-viewport UI reliability",
-      "completionPercent": 25,
+      "completionPercent": 78,
       "summary": "Coordinate the mobile safe-area/portrait and browser layout-persistence lanes through one viewport contract and proof matrix without turning either delivery into an offset patch.",
       "whyItMatters": "The same UI can be valid in a desktop canvas, narrow browser, mobile browser, installed PWA, or restored window only if viewport state, safe areas, and restoration behavior share deliberate rules.",
-      "currentStatus": "Root cause and the first contract are proven on merged Mazer PR #36: `viewportGeometry.ts` drives CSS, Phaser, scene layout, and diagnostics, and the 390x844 -> 844x390 -> 390x844 DPR-2 transition restores portrait geometry without overlap/offscreen violations. The next UI lane owns reserved menu lanes (title, maze, rank, actions), reserved play lanes (safe area, rank/Pause HUD, maze, controls), maze bounds derived from remaining usable space, deterministic skinny/wide/maximize/restore transitions, and the combined desktop/device proof matrix. Percentage remains 25 because this intake adds no implementation evidence.",
+      "currentStatus": "Merged Mazer PR #39 implements explicit title -> maze -> rank -> actions menu lanes and top rank/Pause HUD -> maze -> controls play lanes, caps maze growth by remaining usable content, and anchors the canvas to normalized visual-viewport and safe-area origins. The pure solver restored identical phone bounds after a 390x844 -> 1440x900 -> 390x844 transition; phone menu/play and the four-platform matrix reported zero overlap/offscreen violations. Remaining authenticated overlay endpoints, real-device inset proof, and installed-PWA behavior keep this at 78.",
       "workBreakdown": [
         "Define canonical viewport, safe-area, visible-height, and no-overlap invariants for menu, Options, play, Pause, dialogs, HUD, controls, and scroll rails.",
         "Maintain the child boundary between mobile shell/device behavior and browser layout-state persistence.",
@@ -2046,7 +2046,7 @@
         "Review generated proof metadata for route, viewport, mode, overlay, safe-area, and scroll state.",
         "Read back linked card status before ratcheting this coordinating marker."
       ],
-      "reference": "repos/mazer/docs/ops/MAZER-VIEWPORT-LAYOUT-CONTRACT-PACKET-2026-07-11.md",
+      "reference": "repos/mazer/docs/ops/MAZER-CROSS-PLATFORM-UI-FOLLOWUP-PACKET-2026-07-11.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-cross-viewport-ui-reliability",
       "relatedCardIds": [
         "mazer-mobile-shell-device-harness",
@@ -2067,10 +2067,10 @@
       "priority": "high",
       "category": "mazer",
       "markerName": "Browser UI layout normalization",
-      "completionPercent": 20,
+      "completionPercent": 75,
       "summary": "Normalize responsive browser UI geometry so a narrow-window layout cannot overlap, escape, or expand incorrectly after resize, maximize, restore, or reload. Persist semantic intent only if the product later introduces it.",
       "whyItMatters": "The root-cause pass proved that Mazer has no user-adjustable panel geometry to restore. Derived dimensions must be recomputed from one viewport snapshot instead of being saved and replayed across browser states.",
-      "currentStatus": "Decision A is proven on merged Mazer PR #36: derived geometry is recomputed rather than persisted, a canonical normalized viewport handles phone transitions, and the CSS rotation workaround is gone. The next UI lane must prove skinny-to-wide, wide-to-skinny, maximize, restore, reload, browser-chrome changes, and overlay transitions while preventing maze growth from consuming title, rank, or action lanes. Percentage remains 20 because these are newly recorded acceptance requirements, not completed proof.",
+      "currentStatus": "Merged Mazer PR #39 keeps derived geometry non-persistent, replaces ratio-first sizing with a pure lane solver, and proves deterministic narrow-to-wide-to-narrow restoration. Side-tab 390x844 -> 1440x900 -> 390x844 readback restored title, board, and rank bounds exactly; macOS and Windows browser matrix targets passed with zero overlap/offscreen violations. Native maximize/restore automation, browser-chrome changes, and all authenticated overlays remain open, so this card advances to 75.",
       "workBreakdown": [
         "Document the intentional no-persisted-geometry contract and keep semantic toggle/account preference state separate.",
         "Normalize layout-derived state on reload, resize, maximize, restore, narrow-to-wide, wide-to-narrow, mobile emulation, and orientation transitions.",
@@ -2095,7 +2095,7 @@
         "Capture menu, Options, play, Pause, and confirmation-dialog proof at the relevant viewport endpoints.",
         "Verify no-overlap diagnostics and actual browser screenshots before claiming persistence works."
       ],
-      "reference": "repos/mazer/docs/ops/MAZER-VIEWPORT-LAYOUT-CONTRACT-PACKET-2026-07-11.md",
+      "reference": "repos/mazer/docs/ops/MAZER-CROSS-PLATFORM-UI-FOLLOWUP-PACKET-2026-07-11.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-browser-layout-persistence",
       "relatedCardIds": [
         "mazer-cross-viewport-ui-reliability",
