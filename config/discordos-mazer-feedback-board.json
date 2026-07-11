@@ -24,8 +24,8 @@
     },
     "planning": {
       "version": 1,
-      "activeCardId": "mazer-play-mode-perpetual-loop",
-      "activeSelectionReason": "Mazer PR #40 supplied one-step keyboard route proof and bounded repeat gating for the first core-gameplay card; execution advances to the next open primary card in core gameplay.",
+      "activeCardId": "mazer-turn-synchronous-world-simulation",
+      "activeSelectionReason": "Mazer PR #41 completed the perpetual play acceptance path with a fresh-seed lifecycle, 4/4 locked-phase input probes, and a 25.3% faster handoff; execution advances to the next primary core-gameplay dependency.",
       "executionPolicy": "Finish the earliest execution-ready critical-path epic before taking later product work. Advanced AI research stays parallel and cannot block the critical path.",
       "epics": [
         {
@@ -334,7 +334,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-11T23:28:47.805Z"
+    "liveSyncedAt": "2026-07-11T23:47:33.889Z"
   },
   "cards": [
     {
@@ -959,10 +959,10 @@
       "priority": "high",
       "category": "mazer",
       "markerName": "Play-mode completion lifecycle",
-      "completionPercent": 76,
+      "completionPercent": 96,
       "summary": "Keep players locked into play after reaching the end by recording the cycle, deconstructing cleanly, rebuilding a fresh maze, then restarting play without returning to menu.",
       "whyItMatters": "The core game loop should be endless and progression-backed. Completion should feel like a polished arcade handoff, not a reset or dead stop.",
-      "currentStatus": "First lifecycle pass works in production proof: QA can drive to goal, observe goal-hold, deconstruct, handoff, fresh build, compass spin, and ready state. Title parity, timing polish, and longer held-control soak remain.",
+      "currentStatus": "Merged Mazer PR #41 preserves the full goal-hold, deconstruct, handoff, fresh-build, and ready sequence while reducing the measured post-goal lifecycle from 12069.82 ms to 9013.94 ms. Mobile stick QA completed 73/73 route moves, settled a fresh seed at 60 FPS, and actively proved movement rejection with unchanged player position in all four locked transition phases. Play remains intentionally title-free to preserve the reserved HUD, maze, and control lanes. A longer multi-cycle controller soak remains, so this advances to 96 rather than closing.",
       "workBreakdown": [
         "Record completion and shortest-path comparison before the next maze starts.",
         "Lock input during deconstruct/build while keeping compass and ambient motion active.",
@@ -970,9 +970,9 @@
         "Keep Reset/Menu in pause as explicit player choices."
       ],
       "nextActions": [
-        "Polish deconstruct timing after player goal contact.",
-        "Decide whether play mode gets the Mazer title above the maze.",
-        "Run longer held-stick tests across lifecycle boundaries."
+        "Run one longer multi-cycle held-stick/controller soak across repeated completion boundaries.",
+        "Keep the title-free play-lane decision unless later device proof demonstrates unused safe space.",
+        "Preserve the active lock probes in every future lifecycle QA run."
       ],
       "acceptanceCriteria": [
         "After reaching the end, play mode deconstructs and rebuilds a fresh procedural maze.",
@@ -983,7 +983,7 @@
         "Drive a real play maze to the goal with runtime QA.",
         "Verify post-goal lifecycle pass, fresh seed, locked input during build, and timer reset."
       ],
-      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "reference": "repos/mazer/docs/ops/MAZER-PLAY-MODE-PERPETUAL-LOOP-PACKET-2026-07-11.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-play-mode-perpetual-loop",
       "reactionStatus": "failure",
       "reactionEmojiName": "failure",
@@ -1686,12 +1686,14 @@
     {
       "id": "mazer-turn-synchronous-world-simulation",
       "title": "mazer: turn-synchronous world simulation",
-      "state": "backlog",
+      "state": "open",
       "priority": "medium",
       "category": "mazer",
+      "markerName": "Turn-synchronous world simulation",
+      "completionPercent": 0,
       "summary": "Move gameplay-affecting entities onto a centralized turn command so the world advances only when accepted player movement advances the turn.",
       "whyItMatters": "Enemies, projectiles, pickups, and collisions need predictable ordering and should not run ahead while the player is stopped.",
-      "currentStatus": "Backlog only. Cosmetic animation rules during gameplay pause remain explicit; future item durations, frozen enemies, pass-through collisions, multiplayer conflict resolution, and moving-maze panning all need this central turn contract.",
+      "currentStatus": "Selected as the next core-gameplay dependency after Mazer PR #41 completed the perpetual-loop acceptance path. No implementation percentage is assigned yet. Cosmetic animation rules during gameplay pause remain explicit; future enemies, projectiles, item durations, multiplayer conflicts, and moving-maze panning need this central turn contract.",
       "workBreakdown": [
         "Advance gameplay simulation only after accepted player movement or an explicit timed-mode tick.",
         "Stop enemies, projectiles, and gameplay-affecting moving entities when the player stops unless the mode defines a timed tick.",
