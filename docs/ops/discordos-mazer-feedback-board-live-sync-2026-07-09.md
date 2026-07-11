@@ -1,7 +1,7 @@
 # DiscordOS Mazer Feedback Board Live Sync
 
 - result: `pass`
-- sends messages: `true`
+- sends messages: `false`
 - writes artifacts: `true`
 - calls Discord API: `true`
 - status: `live_board_synced`
@@ -12,10 +12,10 @@
 - forum channel id: `1524889569475170478`
 - guild id: `1504668396338413670`
 - forum created: `false`
-- discovered threads: `36`
+- discovered threads: `41`
 - synced cards: `40`
-- created threads: `5`
-- existing threads: `35`
+- created threads: `0`
+- existing threads: `40`
 - board config written: `true`
 - receipt written: `true`
 - reason codes: `none`
@@ -54,8 +54,8 @@
 - card mazer-multiplayer-foundation: `existing` thread `1525136082193223720` status `200` reaction `200`
 - card mazer-endless-multiplayer-survival-mode: `existing` thread `1525136087725641865` status `200` reaction `200`
 - card mazer-moving-procedural-maze-mode: `existing` thread `1525136091839991940` status `200` reaction `200`
-- card mazer-player-rank-only-progression-display: `created` thread `1525337744774140056` status `201` reaction `204`
-- card mazer-cross-viewport-ui-reliability: `created` thread `1525337748830031875` status `201` reaction `204`
-- card mazer-browser-layout-persistence: `created` thread `1525337752290197514` status `201` reaction `204`
-- card mazer-maze-feature-progression-parity: `created` thread `1525337756132442162` status `201` reaction `204`
-- card mazer-player-trail-readability-lock: `created` thread `1525337759315919001` status `201` reaction `204`
+- card mazer-player-rank-only-progression-display: `existing` thread `1525337744774140056` status `200` reaction `200`
+- card mazer-cross-viewport-ui-reliability: `existing` thread `1525337748830031875` status `200` reaction `200`
+- card mazer-browser-layout-persistence: `existing` thread `1525337752290197514` status `200` reaction `200`
+- card mazer-maze-feature-progression-parity: `existing` thread `1525337756132442162` status `200` reaction `200`
+- card mazer-player-trail-readability-lock: `existing` thread `1525337759315919001` status `200` reaction `200`
