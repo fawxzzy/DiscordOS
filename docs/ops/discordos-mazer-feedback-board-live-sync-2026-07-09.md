@@ -1,20 +1,20 @@
 # DiscordOS Mazer Feedback Board Live Sync
 
 - result: `pass`
-- sends messages: `false`
+- sends messages: `true`
 - writes artifacts: `true`
 - calls Discord API: `true`
 - status: `live_board_synced`
 - board: `mazer`
-- cards: `35`
+- cards: `40`
 - ready cards: `0`
 - sync admission: `sync_admitted`
 - forum channel id: `1524889569475170478`
 - guild id: `1504668396338413670`
 - forum created: `false`
 - discovered threads: `36`
-- synced cards: `35`
-- created threads: `0`
+- synced cards: `40`
+- created threads: `5`
 - existing threads: `35`
 - board config written: `true`
 - receipt written: `true`
@@ -54,3 +54,8 @@
 - card mazer-multiplayer-foundation: `existing` thread `1525136082193223720` status `200` reaction `200`
 - card mazer-endless-multiplayer-survival-mode: `existing` thread `1525136087725641865` status `200` reaction `200`
 - card mazer-moving-procedural-maze-mode: `existing` thread `1525136091839991940` status `200` reaction `200`
+- card mazer-player-rank-only-progression-display: `created` thread `1525337744774140056` status `201` reaction `204`
+- card mazer-cross-viewport-ui-reliability: `created` thread `1525337748830031875` status `201` reaction `204`
+- card mazer-browser-layout-persistence: `created` thread `1525337752290197514` status `201` reaction `204`
+- card mazer-maze-feature-progression-parity: `created` thread `1525337756132442162` status `201` reaction `204`
+- card mazer-player-trail-readability-lock: `created` thread `1525337759315919001` status `201` reaction `204`
