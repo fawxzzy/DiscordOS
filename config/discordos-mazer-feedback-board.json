@@ -188,12 +188,16 @@
       "dependencies": [
         {
           "cardId": "mazer-browser-layout-persistence",
-          "dependsOnCardIds": ["mazer-cross-viewport-ui-reliability"],
+          "dependsOnCardIds": [
+            "mazer-cross-viewport-ui-reliability"
+          ],
           "reason": "Browser transitions must consume the canonical viewport geometry contract."
         },
         {
           "cardId": "mazer-mobile-shell-device-harness",
-          "dependsOnCardIds": ["mazer-cross-viewport-ui-reliability"],
+          "dependsOnCardIds": [
+            "mazer-cross-viewport-ui-reliability"
+          ],
           "reason": "Device safe areas and orientation behavior must use the shared viewport contract."
         },
         {
@@ -224,7 +228,9 @@
         },
         {
           "cardId": "mazer-iridescent-player-trail-material",
-          "dependsOnCardIds": ["mazer-player-trail-readability-lock"],
+          "dependsOnCardIds": [
+            "mazer-player-trail-readability-lock"
+          ],
           "reason": "Experimental material work follows the fixed green-and-white readability baseline."
         },
         {
@@ -245,7 +251,9 @@
         },
         {
           "cardId": "mazer-enemy-pursuit-ai",
-          "dependsOnCardIds": ["mazer-turn-synchronous-world-simulation"],
+          "dependsOnCardIds": [
+            "mazer-turn-synchronous-world-simulation"
+          ],
           "reason": "Enemy pursuit requires one deterministic movement and collision clock."
         },
         {
@@ -293,7 +301,9 @@
         },
         {
           "cardId": "mazer-data-driven-cosmetic-theme-catalog",
-          "dependsOnCardIds": ["mazer-handcrafted-asset-authoring-import-workflow"],
+          "dependsOnCardIds": [
+            "mazer-handcrafted-asset-authoring-import-workflow"
+          ],
           "reason": "Catalog entries need a governed asset production and import path."
         }
       ],
@@ -324,7 +334,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-11T07:40:17.610Z"
+    "liveSyncedAt": "2026-07-11T22:51:29.687Z"
   },
   "cards": [
     {
@@ -2249,7 +2259,9 @@
       ],
       "reactionStatus": "failure",
       "reactionEmojiName": "failure",
-      "reactionEmojiId": "1507384094424694785"
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1525635672961060925",
+      "liveMessageId": "1525635672961060925"
     }
   ]
 }
