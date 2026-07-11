@@ -24,8 +24,8 @@
     },
     "planning": {
       "version": 1,
-      "activeCardId": "mazer-player-input-movement-correctness",
-      "activeSelectionReason": "The operator-selected cross-platform UI follow-up merged in Mazer PR #39; epic-order execution resumes with the first open primary card in core gameplay.",
+      "activeCardId": "mazer-play-mode-perpetual-loop",
+      "activeSelectionReason": "Mazer PR #40 supplied one-step keyboard route proof and bounded repeat gating for the first core-gameplay card; execution advances to the next open primary card in core gameplay.",
       "executionPolicy": "Finish the earliest execution-ready critical-path epic before taking later product work. Advanced AI research stays parallel and cannot block the critical path.",
       "epics": [
         {
@@ -334,7 +334,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-11T23:12:49.173Z"
+    "liveSyncedAt": "2026-07-11T23:28:47.805Z"
   },
   "cards": [
     {
@@ -1200,10 +1200,10 @@
       "priority": "high",
       "category": "mazer",
       "markerName": "Player input and movement correctness",
-      "completionPercent": 52,
+      "completionPercent": 90,
       "summary": "Fix the movement correctness defects where diagonal movement can be faster than cardinal movement and one arrow-key action can move the player twice.",
       "whyItMatters": "Skill, score, route efficiency, and maze difficulty all depend on movement being fair and measurable. Input bugs poison progression analytics.",
-      "currentStatus": "Shared input plumbing, repeat gating, pause locks, and diagonal legality tests exist. QA bridge moves, pointer swipe releases, and buffered keyboard held diagonals now route through the same one-visible-step diagonal planner as touch controls; full browser/mobile proof remains open.",
+      "currentStatus": "Merged Mazer PR #40 fixed a real first-tap loss where immediate keyup cleared the 50ms simultaneous-key buffer before resolution, and it gates held keyboard repeats to one configured movement-speed cadence across directions. Pre-fix live keyboard QA failed at move 0; post-fix QA completed 174/174 planned legal one-step moves and reached the goal with no overshoot at stable 60 FPS. Focused proof passed 102 tests plus TypeScript and full verification passed 42 files / 325 tests plus build. A sustained held-key/stick/controller soak remains open, so this advances to 90 rather than closing.",
       "workBreakdown": [
         "Audit keydown, keyup, browser repeat, and duplicate listener paths. First pass complete for buffered keyboard path.",
         "Ensure one accepted arrow-key command produces one visible movement step. Source-level guard added; browser proof still needed.",
@@ -1212,8 +1212,8 @@
         "Preserve pause/input-lock behavior."
       ],
       "nextActions": [
-        "Run live browser/mobile proof for one accepted input producing one visible movement step.",
-        "Soak keyboard repeat and stick repeat rates against diagnostics.",
+        "Soak sustained keyboard repeat and stick/controller repeat rates against the new accepted/merged diagnostics.",
+        "Capture one maintained controller-equivalence run without changing the cardinal-step planner.",
         "Keep true diagonal pathing deferred until generation, graph, trail, compass, and AI distance share one contract."
       ],
       "acceptanceCriteria": [
@@ -1227,7 +1227,7 @@
         "Run legacy play-step tests for cardinal, diagonal, wall, and pause cases.",
         "Run a live play smoke that samples diagnostics before and after one input event."
       ],
-      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "reference": "repos/mazer/docs/ops/MAZER-PLAYER-INPUT-MOVEMENT-CORRECTNESS-PACKET-2026-07-11.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-player-input-movement-correctness",
       "reactionStatus": "failure",
       "reactionEmojiName": "failure",
