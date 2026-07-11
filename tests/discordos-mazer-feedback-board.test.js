@@ -142,14 +142,14 @@ test("mazer feedback board reads committed cards", async () => {
   assert.equal(result.placement.forumChannelId, "1524889569475170478");
   assert.equal(result.liveForumChannelId, "1524889569475170478");
   assert.equal(result.legacyForumChannelId, "1524844302981926972");
-  assert.equal(result.cardCount, 40);
-  assert.equal(result.openCardCount, 27);
+  assert.equal(result.cardCount, 41);
+  assert.equal(result.openCardCount, 28);
   assert.equal(result.readyCardCount, 0);
   assert.equal(result.completedCardCount, 0);
   assert.equal(result.blockedCardCount, 0);
   assert.equal(result.backlogCardCount, 13);
-  assert.equal(result.reactionReadyCardCount, 40);
-  assert.equal(result.nextCard.id, "mazer-ai-level-rank-progression");
+  assert.equal(result.reactionReadyCardCount, 41);
+  assert.equal(result.nextCard.id, "mazer-ai-run-corpus-quality-calibration");
   assert(result.cards.some((card) => card.id === "mazer-account-scoped-settings-persistence"));
   assert(result.cards.some((card) => card.id === "mazer-player-input-movement-correctness"));
   assert(result.cards.some((card) => card.id === "mazer-procedural-difficulty-generator-shaping"));
@@ -161,6 +161,7 @@ test("mazer feedback board reads committed cards", async () => {
   assert(result.cards.some((card) => card.id === "mazer-diagonal-path-graph-contract"));
   assert(result.cards.some((card) => card.id === "mazer-discordos-board-discipline"));
   assert(result.cards.some((card) => card.id === "mazer-player-rank-only-progression-display"));
+  assert(result.cards.some((card) => card.id === "mazer-ai-run-corpus-quality-calibration"));
   assert(result.cards.some((card) => card.id === "mazer-cross-viewport-ui-reliability"));
   assert(result.cards.some((card) => card.id === "mazer-browser-layout-persistence"));
   assert(result.cards.some((card) => card.id === "mazer-maze-feature-progression-parity"));

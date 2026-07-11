@@ -26,9 +26,71 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-11T06:36:48.533Z"
+    "liveSyncedAt": "2026-07-11T07:40:17.610Z"
   },
   "cards": [
+    {
+      "id": "mazer-ai-run-corpus-quality-calibration",
+      "title": "mazer: AI run corpus quality, retention, and calibration",
+      "state": "open",
+      "priority": "high",
+      "category": "mazer",
+      "markerName": "AI run corpus quality and calibration",
+      "completionPercent": 13,
+      "summary": "Turn account-scoped AI run receipts into versioned, quality-gated calibration cohorts without deleting raw evidence or automatically changing live progression.",
+      "whyItMatters": "The Fawxzzy account has more than 1,300 completed AI cycles, enough to reveal repeatable navigation, generator, and progression behavior. Mixed receipt schemas, incomplete remote coverage, wrapped-route benchmark drift, and duplicated scoring formulas can produce incorrect tuning unless the corpus is governed first.",
+      "currentStatus": "A 2026-07-11 read-only audit found 1,341 completed AI cycles and 1,139 durable receipts: 1,122 menu-demo and 17 play. There are no exact duplicates and storage is about 2.2 MB. The imported audit identified a 202-cycle receipt-coverage gap, 46 zero-frame rows, multiple implicit schema eras, 916 behavior-ready AI receipts, 540 route-calibration-ready receipts, and wrapped-path benchmark inconsistencies in which actual paths can be shorter than the recorded canonical solution. Wave 1 is implemented on Mazer PR #37: `npm run ai:corpus:audit` accepts an explicit export and emits a redacted `mazer.ai-run-corpus-audit.v1` quality report with purpose-specific readiness, coverage, cohort, missing-field, and benchmark-mismatch aggregates. Its fixtures, proof-spine registration, TypeScript check, and full Mazer verification pass. Raw receipts remain immutable evidence; no production formula, account progression, or Supabase receipt row has been changed.",
+      "workBreakdown": [
+        "Create a versioned corpus audit that assigns analytical quality states and reason codes without modifying raw receipts.",
+        "Add receipt schema, build, AI algorithm, generator, benchmark-graph, run-origin, cycle-sequence, and progression-context metadata to future receipts.",
+        "Add an idempotent client receipt identity and bounded retry/outbox contract so remote receipt gaps are observable and retries cannot create duplicates.",
+        "Make runtime and Atlas reporting consume one canonical AI decision scorer.",
+        "Correct shortest-path and route-efficiency metrics to use the same traversable graph as actual player and AI movement, including wraps.",
+        "Generate representative, stress, and wrap-anomaly seed packs for deterministic before-and-after testing.",
+        "Replay candidate progression formulas offline against quality-approved cohorts without mutating account progression.",
+        "Define raw receipt retention, aggregate rollups, export, progression reset, and explicit history deletion as separate contracts."
+      ],
+      "nextActions": [
+        "Write a durable read-only audit receipt with the current counts and quality findings.",
+        "Fix metric-contract correctness before changing progression thresholds.",
+        "Produce the first baseline report and seed packs from the preserved raw corpus."
+      ],
+      "acceptanceCriteria": [
+        "Every receipt used for calibration has an explicit schema/build/algorithm cohort and quality classification.",
+        "Runtime and Atlas scoring produce identical AI pressure values and signal classifications for the same receipt.",
+        "The shortest-path benchmark uses the actual traversable graph and cannot exceed a valid completed path.",
+        "Remote receipt retries are idempotent and the difference between progression count and durable receipt coverage is explainable.",
+        "Raw receipts remain immutable; legacy and excluded rows are preserved with reason codes.",
+        "A deterministic seed pack reproduces representative and long-tail AI behavior.",
+        "Candidate progression changes are evaluated offline against the same fixed corpus before live adoption.",
+        "Menu AI, human play, QA, calibration, and replay runs are not silently mixed.",
+        "Retention and user-data deletion semantics are documented and tested.",
+        "No automatic online tuning or unreviewed weight promotion is introduced."
+      ],
+      "proofPlan": [
+        "Run the corpus audit against a redacted Supabase export and verify counts against live read-only SQL.",
+        "Run scorer-parity tests across historical receipt fixtures.",
+        "Run wrapped-graph shortest-path invariants across the anomaly seed pack.",
+        "Run idempotent receipt retry and count-reconciliation tests.",
+        "Run counterfactual progression simulations without writing Supabase or local progression state.",
+        "Publish a bounded Atlas-safe report with no user id, secret, or unbounded path data."
+      ],
+      "reference": "repos/mazer/docs/ops/MAZER-AI-RUN-CORPUS-WAVE-1-PACKET-2026-07-11.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-ai-run-corpus-quality-calibration",
+      "relatedCardIds": [
+        "mazer-auth-remote-playbook-sync",
+        "mazer-ai-level-rank-progression",
+        "mazer-human-configured-ai-runner",
+        "mazer-procedural-difficulty-generator-shaping",
+        "mazer-edge-wrap-topology-and-notch-fill",
+        "mazer-maze-feature-progression-parity"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1525403143020744786",
+      "liveMessageId": "1525403143020744786"
+    },
     {
       "id": "mazer-ai-level-rank-progression",
       "title": "mazer: player, AI, rank, score, and maze progression contract",
@@ -39,20 +101,22 @@
       "completionPercent": 72,
       "summary": "Document and redesign how player and AI run scores, hidden ratings, rank, target complexity, maze rating, and level bands choose the next maze without punitive regression.",
       "whyItMatters": "Progression must reward strong but imperfect runs, preserve meaningful rank differences, and keep player, AI, and generated-maze semantics explainable without exposing competing public metrics.",
-      "currentStatus": "The current contract stores separate player and AI-runner tracks, uses targetComplexity as the intended source of level/rank, and derives 0-100 paceScore from time, route efficiency, wrong turns, backtracks, reset use, render safety, and AI decision pressure. Current level bands are four target-complexity points wide and rank bands are E/D/C/B/A/S. The public UI still calls the player metric Skill Lvl in some surfaces. This card now owns the formula/terminology audit; the rank-only UI, feature parity, generator delivery, and human AI controller remain linked delivery lanes.",
+      "currentStatus": "The current contract stores separate player and AI-runner tracks, uses targetComplexity as the intended source of level/rank, and derives 0-100 paceScore from time, route efficiency, wrong turns, backtracks, reset use, render safety, and AI decision pressure. Current level bands are four target-complexity points wide and rank bands are E/D/C/B/A/S. The public UI still calls the player metric Skill Lvl in some surfaces. This card now owns the formula/terminology audit; the rank-only UI, feature parity, generator delivery, and human AI controller remain linked delivery lanes. The 2026-07-11 read-only corpus audit showed a large historical struggle classification after 1,341 cycles, but wrapped-route benchmark drift and scorer disagreement make direct threshold tuning unsafe until the linked corpus lane supplies quality-gated offline replay.",
       "workBreakdown": [
         "Inventory every stored, derived, displayed, and telemetry-only progression field before changing formulas or labels.",
         "Define score, hidden rating, rank, level, band, target complexity, measured maze rating, difficulty, and complexity in one versioned contract.",
         "Recalibrate time, route efficiency, wrong-turn, backtrack, reset, render-safety, and AI-decision weights against deterministic perfect, strong, average, weak, and failed runs.",
         "Smooth temporary struggle so a single weak run cannot cause disproportionate regression while strong imperfect runs still make meaningful progress.",
         "Keep player and AI tracks independent, name any intentionally different semantics, and retain save compatibility until an approved migration exists.",
-        "Keep rank S as the top rank while target complexity and visible level can continue toward level 99."
+        "Keep rank S as the top rank while target complexity and visible level can continue toward level 99.",
+        "Replay current and candidate progression formulas only against purpose-approved historical cohorts, with robust time/outlier handling, topology-aware route pressure, and regression hysteresis."
       ],
       "nextActions": [
         "Publish the current formula and field inventory before changing thresholds.",
         "Build deterministic progression fixtures and expected target-complexity deltas for five representative run outcomes.",
         "Coordinate rank-only display work without deleting hidden player-skill/rating data.",
-        "Use validated player and AI receipts to calibrate bands only after maze-feature delivery is measured."
+        "Use validated player and AI receipts to calibrate bands only after maze-feature delivery is measured.",
+        "Compare current and candidate formula trajectories offline before proposing any live threshold, band, or weight change."
       ],
       "acceptanceCriteria": [
         "Score, skill, rating, rank, level, band, difficulty, complexity, and maze rating have explicit non-overlapping definitions.",
@@ -62,7 +126,8 @@
         "Rank and level-band boundaries are centralized, explainable, and covered by deterministic tests.",
         "Measured maze rating is compared to requested target complexity rather than treated as an arbitrary label.",
         "Player and AI formulas explicitly identify shared terms versus intentionally distinct behavior terms.",
-        "No public surface presents two competing progression values to the player."
+        "No public surface presents two competing progression values to the player.",
+        "Candidate formulas are evaluated against fixed quality-approved cohorts without mutating the Fawxzzy account or live progression state."
       ],
       "proofPlan": [
         "Run focused progression, telemetry, and marker tests with fixture receipts across every signal outcome.",
@@ -75,7 +140,8 @@
         "mazer-human-configured-ai-runner",
         "mazer-procedural-difficulty-generator-shaping",
         "mazer-player-rank-only-progression-display",
-        "mazer-maze-feature-progression-parity"
+        "mazer-maze-feature-progression-parity",
+        "mazer-ai-run-corpus-quality-calibration"
       ],
       "liveThreadId": "1524889572415377519",
       "liveMessageId": "1524889572415377519",
@@ -93,7 +159,7 @@
       "completionPercent": 98,
       "summary": "Replace solver-like behavior with a human-style runner that perceives, classifies, commits, doubts, recovers, and learns without secretly routing through the full maze graph.",
       "whyItMatters": "The AI is the game's tuning dummy. If it knows the end or receives a hidden full-floor route, score, rank, maze difficulty, and player-facing complexity all become misleading.",
-      "currentStatus": "The hidden full-floor emergency fallback is removed; A*/shortest-path data is a post-run benchmark; and the AI exposes thought, choice, confidence, remembered options, and a non-goal target. Human-memory recovery can cross a previously exhausted but remembered corridor to reach a verified unexplored frontier, while dead ends remain excluded from new branch selection. Generated menu AI no longer emits ai-path-exhausted or regenerates before goal; focused 30-maze proof and a 60-case E-rank calibration both reached goal in every case with zero target leaks and zero pre-goal regenerations. The rank controller now has a real D-through-S local cognition ladder instead of sharing D behavior: local lookahead grows, confidence noise/split uncertainty decrease, and wrap mental cost drops without granting a solver route. The maintained E-to-S sweep is monotonic, moving average score 65.2 to 80.8 and route-efficiency pressure 61.98 to 25.937. The latest recovery tuning pass rejected E local-progress scoring, a bounded endpoint-discovery prototype, recovery penalties 0.8 and 0.3, and a bounded corridor-terminal preview because each worsened the route-efficiency baseline; all changes were reverted. Decision-level recovery diagnostics now record source/split/target, known-route length, confidence, choice class, and thought state for every recovery. The restored 60-case E baseline reports 1,239 frontier recoveries, 120 optional retargets, 11.586 average known-route steps, and a 105-step maximum. Built-in scale summaries isolate the long tail in the scale-75 stress band: route ratio 6.05, 13.668 recovery steps, and p90 ratio 14.059. The tutorial profile currently targets scale 29, so this is a future progression handoff threshold rather than an early-game assignment. A scale-75 E-through-S sweep reaches all 30 goals with zero leaks but fails rank monotonicity: B/A pressure is 61.371, while C/S regress to 80.947. Calibration now also requires monotonic raw route ratio: E/D/C/B/A/S is 4.179/4.978/5.616/4.335/4.131/4.38, so score or pressure alone cannot certify a slower controller. The first preview action worsened B 4.335 to 5.197 and S 4.38 to 4.645, while A only improved 4.131 to 4.116, so solvePreviewBudget remains diagnostics-only. Long E-rank searches remain intentionally fallible and score poorly through route-efficiency pressure; the next controller change must be ledger-driven before high-scale promotion.",
+      "currentStatus": "The hidden full-floor emergency fallback is removed; A*/shortest-path data is a post-run benchmark; and the AI exposes thought, choice, confidence, remembered options, and a non-goal target. Human-memory recovery can cross a previously exhausted but remembered corridor to reach a verified unexplored frontier, while dead ends remain excluded from new branch selection. Generated menu AI no longer emits ai-path-exhausted or regenerates before goal; focused 30-maze proof and a 60-case E-rank calibration both reached goal in every case with zero target leaks and zero pre-goal regenerations. The rank controller now has a real D-through-S local cognition ladder instead of sharing D behavior: local lookahead grows, confidence noise/split uncertainty decrease, and wrap mental cost drops without granting a solver route. The maintained E-to-S sweep is monotonic, moving average score 65.2 to 80.8 and route-efficiency pressure 61.98 to 25.937. The latest recovery tuning pass rejected E local-progress scoring, a bounded endpoint-discovery prototype, recovery penalties 0.8 and 0.3, and a bounded corridor-terminal preview because each worsened the route-efficiency baseline; all changes were reverted. Decision-level recovery diagnostics now record source/split/target, known-route length, confidence, choice class, and thought state for every recovery. The restored 60-case E baseline reports 1,239 frontier recoveries, 120 optional retargets, 11.586 average known-route steps, and a 105-step maximum. Built-in scale summaries isolate the long tail in the scale-75 stress band: route ratio 6.05, 13.668 recovery steps, and p90 ratio 14.059. The tutorial profile currently targets scale 29, so this is a future progression handoff threshold rather than an early-game assignment. A scale-75 E-through-S sweep reaches all 30 goals with zero leaks but fails rank monotonicity: B/A pressure is 61.371, while C/S regress to 80.947. Calibration now also requires monotonic raw route ratio: E/D/C/B/A/S is 4.179/4.978/5.616/4.335/4.131/4.38, so score or pressure alone cannot certify a slower controller. The first preview action worsened B 4.335 to 5.197 and S 4.38 to 4.645, while A only improved 4.131 to 4.116, so solvePreviewBudget remains diagnostics-only. Long E-rank searches remain intentionally fallible and score poorly through route-efficiency pressure; the next controller change must be ledger-driven before high-scale promotion. The imported corpus can now provide behavior-ready clean/searching/chaotic cohorts and deterministic long-tail seeds, but not automatic online learning or live controller promotion.",
       "workBreakdown": [
         "Use a noisy vision model: clear corridors are trusted more than dense intersections, wraps, and near-overlapping paths.",
         "Separate perception from route choice by labeling branches as promising, risky, dead-end-looking, shortcut-looking, or unclear before selecting a move.",
@@ -108,7 +174,8 @@
         "Use branch-decision diagnostics to compare local candidate score, confidence, class, and sanitized post-run canonical alignment without exposing an end target or solver route.",
         "Use recovery-target diagnostics to compare frontier-pool size and selected-score margin without logging alternate target coordinates.",
         "Maintain npm run ai:calibrate, npm run ai:calibrate:ranks, and npm run ai:calibrate:biases as repeatable generated-seed proof for raw route ratio, reach/regeneration counts, invalid moves, goal-target leaks, thought states, choice classes, resolved perception profile, rank-sweep average-score comparison, route-efficiency-pressure comparison, and bias-profile separation.",
-        "Add richer UI visualization beyond the amber target tile, including branch labels, remembered options, target confidence, and current thought state."
+        "Add richer UI visualization beyond the amber target tile, including branch labels, remembered options, target confidence, and current thought state.",
+        "Generate representative, stress, single-route, and wrap-anomaly seed packs from quality-approved receipts so controller changes compare against fixed controls instead of only fresh random samples."
       ],
       "nextActions": [
         "Test one D-rank committed-frontier or candidate-pool-reduction policy against raw route ratio, then tune C's lower canonical branch alignment separately; do not apply another shared rank weight or repeat the rejected preview/global-vision/path-penalty experiments.",
@@ -116,7 +183,8 @@
         "Expose the now-distinct rank cognition in a compact player-facing thought/skill legend without overwhelming normal UI.",
         "Keep default E-rank calibration near the healthier challenge/ease/hold mix while reducing regeneration count through route-quality improvements.",
         "Run longer rank samples after each controller/generator tuning pass and compare goalTargetLeakPass, monotonicAverageScorePass, monotonicAverageRouteRatioPass, and monotonicRouteEfficiencyPass.",
-        "Add a compact player-facing legend for the thought-state colors and target-confidence visualization."
+        "Add a compact player-facing legend for the thought-state colors and target-confidence visualization.",
+        "Review clean/searching/chaotic and long-tail behavior cohorts before any AI weight promotion; do not add automatic online learning."
       ],
       "acceptanceCriteria": [
         "The AI cannot use a hidden full-floor route or reset/regenerate shortcut to reach the end after local memory fails.",
@@ -135,6 +203,9 @@
       ],
       "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-human-configured-ai-runner",
+      "relatedCardIds": [
+        "mazer-ai-run-corpus-quality-calibration"
+      ],
       "reactionStatus": "failure",
       "reactionEmojiName": "failure",
       "reactionEmojiId": "1507384094424694785",
@@ -198,25 +269,28 @@
       "completionPercent": 43,
       "summary": "Make wrapped border paths a real graph contract, keep start/goal/navigation aware of wrap edges, and prevent maze path visuals from entering border cutouts.",
       "whyItMatters": "Wrap paths and border notches change both visuals and navigation. They must be graph-owned, not just visual tricks, or AI distance, player movement, and difficulty scoring drift apart.",
-      "currentStatus": "Wrap navigation exists and can snap visually, but generation, fill near triangular border cutouts, difficulty scoring, and the explicit feature classification of bleed-off paths still need contract-level hardening. The linked feature-parity card owns the inventory/mode matrix; this card owns graph legality and render safety.",
+      "currentStatus": "Wrap navigation exists and can snap visually, but generation, fill near triangular border cutouts, difficulty scoring, and the explicit feature classification of bleed-off paths still need contract-level hardening. The linked feature-parity card owns the inventory/mode matrix; this card owns graph legality and render safety. A 2026-07-11 read-only audit found historical wrapped completions shorter than the stored canonical solution path, so the current route-efficiency benchmark is not calibration-safe until it is recomputed from the actual wrapped movement graph.",
       "workBreakdown": [
         "Guarantee at least one horizontal and one vertical wrap candidate only when legal for the current maze bounds.",
         "Represent wrap neighbors in the graph so AI, player movement, compass, trail, and complexity formulas all agree.",
         "Keep generated paths out of title/compass notches and folded-corner voids.",
         "Improve bottom and corner fill so paths reach usable border edges without clipping into decorative cutouts.",
-        "Classify bleed-off edge paths as always-on, level-gated, mode-specific, experimental, deprecated, or disconnected instead of inferring intent from absence."
+        "Classify bleed-off edge paths as always-on, level-gated, mode-specific, experimental, deprecated, or disconnected instead of inferring intent from absence.",
+        "Compute shortest path from the same legal neighbor contract used by movement, telemetry, AI, and player controls, including wraps."
       ],
       "nextActions": [
         "Add topology diagnostics for wrap-pair validity.",
         "Add notch-safe render masks or generator constraints.",
         "Capture visual proof for top notch, bottom notch, and all four folded corners.",
-        "Feed confirmed edge-path classification into the linked feature progression matrix."
+        "Feed confirmed edge-path classification into the linked feature progression matrix.",
+        "Build a fixed wrap-shortcut anomaly pack and prove a completed path cannot undercut the computed graph shortest path."
       ],
       "acceptanceCriteria": [
         "At least one horizontal and one vertical wrap candidate can be generated when complexity allows it.",
         "AI distance and route choice account for wrap neighbors instead of treating them as visual-only paths.",
         "Path rendering respects the folded border notches and fills toward edges without leaking into cutout voids.",
-        "Bleed-off path availability, level-band introduction, mode behavior, and complexity contribution are explicitly documented."
+        "Bleed-off path availability, level-band introduction, mode behavior, and complexity contribution are explicitly documented.",
+        "A graph shortest-path invariant holds for representative and historical wrap-anomaly fixtures."
       ],
       "proofPlan": [
         "Run topology diagnostics against generated mazes with wrap paths enabled.",
@@ -226,7 +300,8 @@
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-edge-wrap-topology-and-notch-fill",
       "relatedCardIds": [
         "mazer-maze-feature-progression-parity",
-        "mazer-procedural-difficulty-generator-shaping"
+        "mazer-procedural-difficulty-generator-shaping",
+        "mazer-ai-run-corpus-quality-calibration"
       ],
       "liveThreadId": "1524889576651620382",
       "liveMessageId": "1524889576651620382",
@@ -415,30 +490,37 @@
       "completionPercent": 85,
       "summary": "Finish the account-backed progression loop, remote cycle receipts, and Atlas/playbook handoff without exposing internal debug surfaces to players.",
       "whyItMatters": "Mazer needs continuity. Account-backed progress, cycle receipts, and Atlas reports are what let the game learn, tune difficulty, and preserve user/AI history across sessions.",
-      "currentStatus": "Remote cycle receipts, player progression, AI progression, Supabase read/write proof, Atlas-safe reports, compact AI decision scores, shortest-path comparison fields, render-safety pressure, and bounded AI reset proof are in place; Atlas-side consumer wiring remains open.",
+      "currentStatus": "Remote cycle receipts, player progression, AI progression, Supabase read/write proof, Atlas-safe reports, compact AI decision scores, shortest-path comparison fields, render-safety pressure, and bounded AI reset proof are in place; Atlas-side consumer wiring remains open. The 2026-07-11 read-only corpus audit found 1,341 completed AI cycles against 1,139 durable receipts, plus implicit schema eras and no exact duplicates. The gap must be classified through future coverage/sequence metadata and observable retry state, not synthesized or silently backfilled.",
       "workBreakdown": [
         "Keep compact remote cycle receipts behind the opt-in env flag and authenticated guard.",
         "Preserve player and AI progression tracks independently.",
         "Normalize direct Supabase row exports into Atlas-safe cycle-learning reports.",
         "Carry AI decision score, route-efficiency pressure, shortest-path overrun, and render-safety pressure in compact receipts.",
-        "Bound account AI reset work to the AI progression table only."
+        "Bound account AI reset work to the AI progression table only.",
+        "Add future-only client receipt identity, cycle sequence, coverage-start, schema/build/algorithm/version metadata, run origin, and bounded retry/outbox diagnostics.",
+        "Import the one canonical versioned AI scorer instead of reproducing report-side score weights."
       ],
       "nextActions": [
         "Wire the validator-gated consumer receipt into an Atlas-side process.",
         "Calibrate report trends from longer player and AI sample bands.",
-        "Keep remote sync player-safe and non-noisy for guest, missing-client, disabled, and failure outcomes."
+        "Keep remote sync player-safe and non-noisy for guest, missing-client, disabled, and failure outcomes.",
+        "Reconcile progression count against durable receipt coverage without creating synthetic historical receipts."
       ],
       "acceptanceCriteria": [
         "Remote receipts and progression states remain account-scoped and table-bounded.",
         "Atlas reports omit raw path history while preserving tuning context.",
-        "A real Atlas-side consumer can read the report and produce bounded next-work guidance without silent auto-tuning."
+        "A real Atlas-side consumer can read the report and produce bounded next-work guidance without silent auto-tuning.",
+        "Future retries are idempotent and skipped or failed receipt writes are observable with bounded reason codes."
       ],
       "proofPlan": [
         "Run auth UI QA with intentional failure and success states.",
         "Verify Supabase rows for progression and cycle receipt readback through browser-safe RLS."
       ],
-      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "reference": "docs/ops/mazer-ai-run-corpus-quality-calibration-plan-2026-07-11.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-auth-remote-playbook-sync",
+      "relatedCardIds": [
+        "mazer-ai-run-corpus-quality-calibration"
+      ],
       "liveThreadId": "1524889586021699684",
       "liveMessageId": "1524889586021699684",
       "reactionStatus": "failure",
@@ -855,25 +937,28 @@
       "completionPercent": 61,
       "summary": "Turn player and AI progression targets into measurable maze ratings, difficulty bands, and generated structure instead of badge-only labels.",
       "whyItMatters": "The endless loop needs mazes that actually match requested complexity, with a measured rating that explains why a band is easy or hard and when a candidate should be rejected or retried.",
-      "currentStatus": "Difficulty profiles currently map target complexity into scale, checkpoint pressure, shortcut pressure, route-quality reinforcement, required opposite-border wraps, and perimeter feeder pressure. Generation requests carry target complexity and bounded selection picks the closest candidate, but current terms, boundary calibration, feature matrix ownership, and long-run player/AI reconciliation still need one explicit rating contract. Scale 75 remains an AI stress band and must not be promoted based only on labels or coarse score movement.",
+      "currentStatus": "Difficulty profiles currently map target complexity into scale, checkpoint pressure, shortcut pressure, route-quality reinforcement, required opposite-border wraps, and perimeter feeder pressure. Generation requests carry target complexity and bounded selection picks the closest candidate, but current terms, boundary calibration, feature matrix ownership, and long-run player/AI reconciliation still need one explicit rating contract. Scale 75 remains an AI stress band and must not be promoted based only on labels or coarse score movement. The corpus lane will preserve requested target/rank/band with each future receipt and compare requested, measured, and experienced difficulty, especially for high-complexity wrapped mazes whose legal shortcut routes are unexpectedly short.",
       "workBreakdown": [
         "Define tutorial, starter, explorer, navigator, architect, and mythic difficulty profiles.",
         "Map the active player or AI track into executable generation pressure terms.",
         "Expose generationReview with under-target, on-target, and over-target classification.",
         "Select from a bounded seed window instead of blindly accepting the first generated maze.",
-        "Separate requested target complexity, measured maze rating, difficulty label, level band, and feature availability in one testable contract."
+        "Separate requested target complexity, measured maze rating, difficulty label, level band, and feature availability in one testable contract.",
+        "Persist bounded requested target, rank/level before run, generation profile/band, delivery review, and benchmark-graph version so retrospective cohorts can distinguish requested from experienced difficulty."
       ],
       "nextActions": [
         "Define and prove the future skill-to-scale handoff that admits scale-75 topology only after the matching AI rank has monotonic raw route-ratio and recovery-pressure proof at that scale.",
         "Tune branch, fill, dead-end, and wrap-path pressure against longer samples.",
         "Prove the endless progression loop can rise and fall smoothly across player and AI runs.",
-        "Link feature-introduction rules to the shared maze-feature matrix instead of duplicating mode-specific tuning."
+        "Link feature-introduction rules to the shared maze-feature matrix instead of duplicating mode-specific tuning.",
+        "Use quality-approved corpus cohorts to identify high measured-complexity mazes that wraps trivialize before changing any generator parameter."
       ],
       "acceptanceCriteria": [
         "Generated maze complexity tracks the active player or AI target band within a bounded search cost.",
         "Diagnostics explain whether each maze under-delivered, matched, or overshot the target.",
         "Long-run proof shows difficulty changes remain readable and stable instead of jumping or stalling.",
-        "Every active difficulty band has measurable target, tolerance, parameter range, and expected maze-rating behavior."
+        "Every active difficulty band has measurable target, tolerance, parameter range, and expected maze-rating behavior.",
+        "Requested, measured, and experienced difficulty are analyzable by topology, rank, run origin, and generator contract cohort."
       ],
       "proofPlan": [
         "Run progression and generation tests for difficulty profile selection.",
@@ -889,7 +974,8 @@
         "mazer-ai-level-rank-progression",
         "mazer-human-configured-ai-runner",
         "mazer-maze-feature-progression-parity",
-        "mazer-edge-wrap-topology-and-notch-fill"
+        "mazer-edge-wrap-topology-and-notch-fill",
+        "mazer-ai-run-corpus-quality-calibration"
       ],
       "liveThreadId": "1525063353716834354",
       "liveMessageId": "1525063353716834354"
@@ -1724,18 +1810,20 @@
       "completionPercent": 0,
       "summary": "Audit and normalize maze-feature introduction across level bands and menu/play modes through one traceable feature registry or equivalent single source of truth.",
       "whyItMatters": "A numeric difficulty profile is not enough when preview and playable mazes introduce different features or edge paths silently disappear. Every feature must have an intentional band, mode, and difficulty contribution.",
-      "currentStatus": "Current profiles already control scale, checkpoints, shortcuts, wrap requirements, route reinforcement, and perimeter feeders. Menu and play have separate build kinds while sharing high-level selection. There is no complete feature inventory/matrix proving what is always-on, level-gated, mode-specific, experimental, deprecated, or accidentally disconnected.",
+      "currentStatus": "Current profiles already control scale, checkpoints, shortcuts, wrap requirements, route reinforcement, and perimeter feeders. Menu and play have separate build kinds while sharing high-level selection. There is no complete feature inventory/matrix proving what is always-on, level-gated, mode-specific, experimental, deprecated, or accidentally disconnected. The corpus lane will require future run receipts to retain a bounded feature-set or feature-registry version so topology outcomes can be analyzed by level band without guessing from timestamps.",
       "workBreakdown": [
         "Inventory every actual maze-generation, graph, rendering, and parity feature with its code owner and current menu/play behavior.",
         "Create a feature matrix with availability, level-band introduction, parameter range, difficulty contribution, mode compatibility, and intentional exclusion reason.",
         "Establish one canonical feature registry or equivalent shared configuration consumed wherever menu/play parity is intended.",
         "Classify bleed-off edge paths explicitly and decide whether they are lower-level only, later-gated, band-scaled, preview-only, playable, retired, or otherwise excluded.",
-        "Identify dead/unreachable configuration and duplicated mode-specific rules before copying settings between pipelines."
+        "Identify dead/unreachable configuration and duplicated mode-specific rules before copying settings between pipelines.",
+        "Link future run receipts to the enabled feature set or feature-registry version for mode, band, and topology cohort analysis."
       ],
       "nextActions": [
         "Audit menu and play entry points plus feature consumers before creating smaller implementation children.",
         "Use the existing generator and edge-topology cards as linked implementation owners for confirmed findings.",
-        "Add a child card only when registry, parity, or bleed behavior proves to have a separate delivery boundary."
+        "Add a child card only when registry, parity, or bleed behavior proves to have a separate delivery boundary.",
+        "Supply feature-registry/version evidence to the corpus lane so generated topology outcomes are not silently mixed across feature eras."
       ],
       "acceptanceCriteria": [
         "All relevant maze-generation and rendering entry points are identified and mapped to actual features.",
@@ -1743,7 +1831,8 @@
         "Bleed-off edge-path behavior, level-band introduction, and complexity contribution are a documented decision rather than inferred from absence.",
         "Preview and playable paths share configuration where parity is intended, while intentional differences are explicit.",
         "Boundary tests cover adjacent feature-introduction levels/bands and supported mode combinations.",
-        "Dead or duplicated configuration is removed or justified before the card is completed."
+        "Dead or duplicated configuration is removed or justified before the card is completed.",
+        "Historical and future topology cohorts can identify their feature registry or explicit legacy classification."
       ],
       "proofPlan": [
         "Generate a feature-matrix report for low, boundary, mid, and high difficulty bands in menu and play modes.",
@@ -1756,7 +1845,8 @@
         "mazer-procedural-difficulty-generator-shaping",
         "mazer-edge-wrap-topology-and-notch-fill",
         "mazer-play-mode-perpetual-loop",
-        "mazer-ai-level-rank-progression"
+        "mazer-ai-level-rank-progression",
+        "mazer-ai-run-corpus-quality-calibration"
       ],
       "reactionStatus": "failure",
       "reactionEmojiName": "failure",
