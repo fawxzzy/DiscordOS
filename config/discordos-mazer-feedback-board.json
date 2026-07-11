@@ -22,6 +22,304 @@
       "sortKey": "project:mazer",
       "displayName": "mazer"
     },
+    "planning": {
+      "version": 1,
+      "activeCardId": "mazer-cross-viewport-ui-reliability",
+      "activeSelectionReason": "Operator explicitly selected the cross-platform UI follow-up before epic-order execution resumes.",
+      "executionPolicy": "Finish the earliest execution-ready critical-path epic before taking later product work. Advanced AI research stays parallel and cannot block the critical path.",
+      "epics": [
+        {
+          "id": "core-gameplay",
+          "title": "Core gameplay",
+          "order": 1,
+          "criticalPath": true,
+          "primaryCardIds": [
+            "mazer-player-input-movement-correctness",
+            "mazer-play-mode-perpetual-loop",
+            "mazer-turn-synchronous-world-simulation",
+            "mazer-mystery-box-usable-item-system",
+            "mazer-invisibility-cloak-item"
+          ],
+          "supportingCardIds": [
+            "mazer-fluid-controls-and-motion",
+            "mazer-edge-wrap-topology-and-notch-fill",
+            "mazer-enemy-pursuit-ai"
+          ]
+        },
+        {
+          "id": "feel-and-polish",
+          "title": "Feel and polish",
+          "order": 2,
+          "criticalPath": true,
+          "primaryCardIds": [
+            "mazer-crisp-cyber-arcade-graphics",
+            "mazer-icon-quality-2026-visual-target",
+            "mazer-fluid-controls-and-motion",
+            "mazer-play-camera-zoom-minimap",
+            "mazer-animation-smoothness-lifecycle",
+            "mazer-iridescent-player-trail-material",
+            "mazer-visual-proof-discipline",
+            "mazer-mobile-shell-device-harness",
+            "mazer-visual-defaults-menu-controls",
+            "mazer-cross-viewport-ui-reliability",
+            "mazer-browser-layout-persistence",
+            "mazer-player-trail-readability-lock"
+          ],
+          "supportingCardIds": [
+            "mazer-player-input-movement-correctness",
+            "mazer-player-facing-options-guide",
+            "mazer-auth-ui-flow-hardening",
+            "mazer-handcrafted-asset-authoring-import-workflow"
+          ]
+        },
+        {
+          "id": "progression-systems",
+          "title": "Progression systems",
+          "order": 3,
+          "criticalPath": true,
+          "primaryCardIds": [
+            "mazer-ai-level-rank-progression",
+            "mazer-ai-token-assisted-maze-completion",
+            "mazer-first-time-tutorial-system",
+            "mazer-customization-inventory-cosmetic-unlocks",
+            "mazer-maze-coin-pickups-cosmetic-currency",
+            "mazer-player-rank-only-progression-display"
+          ],
+          "supportingCardIds": [
+            "mazer-ai-run-corpus-quality-calibration",
+            "mazer-procedural-difficulty-generator-shaping",
+            "mazer-account-scoped-settings-persistence"
+          ]
+        },
+        {
+          "id": "maze-systems",
+          "title": "Maze systems",
+          "order": 4,
+          "criticalPath": true,
+          "primaryCardIds": [
+            "mazer-edge-wrap-topology-and-notch-fill",
+            "mazer-diagonal-path-graph-contract",
+            "mazer-procedural-difficulty-generator-shaping",
+            "mazer-data-driven-cosmetic-theme-catalog",
+            "mazer-moving-procedural-maze-mode",
+            "mazer-maze-feature-progression-parity"
+          ],
+          "supportingCardIds": [
+            "mazer-ai-level-rank-progression",
+            "mazer-handcrafted-asset-authoring-import-workflow"
+          ]
+        },
+        {
+          "id": "player-systems",
+          "title": "Player systems",
+          "order": 5,
+          "criticalPath": true,
+          "primaryCardIds": [
+            "mazer-player-facing-options-guide",
+            "mazer-auth-remote-playbook-sync",
+            "mazer-unified-player-message-system",
+            "mazer-auth-gate-persistent-login",
+            "mazer-account-scoped-settings-persistence",
+            "mazer-auth-ui-flow-hardening"
+          ],
+          "supportingCardIds": [
+            "mazer-first-time-tutorial-system",
+            "mazer-customization-inventory-cosmetic-unlocks",
+            "mazer-player-rank-only-progression-display"
+          ]
+        },
+        {
+          "id": "online-and-social",
+          "title": "Online and social",
+          "order": 6,
+          "criticalPath": true,
+          "primaryCardIds": [
+            "mazer-multiplayer-foundation",
+            "mazer-endless-multiplayer-survival-mode"
+          ],
+          "supportingCardIds": [
+            "mazer-auth-gate-persistent-login",
+            "mazer-account-scoped-settings-persistence"
+          ]
+        },
+        {
+          "id": "telemetry-and-analytics",
+          "title": "Telemetry and analytics",
+          "order": 7,
+          "criticalPath": true,
+          "primaryCardIds": [
+            "mazer-ai-run-corpus-quality-calibration"
+          ],
+          "supportingCardIds": [
+            "mazer-auth-remote-playbook-sync",
+            "mazer-visual-proof-discipline"
+          ]
+        },
+        {
+          "id": "ai-systems",
+          "title": "AI systems",
+          "order": 8,
+          "criticalPath": true,
+          "primaryCardIds": [
+            "mazer-human-configured-ai-runner",
+            "mazer-enemy-pursuit-ai"
+          ],
+          "supportingCardIds": [
+            "mazer-ai-token-assisted-maze-completion",
+            "mazer-ai-run-corpus-quality-calibration",
+            "mazer-procedural-difficulty-generator-shaping"
+          ]
+        },
+        {
+          "id": "dev-platform-integration",
+          "title": "Development platform and integration",
+          "order": 9,
+          "criticalPath": true,
+          "primaryCardIds": [
+            "mazer-discordos-board-discipline",
+            "mazer-handcrafted-asset-authoring-import-workflow"
+          ],
+          "supportingCardIds": [
+            "mazer-auth-remote-playbook-sync",
+            "mazer-visual-proof-discipline"
+          ]
+        }
+      ],
+      "dependencies": [
+        {
+          "cardId": "mazer-browser-layout-persistence",
+          "dependsOnCardIds": ["mazer-cross-viewport-ui-reliability"],
+          "reason": "Browser transitions must consume the canonical viewport geometry contract."
+        },
+        {
+          "cardId": "mazer-mobile-shell-device-harness",
+          "dependsOnCardIds": ["mazer-cross-viewport-ui-reliability"],
+          "reason": "Device safe areas and orientation behavior must use the shared viewport contract."
+        },
+        {
+          "cardId": "mazer-auth-ui-flow-hardening",
+          "dependsOnCardIds": [
+            "mazer-cross-viewport-ui-reliability",
+            "mazer-browser-layout-persistence",
+            "mazer-mobile-shell-device-harness",
+            "mazer-auth-gate-persistent-login"
+          ],
+          "reason": "Auth inputs and keyboard behavior should land only after stable viewport geometry and existing auth-state ownership."
+        },
+        {
+          "cardId": "mazer-player-rank-only-progression-display",
+          "dependsOnCardIds": [
+            "mazer-cross-viewport-ui-reliability",
+            "mazer-ai-level-rank-progression"
+          ],
+          "reason": "The compact rank surface needs stable geometry and a settled hidden progression contract."
+        },
+        {
+          "cardId": "mazer-player-trail-readability-lock",
+          "dependsOnCardIds": [
+            "mazer-crisp-cyber-arcade-graphics",
+            "mazer-visual-proof-discipline"
+          ],
+          "reason": "The fixed release baseline requires stable contrast roles and route-aware visual proof."
+        },
+        {
+          "cardId": "mazer-iridescent-player-trail-material",
+          "dependsOnCardIds": ["mazer-player-trail-readability-lock"],
+          "reason": "Experimental material work follows the fixed green-and-white readability baseline."
+        },
+        {
+          "cardId": "mazer-maze-feature-progression-parity",
+          "dependsOnCardIds": [
+            "mazer-edge-wrap-topology-and-notch-fill",
+            "mazer-procedural-difficulty-generator-shaping"
+          ],
+          "reason": "Feature parity needs legal topology and measurable generator bands first."
+        },
+        {
+          "cardId": "mazer-moving-procedural-maze-mode",
+          "dependsOnCardIds": [
+            "mazer-maze-feature-progression-parity",
+            "mazer-turn-synchronous-world-simulation"
+          ],
+          "reason": "Moving mazes need stable feature ownership and deterministic world-step semantics."
+        },
+        {
+          "cardId": "mazer-enemy-pursuit-ai",
+          "dependsOnCardIds": ["mazer-turn-synchronous-world-simulation"],
+          "reason": "Enemy pursuit requires one deterministic movement and collision clock."
+        },
+        {
+          "cardId": "mazer-multiplayer-foundation",
+          "dependsOnCardIds": [
+            "mazer-play-mode-perpetual-loop",
+            "mazer-auth-gate-persistent-login"
+          ],
+          "reason": "Online state should not precede the stable completion loop or account identity contract."
+        },
+        {
+          "cardId": "mazer-endless-multiplayer-survival-mode",
+          "dependsOnCardIds": [
+            "mazer-multiplayer-foundation",
+            "mazer-enemy-pursuit-ai",
+            "mazer-mystery-box-usable-item-system",
+            "mazer-invisibility-cloak-item",
+            "mazer-turn-synchronous-world-simulation"
+          ],
+          "reason": "The mode composes the admitted online, enemy, item, and world-step systems."
+        },
+        {
+          "cardId": "mazer-ai-token-assisted-maze-completion",
+          "dependsOnCardIds": [
+            "mazer-human-configured-ai-runner",
+            "mazer-first-time-tutorial-system"
+          ],
+          "reason": "Player-facing assistance needs a trusted runner and teachable presentation contract."
+        },
+        {
+          "cardId": "mazer-ai-level-rank-progression",
+          "dependsOnCardIds": [
+            "mazer-ai-run-corpus-quality-calibration",
+            "mazer-procedural-difficulty-generator-shaping"
+          ],
+          "reason": "Formula tuning follows quality-approved receipts and measurable generated difficulty."
+        },
+        {
+          "cardId": "mazer-customization-inventory-cosmetic-unlocks",
+          "dependsOnCardIds": [
+            "mazer-data-driven-cosmetic-theme-catalog",
+            "mazer-maze-coin-pickups-cosmetic-currency"
+          ],
+          "reason": "Inventory unlocks need catalog identity and an admitted earning source."
+        },
+        {
+          "cardId": "mazer-data-driven-cosmetic-theme-catalog",
+          "dependsOnCardIds": ["mazer-handcrafted-asset-authoring-import-workflow"],
+          "reason": "Catalog entries need a governed asset production and import path."
+        }
+      ],
+      "parallelTracks": [
+        {
+          "id": "advanced-ai-research",
+          "title": "Advanced AI research",
+          "criticalPath": false,
+          "cardIds": [
+            "mazer-human-configured-ai-runner",
+            "mazer-ai-run-corpus-quality-calibration"
+          ],
+          "policy": "May produce evidence and experiments in parallel but cannot delay core gameplay, UI reliability, or player-facing delivery."
+        }
+      ],
+      "reconciliation": {
+        "source": "Operator-provided epic framework reconciled against the canonical DiscordOS Mazer board on 2026-07-11.",
+        "newCardPolicy": "Create cards only for confirmed gaps after mapping existing ownership and dependencies.",
+        "duplicateDecisions": [
+          "Cross-viewport reliability remains the umbrella; browser layout and mobile shell remain distinct implementation children.",
+          "Auth gate/persistence remains the state owner; auth UI flow hardening is a distinct successor for inputs, keyboard, autofill, and player-safe errors.",
+          "Rank-only display remains presentation-only and does not replace hidden progression ownership.",
+          "Green-and-white trail readability remains the release baseline; iridescent material work remains a later experiment rather than a duplicate active delivery."
+        ]
+      }
+    },
     "sendsMessages": true,
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
@@ -36,10 +334,10 @@
       "priority": "high",
       "category": "mazer",
       "markerName": "AI run corpus quality and calibration",
-      "completionPercent": 13,
+      "completionPercent": 30,
       "summary": "Turn account-scoped AI run receipts into versioned, quality-gated calibration cohorts without deleting raw evidence or automatically changing live progression.",
       "whyItMatters": "The Fawxzzy account has more than 1,300 completed AI cycles, enough to reveal repeatable navigation, generator, and progression behavior. Mixed receipt schemas, incomplete remote coverage, wrapped-route benchmark drift, and duplicated scoring formulas can produce incorrect tuning unless the corpus is governed first.",
-      "currentStatus": "A 2026-07-11 read-only audit found 1,341 completed AI cycles and 1,139 durable receipts: 1,122 menu-demo and 17 play. There are no exact duplicates and storage is about 2.2 MB. The imported audit identified a 202-cycle receipt-coverage gap, 46 zero-frame rows, multiple implicit schema eras, 916 behavior-ready AI receipts, 540 route-calibration-ready receipts, and wrapped-path benchmark inconsistencies in which actual paths can be shorter than the recorded canonical solution. Wave 1 is implemented on Mazer PR #37: `npm run ai:corpus:audit` accepts an explicit export and emits a redacted `mazer.ai-run-corpus-audit.v1` quality report with purpose-specific readiness, coverage, cohort, missing-field, and benchmark-mismatch aggregates. Its fixtures, proof-spine registration, TypeScript check, and full Mazer verification pass. Raw receipts remain immutable evidence; no production formula, account progression, or Supabase receipt row has been changed.",
+      "currentStatus": "A 2026-07-11 read-only audit found 1,341 completed AI cycles and 1,139 durable receipts: 1,122 menu-demo and 17 play. There are no exact duplicates and storage is about 2.2 MB. Wave 1 landed on Mazer PR #37 with an export-only redacted quality audit. Wave 2 landed on Mazer PR #38 at merge commit `b380d2bc`: telemetry now benchmarks the legal wrap-aware playable graph while preserving generator `solutionPath`, and runtime, reporting, corpus audit, and calibration consume canonical scorer `mazer.maze-cycle-ai-decision-pressure` version `1.0.0`. Reports preserve historical stored scores separately from current recomputation. Full Mazer verification passed 323 tests across 42 files plus production build; fast verification passed 127 tests and the calibration smoke reached 5/5 goals with zero target leaks. Raw receipts and account progression remain immutable; future receipt versioning, idempotent coverage, seed packs, and offline formula calibration remain open.",
       "workBreakdown": [
         "Create a versioned corpus audit that assigns analytical quality states and reason codes without modifying raw receipts.",
         "Add receipt schema, build, AI algorithm, generator, benchmark-graph, run-origin, cycle-sequence, and progression-context metadata to future receipts.",
@@ -101,7 +399,7 @@
       "completionPercent": 72,
       "summary": "Document and redesign how player and AI run scores, hidden ratings, rank, target complexity, maze rating, and level bands choose the next maze without punitive regression.",
       "whyItMatters": "Progression must reward strong but imperfect runs, preserve meaningful rank differences, and keep player, AI, and generated-maze semantics explainable without exposing competing public metrics.",
-      "currentStatus": "The current contract stores separate player and AI-runner tracks, uses targetComplexity as the intended source of level/rank, and derives 0-100 paceScore from time, route efficiency, wrong turns, backtracks, reset use, render safety, and AI decision pressure. Current level bands are four target-complexity points wide and rank bands are E/D/C/B/A/S. The public UI still calls the player metric Skill Lvl in some surfaces. This card now owns the formula/terminology audit; the rank-only UI, feature parity, generator delivery, and human AI controller remain linked delivery lanes. The 2026-07-11 read-only corpus audit showed a large historical struggle classification after 1,341 cycles, but wrapped-route benchmark drift and scorer disagreement make direct threshold tuning unsafe until the linked corpus lane supplies quality-gated offline replay.",
+      "currentStatus": "The current contract stores separate player and AI-runner tracks, uses targetComplexity as the intended source of level/rank, and derives 0-100 paceScore from time, route efficiency, wrong turns, backtracks, reset use, render safety, and AI decision pressure. Current level bands are four target-complexity points wide and rank bands are E/D/C/B/A/S. The public UI still calls the player metric Skill Lvl in some surfaces. Mazer PR #38 removed wrapped-route benchmark and scorer-implementation disagreement for future/runtime recomputation without changing thresholds, rank bands, historical progression, or account state. Formula terminology, representative outcome fixtures, hysteresis, and quality-approved offline calibration remain open; rank-only presentation stays in its linked successor card.",
       "workBreakdown": [
         "Inventory every stored, derived, displayed, and telemetry-only progression field before changing formulas or labels.",
         "Define score, hidden rating, rank, level, band, target complexity, measured maze rating, difficulty, and complexity in one versioned contract.",
@@ -266,10 +564,10 @@
       "priority": "high",
       "category": "mazer",
       "markerName": "Maze complexity/path topology",
-      "completionPercent": 43,
+      "completionPercent": 52,
       "summary": "Make wrapped border paths a real graph contract, keep start/goal/navigation aware of wrap edges, and prevent maze path visuals from entering border cutouts.",
       "whyItMatters": "Wrap paths and border notches change both visuals and navigation. They must be graph-owned, not just visual tricks, or AI distance, player movement, and difficulty scoring drift apart.",
-      "currentStatus": "Wrap navigation exists and can snap visually, but generation, fill near triangular border cutouts, difficulty scoring, and the explicit feature classification of bleed-off paths still need contract-level hardening. The linked feature-parity card owns the inventory/mode matrix; this card owns graph legality and render safety. A 2026-07-11 read-only audit found historical wrapped completions shorter than the stored canonical solution path, so the current route-efficiency benchmark is not calibration-safe until it is recomputed from the actual wrapped movement graph.",
+      "currentStatus": "Mazer PR #38 landed explicit direct-floor and playable-wrap-aware shortest-path policies, deterministic unreachable semantics, self-wrap rejection, and telemetry migration to the legal playable benchmark while preserving generator `solutionPath`. Focused graph and telemetry fixtures plus the full 323-test verification spine pass. Generation guarantees, border-notch rendering/fill, bleed-path feature classification, and retrospective re-export of historical route benchmarks remain open.",
       "workBreakdown": [
         "Guarantee at least one horizontal and one vertical wrap candidate only when legal for the current maze bounds.",
         "Represent wrap neighbors in the graph so AI, player movement, compass, trail, and complexity formulas all agree.",
@@ -487,10 +785,10 @@
       "priority": "medium",
       "category": "mazer",
       "markerName": "Remote progression and cycle receipts",
-      "completionPercent": 85,
+      "completionPercent": 88,
       "summary": "Finish the account-backed progression loop, remote cycle receipts, and Atlas/playbook handoff without exposing internal debug surfaces to players.",
       "whyItMatters": "Mazer needs continuity. Account-backed progress, cycle receipts, and Atlas reports are what let the game learn, tune difficulty, and preserve user/AI history across sessions.",
-      "currentStatus": "Remote cycle receipts, player progression, AI progression, Supabase read/write proof, Atlas-safe reports, compact AI decision scores, shortest-path comparison fields, render-safety pressure, and bounded AI reset proof are in place; Atlas-side consumer wiring remains open. The 2026-07-11 read-only corpus audit found 1,341 completed AI cycles against 1,139 durable receipts, plus implicit schema eras and no exact duplicates. The gap must be classified through future coverage/sequence metadata and observable retry state, not synthesized or silently backfilled.",
+      "currentStatus": "Remote cycle receipts, account-scoped progression, Supabase proof, Atlas-safe reports, compact AI decision scores, playable shortest-path comparison, render-safety pressure, and bounded AI reset proof are in place. Mazer PR #38 removes report-side scorer duplication, publishes scorer version `1.0.0`, validates scorer identity in Atlas reports, and preserves stored-versus-recomputed history. Atlas-side consumer wiring, future receipt version metadata, idempotent retry/outbox coverage, and explanation of the 202-cycle durable-receipt gap remain open; no historical row was rewritten or backfilled.",
       "workBreakdown": [
         "Keep compact remote cycle receipts behind the opt-in env flag and authenticated guard.",
         "Preserve player and AI progression tracks independently.",
@@ -693,7 +991,7 @@
       "completionPercent": 50,
       "summary": "Design and tune a future midnight-rainbow material for player halo, trail, and pulse while keeping the core player readable and separated from path color.",
       "whyItMatters": "The player and trail need to communicate progression and AI thinking without blending into pale path tiles or becoming visually noisy.",
-      "currentStatus": "Runtime material helpers and tests exist. The current shipped readability baseline is green player/trail plus one purple trail pulse. The fixed green-and-white readability delivery is intentionally split into mazer-player-trail-readability-lock so experimental rainbow work cannot change the active release contract by accident.",
+      "currentStatus": "Runtime material helpers and tests exist. This card is a later experimental successor, not a duplicate of the shipping readability contract. The fixed green player/trail plus one white fading shine must land and pass route-aware proof under `mazer-player-trail-readability-lock` before iridescent palette work can alter halo, accent, or cosmetic layers.",
       "workBreakdown": [
         "Keep the player core locked to a high-contrast green readability anchor.",
         "Shift halo, accent, trail, and pulse through a controlled midnight-rainbow palette.",
@@ -775,7 +1073,7 @@
       "completionPercent": 99,
       "summary": "Require screenshots and visual claims to prove they are on the intended route, mode, overlay, and viewport before being accepted.",
       "whyItMatters": "Several visual passes were weakened by vague screenshots. Mazer needs route-aware proof so fixes are validated on the exact surface the user asked about.",
-      "currentStatus": "Screen contracts exist across capture scripts, and the viewport-contract pass captured authenticated menu, Options top/bottom, play, and Pause top/bottom at 390x844 DPR-2 after a real local-server transition. The capture script drives the real Phaser scroll rail by drag input, requires scroll offset=maxOffset for bottom proof, and fails on route/mode/overlay mismatch, text escape, text collision, or unreachable lower controls. Physical-device adoption remains open.",
+      "currentStatus": "Screen contracts exist across capture scripts, and merged Mazer PR #36 captured authenticated menu, Options top/bottom, play, and Pause top/bottom at 390x844 DPR-2 after a real local-server transition. The capture script drives the real Phaser scroll rail by drag input and fails on route/mode/overlay mismatch, text escape, collision, or unreachable controls. The next UI lane must add route-aware proof for skinny/wide desktop transitions, Windows and macOS browser matrices, iPhone camera/Dynamic Island safe areas, Android cutouts/browser chrome, portrait-only phone behavior, and title/maze/rank/action lane spacing. Existing percentage stays unchanged because this pass records requirements rather than new proof.",
       "workBreakdown": [
         "Fail captures when route, mode, overlay, or viewport contract does not match.",
         "Record actual URL, diagnostics mode, surface, and viewport beside screenshots.",
@@ -937,7 +1235,7 @@
       "completionPercent": 61,
       "summary": "Turn player and AI progression targets into measurable maze ratings, difficulty bands, and generated structure instead of badge-only labels.",
       "whyItMatters": "The endless loop needs mazes that actually match requested complexity, with a measured rating that explains why a band is easy or hard and when a candidate should be rejected or retried.",
-      "currentStatus": "Difficulty profiles currently map target complexity into scale, checkpoint pressure, shortcut pressure, route-quality reinforcement, required opposite-border wraps, and perimeter feeder pressure. Generation requests carry target complexity and bounded selection picks the closest candidate, but current terms, boundary calibration, feature matrix ownership, and long-run player/AI reconciliation still need one explicit rating contract. Scale 75 remains an AI stress band and must not be promoted based only on labels or coarse score movement. The corpus lane will preserve requested target/rank/band with each future receipt and compare requested, measured, and experienced difficulty, especially for high-complexity wrapped mazes whose legal shortcut routes are unexpectedly short.",
+      "currentStatus": "Difficulty profiles currently map target complexity into scale, checkpoint pressure, shortcut pressure, route-quality reinforcement, required opposite-border wraps, and perimeter feeder pressure. Mazer PR #38 now separates generator-authored `solutionPath` from the legal playable shortest-path benchmark so measured route pressure cannot silently use direct-only movement when wraps are legal. Requested/measured/experienced terminology, boundary calibration, feature-matrix ownership, and quality-approved long-run reconciliation remain open; scale 75 stays an AI stress band rather than a promotion target.",
       "workBreakdown": [
         "Define tutorial, starter, explorer, navigator, architect, and mythic difficulty profiles.",
         "Map the active player or AI track into executable generation pressure terms.",
@@ -990,7 +1288,7 @@
       "completionPercent": 38,
       "summary": "Prove the phone-shell path for mobile view, safe-area handling, portrait behavior, and real-device confidence without letting browser chrome or device intrusions cover game UI.",
       "whyItMatters": "Mazer is canvas-driven and can pass desktop emulation while still clipping text, controls, HUD, or scrollable overlays behind mobile browser chrome, the Dynamic Island, and home indicators.",
-      "currentStatus": "The app remains a web/PWA runtime with local mobile emulation proof. Draft Mazer PR #36 centralizes safe-area and viewport geometry, removes the CSS 90-degree app rotation, and safely blocks/sleeps phone landscape with an accessible rotate-device shell. Authenticated 390x844 captures cover menu, Options top/bottom, play, Pause top/bottom, guide containment, scroll rails, and lower-control reachability. Portrait lock remains browser best-effort, not a guaranteed physical hard lock; real-device safe-area proof remains open.",
+      "currentStatus": "The app remains a web/PWA runtime with local mobile emulation proof. Merged Mazer PR #36 centralizes safe-area and viewport geometry, removes CSS app rotation, and safely blocks/sleeps phone landscape with an accessible rotate-device shell. The next UI lane must reserve top/bottom play lanes, bound maze growth to remaining usable content, and prove iPhone camera/Dynamic Island, Android cutouts/browser chrome, home-indicator clearance, software browser chrome changes, and portrait-only behavior. Real-device proof remains open and the percentage does not move for requirement intake.",
       "workBreakdown": [
         "Keep phone-size UI-surface proof at 405x958 for guest, auth, play, and pause surfaces.",
         "Assert active labels fit and progression badge text stays inside its chrome.",
@@ -1714,7 +2012,7 @@
       "completionPercent": 25,
       "summary": "Coordinate the mobile safe-area/portrait and browser layout-persistence lanes through one viewport contract and proof matrix without turning either delivery into an offset patch.",
       "whyItMatters": "The same UI can be valid in a desktop canvas, narrow browser, mobile browser, installed PWA, or restored window only if viewport state, safe areas, and restoration behavior share deliberate rules.",
-      "currentStatus": "Root cause and the first contract are proven on draft Mazer PR #36: the defect was competing viewport authorities, not missing persisted panel geometry. `viewportGeometry.ts` now drives CSS, Phaser, scene layout, and diagnostics; the 390x844 -> 844x390 -> 390x844 DPR-2 transition restores portrait geometry with no overlap/offscreen violations. Broader desktop and device matrices remain open.",
+      "currentStatus": "Root cause and the first contract are proven on merged Mazer PR #36: `viewportGeometry.ts` drives CSS, Phaser, scene layout, and diagnostics, and the 390x844 -> 844x390 -> 390x844 DPR-2 transition restores portrait geometry without overlap/offscreen violations. The next UI lane owns reserved menu lanes (title, maze, rank, actions), reserved play lanes (safe area, rank/Pause HUD, maze, controls), maze bounds derived from remaining usable space, deterministic skinny/wide/maximize/restore transitions, and the combined desktop/device proof matrix. Percentage remains 25 because this intake adds no implementation evidence.",
       "workBreakdown": [
         "Define canonical viewport, safe-area, visible-height, and no-overlap invariants for menu, Options, play, Pause, dialogs, HUD, controls, and scroll rails.",
         "Maintain the child boundary between mobile shell/device behavior and browser layout-state persistence.",
@@ -1762,7 +2060,7 @@
       "completionPercent": 20,
       "summary": "Normalize responsive browser UI geometry so a narrow-window layout cannot overlap, escape, or expand incorrectly after resize, maximize, restore, or reload. Persist semantic intent only if the product later introduces it.",
       "whyItMatters": "The root-cause pass proved that Mazer has no user-adjustable panel geometry to restore. Derived dimensions must be recomputed from one viewport snapshot instead of being saved and replayed across browser states.",
-      "currentStatus": "Decision A is proven on draft Mazer PR #36: there is no dedicated persisted panel geometry, so no layout storage key or raw-coordinate restoration is correct. A canonical normalized viewport now handles the first phone transition and removes the CSS rotation workaround. Desktop maximize/restore, reload, and broader overlay transitions remain to be proven before this card can close.",
+      "currentStatus": "Decision A is proven on merged Mazer PR #36: derived geometry is recomputed rather than persisted, a canonical normalized viewport handles phone transitions, and the CSS rotation workaround is gone. The next UI lane must prove skinny-to-wide, wide-to-skinny, maximize, restore, reload, browser-chrome changes, and overlay transitions while preventing maze growth from consuming title, rank, or action lanes. Percentage remains 20 because these are newly recorded acceptance requirements, not completed proof.",
       "workBreakdown": [
         "Document the intentional no-persisted-geometry contract and keep semantic toggle/account preference state separate.",
         "Normalize layout-derived state on reload, resize, maximize, restore, narrow-to-wide, wide-to-narrow, mobile emulation, and orientation transitions.",
@@ -1900,6 +2198,58 @@
       "reactionEmojiId": "1507384094424694785",
       "liveThreadId": "1525337759315919001",
       "liveMessageId": "1525337759315919001"
+    },
+    {
+      "id": "mazer-auth-ui-flow-hardening",
+      "title": "mazer: auth UI and flow hardening",
+      "state": "open",
+      "priority": "high",
+      "category": "mazer",
+      "markerName": "Auth UI and flow hardening",
+      "completionPercent": 0,
+      "summary": "Harden login and account-creation presentation, native input geometry, mobile keyboard behavior, autofill, password-manager integration, and player-safe error states without changing auth ownership.",
+      "whyItMatters": "Authentication is the front door to account-backed play. Input overlays that shift behind browser chrome, fight the software keyboard, or expose raw provider errors can block otherwise healthy persistence and progression systems.",
+      "currentStatus": "The existing auth gate and persistent-login card owns session and state continuity at 94%, while account-scoped settings owns preference identity. This successor owns UI and flow hardening only. Implementation is intentionally deferred until the cross-viewport layout contract is stable because MenuScene, native auth inputs, overlay geometry, safe areas, and mobile viewport behavior overlap. Fitness may be reviewed as a proven reference, but any pattern must be deliberately adapted to Mazer rather than copied blindly.",
+      "workBreakdown": [
+        "Audit login, account creation, session restoration, logout, and error-state presentation without changing the auth provider contract.",
+        "Place native email/password inputs from canonical viewport and safe-area geometry instead of independent DOM offsets.",
+        "Keep focused fields, submit actions, validation, and recovery controls reachable when iOS or Android software keyboards resize the visual viewport.",
+        "Define deliberate autocomplete, autofill, password-manager, enter-key, and focus-order behavior.",
+        "Translate provider and network failures into bounded player-safe messages while retaining diagnosable internal reason codes.",
+        "Review Fitness auth patterns as evidence and adapt only the parts that fit Mazer's canvas-plus-native-input architecture.",
+        "Capture authenticated and unauthenticated phone/desktop proof across login, creation, validation, recovery, and restored-session states."
+      ],
+      "nextActions": [
+        "Wait for the cross-platform UI lane to stabilize menu and overlay geometry.",
+        "Inventory the existing native input bridge and auth-state transitions before changing presentation.",
+        "Build a focused keyboard/autofill/error-state matrix using Mazer routes and QA-safe accounts."
+      ],
+      "acceptanceCriteria": [
+        "Login and account creation use one coherent player-facing flow with no duplicate state owners.",
+        "Native fields align with the visible auth surface after resize, browser chrome changes, safe-area changes, and software-keyboard open/close transitions.",
+        "Autofill and password managers identify fields correctly without obscuring controls or bypassing required validation.",
+        "Keyboard, touch, and desktop focus/submit behavior remain accessible and deterministic.",
+        "Provider details and secrets are never shown to players; errors remain useful, bounded, and testable.",
+        "Authenticated session restoration remains compatible with existing account-backed progression and settings."
+      ],
+      "proofPlan": [
+        "Run focused auth, account-settings, and viewport tests without live user-data mutation.",
+        "Capture desktop and phone login/create-account flows with software keyboard, autofill, validation, and restored-session states.",
+        "Verify route, overlay, viewport, safe-area, focus, and auth-state diagnostics before moving the marker."
+      ],
+      "reference": "repos/mazer/docs/research/MAZER_BOARD_RECONCILIATION_2026-07-10.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-auth-ui-flow-hardening",
+      "relatedCardIds": [
+        "mazer-auth-gate-persistent-login",
+        "mazer-account-scoped-settings-persistence",
+        "mazer-cross-viewport-ui-reliability",
+        "mazer-browser-layout-persistence",
+        "mazer-mobile-shell-device-harness",
+        "mazer-visual-proof-discipline"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785"
     }
   ]
 }
