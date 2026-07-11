@@ -26,7 +26,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-11T05:15:21.841Z"
+    "liveSyncedAt": "2026-07-11T06:36:48.533Z"
   },
   "cards": [
     {
@@ -693,7 +693,7 @@
       "completionPercent": 99,
       "summary": "Require screenshots and visual claims to prove they are on the intended route, mode, overlay, and viewport before being accepted.",
       "whyItMatters": "Several visual passes were weakened by vague screenshots. Mazer needs route-aware proof so fixes are validated on the exact surface the user asked about.",
-      "currentStatus": "Screen contracts exist across capture scripts, and authenticated surface proof now captures menu, Options top/bottom, play, and Pause top/bottom at 360x720 DPR-2. The capture script drives the real Phaser scroll rail by drag input, requires scroll offset=maxOffset for bottom proof, and fails on route/mode/overlay mismatch, text escape, text collision, or unreachable lower controls. Physical-device adoption remains open.",
+      "currentStatus": "Screen contracts exist across capture scripts, and the viewport-contract pass captured authenticated menu, Options top/bottom, play, and Pause top/bottom at 390x844 DPR-2 after a real local-server transition. The capture script drives the real Phaser scroll rail by drag input, requires scroll offset=maxOffset for bottom proof, and fails on route/mode/overlay mismatch, text escape, text collision, or unreachable lower controls. Physical-device adoption remains open.",
       "workBreakdown": [
         "Fail captures when route, mode, overlay, or viewport contract does not match.",
         "Record actual URL, diagnostics mode, surface, and viewport beside screenshots.",
@@ -714,7 +714,7 @@
         "Run the authenticated 360x720 DPR-2 UI-surface matrix including top and bottom overlay states.",
         "Verify generated metadata includes screenContract.pass plus bottom-scroll reachability for each proof."
       ],
-      "reference": "repos/mazer/docs/research/MAZER_MECHANICS_MOBILE_COMPLETION_MARKER.md",
+      "reference": "repos/mazer/docs/ops/MAZER-VIEWPORT-LAYOUT-CONTRACT-PACKET-2026-07-11.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-visual-proof-discipline",
       "reactionStatus": "failure",
       "reactionEmojiName": "failure",
@@ -904,7 +904,7 @@
       "completionPercent": 38,
       "summary": "Prove the phone-shell path for mobile view, safe-area handling, portrait behavior, and real-device confidence without letting browser chrome or device intrusions cover game UI.",
       "whyItMatters": "Mazer is canvas-driven and can pass desktop emulation while still clipping text, controls, HUD, or scrollable overlays behind mobile browser chrome, the Dynamic Island, and home indicators.",
-      "currentStatus": "The app remains a web/PWA runtime with local mobile emulation proof. Authenticated 360x720 DPR-2 captures cover menu, Options top/bottom, play, Pause top/bottom, guide containment, scroll rails, phone HUD spacing, and lower-control reachability. Current portrait lock is browser best-effort, not a guaranteed hard lock. This child lane now explicitly depends on the canonical viewport contract before the CSS 90-degree app-rotation workaround is removed. Fitness patterns identified for adaptation are centralized safe-area variables, 100dvh sizing, and visualViewport inset synchronization; direct Fitness CSS/React shell reuse is incompatible with Mazer's Phaser canvas runtime.",
+      "currentStatus": "The app remains a web/PWA runtime with local mobile emulation proof. Draft Mazer PR #36 centralizes safe-area and viewport geometry, removes the CSS 90-degree app rotation, and safely blocks/sleeps phone landscape with an accessible rotate-device shell. Authenticated 390x844 captures cover menu, Options top/bottom, play, Pause top/bottom, guide containment, scroll rails, and lower-control reachability. Portrait lock remains browser best-effort, not a guaranteed physical hard lock; real-device safe-area proof remains open.",
       "workBreakdown": [
         "Keep phone-size UI-surface proof at 405x958 for guest, auth, play, and pause surfaces.",
         "Assert active labels fit and progression badge text stays inside its chrome.",
@@ -931,7 +931,7 @@
         "Run authenticated Options and played-game Pause top/bottom screenshots with scroll rail and max-offset diagnostics.",
         "Run high-DPI mobile smoke for play controls, pause, and auth fields."
       ],
-      "reference": "repos/mazer/docs/research/MAZER_BOARD_RECONCILIATION_2026-07-10.md",
+      "reference": "repos/mazer/docs/ops/MAZER-VIEWPORT-LAYOUT-CONTRACT-PACKET-2026-07-11.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-mobile-shell-device-harness",
       "reactionStatus": "failure",
       "reactionEmojiName": "failure",
@@ -1625,10 +1625,10 @@
       "priority": "high",
       "category": "mazer",
       "markerName": "Cross-viewport UI reliability",
-      "completionPercent": 0,
+      "completionPercent": 25,
       "summary": "Coordinate the mobile safe-area/portrait and browser layout-persistence lanes through one viewport contract and proof matrix without turning either delivery into an offset patch.",
       "whyItMatters": "The same UI can be valid in a desktop canvas, narrow browser, mobile browser, installed PWA, or restored window only if viewport state, safe areas, and restoration behavior share deliberate rules.",
-      "currentStatus": "Implementation has started on a fresh Mazer branch. The first pass is root-cause reproduction and viewport-authority definition: browser geometry persistence is not assumed, and mobile safe-area/portrait behavior remains linked but separately verifiable. The 0% marker remains unchanged until the defect and contract are proven.",
+      "currentStatus": "Root cause and the first contract are proven on draft Mazer PR #36: the defect was competing viewport authorities, not missing persisted panel geometry. `viewportGeometry.ts` now drives CSS, Phaser, scene layout, and diagnostics; the 390x844 -> 844x390 -> 390x844 DPR-2 transition restores portrait geometry with no overlap/offscreen violations. Broader desktop and device matrices remain open.",
       "workBreakdown": [
         "Define canonical viewport, safe-area, visible-height, and no-overlap invariants for menu, Options, play, Pause, dialogs, HUD, controls, and scroll rails.",
         "Maintain the child boundary between mobile shell/device behavior and browser layout-state persistence.",
@@ -1636,9 +1636,9 @@
         "Require route, mode, viewport, safe-area state, scroll position, and layout diagnostics beside visual proof."
       ],
       "nextActions": [
-        "Run the reproduction matrix across narrow/wide, maximize/restore, phone-like, and overlay states.",
-        "Instrument viewport, canvas, Phaser, overlay, scroll, and no-overlap diagnostics under one geometry owner.",
-        "Define the canonical geometry authority before changing layout persistence or applying UI offsets.",
+        "Extend the normalized-geometry transition matrix across narrow/wide, maximize/restore, phone-like, and overlay states.",
+        "Capture guest and authenticated Options/Play/Pause at 360x720 and 405x958 after transition endpoints.",
+        "Use the canonical geometry owner rather than raw per-overlay viewport reads or UI offsets.",
         "Keep mazer-visual-proof-discipline as the proof contract rather than treating screenshots as a substitute for state checks."
       ],
       "acceptanceCriteria": [
@@ -1652,7 +1652,7 @@
         "Review generated proof metadata for route, viewport, mode, overlay, safe-area, and scroll state.",
         "Read back linked card status before ratcheting this coordinating marker."
       ],
-      "reference": "repos/mazer/docs/research/MAZER_BOARD_RECONCILIATION_2026-07-10.md",
+      "reference": "repos/mazer/docs/ops/MAZER-VIEWPORT-LAYOUT-CONTRACT-PACKET-2026-07-11.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-cross-viewport-ui-reliability",
       "relatedCardIds": [
         "mazer-mobile-shell-device-harness",
@@ -1668,32 +1668,31 @@
     },
     {
       "id": "mazer-browser-layout-persistence",
-      "title": "mazer: persist and normalize browser UI layout across viewports",
+      "title": "mazer: normalize browser UI layout across viewports",
       "state": "open",
       "priority": "high",
       "category": "mazer",
-      "markerName": "Browser UI layout persistence",
-      "completionPercent": 0,
-      "summary": "Define, version, and safely restore browser UI layout state so a narrow-window layout cannot overlap, escape, or expand incorrectly after resize, maximize, restore, or reload.",
-      "whyItMatters": "Responsive CSS/canvas recomputation alone does not make persisted UI intent safe. A layout valid in one viewport must be normalized before it is reused in another.",
-      "currentStatus": "The current runtime has no dedicated persisted panel geometry. The active investigation will distinguish supported persistence from spacing, responsive recalculation, browser maximize/restore behavior, and conflicting viewport authorities; no storage schema or raw-coordinate restoration will be introduced without evidence.",
+      "markerName": "Browser UI layout normalization",
+      "completionPercent": 20,
+      "summary": "Normalize responsive browser UI geometry so a narrow-window layout cannot overlap, escape, or expand incorrectly after resize, maximize, restore, or reload. Persist semantic intent only if the product later introduces it.",
+      "whyItMatters": "The root-cause pass proved that Mazer has no user-adjustable panel geometry to restore. Derived dimensions must be recomputed from one viewport snapshot instead of being saved and replayed across browser states.",
+      "currentStatus": "Decision A is proven on draft Mazer PR #36: there is no dedicated persisted panel geometry, so no layout storage key or raw-coordinate restoration is correct. A canonical normalized viewport now handles the first phone transition and removes the CSS rotation workaround. Desktop maximize/restore, reload, and broader overlay transitions remain to be proven before this card can close.",
       "workBreakdown": [
-        "Identify the canonical owner for any user-adjustable browser layout state and document its schema, keys, version, and viewport assumptions.",
-        "Define which properties may persist: position, size, visibility, expansion, collapse, docking, ordering, active panel, or none when the responsive layout is authoritative.",
-        "Normalize persisted state on reload, resize, maximize, restore, narrow-to-wide, wide-to-narrow, mobile emulation, and orientation transitions.",
-        "Reject invalid, obsolete, or conflicting state to a known safe default instead of preserving overlap or off-screen controls.",
-        "Ensure only one component owns restoration for each layout dimension."
+        "Document the intentional no-persisted-geometry contract and keep semantic toggle/account preference state separate.",
+        "Normalize layout-derived state on reload, resize, maximize, restore, narrow-to-wide, wide-to-narrow, mobile emulation, and orientation transitions.",
+        "Reject stale geometry by recomputing from the active content rectangle instead of restoring overlap or off-screen controls.",
+        "Introduce a versioned semantic layout schema only if a supported user-adjustable intent is added later."
       ],
       "nextActions": [
-        "Inventory current layout-derived values and persisted preference reads before adding a persistence schema.",
-        "Classify state as semantic user intent, transient overlay state, account preference, or viewport-derived geometry.",
-        "Create deterministic viewport-transition fixtures and a legacy-state migration/fallback test matrix only if supported semantic state exists.",
+        "Run deterministic desktop reload, narrow-to-wide, wide-to-narrow, maximize, and restore transition fixtures.",
+        "Classify any future state as semantic user intent, transient overlay state, account preference, or viewport-derived geometry before persisting it.",
+        "Add a migration/fallback matrix only if supported semantic layout state is introduced.",
         "Validate browser behavior separately from mobile safe-area work, then feed both into the cross-viewport proof matrix."
       ],
       "acceptanceCriteria": [
-        "The canonical layout-state owner and schema are explicit and versioned or safely migrated.",
-        "A layout restored from a different viewport cannot overlap, escape the viewport, cover essential controls, or fight responsive defaults.",
-        "Normal reload preserves intended supported UI state without persisting invalid geometry.",
+        "The intentional no-persisted-geometry contract is explicit; any future semantic state owner and schema are versioned or safely migrated.",
+        "A layout recalculated after a different viewport cannot overlap, escape the viewport, cover essential controls, or fight responsive defaults.",
+        "Normal reload preserves supported semantic state without persisting invalid geometry.",
         "Narrow/wide transitions, restore/maximize, mobile emulation, and orientation transitions have deterministic expected outcomes.",
         "Invalid or obsolete state fails safely to a known default and is covered by regression tests."
       ],
@@ -1702,7 +1701,7 @@
         "Capture menu, Options, play, Pause, and confirmation-dialog proof at the relevant viewport endpoints.",
         "Verify no-overlap diagnostics and actual browser screenshots before claiming persistence works."
       ],
-      "reference": "repos/mazer/docs/research/MAZER_BOARD_RECONCILIATION_2026-07-10.md",
+      "reference": "repos/mazer/docs/ops/MAZER-VIEWPORT-LAYOUT-CONTRACT-PACKET-2026-07-11.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-browser-layout-persistence",
       "relatedCardIds": [
         "mazer-cross-viewport-ui-reliability",
