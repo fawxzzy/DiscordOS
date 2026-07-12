@@ -334,7 +334,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-12T14:03:09.638Z"
+    "liveSyncedAt": "2026-07-12T14:14:50.467Z"
   },
   "cards": [
     {
@@ -570,14 +570,14 @@
     {
       "id": "mazer-edge-wrap-topology-and-notch-fill",
       "title": "mazer: edge-wrap topology, border fill, and notch safety",
-      "state": "open",
+      "state": "ready",
       "priority": "high",
       "category": "mazer",
       "markerName": "Maze complexity/path topology",
       "completionPercent": 52,
       "summary": "Make wrapped border paths a real graph contract, keep start/goal/navigation aware of wrap edges, and prevent maze path visuals from entering border cutouts.",
       "whyItMatters": "Wrap paths and border notches change both visuals and navigation. They must be graph-owned, not just visual tricks, or AI distance, player movement, and difficulty scoring drift apart.",
-      "currentStatus": "Mazer PR #38 landed explicit direct-floor and playable-wrap-aware shortest-path policies, deterministic unreachable semantics, self-wrap rejection, and telemetry migration to the legal playable benchmark while preserving generator `solutionPath`. Focused graph and telemetry fixtures plus the full 323-test verification spine pass. Generation guarantees, border-notch rendering/fill, bleed-path feature classification, and retrospective re-export of historical route benchmarks remain open.",
+      "currentStatus": "Mazer PR #38 landed explicit direct-floor and playable-wrap-aware shortest-path policies, deterministic unreachable semantics, self-wrap rejection, and telemetry migration to the legal playable benchmark while preserving generator `solutionPath`. The approved v1 slice is now ready: classify only existing legal non-corner opposite-edge corridors as bleed-off paths, pair left/right by row and top/bottom by column, preserve current generator and graph behavior, and render safe continuation geometry beyond the visible border through the shared menu/play renderer. Focused topology, architecture, and route-aware desktop/mobile proof must show legal continuity without notch, corner, safe-area, or reserved-lane clipping. Generation guarantees, broader border-notch work, feature-era classification, and retrospective route-benchmark export remain open.",
       "workBreakdown": [
         "Guarantee at least one horizontal and one vertical wrap candidate only when legal for the current maze bounds.",
         "Represent wrap neighbors in the graph so AI, player movement, compass, trail, and complexity formulas all agree.",
@@ -587,11 +587,9 @@
         "Compute shortest path from the same legal neighbor contract used by movement, telemetry, AI, and player controls, including wraps."
       ],
       "nextActions": [
-        "Add topology diagnostics for wrap-pair validity.",
-        "Add notch-safe render masks or generator constraints.",
-        "Capture visual proof for top notch, bottom notch, and all four folded corners.",
-        "Feed confirmed edge-path classification into the linked feature progression matrix.",
-        "Build a fixed wrap-shortcut anomaly pack and prove a completed path cannot undercut the computed graph shortest path."
+        "Implement the approved v1 legal-wrap classification and shared bleed-off continuation rendering without changing maze-generation policy.",
+        "Add deterministic horizontal and vertical pairing, corner/notch rejection, and menu/play parity tests.",
+        "Capture route-aware desktop and mobile proof for legal continuations and reserved-lane safety."
       ],
       "acceptanceCriteria": [
         "At least one horizontal and one vertical wrap candidate can be generated when complexity allows it.",
