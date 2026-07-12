@@ -334,7 +334,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-12T14:30:13.776Z"
+    "liveSyncedAt": "2026-07-12T14:36:21.402Z"
   },
   "cards": [
     {
@@ -2016,14 +2016,14 @@
     {
       "id": "mazer-cross-viewport-ui-reliability",
       "title": "mazer: cross-viewport UI reliability and layout hardening",
-      "state": "open",
+      "state": "ready",
       "priority": "high",
       "category": "mazer",
       "markerName": "Cross-viewport UI reliability",
       "completionPercent": 78,
       "summary": "Coordinate the mobile safe-area/portrait and browser layout-persistence lanes through one viewport contract and proof matrix without turning either delivery into an offset patch.",
       "whyItMatters": "The same UI can be valid in a desktop canvas, narrow browser, mobile browser, installed PWA, or restored window only if viewport state, safe areas, and restoration behavior share deliberate rules.",
-      "currentStatus": "Merged Mazer PR #39 implements explicit title -> maze -> rank -> actions menu lanes and top rank/Pause HUD -> maze -> controls play lanes, caps maze growth by remaining usable content, and anchors the canvas to normalized visual-viewport and safe-area origins. The pure solver restored identical phone bounds after a 390x844 -> 1440x900 -> 390x844 transition; phone menu/play and the four-platform matrix reported zero overlap/offscreen violations. Remaining authenticated overlay endpoints, real-device inset proof, and installed-PWA behavior keep this at 78.",
+      "currentStatus": "Merged Mazer PR #39 implements explicit title -> maze -> rank -> actions menu lanes and top rank/Pause HUD -> maze -> controls play lanes, caps maze growth by remaining usable content, and anchors the canvas to normalized visual-viewport and safe-area origins. The pure solver restored identical phone bounds after a 390x844 -> 1440x900 -> 390x844 transition; phone menu/play and the four-platform matrix reported zero overlap/offscreen violations. The approved next slice is ready: extend the existing route-aware UI capture tooling so the same guest and authenticated browser pages cross deterministic 360x720 -> desktop -> 360x720 and 405x958 transition endpoints for Menu, Options, Play, and Pause, asserting canonical diagnostics restoration and no overlap/offscreen regressions. This does not alter the shared layout policy, browser persistence contract, mobile-shell ownership, or visual-proof ownership. Real-device inset proof and installed-PWA behavior remain open.",
       "workBreakdown": [
         "Define canonical viewport, safe-area, visible-height, and no-overlap invariants for menu, Options, play, Pause, dialogs, HUD, controls, and scroll rails.",
         "Maintain the child boundary between mobile shell/device behavior and browser layout-state persistence.",
@@ -2031,10 +2031,9 @@
         "Require route, mode, viewport, safe-area state, scroll position, and layout diagnostics beside visual proof."
       ],
       "nextActions": [
-        "Extend the normalized-geometry transition matrix across narrow/wide, maximize/restore, phone-like, and overlay states.",
-        "Capture guest and authenticated Options/Play/Pause at 360x720 and 405x958 after transition endpoints.",
-        "Use the canonical geometry owner rather than raw per-overlay viewport reads or UI offsets.",
-        "Keep mazer-visual-proof-discipline as the proof contract rather than treating screenshots as a substitute for state checks."
+        "Implement the approved deterministic transition harness for guest and authenticated Menu, Options, Play, and Pause endpoints.",
+        "Assert restored canonical geometry and no-overlap/offscreen diagnostics at 360x720 and 405x958 after a desktop transition.",
+        "Keep browser-layout, mobile-shell, and visual-proof cards as linked owners for persistence, device harness, and proof-policy follow-through."
       ],
       "acceptanceCriteria": [
         "Every primary Mazer surface has an owner, supported viewport category, and no-overlap contract.",
