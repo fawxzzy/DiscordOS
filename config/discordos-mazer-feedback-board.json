@@ -334,7 +334,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-11T23:57:01.411Z"
+    "liveSyncedAt": "2026-07-12T14:03:09.638Z"
   },
   "cards": [
     {
@@ -1690,10 +1690,10 @@
       "priority": "medium",
       "category": "mazer",
       "markerName": "Turn-synchronous world simulation",
-      "completionPercent": 30,
+      "completionPercent": 55,
       "summary": "Move gameplay-affecting entities onto a centralized turn command so the world advances only when accepted player movement advances the turn.",
       "whyItMatters": "Enemies, projectiles, pickups, and collisions need predictable ordering and should not run ahead while the player is stopped.",
-      "currentStatus": "Merged Mazer PR #42 adds the first central WorldTurnSystem contract with fixed player, enemy, projectile, pickup, item-effect, duration-expiry, and collision ordering. Accepted player moves and explicit timed-mode ticks are admitted; paused, duplicate, stale, missing-handler, and rejected-move commands cannot advance the turn. Ordered receipts and diagnostics are public, cosmetic render-clock ownership is documented, focused world-turn proof passed 5/5, related core proof passed 22/22, architecture passed 14/14, and full existing verification passed 42 files / 326 tests plus build. Live MenuScene and future entity integration remain open, so this advances to 30 rather than claiming completion.",
+      "currentStatus": "Merged Mazer PR #43 routes live MenuScene player movement through WorldTurnSystem without changing the one-step input contract, resets the turn coordinator on maze generation and player reset, and publishes accepted-turn count, last command/receipt, rejection count, and next turn through play diagnostics. Live QA proved 79/79 planned moves admitted as 79 turns, then a fresh maze stayed at turn zero after a locked build-phase probe was rejected as simulation-paused. Full verification passed 42 files / 328 tests plus build, architecture passed 14/14, and browser proof reported no viewport overlap, offscreen elements, or console warnings. Enemy, projectile, pickup, item-effect, duration-expiry, collision, timed-mode, and multiplayer handlers remain unintegrated, so this advances to 55 rather than claiming completion.",
       "workBreakdown": [
         "Advance gameplay simulation only after accepted player movement or an explicit timed-mode tick.",
         "Stop enemies, projectiles, and gameplay-affecting moving entities when the player stops unless the mode defines a timed tick.",
@@ -1703,9 +1703,9 @@
         "Document inspiration at a high level without copying third-party assets or implementation."
       ],
       "nextActions": [
-        "Route accepted MenuScene player movement through WorldTurnSystem without changing the one-step input contract.",
-        "Publish turn count, last command, and rejection reason through play-mode runtime diagnostics.",
-        "Add paused/stopped host proof before wiring future enemies, projectiles, items, multiplayer conflicts, or moving-maze panning."
+        "Add explicit paused/stopped host proof for future non-player phase handlers before wiring enemies, projectiles, items, multiplayer conflicts, or moving-maze panning.",
+        "Integrate the next gameplay-affecting entity phase only when its owning card is execution-ready, retaining the fixed receipt ordering and command admission rules.",
+        "Add timed-mode host coverage before enabling any mode where world advancement is intentionally decoupled from player movement."
       ],
       "acceptanceCriteria": [
         "Gameplay-affecting state changes only advance through the central turn command.",
