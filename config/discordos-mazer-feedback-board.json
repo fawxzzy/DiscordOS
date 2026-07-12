@@ -334,7 +334,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-12T14:36:21.402Z"
+    "liveSyncedAt": "2026-07-12T23:40:11.872Z"
   },
   "cards": [
     {
@@ -1092,7 +1092,8 @@
       "nextActions": [
         "Run the same contract on a maintained physical-device harness with real safe-area insets.",
         "Require visual closeouts to cite screenContract.pass.",
-        "Keep screenshots tied to the exact requested surface."
+        "Keep screenshots tied to the exact requested surface.",
+        "Include the PR #45 360x720 badge/action-lane proof; level-box sizing and title-diamond clearance remain linked to the viewport geometry owner."
       ],
       "acceptanceCriteria": [
         "Visual proof includes actual route, mode, overlay, viewport, and diagnostics contract.",
@@ -2016,14 +2017,14 @@
     {
       "id": "mazer-cross-viewport-ui-reliability",
       "title": "mazer: cross-viewport UI reliability and layout hardening",
-      "state": "ready",
+      "state": "open",
       "priority": "high",
       "category": "mazer",
       "markerName": "Cross-viewport UI reliability",
       "completionPercent": 78,
       "summary": "Coordinate the mobile safe-area/portrait and browser layout-persistence lanes through one viewport contract and proof matrix without turning either delivery into an offset patch.",
       "whyItMatters": "The same UI can be valid in a desktop canvas, narrow browser, mobile browser, installed PWA, or restored window only if viewport state, safe areas, and restoration behavior share deliberate rules.",
-      "currentStatus": "Merged Mazer PR #39 implements explicit title -> maze -> rank -> actions menu lanes and top rank/Pause HUD -> maze -> controls play lanes, caps maze growth by remaining usable content, and anchors the canvas to normalized visual-viewport and safe-area origins. The pure solver restored identical phone bounds after a 390x844 -> 1440x900 -> 390x844 transition; phone menu/play and the four-platform matrix reported zero overlap/offscreen violations. The approved next slice is ready: extend the existing route-aware UI capture tooling so the same guest and authenticated browser pages cross deterministic 360x720 -> desktop -> 360x720 and 405x958 transition endpoints for Menu, Options, Play, and Pause, asserting canonical diagnostics restoration and no overlap/offscreen regressions. This does not alter the shared layout policy, browser persistence contract, mobile-shell ownership, or visual-proof ownership. Real-device inset proof and installed-PWA behavior remain open.",
+      "currentStatus": "Merged Mazer PR #45 fixes the confirmed 360x720 progression-badge/action-lane collision through the canonical shared layout owner, preserving the established 10px readable separation. Focused layout tests (17/17), full Mazer verification, build, and route-aware 360x720 UI-surface proof passed. The broader cross-viewport lane remains open at 78%: deterministic transition harness proof, real-device safe-area/inset coverage, installed-PWA behavior, browser persistence, and authenticated overlay work remain outstanding. Follow-up visual notes are recorded here: remove empty space at the bottom of the level display box, expand that box to the maze-border width with a small border-to-box gap, and keep rotating tip diamonds clear of the maze top border. The separate desktop native-input overflow is owned by the auth UI hardening card.",
       "workBreakdown": [
         "Define canonical viewport, safe-area, visible-height, and no-overlap invariants for menu, Options, play, Pause, dialogs, HUD, controls, and scroll rails.",
         "Maintain the child boundary between mobile shell/device behavior and browser layout-state persistence.",
@@ -2031,8 +2032,8 @@
         "Require route, mode, viewport, safe-area state, scroll position, and layout diagnostics beside visual proof."
       ],
       "nextActions": [
-        "Implement the approved deterministic transition harness for guest and authenticated Menu, Options, Play, and Pause endpoints.",
-        "Assert restored canonical geometry and no-overlap/offscreen diagnostics at 360x720 and 405x958 after a desktop transition.",
+        "Complete the deterministic guest/auth Menu, Options, Play, and Pause transition harness after the authenticated native-input blocker is resolved.",
+        "Normalize level display box height/width and tip-diamond clearance against shared maze-border geometry without weakening diagnostics.",
         "Keep browser-layout, mobile-shell, and visual-proof cards as linked owners for persistence, device harness, and proof-policy follow-through."
       ],
       "acceptanceCriteria": [
@@ -2182,7 +2183,8 @@
       "nextActions": [
         "Audit every player/trail render path before changing colors or timing.",
         "Capture dense menu and play mazes with player, trail, white shine, memory, and target overlays simultaneously visible.",
-        "Keep future iridescent work behind its separate material card after this fixed baseline is proven."
+        "Keep future iridescent work behind its separate material card after this fixed baseline is proven.",
+        "Replace the purple trail pulse with the already-required single white fading shine at the existing cadence."
       ],
       "acceptanceCriteria": [
         "Player core and trail remain green and visibly distinct from maze path materials at supported contrast tiers.",
@@ -2232,7 +2234,8 @@
       "nextActions": [
         "Wait for the cross-platform UI lane to stabilize menu and overlay geometry.",
         "Inventory the existing native input bridge and auth-state transitions before changing presentation.",
-        "Build a focused keyboard/autofill/error-state matrix using Mazer routes and QA-safe accounts."
+        "Build a focused keyboard/autofill/error-state matrix using Mazer routes and QA-safe accounts.",
+        "Investigate the reported local account reachability issue only through credential-free, read-only diagnostics after a QA-safe auth path exists; never use chat-supplied credentials."
       ],
       "acceptanceCriteria": [
         "Login and account creation use one coherent player-facing flow with no duplicate state owners.",
