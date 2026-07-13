@@ -334,7 +334,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-13T01:22:11.800Z"
+    "liveSyncedAt": "2026-07-13T01:23:50.140Z"
   },
   "cards": [
     {
@@ -2017,14 +2017,14 @@
     {
       "id": "mazer-cross-viewport-ui-reliability",
       "title": "mazer: cross-viewport UI reliability and layout hardening",
-      "state": "open",
+      "state": "ready",
       "priority": "high",
       "category": "mazer",
       "markerName": "Cross-viewport UI reliability",
       "completionPercent": 78,
       "summary": "Coordinate the mobile safe-area/portrait and browser layout-persistence lanes through one viewport contract and proof matrix without turning either delivery into an offset patch.",
       "whyItMatters": "The same UI can be valid in a desktop canvas, narrow browser, mobile browser, installed PWA, or restored window only if viewport state, safe areas, and restoration behavior share deliberate rules.",
-      "currentStatus": "Merged Mazer PR #49 clears the native auth-input blocker by mapping fixed DOM input placement through current layout dimensions instead of stale Phaser scale dimensions. The preserved guest transition matrix now passes all checks through 360x720 -> 1440x900 -> 360x720 -> 405x958, with the desktop email field bounded at 510..930 inside 1440px; the authenticated matrix already passed. The marker remains 78 until the transition harness is merged and broader real-device safe-area and installed-PWA proof are completed.",
+      "currentStatus": "Ready at unchanged 78% to merge the now-green deterministic transition harness only. Mazer PR #49 cleared the native auth-input blocker; preserved guest and authenticated matrices pass through 360x720 -> 1440x900 -> 360x720 -> 405x958 with exact restored diagnostics and zero layout violations. The bounded implementation owns the capture driver, shared capture tooling, package entry, and focused contract tests. Broader real-device safe-area and installed-PWA proof remain open.",
       "workBreakdown": [
         "Define canonical viewport, safe-area, visible-height, and no-overlap invariants for menu, Options, play, Pause, dialogs, HUD, controls, and scroll rails.",
         "Maintain the child boundary between mobile shell/device behavior and browser layout-state persistence.",
