@@ -334,7 +334,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-13T00:23:33.079Z"
+    "liveSyncedAt": "2026-07-13T00:27:53.724Z"
   },
   "cards": [
     {
@@ -2017,14 +2017,14 @@
     {
       "id": "mazer-cross-viewport-ui-reliability",
       "title": "mazer: cross-viewport UI reliability and layout hardening",
-      "state": "open",
+      "state": "ready",
       "priority": "high",
       "category": "mazer",
       "markerName": "Cross-viewport UI reliability",
       "completionPercent": 78,
       "summary": "Coordinate the mobile safe-area/portrait and browser layout-persistence lanes through one viewport contract and proof matrix without turning either delivery into an offset patch.",
       "whyItMatters": "The same UI can be valid in a desktop canvas, narrow browser, mobile browser, installed PWA, or restored window only if viewport state, safe areas, and restoration behavior share deliberate rules.",
-      "currentStatus": "Merged Mazer PR #46 makes play-shell geometry reserve top HUD and controller lanes before maze sizing across viewport classes, keeps the controller visible, and keeps the compass inside the controller cluster. Focused geometry/HUD tests passed 23/23, the eight-viewport route-aware play matrix passed with zero overlap/offscreen diagnostics, and full Mazer verification passed. The marker remains 78 because broader browser persistence, real-device safe areas, installed-PWA, authenticated overlays, and the deterministic transition harness remain open. A desktop pause-overlay scroll timeout in the broader UI-surface runner remains an explicit proof follow-up.",
+      "currentStatus": "Merged Mazer PR #46 makes play-shell geometry reserve top HUD and controller lanes before maze sizing across viewport classes, keeps the controller visible, and keeps the compass inside the controller cluster. Focused geometry/HUD tests passed 23/23, the eight-viewport route-aware play matrix passed with zero overlap/offscreen diagnostics, and full Mazer verification passed. The next bounded slice is Ready at unchanged 78%: reproduce and fix the desktop Pause-overlay bottom-scroll reachability timeout without weakening the existing scroll diagnostics or changing play-shell geometry. Broader browser persistence, real-device safe areas, installed-PWA, authenticated overlays, and the deterministic transition harness remain open.",
       "workBreakdown": [
         "Define canonical viewport, safe-area, visible-height, and no-overlap invariants for menu, Options, play, Pause, dialogs, HUD, controls, and scroll rails.",
         "Maintain the child boundary between mobile shell/device behavior and browser layout-state persistence.",
