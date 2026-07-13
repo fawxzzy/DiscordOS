@@ -334,7 +334,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-13T00:43:43.952Z"
+    "liveSyncedAt": "2026-07-13T00:54:55.635Z"
   },
   "cards": [
     {
@@ -1082,7 +1082,7 @@
       "completionPercent": 99,
       "summary": "Require screenshots and visual claims to prove they are on the intended route, mode, overlay, and viewport before being accepted.",
       "whyItMatters": "Several visual passes were weakened by vague screenshots. Mazer needs route-aware proof so fixes are validated on the exact surface the user asked about.",
-      "currentStatus": "Merged Mazer PR #39 adds route-aware phone menu/play proof, exact 390x844 -> 1440x900 -> 390x844 bounds restoration, and a four-target iPhone/Android/macOS/Windows matrix. All four screen contracts passed with zero overlap/offscreen violations and no warning/error logs; full verification passed 42 files / 325 tests plus build. The marker remains 99 because physical-device safe-area proof and the remaining authenticated overlay endpoints are still open.",
+      "currentStatus": "Merged Mazer PR #39 established route-aware phone menu/play proof, exact 390x844 -> 1440x900 -> 390x844 bounds restoration, and a four-target iPhone/Android/macOS/Windows matrix. Merged PRs #47 and #48 extend that discipline with exact desktop Pause bottom reachability and desktop/mobile menu-lane regression proof. The latest focused and full verification passed. The marker remains 99 because physical-device safe-area proof and the remaining authenticated overlay endpoints are still open.",
       "workBreakdown": [
         "Fail captures when route, mode, overlay, or viewport contract does not match.",
         "Record actual URL, diagnostics mode, surface, and viewport beside screenshots.",
@@ -1093,7 +1093,7 @@
         "Run the same contract on a maintained physical-device harness with real safe-area insets.",
         "Require visual closeouts to cite screenContract.pass.",
         "Keep screenshots tied to the exact requested surface.",
-        "Include the PR #45 360x720 badge/action-lane proof; level-box sizing and title-diamond clearance remain linked to the viewport geometry owner."
+        "Retain the PR #45 360x720 and PR #48 desktop/mobile badge/action-lane proof; level-box sizing and title-diamond clearance remain linked to the viewport geometry owner."
       ],
       "acceptanceCriteria": [
         "Visual proof includes actual route, mode, overlay, viewport, and diagnostics contract.",
@@ -2017,14 +2017,14 @@
     {
       "id": "mazer-cross-viewport-ui-reliability",
       "title": "mazer: cross-viewport UI reliability and layout hardening",
-      "state": "ready",
+      "state": "open",
       "priority": "high",
       "category": "mazer",
       "markerName": "Cross-viewport UI reliability",
       "completionPercent": 78,
       "summary": "Coordinate the mobile safe-area/portrait and browser layout-persistence lanes through one viewport contract and proof matrix without turning either delivery into an offset patch.",
       "whyItMatters": "The same UI can be valid in a desktop canvas, narrow browser, mobile browser, installed PWA, or restored window only if viewport state, safe areas, and restoration behavior share deliberate rules.",
-      "currentStatus": "Merged Mazer PR #47 fixes desktop Pause bottom-scroll proof and preserves mobile drag proof. The next product slice is Ready at unchanged 78%: raise desktop menu progression-badge/action separation from the proven 8.5px failure to the established 10px contract through canonical shared layout geometry, with focused and route-aware desktop/mobile regression proof. Broader browser persistence, real-device safe areas, installed-PWA, authenticated overlays, and deterministic transitions remain open.",
+      "currentStatus": "Merged Mazer PR #48 raises desktop menu progression-badge/action separation to the established 10px contract through canonical shared layout geometry while preserving the existing play-shell cadence. Focused layout tests passed 18/18, route-aware 1440x900 and 390x844 UI-surface proof passed including Pause bottom reachability, and full Mazer verification passed. The marker remains 78 because broader browser persistence, real-device safe areas, installed-PWA, authenticated overlays, and deterministic transitions remain open.",
       "workBreakdown": [
         "Define canonical viewport, safe-area, visible-height, and no-overlap invariants for menu, Options, play, Pause, dialogs, HUD, controls, and scroll rails.",
         "Maintain the child boundary between mobile shell/device behavior and browser layout-state persistence.",
@@ -2032,8 +2032,8 @@
         "Require route, mode, viewport, safe-area state, scroll position, and layout diagnostics beside visual proof."
       ],
       "nextActions": [
-        "Fix the desktop menu progression-badge/action separation from 8.5px to the established 10px contract through shared layout geometry.",
         "Complete deterministic guest/auth transition coverage across compact and expanded play endpoints.",
+        "Complete real-device safe-area and installed-PWA proof for the shared menu and play geometry.",
         "Keep browser-layout, mobile-shell, and visual-proof cards as linked owners for persistence, device harness, and proof-policy follow-through."
       ],
       "acceptanceCriteria": [
