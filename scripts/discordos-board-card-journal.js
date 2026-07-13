@@ -263,6 +263,7 @@ function summarizeThread(thread) {
     parentId: thread?.parent_id || null,
     archived: thread?.thread_metadata?.archived === true,
     locked: thread?.thread_metadata?.locked === true,
+    appliedTags: Array.isArray(thread?.applied_tags) ? [...thread.applied_tags] : [],
   };
 }
 
