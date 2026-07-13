@@ -52,19 +52,27 @@ function resolveAdmission({ allowApply, env }) {
 }
 
 function text(value) {
-  return typeof value === "string" ? value.trim() : "";
+  return typeof value === "string" ? repairMojibakeText(value).trim() : "";
 }
 
 function list(value) {
   return Array.isArray(value) ? value.map(text).filter(Boolean) : [];
 }
 
-function normalizeCardTitle(value) {
-  return text(value)
+function repairMojibakeText(value) {
+  return String(value || "")
     .replace(/\u00c3\u00a2\u00e2\u201a\u00ac\u00e2\u20ac[\u009d\ufffd]?/g, " - ")
     .replace(/\u00e2\u20ac[\u201c\u201d]/g, " - ")
     .replace(/[\u2013\u2014]/g, " - ")
     .replace(/\s+-\s+/g, " - ");
+}
+
+function findMojibakeRuns(value) {
+  return String(value || "").match(/(?:\u00c3|\u00c2|\u00e2|\ufffd|[\u0080-\u009f])[^\x00-\x7f]*/g) || [];
+}
+
+function normalizeCardTitle(value) {
+  return text(value);
 }
 
 function normalizeEvent(raw) {
@@ -628,6 +636,8 @@ module.exports = {
     resolveAdmission,
     normalizeEvent,
     normalizeCardTitle,
+    repairMojibakeText,
+    findMojibakeRuns,
     validateEvent,
     cardMarker,
     eventMarker,

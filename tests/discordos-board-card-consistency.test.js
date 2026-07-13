@@ -53,6 +53,24 @@ test("duplicate identities are reported across boards", () => {
   assert.equal(duplicates[0].cardId, "fit-1");
 });
 
+test("encoding corruption is reported across titles, starters, and history", () => {
+  const mojibake = "\u00e2\u20ac\u201d";
+  const row = _internals.inspectThread({
+    board: { id: "fitness", role: "active" },
+    thread: { id: "thread", name: `Feature ${mojibake} title`, thread_metadata: { archived: false } },
+    starter: {
+      content: `${journal.CARD_START}\nATLAS-CARD-ID: \`FIT-1\`\n- state: \`review\`\n- updated: \`2026-07-13\`\nSummary ${mojibake}\n${journal.CARD_END}`,
+    },
+    messages: [
+      { content: "ATLAS-JOURNAL-EVENT-ID: `evt-1`" },
+      { content: `Historical rename ${mojibake}` },
+    ],
+  });
+  assert(row.reasonCodes.includes("card_title_encoding_corrupt"));
+  assert(row.reasonCodes.includes("card_starter_encoding_corrupt"));
+  assert(row.reasonCodes.includes("card_history_encoding_corrupt"));
+});
+
 test("reciprocal archived source and completed clone are an allowed identity pair", () => {
   const result = _internals.classifyIdentities([
     {
