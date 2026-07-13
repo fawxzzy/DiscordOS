@@ -334,7 +334,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-13T00:04:14.458Z"
+    "liveSyncedAt": "2026-07-13T00:23:33.079Z"
   },
   "cards": [
     {
@@ -2017,14 +2017,14 @@
     {
       "id": "mazer-cross-viewport-ui-reliability",
       "title": "mazer: cross-viewport UI reliability and layout hardening",
-      "state": "ready",
+      "state": "open",
       "priority": "high",
       "category": "mazer",
       "markerName": "Cross-viewport UI reliability",
       "completionPercent": 78,
       "summary": "Coordinate the mobile safe-area/portrait and browser layout-persistence lanes through one viewport contract and proof matrix without turning either delivery into an offset patch.",
       "whyItMatters": "The same UI can be valid in a desktop canvas, narrow browser, mobile browser, installed PWA, or restored window only if viewport state, safe areas, and restoration behavior share deliberate rules.",
-      "currentStatus": "Merged Mazer PR #45 fixes the confirmed 360x720 progression-badge/action-lane collision through the canonical shared layout owner, preserving the established 10px readable separation. The approved next slice is ready at the unchanged 78% marker: make the shared play-shell geometry reserve a visible controller lane at every supported viewport, reserve a top HUD row with centered level display and pause on its right, keep the compass inside the controller, and derive the maze from the remaining space. This addresses observed missing controls, off-center or clipped level display, inconsistent maze gap, misplaced compass, and disappearing pause action without changing auth, world-turn, camera, or progression behavior. Browser, mobile-shell, and proof cards remain linked owners.",
+      "currentStatus": "Merged Mazer PR #46 makes play-shell geometry reserve top HUD and controller lanes before maze sizing across viewport classes, keeps the controller visible, and keeps the compass inside the controller cluster. Focused geometry/HUD tests passed 23/23, the eight-viewport route-aware play matrix passed with zero overlap/offscreen diagnostics, and full Mazer verification passed. The marker remains 78 because broader browser persistence, real-device safe areas, installed-PWA, authenticated overlays, and the deterministic transition harness remain open. A desktop pause-overlay scroll timeout in the broader UI-surface runner remains an explicit proof follow-up.",
       "workBreakdown": [
         "Define canonical viewport, safe-area, visible-height, and no-overlap invariants for menu, Options, play, Pause, dialogs, HUD, controls, and scroll rails.",
         "Maintain the child boundary between mobile shell/device behavior and browser layout-state persistence.",
@@ -2032,8 +2032,8 @@
         "Require route, mode, viewport, safe-area state, scroll position, and layout diagnostics beside visual proof."
       ],
       "nextActions": [
-        "Implement the admitted shared play-shell lane contract for controller, compass, centered level display, pause action, and maze bounds.",
-        "Prove compact and expanded browser play endpoints retain visible non-overlapping HUD, controller, and maze geometry.",
+        "Resolve the desktop pause-overlay scroll proof timeout without weakening its reachability contract.",
+        "Complete deterministic guest/auth transition coverage across compact and expanded play endpoints.",
         "Keep browser-layout, mobile-shell, and visual-proof cards as linked owners for persistence, device harness, and proof-policy follow-through."
       ],
       "acceptanceCriteria": [
