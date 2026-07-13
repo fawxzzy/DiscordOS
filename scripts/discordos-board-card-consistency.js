@@ -179,15 +179,23 @@ async function buildBoardCardConsistency({ payload, env = process.env, fetchImpl
     const inventory = await listThreads({ board, guildId: channel.payload.guild_id, token, fetchImpl });
     reasonCodes.push(...inventory.reasonCodes.map((code) => `${code}:${board.id}`));
     for (const thread of inventory.threads) {
-      const [starter, messages] = await Promise.all([
+      const [threadReadback, starter, messages] = await Promise.all([
+        cardContract.discordRequest({ path: `/channels/${thread.id}`, token, fetchImpl }),
         cardContract.fetchMessage({ channelId: thread.id, messageId: thread.id, token, fetchImpl }),
         cardContract.discordRequest({ path: `/channels/${thread.id}/messages?limit=100`, token, fetchImpl }),
       ]);
+      if (!threadReadback.ok) reasonCodes.push(`card_thread_readback_failed:${thread.id}`);
       if (!starter.ok) reasonCodes.push(`card_starter_read_failed:${thread.id}`);
       if (!messages.ok) reasonCodes.push(`card_journal_read_failed:${thread.id}`);
       rows.push(inspectThread({
         board,
-        thread,
+        thread: threadReadback.ok
+          ? {
+              ...thread,
+              name: threadReadback.payload?.name || thread.name,
+              thread_metadata: threadReadback.payload?.thread_metadata || thread.thread_metadata,
+            }
+          : thread,
         starter: starter.ok ? starter.payload : null,
         messages: messages.ok ? messages.payload : [],
       }));
