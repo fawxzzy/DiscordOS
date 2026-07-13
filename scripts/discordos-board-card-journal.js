@@ -61,6 +61,7 @@ function list(value) {
 
 function normalizeCardTitle(value) {
   return text(value)
+    .replace(/\u00c3\u00a2\u00e2\u201a\u00ac\u00e2\u20ac[\u009d\ufffd]?/g, " - ")
     .replace(/\u00e2\u20ac[\u201c\u201d]/g, " - ")
     .replace(/[\u2013\u2014]/g, " - ")
     .replace(/\s+-\s+/g, " - ");
@@ -189,6 +190,8 @@ function fitMessage(lines, suffix = "") {
 
 function buildCanonicalBody(event, existingContent = "") {
   const { card } = event;
+  const boardLinks = card.evidence.filter((item) => /^(original|completed) card:/i.test(item));
+  const evidence = card.evidence.filter((item) => !/^(original|completed) card:/i.test(item));
   const lines = [
     CARD_START,
     cardMarker(card.id),
@@ -199,16 +202,15 @@ function buildCanonicalBody(event, existingContent = "") {
     `- owner: \`${card.owner}\``,
     `- progress: \`${card.progress}\``,
     `- updated: \`${event.occurredAt}\``,
-    "",
-    "## Summary",
-    card.summary,
   ];
+  appendSection(lines, "Board links", boardLinks);
+  lines.push("", "## Summary", card.summary);
   if (card.objective) appendSection(lines, "Objective", [card.objective]);
   appendSection(lines, "Acceptance criteria", card.acceptanceCriteria);
   appendSection(lines, "Discoveries", card.discoveries);
   appendSection(lines, "Next actions", card.nextActions);
   appendSection(lines, "Blockers", card.blockers.length ? card.blockers : ["None"]);
-  appendSection(lines, "Evidence", card.evidence);
+  appendSection(lines, "Evidence", evidence);
   const legacy = stripManagedCard(existingContent);
   if (legacy) appendSection(lines, "Original context", [legacy]);
   return fitMessage(lines, `\n${CARD_END}`);
