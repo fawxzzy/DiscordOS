@@ -60,6 +60,7 @@ test("completed transfer dry-run reads both boards without mutation", async () =
 test("completed transfer creates, verifies, links, archives, and locks", async () => {
   const calls = [];
   let completedContent = "";
+  let completionJournal = "";
   let sourceContent = "Original card details";
   let reactionPresent = false;
   let sourceArchived = false;
@@ -108,6 +109,16 @@ test("completed transfer creates, verifies, links, archives, and locks", async (
             : [],
         } });
       }
+      if (url.endsWith("/channels/completed-thread/messages?limit=100")) {
+        return response({ payload: [] });
+      }
+      if (url.endsWith("/channels/completed-thread/messages") && init.method === "POST") {
+        completionJournal = JSON.parse(init.body).content;
+        return response({ status: 201, payload: { id: "completion-journal", content: completionJournal } });
+      }
+      if (url.endsWith("/channels/completed-thread/messages/completion-journal")) {
+        return response({ payload: { id: "completion-journal", content: completionJournal } });
+      }
       if (url.includes("/channels/completed-thread/messages/completed-thread/reactions/") && init.method === "PUT") {
         reactionPresent = true;
         return response({ status: 204 });
@@ -122,10 +133,15 @@ test("completed transfer creates, verifies, links, archives, and locks", async (
   assert.equal(result.status, "transferred");
   assert.equal(result.completed.threadId, "completed-thread");
   assert.equal(result.completed.reaction.presentAfter, true);
+  assert.equal(result.completed.journal.action, "created");
+  assert.equal(result.completed.readback.canonicalBodyPresent, true);
+  assert.equal(result.completed.readback.journalMarkerPresent, true);
   assert.equal(result.source.readback.archived, true);
   assert.equal(result.source.readback.locked, true);
   assert(sourceContent.includes("https://discord.com/channels/guild/completed-thread"));
   assert(completedContent.includes("ATLAS-CARD-ID: `CARD-42`"));
+  assert(completedContent.includes("<!-- ATLAS-CARD:START -->"));
+  assert(completionJournal.includes("ATLAS-JOURNAL-EVENT-ID: `completed:CARD-42`"));
   assert(calls.some((call) => call.url.endsWith("/channels/source-thread") && call.method === "PATCH"));
 });
 

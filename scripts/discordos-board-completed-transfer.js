@@ -1,6 +1,9 @@
 const {
   _internals: cardContract,
 } = require("./discordos-board-card-contract");
+const {
+  _internals: journal,
+} = require("./discordos-board-card-journal");
 
 const TRANSFER_ENV = "DISCORDOS_BOARD_COMPLETED_TRANSFER";
 const TRANSFER_ENV_VALUE = "enabled";
@@ -22,6 +25,11 @@ function parseArgs(args) {
     sourceForumChannelId: null,
     completedForumChannelId: DEFAULT_COMPLETED_FORUM_CHANNEL_ID,
     cardId: null,
+    project: null,
+    type: "feature",
+    priority: "Unspecified",
+    owner: "Unassigned",
+    eventId: null,
     evidence: null,
     allowApply: false,
     apply: false,
@@ -40,6 +48,21 @@ function parseArgs(args) {
       index += 1;
     } else if (arg === "--card-id") {
       options.cardId = readValue(args, index, "missing_card_id");
+      index += 1;
+    } else if (arg === "--project") {
+      options.project = readValue(args, index, "missing_project");
+      index += 1;
+    } else if (arg === "--type") {
+      options.type = readValue(args, index, "missing_type");
+      index += 1;
+    } else if (arg === "--priority") {
+      options.priority = readValue(args, index, "missing_priority");
+      index += 1;
+    } else if (arg === "--owner") {
+      options.owner = readValue(args, index, "missing_owner");
+      index += 1;
+    } else if (arg === "--event-id") {
+      options.eventId = readValue(args, index, "missing_event_id");
       index += 1;
     } else if (arg === "--evidence") {
       options.evidence = readValue(args, index, "missing_evidence");
@@ -85,6 +108,13 @@ function cardMarker(cardId) {
   return `ATLAS-CARD-ID: \`${cardId}\``;
 }
 
+function inferProject(sourceForumChannelId, explicitProject = null) {
+  if (explicitProject) return explicitProject;
+  if (sourceForumChannelId === "1508144612957622313") return "Fitness";
+  if (sourceForumChannelId === "1524889569475170478") return "Mazer";
+  return "Unspecified";
+}
+
 function discordThreadUrl(guildId, threadId) {
   return `https://discord.com/channels/${guildId}/${threadId}`;
 }
@@ -95,17 +125,58 @@ function truncateForSuffix(value, suffix) {
   return text.length <= available ? text : `${text.slice(0, Math.max(0, available - 3)).trimEnd()}...`;
 }
 
-function buildCompletedMessage({ cardId, sourceContent, sourceUrl, destinationUrl = null, evidence }) {
-  const suffix = [
-    "",
-    "## Completion",
-    "- state: `completed`",
-    `- evidence: ${evidence}`,
-    `- original card: ${sourceUrl}`,
-    destinationUrl ? `- completed card: ${destinationUrl}` : null,
-  ].filter(Boolean).join("\n");
-  const body = truncateForSuffix(sourceContent, suffix);
-  return `${cardMarker(cardId)}\n\n${body}${suffix}`.slice(0, MAX_MESSAGE_LENGTH);
+function buildCompletedEvent({
+  cardId,
+  project,
+  sourceForumChannelId,
+  title,
+  type = "feature",
+  priority = "Unspecified",
+  owner = "Unassigned",
+  evidence,
+  sourceUrl,
+  destinationUrl = null,
+  eventId = null,
+}) {
+  return journal.normalizeEvent({
+    schemaVersion: "atlas.board-card-journal.v1",
+    eventId: eventId || `completed:${cardId}`,
+    occurredAt: new Date().toISOString(),
+    actor: "discordos.completed-transfer",
+    card: {
+      id: cardId,
+      project: inferProject(sourceForumChannelId, project),
+      sourceForumChannelId,
+      title,
+      type,
+      state: "completed",
+      priority,
+      owner,
+      progress: "100%",
+      summary: "Proof-complete work was transferred to the shared Completed board.",
+      objective: "Preserve completion evidence and source-card provenance.",
+      acceptanceCriteria: ["Completion evidence is present", "Source and Completed cards are linked", "Both surfaces pass live readback"],
+      discoveries: [],
+      nextActions: ["Retain for review and historical reference"],
+      blockers: [],
+      evidence: [evidence, `original card: ${sourceUrl}`, destinationUrl ? `completed card: ${destinationUrl}` : null].filter(Boolean),
+    },
+    entry: {
+      kind: "completed",
+      headline: "Completion transferred",
+      completed: ["Moved proof-complete work into the shared Completed board"],
+      discovered: [],
+      next: ["Review the linked source and completion evidence as needed"],
+      blockers: [],
+      evidence: [evidence, `original card: ${sourceUrl}`],
+    },
+    correlation: {},
+  });
+}
+
+function buildCompletedMessage(options) {
+  const event = buildCompletedEvent(options);
+  return journal.buildCanonicalBody(event, options.sourceContent);
 }
 
 function buildSourceMessage({ sourceContent, destinationUrl, cardId }) {
@@ -179,6 +250,11 @@ async function buildCompletedBoardTransfer({
   sourceForumChannelId,
   completedForumChannelId = DEFAULT_COMPLETED_FORUM_CHANNEL_ID,
   cardId,
+  project = null,
+  type = "feature",
+  priority = "Unspecified",
+  owner = "Unassigned",
+  eventId = null,
   evidence,
   allowApply = false,
   apply = false,
@@ -190,6 +266,11 @@ async function buildCompletedBoardTransfer({
     sourceForumChannelId,
     completedForumChannelId,
     cardId,
+    project,
+    type,
+    priority,
+    owner,
+    eventId,
     evidence,
   };
   const admission = resolveAdmission({ allowApply, env });
@@ -311,6 +392,13 @@ async function buildCompletedBoardTransfer({
       message: {
         content: buildCompletedMessage({
           cardId,
+          project,
+          sourceForumChannelId,
+          title: sourceThread.payload.name,
+          type,
+          priority,
+          owner,
+          eventId,
           sourceContent: sourceMessage.payload?.content,
           sourceUrl,
           destinationUrl,
@@ -324,9 +412,55 @@ async function buildCompletedBoardTransfer({
   reasonCodes.push(...upsert.reasonCodes);
   const finalDestinationId = upsert.threadId;
   const finalDestinationUrl = finalDestinationId ? discordThreadUrl(guildId, finalDestinationId) : null;
-  let destinationReadback = null;
+  const completionEvent = buildCompletedEvent({
+    cardId,
+    project,
+    sourceForumChannelId,
+    title: sourceThread.payload.name,
+    type,
+    priority,
+    owner,
+    evidence,
+    sourceUrl,
+    destinationUrl: finalDestinationUrl,
+    eventId,
+  });
+  const completionJournal = journal.buildJournalMessage(completionEvent);
+  let journalAction = "not_attempted";
+  let journalMessageId = null;
   if (upsert.ok && finalDestinationId) {
-    const [threadRead, messageRead] = await Promise.all([
+    const history = await cardContract.discordRequest({
+      path: `/channels/${finalDestinationId}/messages?limit=100`,
+      token,
+      fetchImpl,
+    });
+    if (!history.ok || !Array.isArray(history.payload)) {
+      reasonCodes.push("completed_card_journal_history_read_failed");
+    } else {
+      const marker = journal.eventMarker(completionEvent.eventId);
+      const existingJournal = history.payload.find((message) => String(message?.content || "").includes(marker));
+      if (existingJournal) {
+        journalAction = "reused";
+        journalMessageId = existingJournal.id;
+      } else {
+        const posted = await cardContract.discordRequest({
+          path: `/channels/${finalDestinationId}/messages`,
+          token,
+          method: "POST",
+          body: { content: completionJournal, allowed_mentions: { parse: [] } },
+          fetchImpl,
+        });
+        if (!posted.ok || !posted.payload?.id) reasonCodes.push("completed_card_journal_create_failed");
+        else {
+          journalAction = "created";
+          journalMessageId = posted.payload.id;
+        }
+      }
+    }
+  }
+  let destinationReadback = null;
+  if (upsert.ok && finalDestinationId && journalMessageId) {
+    const [threadRead, messageRead, journalRead] = await Promise.all([
       cardContract.discordRequest({ path: `/channels/${finalDestinationId}`, token, fetchImpl }),
       cardContract.fetchMessage({
         channelId: finalDestinationId,
@@ -334,14 +468,25 @@ async function buildCompletedBoardTransfer({
         token,
         fetchImpl,
       }),
+      cardContract.fetchMessage({
+        channelId: finalDestinationId,
+        messageId: journalMessageId,
+        token,
+        fetchImpl,
+      }),
     ]);
     const content = String(messageRead.payload?.content || "");
+    const journalContent = String(journalRead.payload?.content || "");
     destinationReadback = {
       threadRead: threadRead.ok,
       messageRead: messageRead.ok,
       parentMatches: threadRead.payload?.parent_id === completedForumChannelId,
       cardMarkerPresent: content.includes(cardMarker(cardId)),
+      canonicalBodyPresent: content.includes(journal.CARD_START) && content.includes(journal.CARD_END),
+      completedStatePresent: content.includes("- state: `completed`"),
       sourceLinkPresent: content.includes(sourceUrl),
+      journalRead: journalRead.ok,
+      journalMarkerPresent: journalContent.includes(journal.eventMarker(completionEvent.eventId)),
     };
     if (!Object.values(destinationReadback).every(Boolean)) reasonCodes.push("completed_card_readback_failed");
   }
@@ -424,6 +569,10 @@ async function buildCompletedBoardTransfer({
       threadId: finalDestinationId,
       action: upsert.action,
       reaction: upsert.reactionResult,
+      journal: {
+        action: journalAction,
+        messageId: journalMessageId,
+      },
       readback: destinationReadback,
     },
     reasonCodes: [...new Set(reasonCodes)],
@@ -454,6 +603,8 @@ module.exports = {
     resolveAdmission,
     validateInput,
     cardMarker,
+    inferProject,
+    buildCompletedEvent,
     buildCompletedMessage,
     buildSourceMessage,
     listForumThreads,

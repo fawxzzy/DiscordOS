@@ -22,13 +22,74 @@ The matching code-facing shape is `DiscordOSBoardCardIdentity` in `src/contracts
 
 The admitted v0 card states are:
 
+- `intake`
+- `planning`
+- `ready`
 - `opened`
 - `in_progress`
+- `review`
 - `blocked`
 - `completed`
+- `archived`
 - `closed`
 
 The matching code-facing state union is `DiscordOSBoardCardState` in `src/contracts/board.ts`.
+
+## Continuous card journal
+
+Board state is not allowed to live only in a ChatGPT or Codex transcript. Every governed work item must resolve or create one stable card and publish lifecycle evidence into that card while work is active.
+
+The shared `atlas.board-card-journal.v1` event contains:
+
+- stable event and card identities
+- a complete canonical card snapshot
+- summary, objective, acceptance criteria, discoveries, next actions, blockers, and evidence
+- a progress entry describing completed work, new discoveries, next work, and blockers
+- task, job, branch, commit, and receipt correlations
+
+DiscordOS applies one event by:
+
+1. Resolving the card by explicit thread ID, then stable `ATLAS-CARD-ID`, then one unique legacy title.
+2. Creating the card when no match exists, or refreshing its canonical starter body when it does.
+3. Preserving pre-contract legacy content as original context.
+4. Appending exactly one thread message identified by `ATLAS-JOURNAL-EVENT-ID`.
+5. Reopening an archived active card before mutation.
+6. Reading back both the starter body and journal message before returning success.
+
+Live mutation requires both `--allow-apply` and `DISCORDOS_BOARD_CARD_JOURNAL=enabled`; dry-run remains the default. Duplicate stable identities and ambiguous legacy titles block instead of guessing.
+
+Required publication checkpoints are:
+
+- admission or creation
+- work start
+- material checkpoint
+- discovery that changes scope, acceptance criteria, priority, architecture, or risk
+- blocker or unblock
+- review readiness
+- terminal completion or cancellation
+
+Routine tool chatter does not require a card message. A checkpoint is material when a human reviewer would otherwise lose useful planning or execution context by reading only the starter body.
+
+The cross-board consistency scanner reads the active Fitness board, active Mazer board, and shared Completed board and reports:
+
+- cards missing stable identities
+- cards missing the canonical managed starter body or update timestamp
+- cards with no journal history
+- active cards that are archived
+- completed cards left on active boards
+- invalid Completed-board state or source links
+- duplicate stable card identities across boards
+
+```powershell
+npm run ops:production-env:run -- npm run ops:discordos:board-card-consistency:json -- --input <boards.json>
+```
+
+```powershell
+npm run ops:production-env:run -- npm run ops:discordos:board-card-journal:json -- --input <event.json> --dry-run
+
+$env:DISCORDOS_BOARD_CARD_JOURNAL='enabled'
+npm run ops:production-env:run -- npm run ops:discordos:board-card-journal:json -- --input <event.json> --allow-apply --apply
+```
 
 ## Completed-board transfer
 
