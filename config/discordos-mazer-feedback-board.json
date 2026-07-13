@@ -25,7 +25,7 @@
     "planning": {
       "version": 1,
       "activeCardId": "mazer-endless-progression-mode-contract",
-      "activeSelectionReason": "Endless Progression is the canonical base mode. Its checkpoint, failure, score, content-band, and receipt contracts must precede downstream enemies, economy, challenges, and leaderboard implementation.",
+      "activeSelectionReason": "Endless Progression is admitted for one bounded first PR: define a pure versioned checkpoint/attempt lifecycle resolver and table-driven tests before scene wiring, persistence migration, remote sync, economy, enemies, or leaderboard changes.",
       "executionPolicy": "Finish the earliest execution-ready critical-path epic before taking later product work. Advanced AI research stays parallel and cannot block the critical path.",
       "epics": [
         {
@@ -508,7 +508,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-13T20:26:54.490Z"
+    "liveSyncedAt": "2026-07-13T20:31:15.668Z"
   },
   "cards": [
     {
@@ -2904,23 +2904,24 @@
     {
       "id": "mazer-endless-progression-mode-contract",
       "title": "mazer: Endless Progression mode contract",
-      "state": "open",
+      "state": "ready",
       "priority": "high",
       "category": "mazer",
       "markerName": "Canonical Endless mode contract",
       "completionPercent": 0,
       "summary": "Define Endless as the canonical mode: level chain, completion checkpoint, current-attempt reset, durable resume, private score envelope, and result receipt.",
       "whyItMatters": "Coins, enemies, items, content gates, challenges, leaderboards, and offline recovery need one stable base-mode contract.",
-      "currentStatus": "Planning admission. Completion advances the durable checkpoint; enemy pressure/failure resets only the current maze attempt; leaving later resumes from the last completed checkpoint; public UI remains rank-only while a private versioned score is retained for trusted systems.",
+      "currentStatus": "Ready for a bounded first implementation PR. Code inspection confirmed `legacyPlayLifecycle` models only goal reset/regenerate and `legacyProgression` records completed cycles but has no named attempt/checkpoint lifecycle. This slice adds a pure, versioned resolver for start, completion, current-attempt failure, abandon/resume intent, and reset scope with table-driven tests only. It does not wire MenuScene, alter existing saves, write Supabase, add enemies, or designate a leaderboard score.",
       "workBreakdown": [
         "Define run, attempt, completion, checkpoint, resume, abandon, retry, and failure states.",
         "Define deterministic seed/level sequencing and versioned result receipts.",
         "Specify reset scope for enemy, player, close/reopen, offline reconnect, and later hazards.",
-        "Define private score inputs and exclude raw client totals from authority."
+        "Define private score inputs and exclude raw client totals from authority.",
+        "First PR: add the pure lifecycle resolver and fixture tests without runtime wiring or storage migration."
       ],
       "nextActions": [
-        "Inventory current lifecycle, reset, progression, and receipt state.",
-        "Write table-driven transitions before implementation."
+        "Implement the pure lifecycle resolver beside `legacyPlayLifecycle.ts` with focused tests.",
+        "Use the resolver results to specify the subsequent scene/persistence integration slice; do not widen this PR."
       ],
       "acceptanceCriteria": [
         "Completion, failure, abandon, and resume have non-overlapping deterministic outcomes.",
@@ -2928,7 +2929,8 @@
         "Existing progression is preserved until a reviewed migration exists."
       ],
       "proofPlan": [
-        "Review lifecycle fixtures for completion, failure, close/reopen, and offline resume."
+        "Run lifecycle fixtures for completion, failure, abandon/resume intent, and reset scope.",
+        "Run full Mazer verification before moving the card to review."
       ],
       "reference": "repos/mazer/src/legacy-runtime/legacyPlayLifecycle.ts",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-endless-progression-mode-contract",
