@@ -334,7 +334,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-13T01:33:47.088Z"
+    "liveSyncedAt": "2026-07-13T01:50:14.256Z"
   },
   "cards": [
     {
@@ -530,7 +530,7 @@
       "completionPercent": 82,
       "summary": "Turn the Options menu into a clean player guide that explains controls, compass, toggles, level/rank, and current progression without exposing internal diagnostics.",
       "whyItMatters": "Players should understand the game without seeing internal debug language. The Options screen is the correct place for concise, branded explanations.",
-      "currentStatus": "Options and played-game Pause now start with a centered Player Guide for Compass, Start, End, Player, Skill Lvl, Score, Runs, and Maze Lvl. The guide reuses the same compass/start/end renderers as the board, replaces the redundant player picture with clear bullets, hides developer-only scale controls, and has mobile scroll proof. The pending rank-only display delivery must remove Skill Lvl from the guide and explain only the final public badge vocabulary.",
+      "currentStatus": "Merged Mazer PR #51 synchronizes Options and played-game Pause with the completed rank-only public vocabulary. Player Skill and Skill Lvl copy is removed, Rank or AI Rank is the public progression tier, and Score remains described as run quality while hidden progression fields remain compatible. Phone and desktop route-aware proof plus full verification passed. The marker remains 82 because physical-device authenticated safe-area soak and future guide/asset maintenance remain open.",
       "workBreakdown": [
         "Move the guide to the top of main-menu Options.",
         "Reuse the guide inside played-game Pause before controls.",
@@ -543,7 +543,7 @@
         "Keep literal board-renderer glyphs in the guide when those assets evolve; do not duplicate their drawing contracts.",
         "Run a physical-device authenticated Options and Pause soak at iPhone safe-area dimensions.",
         "Keep target-complexity and raw diagnostic fields out of normal player Options.",
-        "Replace Player Skill and Skill Lvl wording only after the linked public-display contract is implemented."
+        "Maintain rank-only public vocabulary whenever guide or badge fields evolve."
       ],
       "acceptanceCriteria": [
         "The player guide explains every visible badge field without clipping or escaping its card.",
@@ -1970,14 +1970,14 @@
     {
       "id": "mazer-player-rank-only-progression-display",
       "title": "mazer: rank-only player progression display",
-      "state": "ready",
+      "state": "completed",
       "priority": "high",
       "category": "mazer",
       "markerName": "Rank-only public progression display",
-      "completionPercent": 0,
+      "completionPercent": 100,
       "summary": "Remove player-facing Skill and Player Skill labels and present one consistent public rank display without deleting hidden progression data.",
       "whyItMatters": "Players should not have to reconcile skill, rating, rank, level, and score as competing public measures. Rank is the chosen public progression signal; score remains run quality.",
-      "currentStatus": "Ready at unchanged 0% for one complete public-surface slice. Replace badge and guide Skill Lvl / Player Skill wording with Rank or AI Rank while preserving hidden levels, saves, telemetry, and progression formulas. Make the badge span the rendered maze-border width, remove the portrait-only surplus bottom row and upward text offset, retain the shared lane gap between maze and badge, and prove authenticated Menu/Options/Play/Pause at phone and desktop sizes. No storage or schema migration is admitted.",
+      "currentStatus": "Completed by merged Mazer PR #51. Normal player-facing surfaces now use Rank or AI Rank only, the badge contains timer plus rank, hidden levels/saves/telemetry/formulas remain unchanged, menu and non-portrait play badge chrome matches maze width, portrait play is centered and separated from Pause, and menu/play badge placement preserves viewport and maze gaps. Focused tests passed 91/91, authenticated 360x720 and 1440x900 matrices passed the new geometry contract, and full verification passed 43 files / 334 tests plus build.",
       "workBreakdown": [
         "Audit HUD, main menu, Options, Pause, completion/results, onboarding, tooltips, accessibility labels, and mobile layouts for player Skill or Player Skill wording.",
         "Replace the public player progression display with rank-only language while preserving score as a separate 0-100 run-quality value.",
@@ -1985,9 +1985,9 @@
         "Make labels, compact badge layouts, and guide explanations consistent across desktop and phone surfaces."
       ],
       "nextActions": [
-        "Replace the complete audited public terminology surface with rank-only language while preserving internal progression fields.",
-        "Normalize badge width, height, and maze separation through the shared progression-badge renderer.",
-        "Capture authenticated menu, Options, play, and Pause proofs at desktop and phone sizes."
+        "Keep rank-only public terminology and badge geometry under the merged regression checks.",
+        "Preserve hidden progression compatibility until a separately reviewed migration changes it.",
+        "Re-run authenticated phone and desktop proof whenever badge fields or shared lanes change."
       ],
       "acceptanceCriteria": [
         "No normal player-facing surface exposes Player Skill, Skill Lvl, or a redundant public rating label.",
@@ -2008,9 +2008,9 @@
         "mazer-player-facing-options-guide",
         "mazer-mobile-shell-device-harness"
       ],
-      "reactionStatus": "failure",
-      "reactionEmojiName": "failure",
-      "reactionEmojiId": "1507384094424694785",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851",
       "liveThreadId": "1525337744774140056",
       "liveMessageId": "1525337744774140056"
     },
