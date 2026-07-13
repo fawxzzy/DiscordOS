@@ -1,0 +1,13 @@
+{
+  "contract_id": "atlas.approval-record.v2",
+  "contract_version": "v2",
+  "atlas_owner_repository": "ATLAS",
+  "atlas_owner_ref": "root-commit",
+  "atlas_owner_commit": "d718d14c5f23a08c402e9bd821db6526f541034a",
+  "canonical_schema_path": "packages/atlas-contracts/schemas/atlas.approval-record.v2.schema.json",
+  "canonical_sha256": "e882aae2ceb6ea65cc7a208f036e95ddc209c203f0b4b830372b8b2b35e954a2",
+  "mirror_path": "src/contracts/atlas.approval-record.v2.schema.json",
+  "mirror_sha256": "e882aae2ceb6ea65cc7a208f036e95ddc209c203f0b4b830372b8b2b35e954a2",
+  "fallback_scope": "isolated_discordos_ci_only",
+  "fallback_statement": "Mirror fallback is for isolated DiscordOS CI only."
+}

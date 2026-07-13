@@ -243,6 +243,7 @@ Current governed contract surface:
   - `--apply` now runs live target admission and duplicate-title preflight before sending
   - formats normal updates as green embeds with mentions disabled
   - returns Discord response metadata, including message id, channel id, and timestamp, after successful sends
+  - performs one exact GET readback after a successful POST; failed or mismatched readback is terminal `sent_but_unverified` and never triggers another POST
   - can write a bounded Discord publication block into an existing ops receipt with `--receipt-file`
   - supports repeatable `--marker "<marker name>"` flags that append workflow completion data from ATLAS marker truth or an explicit `--marker-file <path>`
 - `scripts/discordos-github-projection-intent-consumer.js`
@@ -250,6 +251,11 @@ Current governed contract surface:
   - validates projection intent, correlated Atlas source receipts, schema provenance, and committed route policy before building a no-send DiscordOS application plan
   - preserves projection id, idempotency key, replay suppression, and blocked/review/suppressed decisions without sending Discord messages or resolving secret values
   - identifies future apply adapters such as `scripts/discord-update-post.js` and `scripts/runtime-health-alert-delivery.js` without invoking them
+- `scripts/discordos-github-projection-application.js`
+  - separately governed single-writer apply adapter for a previously validated GitHub projection dry-run receipt
+  - requires one exact, unexpired `atlas.approval-record.v2` approval for `discordos:updates`, `publish_projection:<projection id>`, and the `single-writer`, `exact-readback`, and `no-mentions` constraints
+  - is readiness-only without `--apply`; implementation readiness is not live-apply authority
+  - delegates sending exclusively to `scripts/discord-update-post.js`, records exact GET readback, and suppresses/quarantines replay evidence before writer invocation
 - `scripts/discord-forum-card-lifecycle.js`
   - repo-local forum/card lifecycle publication command for governed workflow-card state updates
   - dry-runs by default, requires `--apply` before sending, and uses the shared `updates` target with the `discordos.forum_card.lifecycle` route

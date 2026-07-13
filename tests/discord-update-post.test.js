@@ -34,6 +34,22 @@ function message({
   };
 }
 
+function verifiedMessage({
+  id = "1516000000000000000",
+  title = "Runtime hardening closed",
+  body = "DiscordOS runtime hardening is closed.",
+} = {}) {
+  return {
+    id,
+    channel_id: UPDATES_CHANNEL_ID,
+    timestamp: "2026-06-13T20:00:00.000000+00:00",
+    embeds: [{ title, description: body, color: _internals.UPDATE_EMBED_COLOR }],
+    mentions: [],
+    mention_roles: [],
+    mention_everyone: false,
+  };
+}
+
 function markerBoardMarkdown() {
   return [
     "# Lanes And Markers",
@@ -316,6 +332,10 @@ test("discord update post sends bot-channel payload with DiscordOS env only", as
           ],
         };
       }
+      if (url === `${_internals.DISCORD_API_BASE}/channels/${UPDATES_CHANNEL_ID}/messages/1516000000000000000`) {
+        assert.equal(init.method, "GET");
+        return { ok: true, status: 200, json: async () => verifiedMessage() };
+      }
       assert.equal(url, `${_internals.DISCORD_API_BASE}/channels/${UPDATES_CHANNEL_ID}/messages`);
       assert.equal(init.method, "POST");
       const parsed = JSON.parse(init.body);
@@ -345,7 +365,8 @@ test("discord update post sends bot-channel payload with DiscordOS env only", as
   assert.equal(result.notificationRoute.targetEnv, "DISCORDOS_UPDATES_CHANNEL_ID");
   assert.equal(result.preflight.status, "ready");
   assert.equal(result.preflight.duplicateCheck.status, "not_found");
-  assert.equal(requests.length, 3);
+  assert.equal(requests.length, 4);
+  assert.equal(result.readback.status, "verified");
   assert.deepEqual(result.receipt, {
     requested: false,
     written: false,
@@ -372,6 +393,9 @@ test("discord update post apply blocks duplicate titles before sending", async (
           status: 200,
           json: async () => channelProbeBody(),
         };
+      }
+      if (url === `${_internals.DISCORD_API_BASE}/channels/${UPDATES_CHANNEL_ID}/messages/1516000000000000000`) {
+        return { ok: true, status: 200, json: async () => verifiedMessage() };
       }
       return {
         ok: true,
@@ -527,6 +551,9 @@ test("discord update post writes receipt file only after successful send", async
           json: async () => [],
         };
       }
+      if (url === `${_internals.DISCORD_API_BASE}/channels/${UPDATES_CHANNEL_ID}/messages/1516000000000000000`) {
+        return { ok: true, status: 200, json: async () => verifiedMessage() };
+      }
       return {
         ok: true,
         status: 200,
@@ -577,6 +604,9 @@ test("discord update post reports sent receipt write failures without hiding sen
           json: async () => [],
         };
       }
+      if (url === `${_internals.DISCORD_API_BASE}/channels/${UPDATES_CHANNEL_ID}/messages/1516000000000000000`) {
+        return { ok: true, status: 200, json: async () => verifiedMessage() };
+      }
       return {
         ok: true,
         status: 200,
@@ -593,6 +623,43 @@ test("discord update post reports sent receipt write failures without hiding sen
   assert.equal(result.sendsMessages, true);
   assert.equal(result.status, "sent_receipt_write_failed");
   assert.deepEqual(result.reasonCodes, ["receipt_write_failed"]);
+});
+
+test("discord update post makes a sent-but-unverified terminal state for mismatched readback", async () => {
+  const result = await _internals.buildDiscordUpdatePost({
+    title: "Runtime hardening closed",
+    body: "DiscordOS runtime hardening is closed.",
+    apply: true,
+    env: { DISCORDOS_UPDATES_CHANNEL_ID: UPDATES_CHANNEL_ID, DISCORDOS_BOT_TOKEN: "bot-secret" },
+    fetchImpl: async (url) => {
+      if (url.endsWith(`/${UPDATES_CHANNEL_ID}`)) return { ok: true, status: 200, json: async () => channelProbeBody() };
+      if (url.includes("?limit=")) return { ok: true, status: 200, json: async () => [] };
+      if (url.endsWith("/messages")) return { ok: true, status: 200, json: async () => verifiedMessage() };
+      return { ok: true, status: 200, json: async () => verifiedMessage({ title: "Unexpected title" }) };
+    },
+  });
+  assert.equal(result.status, "sent_but_unverified");
+  assert.equal(result.sendsMessages, true);
+  assert.equal(result.readback.status, "mismatch");
+  assert(result.readback.reasonCodes.includes("readback_embed_title_mismatch"));
+});
+
+test("discord update post makes a sent-but-unverified terminal state for failed readback", async () => {
+  const result = await _internals.buildDiscordUpdatePost({
+    title: "Runtime hardening closed",
+    body: "DiscordOS runtime hardening is closed.",
+    apply: true,
+    env: { DISCORDOS_UPDATES_CHANNEL_ID: UPDATES_CHANNEL_ID, DISCORDOS_BOT_TOKEN: "bot-secret" },
+    fetchImpl: async (url) => {
+      if (url.endsWith(`/${UPDATES_CHANNEL_ID}`)) return { ok: true, status: 200, json: async () => channelProbeBody() };
+      if (url.includes("?limit=")) return { ok: true, status: 200, json: async () => [] };
+      if (url.endsWith("/messages")) return { ok: true, status: 200, json: async () => verifiedMessage() };
+      return { ok: false, status: 500, json: async () => null };
+    },
+  });
+  assert.equal(result.status, "sent_but_unverified");
+  assert.equal(result.sendsMessages, true);
+  assert.equal(result.readback.status, "failed");
 });
 
 test("discord update post resolves body-file sections from repo-relative paths", async () => {

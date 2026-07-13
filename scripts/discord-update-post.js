@@ -1,5 +1,6 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
+const crypto = require("node:crypto");
 const {
   _internals: targetAdmissionInternals,
 } = require("./discord-update-target-admission");
@@ -271,6 +272,112 @@ async function sendDiscordBotChannel({ channelId, token, payload, fetchImpl = fe
   };
 }
 
+function sha256Hex(value) {
+  return crypto.createHash("sha256").update(String(value || ""), "utf8").digest("hex");
+}
+
+function buildNotRequestedReadback() {
+  return {
+    requested: false,
+    ok: true,
+    status: "not_requested",
+    httpStatus: null,
+    exactMatch: null,
+    messageId: null,
+    channelId: null,
+    timestamp: null,
+    title: null,
+    bodySha256: null,
+    reasonCodes: ["readback_not_requested"],
+  };
+}
+
+function messageHasNoUnexpectedMentions(message) {
+  const mentions = Array.isArray(message?.mentions) ? message.mentions : [];
+  const mentionRoles = Array.isArray(message?.mention_roles) ? message.mention_roles : [];
+  return mentions.length === 0 && mentionRoles.length === 0 && !message?.mention_everyone;
+}
+
+async function readDiscordBotChannelMessage({ channelId, messageId, token, payload, fetchImpl = fetch }) {
+  const requested = {
+    channelId,
+    messageId,
+    title: payload?.embeds?.[0]?.title || null,
+    bodySha256: sha256Hex(payload?.embeds?.[0]?.description || ""),
+    color: payload?.embeds?.[0]?.color ?? null,
+    allowedMentions: { parse: [] },
+  };
+  if (!messageId) {
+    return {
+      requested,
+      ok: false,
+      status: "failed",
+      httpStatus: null,
+      exactMatch: false,
+      messageId: null,
+      channelId,
+      timestamp: null,
+      title: null,
+      bodySha256: null,
+      reasonCodes: ["readback_message_id_missing"],
+    };
+  }
+
+  try {
+    const response = await fetchImpl(`${DISCORD_API_BASE}/channels/${channelId}/messages/${messageId}`, {
+      method: "GET",
+      headers: { Authorization: `Bot ${token}` },
+    });
+    const message = typeof response.json === "function" ? await response.json().catch(() => null) : null;
+    const embed = Array.isArray(message?.embeds) ? message.embeds[0] : null;
+    const actual = {
+      messageId: typeof message?.id === "string" ? message.id : null,
+      channelId: typeof message?.channel_id === "string" ? message.channel_id : null,
+      timestamp: typeof message?.timestamp === "string" ? message.timestamp : null,
+      title: typeof embed?.title === "string" ? embed.title : null,
+      bodySha256: typeof embed?.description === "string" ? sha256Hex(embed.description) : null,
+      color: typeof embed?.color === "number" ? embed.color : null,
+      noUnexpectedMentions: messageHasNoUnexpectedMentions(message),
+    };
+    const reasonCodes = [];
+    if (!response.ok) reasonCodes.push("readback_get_failed");
+    if (actual.channelId !== requested.channelId) reasonCodes.push("readback_channel_id_mismatch");
+    if (actual.messageId !== requested.messageId) reasonCodes.push("readback_message_id_mismatch");
+    if (actual.title !== requested.title) reasonCodes.push("readback_embed_title_mismatch");
+    if (actual.bodySha256 !== requested.bodySha256) reasonCodes.push("readback_embed_body_mismatch");
+    if (actual.color !== requested.color) reasonCodes.push("readback_embed_color_mismatch");
+    if (!actual.noUnexpectedMentions) reasonCodes.push("readback_unexpected_mentions");
+    const exactMatch = response.ok && reasonCodes.length === 0;
+    return {
+      requested,
+      ok: exactMatch,
+      status: exactMatch ? "verified" : (response.ok ? "mismatch" : "failed"),
+      httpStatus: response.status,
+      exactMatch,
+      messageId: actual.messageId,
+      channelId: actual.channelId,
+      timestamp: actual.timestamp,
+      title: actual.title,
+      bodySha256: actual.bodySha256,
+      reasonCodes,
+    };
+  } catch (_error) {
+    return {
+      requested,
+      ok: false,
+      status: "failed",
+      httpStatus: null,
+      exactMatch: false,
+      messageId,
+      channelId,
+      timestamp: null,
+      title: null,
+      bodySha256: null,
+      reasonCodes: ["readback_get_failed"],
+    };
+  }
+}
+
 async function fetchRecentDiscordMessages({
   channelId,
   token,
@@ -521,6 +628,7 @@ async function buildDiscordUpdatePost({
       notificationRoute,
       reasonCodes: ["apply_flag_not_set"],
       markerProgress,
+      readback: buildNotRequestedReadback(),
       receipt: {
         requested: hasValue(receiptFile),
         written: false,
@@ -615,7 +723,24 @@ async function buildDiscordUpdatePost({
     reasonCodes: result.ok ? [] : ["updates_post_request_failed"],
     markerProgress,
     preflight,
+    readback: buildNotRequestedReadback(),
   };
+
+  if (result.ok) {
+    postResult.readback = await readDiscordBotChannelMessage({
+      channelId: result.channelId,
+      messageId: result.messageId,
+      token: targetAdmissionInternals.normalizeEnvValue(env.DISCORDOS_BOT_TOKEN),
+      payload,
+      fetchImpl,
+    });
+    if (!postResult.readback.ok) {
+      postResult.ok = false;
+      postResult.status = "sent_but_unverified";
+      postResult.sendsMessages = true;
+      postResult.reasonCodes = ["post_sent_readback_unverified", ...postResult.readback.reasonCodes];
+    }
+  }
 
   if (postResult.ok && hasValue(receiptFile)) {
     try {
@@ -750,6 +875,10 @@ module.exports = {
     getUpdateTarget,
     buildUpdateNotificationRoute,
     sendDiscordBotChannel,
+    sha256Hex,
+    buildNotRequestedReadback,
+    messageHasNoUnexpectedMentions,
+    readDiscordBotChannelMessage,
     fetchRecentDiscordMessages,
     getMessageEmbedTitle,
     summarizeDiscordMessage,
