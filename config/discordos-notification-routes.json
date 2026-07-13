@@ -9,6 +9,18 @@
       "target": "alerts",
       "targetEnv": "DISCORDOS_RUNTIME_HEALTH_ALERT_CHANNEL_ID",
       "fallbackTargetEnv": "DISCORDOS_RUNTIME_HEALTH_ALERT_WEBHOOK_URL",
+      "aliases": [
+        {
+          "id": "atlas-github-security-alert-critical",
+          "source": "atlas-github",
+          "type": "atlas.github.security_alert.observed",
+          "minSeverity": "critical",
+          "target": "alerts",
+          "targetEnv": "DISCORDOS_RUNTIME_HEALTH_ALERT_CHANNEL_ID",
+          "fallbackTargetEnv": "DISCORDOS_ATLAS_HEALTH_ALERT_CHANNEL_ID",
+          "enabled": true
+        }
+      ],
       "enabled": true
     },
     {
@@ -28,6 +40,17 @@
       "minSeverity": "info",
       "target": "updates",
       "targetEnv": "DISCORDOS_UPDATES_CHANNEL_ID",
+      "aliases": [
+        {
+          "id": "atlas-github-release-observed-info",
+          "source": "updates",
+          "type": "atlas.github.release.observed",
+          "minSeverity": "info",
+          "target": "updates",
+          "targetEnv": "DISCORDOS_UPDATES_CHANNEL_ID",
+          "enabled": true
+        }
+      ],
       "enabled": true
     },
     {

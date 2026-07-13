@@ -219,6 +219,7 @@ Current governed contract surface:
   - committed no-secret notification route policy for DiscordOS runtime/product notification intents
   - maps source/type/severity to target classes such as `alerts` and `updates`
   - stores only target environment variable names, never channel ids, webhook URLs, or bot tokens
+  - includes Atlas GitHub release/security observation routes that resolve only to the existing updates/alerts env names
 - `scripts/atlas-health-watch.js`
   - repo-local ATLAS health watch command for critical-only multi-project availability checks
   - consults the shared DiscordOS notification route policy before any ATLAS critical alert can be delivered
@@ -244,6 +245,11 @@ Current governed contract surface:
   - returns Discord response metadata, including message id, channel id, and timestamp, after successful sends
   - can write a bounded Discord publication block into an existing ops receipt with `--receipt-file`
   - supports repeatable `--marker "<marker name>"` flags that append workflow completion data from ATLAS marker truth or an explicit `--marker-file <path>`
+- `scripts/discordos-github-projection-intent-consumer.js`
+  - repo-local dry-run consumer for canonical `atlas.github.projection-intent.v1` artifacts
+  - validates projection intent, correlated Atlas source receipts, schema provenance, and committed route policy before building a no-send DiscordOS application plan
+  - preserves projection id, idempotency key, replay suppression, and blocked/review/suppressed decisions without sending Discord messages or resolving secret values
+  - identifies future apply adapters such as `scripts/discord-update-post.js` and `scripts/runtime-health-alert-delivery.js` without invoking them
 - `scripts/discord-forum-card-lifecycle.js`
   - repo-local forum/card lifecycle publication command for governed workflow-card state updates
   - dry-runs by default, requires `--apply` before sending, and uses the shared `updates` target with the `discordos.forum_card.lifecycle` route
@@ -735,6 +741,8 @@ Current repo-local verification surface:
   - Node test coverage for the repo-local DiscordOS publication/docs reliability status command
 - `npm run verify:discord-publication-audit`
   - Node test coverage for the repo-local DiscordOS publication receipt audit command
+- `npm run verify:discordos-github-projection-intent-consumer`
+  - Node test coverage for the repo-local DiscordOS Atlas GitHub projection-intent dry-run consumer
 - `npm run verify:discordos-operator-status`
   - Node test coverage for the repo-local DiscordOS operator status bundle command
 - `npm run verify:discordos-next-work`
@@ -1130,6 +1138,7 @@ Current updates-channel recommendation:
 - use `#updates` only for curated public release/status announcements
 - use `npm run ops:discord:publication-status -- --probe-live` to inspect the full publication chain and channel separation
 - use `npm run ops:discord:publication-audit` to confirm published update receipts have durable Discord message ids and no backfill gaps
+- use `npm run ops:discordos:github-projection-intent-consumer -- --intent <intent.json> --source-receipt <source-receipt.json> --json` for Atlas GitHub projection-intent dry-run planning; this resolves only env variable names and emits no-send receipts
 - publish from DiscordOS with `npm run ops:discord:update-post -- --title "<title>" --body-file <path> --body-section "<section>" --apply`
 - include `--receipt-file <receipt>` on future live posts so the returned Discord message id is recorded durably
 - run `npm run ops:discord:update-draft-validator -- --title "<title>" --body-file <path> --body-section "<section>"` before preflight when drafting a new public update receipt
@@ -1137,4 +1146,5 @@ Current updates-channel recommendation:
 - `--apply` now runs live target admission and duplicate-title preflight automatically before sending
 - run `npm run ops:discord:update-preflight -- --title "<title>" --body-file <path> --body-section "<section>" --probe-live` when you want a no-send preview before the final apply
 - use `npm run ops:discord:update-lookup` only to backfill receipts for already-published updates
+- keep the next Atlas GitHub projection step to a separately authorized no-send canary using real Atlas-produced artifacts; do not treat the dry-run consumer as live apply admission
 - keep routine runtime logs, cron proof dumps, and critical alerts out of `#updates`
