@@ -24,8 +24,8 @@
     },
     "planning": {
       "version": 1,
-      "activeCardId": "mazer-run-quality-metric-contract-v2",
-      "activeSelectionReason": "Planning review identified run-quality metrics as the next product-contract gate: define telemetry-first quality signals before changing rank, score, leaderboards, achievements, or progression calibration.",
+      "activeCardId": "mazer-endless-progression-mode-contract",
+      "activeSelectionReason": "Endless Progression is the canonical base mode. Its checkpoint, failure, score, content-band, and receipt contracts must precede downstream enemies, economy, challenges, and leaderboard implementation.",
       "executionPolicy": "Finish the earliest execution-ready critical-path epic before taking later product work. Advanced AI research stays parallel and cannot block the critical path.",
       "epics": [
         {
@@ -39,7 +39,8 @@
             "mazer-turn-synchronous-world-simulation",
             "mazer-mystery-box-usable-item-system",
             "mazer-invisibility-cloak-item",
-            "mazer-moving-maze-one-tile-lane-snap"
+            "mazer-moving-maze-one-tile-lane-snap",
+            "mazer-endless-progression-mode-contract"
           ],
           "supportingCardIds": [
             "mazer-fluid-controls-and-motion",
@@ -88,7 +89,9 @@
             "mazer-player-rank-only-progression-display",
             "mazer-run-quality-metric-contract-v2",
             "mazer-run-quality-player-results-ui",
-            "mazer-run-quality-achievement-admission"
+            "mazer-run-quality-achievement-admission",
+            "mazer-endless-content-band-manifest",
+            "mazer-shop-and-random-item-economy-contract"
           ],
           "supportingCardIds": [
             "mazer-ai-run-corpus-quality-calibration",
@@ -108,7 +111,8 @@
             "mazer-data-driven-cosmetic-theme-catalog",
             "mazer-moving-procedural-maze-mode",
             "mazer-maze-feature-progression-parity",
-            "mazer-moving-maze-lane-correction-contract"
+            "mazer-moving-maze-lane-correction-contract",
+            "mazer-obstacle-trap-puzzle-environment-contract"
           ],
           "supportingCardIds": [
             "mazer-ai-level-rank-progression",
@@ -126,7 +130,10 @@
             "mazer-unified-player-message-system",
             "mazer-auth-gate-persistent-login",
             "mazer-account-scoped-settings-persistence",
-            "mazer-auth-ui-flow-hardening"
+            "mazer-auth-ui-flow-hardening",
+            "mazer-offline-first-play-sync-and-conflict-contract",
+            "mazer-account-license-entitlement-contract",
+            "mazer-paid-account-checkout-and-access"
           ],
           "supportingCardIds": [
             "mazer-first-time-tutorial-system",
@@ -142,7 +149,9 @@
           "primaryCardIds": [
             "mazer-multiplayer-foundation",
             "mazer-endless-multiplayer-survival-mode",
-            "mazer-run-quality-leaderboard-admission"
+            "mazer-run-quality-leaderboard-admission",
+            "mazer-shared-seed-daily-weekly-challenges",
+            "mazer-social-profiles-friends-and-events-contract"
           ],
           "supportingCardIds": [
             "mazer-auth-gate-persistent-login",
@@ -187,7 +196,8 @@
             "mazer-discordos-board-discipline",
             "mazer-handcrafted-asset-authoring-import-workflow",
             "mazer-web-share-metadata-and-preview-asset",
-            "mazer-web-share-preview-platform-verification"
+            "mazer-web-share-preview-platform-verification",
+            "mazer-installable-pwa-offline-shell"
           ],
           "supportingCardIds": [
             "mazer-auth-remote-playbook-sync",
@@ -337,9 +347,11 @@
           "cardId": "mazer-run-quality-leaderboard-admission",
           "dependsOnCardIds": [
             "mazer-run-quality-telemetry-capture-v2",
-            "mazer-auth-remote-playbook-sync"
+            "mazer-auth-remote-playbook-sync",
+            "mazer-endless-progression-mode-contract",
+            "mazer-account-license-entitlement-contract"
           ],
-          "reason": "Leaderboard use needs a stable metric version, account-safe receipts, and an explicit anti-cheat/privacy decision."
+          "reason": "A verified global rank needs stable metrics, Endless receipt/checkpoint semantics, account-safe receipts, entitlement policy, and explicit anti-cheat/privacy rules."
         },
         {
           "cardId": "mazer-run-quality-achievement-admission",
@@ -380,6 +392,90 @@
             "mazer-web-share-metadata-and-preview-asset"
           ],
           "reason": "External crawler verification can only evaluate a deployed metadata and absolute-image contract."
+        },
+        {
+          "cardId": "mazer-endless-progression-mode-contract",
+          "dependsOnCardIds": [
+            "mazer-play-mode-perpetual-loop",
+            "mazer-turn-synchronous-world-simulation",
+            "mazer-maze-feature-progression-parity"
+          ],
+          "reason": "Endless reuses the stable completion loop, deterministic world turn, and generated feature delivery."
+        },
+        {
+          "cardId": "mazer-endless-content-band-manifest",
+          "dependsOnCardIds": [
+            "mazer-endless-progression-mode-contract",
+            "mazer-maze-feature-progression-parity",
+            "mazer-procedural-difficulty-generator-shaping"
+          ],
+          "reason": "Content gates need canonical checkpoint semantics, legal feature delivery, and measurable generation bands."
+        },
+        {
+          "cardId": "mazer-shop-and-random-item-economy-contract",
+          "dependsOnCardIds": [
+            "mazer-maze-coin-pickups-cosmetic-currency",
+            "mazer-customization-inventory-cosmetic-unlocks",
+            "mazer-data-driven-cosmetic-theme-catalog",
+            "mazer-mystery-box-usable-item-system"
+          ],
+          "reason": "The shop consumes current currency, inventory, catalog, and item ownership rather than duplicating them."
+        },
+        {
+          "cardId": "mazer-shared-seed-daily-weekly-challenges",
+          "dependsOnCardIds": [
+            "mazer-endless-progression-mode-contract",
+            "mazer-run-quality-leaderboard-admission"
+          ],
+          "reason": "Challenges need canonical mode rules and verified ranking."
+        },
+        {
+          "cardId": "mazer-offline-first-play-sync-and-conflict-contract",
+          "dependsOnCardIds": [
+            "mazer-auth-remote-playbook-sync",
+            "mazer-account-scoped-settings-persistence",
+            "mazer-endless-progression-mode-contract"
+          ],
+          "reason": "Offline reconciliation needs account identity, local persistence, and level-resume semantics."
+        },
+        {
+          "cardId": "mazer-installable-pwa-offline-shell",
+          "dependsOnCardIds": [
+            "mazer-offline-first-play-sync-and-conflict-contract"
+          ],
+          "reason": "The PWA shell must follow the offline data and reconciliation contract."
+        },
+        {
+          "cardId": "mazer-account-license-entitlement-contract",
+          "dependsOnCardIds": [
+            "mazer-auth-gate-persistent-login",
+            "mazer-auth-ui-flow-hardening"
+          ],
+          "reason": "Paid access needs stable account identity and player-safe auth recovery."
+        },
+        {
+          "cardId": "mazer-paid-account-checkout-and-access",
+          "dependsOnCardIds": [
+            "mazer-account-license-entitlement-contract"
+          ],
+          "reason": "Checkout consumes an approved entitlement and support contract."
+        },
+        {
+          "cardId": "mazer-obstacle-trap-puzzle-environment-contract",
+          "dependsOnCardIds": [
+            "mazer-endless-content-band-manifest",
+            "mazer-procedural-difficulty-generator-shaping",
+            "mazer-turn-synchronous-world-simulation"
+          ],
+          "reason": "Environment systems need content gates, legal placement, and deterministic turns."
+        },
+        {
+          "cardId": "mazer-social-profiles-friends-and-events-contract",
+          "dependsOnCardIds": [
+            "mazer-run-quality-leaderboard-admission",
+            "mazer-shared-seed-daily-weekly-challenges"
+          ],
+          "reason": "Social features compose verified identity, rankings, and events."
         }
       ],
       "parallelTracks": [
@@ -395,13 +491,16 @@
         }
       ],
       "reconciliation": {
-        "source": "Operator-provided epic framework reconciled against the canonical DiscordOS Mazer board on 2026-07-11.",
+        "source": "Operator-provided epic framework and 2026-07-13 Endless, economy, entitlement, offline, and challenge decisions reconciled against the canonical DiscordOS Mazer board.",
         "newCardPolicy": "Create cards only for confirmed gaps after mapping existing ownership and dependencies.",
         "duplicateDecisions": [
           "Cross-viewport reliability remains the umbrella; browser layout and mobile shell remain distinct implementation children.",
           "Auth gate/persistence remains the state owner; auth UI flow hardening is a distinct successor for inputs, keyboard, autofill, and player-safe errors.",
           "Rank-only display remains presentation-only and does not replace hidden progression ownership.",
-          "Green-and-white trail readability remains the release baseline; iridescent material work remains a later experiment rather than a duplicate active delivery."
+          "Green-and-white trail readability remains the release baseline; iridescent material work remains a later experiment rather than a duplicate active delivery.",
+          "Endless Progression is the canonical base mode; multiplayer survival remains a distinct later composition rather than a second base progression loop.",
+          "Rank remains the only public progression display; overall score, run quality, and verified leaderboard eligibility remain private versioned pipeline terms until an approved player-facing contract exists.",
+          "Browser-native installation prompting cannot be reliably entitlement-blocked; account access is enforced by the app and server entitlement layer while the PWA shell remains installable and offline-capable."
         ]
       }
     },
@@ -409,7 +508,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-13T17:51:59.716Z"
+    "liveSyncedAt": "2026-07-13T20:26:54.490Z"
   },
   "cards": [
     {
@@ -486,7 +585,7 @@
       "completionPercent": 72,
       "summary": "Document and redesign how player and AI run scores, hidden ratings, rank, target complexity, maze rating, and level bands choose the next maze without punitive regression.",
       "whyItMatters": "Progression must reward strong but imperfect runs, preserve meaningful rank differences, and keep player, AI, and generated-maze semantics explainable without exposing competing public metrics.",
-      "currentStatus": "The current contract stores separate player and AI-runner tracks, uses targetComplexity as the intended source of level/rank, and derives 0-100 paceScore from time, route efficiency, wrong turns, backtracks, reset use, render safety, and AI decision pressure. Current level bands are four target-complexity points wide and rank bands are E/D/C/B/A/S. Mazer PR #38 removed wrapped-route benchmark and scorer-implementation disagreement without changing thresholds, rank bands, historical progression, or account state. Run-quality v2 is now the prerequisite telemetry contract; no new metric changes rank or score until its multi-route and historical-data policy is approved. Formula terminology, representative outcome fixtures, hysteresis, and quality-approved offline calibration remain open.",
+      "currentStatus": "The current contract stores separate player and AI-runner tracks, uses targetComplexity as the intended source of level/rank, and derives 0-100 paceScore from time, route efficiency, wrong turns, backtracks, reset use, render safety, and AI decision pressure. Current level bands are four target-complexity points wide and rank bands are E/D/C/B/A/S. Mazer PR #38 removed wrapped-route benchmark and scorer-implementation disagreement without changing thresholds, rank bands, historical progression, or account state. Run-quality v2 is now the prerequisite telemetry contract; no new metric changes rank or score until its multi-route and historical-data policy is approved. Formula terminology, representative outcome fixtures, hysteresis, and quality-approved offline calibration remain open. Public presentation stays rank-only. A private versioned overall score may combine approved quality, level, and difficulty signals, but a failed Endless attempt cannot erase an already completed checkpoint.",
       "workBreakdown": [
         "Inventory every stored, derived, displayed, and telemetry-only progression field before changing formulas or labels.",
         "Define score, hidden rating, rank, level, band, target complexity, measured maze rating, difficulty, and complexity in one versioned contract.",
@@ -528,7 +627,10 @@
         "mazer-maze-feature-progression-parity",
         "mazer-ai-run-corpus-quality-calibration",
         "mazer-run-quality-metric-contract-v2",
-        "mazer-run-quality-player-results-ui"
+        "mazer-run-quality-player-results-ui",
+        "mazer-endless-progression-mode-contract",
+        "mazer-endless-content-band-manifest",
+        "mazer-run-quality-leaderboard-admission"
       ],
       "liveThreadId": "1524889572415377519",
       "liveMessageId": "1524889572415377519",
@@ -865,7 +967,10 @@
       "reactionEmojiName": "failure",
       "reactionEmojiId": "1507384094424694785",
       "liveThreadId": "1525041184274124860",
-      "liveMessageId": "1525041184274124860"
+      "liveMessageId": "1525041184274124860",
+      "relatedCardIds": [
+        "mazer-endless-content-band-manifest"
+      ]
     },
     {
       "id": "mazer-auth-remote-playbook-sync",
@@ -877,7 +982,7 @@
       "completionPercent": 88,
       "summary": "Finish the account-backed progression loop, remote cycle receipts, and Atlas/playbook handoff without exposing internal debug surfaces to players.",
       "whyItMatters": "Mazer needs continuity. Account-backed progress, cycle receipts, and Atlas reports are what let the game learn, tune difficulty, and preserve user/AI history across sessions.",
-      "currentStatus": "Remote cycle receipts, account-scoped progression, Supabase proof, Atlas-safe reports, compact AI decision scores, playable shortest-path comparison, render-safety pressure, and bounded AI reset proof are in place. Mazer PR #38 removes report-side scorer duplication, publishes scorer version `1.0.0`, validates scorer identity in Atlas reports, and preserves stored-versus-recomputed history. Run-quality v2 may add future compact aggregates only after its metric contract; no historical row will be rewritten or backfilled. Atlas-side consumer wiring, future receipt metadata, idempotent retry/outbox coverage, and explanation of the durable-receipt gap remain open.",
+      "currentStatus": "Remote cycle receipts, account-scoped progression, Supabase proof, Atlas-safe reports, compact AI decision scores, playable shortest-path comparison, render-safety pressure, and bounded AI reset proof are in place. Mazer PR #38 removes report-side scorer duplication, publishes scorer version `1.0.0`, validates scorer identity in Atlas reports, and preserves stored-versus-recomputed history. Run-quality v2 may add future compact aggregates only after its metric contract; no historical row will be rewritten or backfilled. Atlas-side consumer wiring, future receipt metadata, idempotent retry/outbox coverage, and explanation of the durable-receipt gap remain open. Future remote sync must reconcile offline checkpoint and receipt outboxes idempotently; stale remote state cannot overwrite a later valid local Endless checkpoint.",
       "workBreakdown": [
         "Keep compact remote cycle receipts behind the opt-in env flag and authenticated guard.",
         "Preserve player and AI progression tracks independently.",
@@ -908,7 +1013,9 @@
       "relatedCardIds": [
         "mazer-ai-run-corpus-quality-calibration",
         "mazer-run-quality-telemetry-capture-v2",
-        "mazer-run-quality-leaderboard-admission"
+        "mazer-run-quality-leaderboard-admission",
+        "mazer-offline-first-play-sync-and-conflict-contract",
+        "mazer-account-license-entitlement-contract"
       ],
       "liveThreadId": "1524889586021699684",
       "liveMessageId": "1524889586021699684",
@@ -965,7 +1072,7 @@
       "completionPercent": 94,
       "summary": "Finish the player-facing account gate and persistent-login behavior so Mazer matches the useful Fitness app login continuity without exposing auth internals.",
       "whyItMatters": "The game needs account continuity for progression, AI-runner history, and remote receipts, but the login flow still has to feel like a game surface instead of a debug form.",
-      "currentStatus": "Native inputs, remembered identity, local-only sign-out, real account proof, and production deploy alias proof exist. Remaining risk is longer mobile/form soak plus deeper production auth parity checks.",
+      "currentStatus": "Native inputs, remembered identity, local-only sign-out, real account proof, and production deploy alias proof exist. Remaining risk is longer mobile/form soak plus deeper production auth parity checks. Paid account access and retained Endless identity will be designed through entitlement and offline-sync contracts, without embedding purchase logic in the auth gate.",
       "workBreakdown": [
         "Keep guests on the animated menu with Login as the only gated action.",
         "Preserve signed-in sessions across reloads without storing tokens in local app state.",
@@ -992,7 +1099,11 @@
       "reactionEmojiName": "failure",
       "reactionEmojiId": "1507384094424694785",
       "liveThreadId": "1524974571059675198",
-      "liveMessageId": "1524974571059675198"
+      "liveMessageId": "1524974571059675198",
+      "relatedCardIds": [
+        "mazer-account-license-entitlement-contract",
+        "mazer-offline-first-play-sync-and-conflict-contract"
+      ]
     },
     {
       "id": "mazer-animation-smoothness-lifecycle",
@@ -1149,7 +1260,8 @@
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-diagonal-path-graph-contract",
       "relatedCardIds": [
         "mazer-fluid-controls-and-motion",
-        "mazer-moving-maze-lane-correction-contract"
+        "mazer-moving-maze-lane-correction-contract",
+        "mazer-endless-content-band-manifest"
       ],
       "reactionStatus": "failure",
       "reactionEmojiName": "failure",
@@ -1477,7 +1589,7 @@
       "category": "mazer",
       "summary": "Let an account earn AI Tokens and spend one during a playable maze so the existing AI player takes over and completes the remaining route.",
       "whyItMatters": "This gives players a bounded assist mechanic while reusing the AI navigation system as visible, account-aware gameplay instead of only menu telemetry.",
-      "currentStatus": "Backlog only. The existing player AI/navigation implementation is the dependency; no active implementation is started in this pass.",
+      "currentStatus": "Backlog only. The existing player AI/navigation implementation is the dependency; no active implementation is started in this pass. AI assistance is optional, earned at checkpoints or bought at a deliberately high coin cost; it cannot become required or a paid leaderboard advantage.",
       "workBreakdown": [
         "Award one AI Token for every 10 completed levels and store tokens per account.",
         "Allow token consumption during an active playable maze level.",
@@ -1503,7 +1615,9 @@
       ],
       "relatedCardIds": [
         "mazer-ai-level-rank-progression",
-        "mazer-first-time-tutorial-system"
+        "mazer-first-time-tutorial-system",
+        "mazer-shop-and-random-item-economy-contract",
+        "mazer-endless-progression-mode-contract"
       ],
       "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-ai-token-assisted-maze-completion",
@@ -1605,7 +1719,7 @@
       "category": "mazer",
       "summary": "Add animated coin pickups to valid maze tiles and persist a cosmetic-only account currency balance.",
       "whyItMatters": "Cosmetic unlocks need an in-game economy that does not corrupt maze scoring, AI behavior, or progression difficulty metrics.",
-      "currentStatus": "Backlog only. Currency is intended only for customization and cosmetic unlocks.",
+      "currentStatus": "Backlog only. Currency is intended only for customization and cosmetic unlocks. Coins are the earned Endless economy for cosmetics, approved random draws, and upgrades; they cannot directly purchase rank or leaderboard authority.",
       "workBreakdown": [
         "Place animated rotating coins on accessible valid maze tiles.",
         "Collect coins when the player enters a coin tile.",
@@ -1635,7 +1749,12 @@
       "reactionEmojiName": "failure",
       "reactionEmojiId": "1507384094424694785",
       "liveThreadId": "1525045162559017021",
-      "liveMessageId": "1525045162559017021"
+      "liveMessageId": "1525045162559017021",
+      "relatedCardIds": [
+        "mazer-endless-progression-mode-contract",
+        "mazer-shop-and-random-item-economy-contract",
+        "mazer-endless-content-band-manifest"
+      ]
     },
     {
       "id": "mazer-data-driven-cosmetic-theme-catalog",
@@ -1728,7 +1847,7 @@
       "category": "mazer",
       "summary": "Add deterministic enemy navigation that pursues the player's current position instead of the maze endpoint.",
       "whyItMatters": "Enemies are a major difficulty and urgency layer, but they need a testable movement contract before combat or item systems are added.",
-      "currentStatus": "Backlog only. Enemy spawn rules, counts, difficulty scaling, visual design, balancing, and item interactions remain unresolved; future pursuit must respect cloak masking, frozen-enemy duration windows, and multiplayer target ownership.",
+      "currentStatus": "Backlog only. Enemy spawn rules, counts, difficulty scaling, visual design, balancing, and item interactions remain unresolved; future pursuit must respect cloak masking, frozen-enemy duration windows, and multiplayer target ownership. In canonical Endless mode, enemy collision resets only the current maze attempt; the last completed checkpoint remains durable.",
       "workBreakdown": [
         "Reuse existing player-AI compass/navigation concepts where they fit.",
         "Use pathfinding toward the visible, targetable player position rather than the maze endpoint.",
@@ -1758,7 +1877,9 @@
         "mazer-turn-synchronous-world-simulation",
         "mazer-invisibility-cloak-item",
         "mazer-endless-multiplayer-survival-mode",
-        "mazer-multiplayer-foundation"
+        "mazer-multiplayer-foundation",
+        "mazer-endless-progression-mode-contract",
+        "mazer-endless-content-band-manifest"
       ],
       "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-enemy-pursuit-ai",
@@ -1825,7 +1946,7 @@
       "category": "mazer",
       "summary": "Add mystery-box pickups that grant one held usable item with a visible action button and deterministic bounded AI evaluation.",
       "whyItMatters": "Items create tactical variation, but they must be tied to enemy/combat and turn-simulation contracts before implementation.",
-      "currentStatus": "Backlog only. Combat, projectile targeting, duration, probability, cloak behavior, pass-through collision, and balance rules remain unresolved.",
+      "currentStatus": "Backlog only. Combat, projectile targeting, duration, probability, cloak behavior, pass-through collision, and balance rules remain unresolved. Mystery boxes are the first player-item unlock after the enemy band; coin upgrades can expand eligible box contents only through a versioned content manifest.",
       "workBreakdown": [
         "Render a one-tile mystery box with yellow question mark, blue body, animated sheen, and a three-second blue-to-light-blue pulse.",
         "Collect the box by reaching its tile and randomly select one held item.",
@@ -1855,7 +1976,9 @@
         "mazer-turn-synchronous-world-simulation",
         "mazer-enemy-pursuit-ai",
         "mazer-invisibility-cloak-item",
-        "mazer-endless-multiplayer-survival-mode"
+        "mazer-endless-multiplayer-survival-mode",
+        "mazer-shop-and-random-item-economy-contract",
+        "mazer-endless-content-band-manifest"
       ],
       "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-mystery-box-usable-item-system",
@@ -2207,7 +2330,7 @@
       "completionPercent": 0,
       "summary": "Audit and normalize maze-feature introduction across level bands and menu/play modes through one traceable feature registry or equivalent single source of truth.",
       "whyItMatters": "A numeric difficulty profile is not enough when preview and playable mazes introduce different features or edge paths silently disappear. Every feature must have an intentional band, mode, and difficulty contribution.",
-      "currentStatus": "Current profiles already control scale, checkpoints, shortcuts, wrap requirements, route reinforcement, and perimeter feeders. Menu and play have separate build kinds while sharing high-level selection. There is no complete feature inventory/matrix proving what is always-on, level-gated, mode-specific, experimental, deprecated, or accidentally disconnected. The corpus lane will require future run receipts to retain a bounded feature-set or feature-registry version so topology outcomes can be analyzed by level band without guessing from timestamps.",
+      "currentStatus": "Current profiles already control scale, checkpoints, shortcuts, wrap requirements, route reinforcement, and perimeter feeders. Menu and play have separate build kinds while sharing high-level selection. There is no complete feature inventory/matrix proving what is always-on, level-gated, mode-specific, experimental, deprecated, or accidentally disconnected. The corpus lane will require future run receipts to retain a bounded feature-set or feature-registry version so topology outcomes can be analyzed by level band without guessing from timestamps. Endless now needs extensible 0-999-plus content bands: coins, then enemies, then player items beginning with mystery boxes, then obstacles, traps, puzzles, and environments.",
       "workBreakdown": [
         "Inventory every actual maze-generation, graph, rendering, and parity feature with its code owner and current menu/play behavior.",
         "Create a feature matrix with availability, level-band introduction, parameter range, difficulty contribution, mode compatibility, and intentional exclusion reason.",
@@ -2243,7 +2366,9 @@
         "mazer-edge-wrap-topology-and-notch-fill",
         "mazer-play-mode-perpetual-loop",
         "mazer-ai-level-rank-progression",
-        "mazer-ai-run-corpus-quality-calibration"
+        "mazer-ai-run-corpus-quality-calibration",
+        "mazer-endless-content-band-manifest",
+        "mazer-obstacle-trap-puzzle-environment-contract"
       ],
       "reactionStatus": "failure",
       "reactionEmojiName": "failure",
@@ -2489,39 +2614,48 @@
     {
       "id": "mazer-run-quality-leaderboard-admission",
       "title": "mazer: run-quality leaderboard admission",
-      "state": "backlog",
-      "priority": "medium",
+      "state": "open",
+      "priority": "high",
       "category": "mazer",
-      "summary": "Decide whether any versioned run-quality metric is safe and meaningful for a future leaderboard.",
+      "summary": "Define a verified seasonal global leaderboard that displays rank only while consuming a private versioned overall-score and run-quality pipeline.",
       "whyItMatters": "Leaderboards require stable definitions, anti-cheat policy, account identity, retention rules, and an intentionally public ranking model; none should be inferred from telemetry receipts.",
-      "currentStatus": "Backlog decision gate. No leaderboard runtime, schema, or public ranking surface exists today.",
+      "currentStatus": "Planning gate. Endless account holders should have a global leaderboard with public rank only. A private overall score may use approved run quality, maze level, delivered difficulty, and other versioned signals; raw client totals and historical backfill are not authoritative.",
       "workBreakdown": [
-        "Choose eligible metric versions and tie-break rules.",
-        "Define cheat resistance, season/reset, privacy, moderation, and deletion policies.",
-        "Design minimal server-owned read/write boundaries and RLS requirements before implementation."
+        "Define seasons, eligibility, privacy, tie-break, moderation, and reset policy.",
+        "Specify a server-verifiable versioned run receipt and anti-tamper score envelope.",
+        "Define private overall-score normalization while preserving public rank-only presentation.",
+        "Define provisional offline, delayed-sync, review, and dispute behavior."
       ],
       "nextActions": [
-        "Revisit only after telemetry v2 and remote receipt governance are proven.",
-        "Do not expose private receipt data or create a leaderboard table during planning."
+        "Finish Endless and metric contracts before designating any score authoritative.",
+        "Decide season cadence and visibility defaults.",
+        "Keep Supabase read-only until a separate implementation admission."
       ],
       "acceptanceCriteria": [
-        "Public ranking semantics, anti-cheat, privacy, retention, and moderation decisions are approved.",
-        "A separate implementation plan identifies backend, UI, and verification ownership."
+        "Published entries trace to versioned verified run receipts.",
+        "Public UI presents rank only.",
+        "Offline reconciliation, privacy, cheating, and tie-break rules are deterministic."
       ],
       "proofPlan": [
-        "Review a threat model and data-flow design before any schema or UI implementation."
+        "Review adversarial receipt and tie-break fixtures.",
+        "Run deterministic score-normalization tests before any remote implementation."
       ],
       "reference": "repos/mazer/docs/MAZER_SUPABASE_STORAGE.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-run-quality-leaderboard-admission",
       "relatedCardIds": [
         "mazer-run-quality-telemetry-capture-v2",
-        "mazer-auth-remote-playbook-sync"
+        "mazer-auth-remote-playbook-sync",
+        "mazer-endless-progression-mode-contract",
+        "mazer-account-license-entitlement-contract",
+        "mazer-shared-seed-daily-weekly-challenges"
       ],
       "reactionStatus": "failure",
       "reactionEmojiName": "failure",
       "reactionEmojiId": "1507384094424694785",
       "liveThreadId": "1526284213803024565",
-      "liveMessageId": "1526284213803024565"
+      "liveMessageId": "1526284213803024565",
+      "markerName": "Verified global rank admission",
+      "completionPercent": 0
     },
     {
       "id": "mazer-run-quality-achievement-admission",
@@ -2766,6 +2900,419 @@
       "reactionEmojiId": "1507384094424694785",
       "liveThreadId": "1526284241061543996",
       "liveMessageId": "1526284241061543996"
+    },
+    {
+      "id": "mazer-endless-progression-mode-contract",
+      "title": "mazer: Endless Progression mode contract",
+      "state": "open",
+      "priority": "high",
+      "category": "mazer",
+      "markerName": "Canonical Endless mode contract",
+      "completionPercent": 0,
+      "summary": "Define Endless as the canonical mode: level chain, completion checkpoint, current-attempt reset, durable resume, private score envelope, and result receipt.",
+      "whyItMatters": "Coins, enemies, items, content gates, challenges, leaderboards, and offline recovery need one stable base-mode contract.",
+      "currentStatus": "Planning admission. Completion advances the durable checkpoint; enemy pressure/failure resets only the current maze attempt; leaving later resumes from the last completed checkpoint; public UI remains rank-only while a private versioned score is retained for trusted systems.",
+      "workBreakdown": [
+        "Define run, attempt, completion, checkpoint, resume, abandon, retry, and failure states.",
+        "Define deterministic seed/level sequencing and versioned result receipts.",
+        "Specify reset scope for enemy, player, close/reopen, offline reconnect, and later hazards.",
+        "Define private score inputs and exclude raw client totals from authority."
+      ],
+      "nextActions": [
+        "Inventory current lifecycle, reset, progression, and receipt state.",
+        "Write table-driven transitions before implementation."
+      ],
+      "acceptanceCriteria": [
+        "Completion, failure, abandon, and resume have non-overlapping deterministic outcomes.",
+        "Checkpoint durability and score version are explicit.",
+        "Existing progression is preserved until a reviewed migration exists."
+      ],
+      "proofPlan": [
+        "Review lifecycle fixtures for completion, failure, close/reopen, and offline resume."
+      ],
+      "reference": "repos/mazer/src/legacy-runtime/legacyPlayLifecycle.ts",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-endless-progression-mode-contract",
+      "relatedCardIds": [
+        "mazer-play-mode-perpetual-loop",
+        "mazer-turn-synchronous-world-simulation",
+        "mazer-maze-feature-progression-parity",
+        "mazer-ai-level-rank-progression",
+        "mazer-run-quality-leaderboard-admission"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1526324027864645693",
+      "liveMessageId": "1526324027864645693"
+    },
+    {
+      "id": "mazer-endless-content-band-manifest",
+      "title": "mazer: Endless content-band manifest",
+      "state": "open",
+      "priority": "high",
+      "category": "mazer",
+      "markerName": "Extensible Endless content bands",
+      "completionPercent": 0,
+      "summary": "Define an extensible 0-999-plus level-band manifest for deliberate, testable feature introduction.",
+      "whyItMatters": "A scalable progression spine prevents scattered level checks as coins, enemies, items, diagonal paths, zoom, obstacles, and environments arrive.",
+      "currentStatus": "Planning admission. Operator sequence: coins, then enemies, then player items starting with mystery boxes, then obstacles/traps/puzzles/environment. Diagonal paths and zoom can be gated when scale requires them.",
+      "workBreakdown": [
+        "Define band schema, content flags, safe fallback, and versioning.",
+        "Map levels to maze size, topology, coins, enemies, items, obstacles, puzzles, environments, camera, and assistance.",
+        "Define rollout seed packs at first-introduction boundaries."
+      ],
+      "nextActions": [
+        "Inventory existing level and target-complexity concepts.",
+        "Draft the initial band table without claiming 0-999 content is implemented."
+      ],
+      "acceptanceCriteria": [
+        "Every level resolves to one deterministic supported band.",
+        "New content can arrive without ad hoc game-loop branching.",
+        "Bands preserve seed/replay and save compatibility."
+      ],
+      "proofPlan": [
+        "Run band-resolution tests and review fixed seeds at each boundary."
+      ],
+      "reference": "repos/mazer/src/legacy-runtime/legacyGenerationLifecycle.ts",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-endless-content-band-manifest",
+      "relatedCardIds": [
+        "mazer-endless-progression-mode-contract",
+        "mazer-maze-feature-progression-parity",
+        "mazer-procedural-difficulty-generator-shaping",
+        "mazer-play-camera-zoom-minimap"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1526324032222396428",
+      "liveMessageId": "1526324032222396428"
+    },
+    {
+      "id": "mazer-shop-and-random-item-economy-contract",
+      "title": "mazer: shop and random-item economy contract",
+      "state": "open",
+      "priority": "medium",
+      "category": "mazer",
+      "markerName": "Coin shop and random-item contract",
+      "completionPercent": 0,
+      "summary": "Specify earned-coin shop, Crossy Road-style random draws, cosmetic inventory, and mystery-box pool upgrades without pay-to-win scoring.",
+      "whyItMatters": "Random unlocks need transparent pools, duplicate handling, economy sinks, and a hard separation between cosmetics, optional tools, and competitive integrity.",
+      "currentStatus": "Planning admission. Coins are earned in Endless. The shop can award cosmetics and allowed upgrades; coin upgrades can expand mystery-box pools. AI assistance is optional, expensive/earned, and never required or a paid ranking advantage.",
+      "workBreakdown": [
+        "Define coin sources, balances, pricing, duplicate conversion, draw odds, and audit events.",
+        "Separate cosmetic pools from gameplay pools and define fairness rules.",
+        "Specify item-pool upgrades and content-band eligibility.",
+        "Define account, offline outbox, refund, and anti-tamper boundaries without payments."
+      ],
+      "nextActions": [
+        "Choose initial draw and duplicate policy.",
+        "Set non-pay-to-win rules for assistance and competitive modes."
+      ],
+      "acceptanceCriteria": [
+        "Every draw has a deterministic auditable result.",
+        "Cosmetic and gameplay effects are visibly distinct.",
+        "No transaction directly changes rank or leaderboard authority."
+      ],
+      "proofPlan": [
+        "Review seeded draw and duplicate fixtures before implementation."
+      ],
+      "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-shop-and-random-item-economy-contract",
+      "relatedCardIds": [
+        "mazer-maze-coin-pickups-cosmetic-currency",
+        "mazer-customization-inventory-cosmetic-unlocks",
+        "mazer-data-driven-cosmetic-theme-catalog",
+        "mazer-mystery-box-usable-item-system",
+        "mazer-ai-token-assisted-maze-completion"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1526324035640627260",
+      "liveMessageId": "1526324035640627260"
+    },
+    {
+      "id": "mazer-shared-seed-daily-weekly-challenges",
+      "title": "mazer: shared-seed daily and weekly challenges",
+      "state": "backlog",
+      "priority": "high",
+      "category": "mazer",
+      "summary": "Define account-scoped daily and weekly shared-seed challenge events with verified completion, fairness, and seasonal rules.",
+      "whyItMatters": "Daily and weekly competition needs canonical Endless receipts and verified rankings to remain fair.",
+      "currentStatus": "Backlog. Daily is confirmed and weekly desired; schedule, rewards, timezone, season, and anti-cheat policies are not implemented.",
+      "workBreakdown": [
+        "Define seed issuance, time boundaries, retries, rewards, and eligibility.",
+        "Specify version-pinned challenge runs and verified submission.",
+        "Define offline provisional play and reconciliation."
+      ],
+      "nextActions": [
+        "Wait for Endless and verified leaderboard contracts.",
+        "Choose rollover and reward policy."
+      ],
+      "acceptanceCriteria": [
+        "Eligible players receive equivalent version-pinned conditions.",
+        "Late/offline results have deterministic treatment.",
+        "Rewards cannot duplicate through retry or clock manipulation."
+      ],
+      "proofPlan": [
+        "Run clock-boundary, seed, and receipt fixtures."
+      ],
+      "reference": "repos/mazer/src/legacy-runtime/mazeCycleTelemetry.ts",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-shared-seed-daily-weekly-challenges",
+      "relatedCardIds": [
+        "mazer-endless-progression-mode-contract",
+        "mazer-run-quality-leaderboard-admission",
+        "mazer-social-profiles-friends-and-events-contract"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1526324039172358246",
+      "liveMessageId": "1526324039172358246"
+    },
+    {
+      "id": "mazer-offline-first-play-sync-and-conflict-contract",
+      "title": "mazer: offline-first play sync and conflict contract",
+      "state": "open",
+      "priority": "high",
+      "category": "mazer",
+      "markerName": "Offline checkpoint and receipt reconciliation",
+      "completionPercent": 0,
+      "summary": "Specify total offline play, durable local checkpoints/receipts, reconnect outbox behavior, and deterministic conflicts.",
+      "whyItMatters": "The game must remain playable without network while preserving earned progress and preventing duplicated rewards.",
+      "currentStatus": "Planning admission. Fully offline play with later resync is required. No remote write or schema work is authorized by this card.",
+      "workBreakdown": [
+        "Define local checkpoint, progress, inventory, receipt, and sync-outbox ownership.",
+        "Specify idempotency, ordering, retry, conflict, and acknowledgement rules.",
+        "Define bounded offline entitlement grace.",
+        "Define player-safe sync status and recovery."
+      ],
+      "nextActions": [
+        "Inventory current local storage and remote receipt behavior.",
+        "Choose hierarchy for checkpoint, coin, inventory, and verified-run conflicts."
+      ],
+      "acceptanceCriteria": [
+        "Offline completion and resume work without network.",
+        "Reconnect cannot lose valid later checkpoints or duplicate coins/items.",
+        "Outbox items are idempotent and diagnosable."
+      ],
+      "proofPlan": [
+        "Run offline/reconnect/duplicate/reordered fixtures and restart recovery."
+      ],
+      "reference": "repos/mazer/docs/MAZER_SUPABASE_STORAGE.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-offline-first-play-sync-and-conflict-contract",
+      "relatedCardIds": [
+        "mazer-auth-remote-playbook-sync",
+        "mazer-account-scoped-settings-persistence",
+        "mazer-endless-progression-mode-contract",
+        "mazer-installable-pwa-offline-shell"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1526324042842247288",
+      "liveMessageId": "1526324042842247288"
+    },
+    {
+      "id": "mazer-installable-pwa-offline-shell",
+      "title": "mazer: installable PWA and offline shell",
+      "state": "open",
+      "priority": "high",
+      "category": "mazer",
+      "markerName": "Installable offline application shell",
+      "completionPercent": 0,
+      "summary": "Define installable PWA shell, caching, offline boot, update lifecycle, and account-aware access.",
+      "whyItMatters": "Mazer should be highly installable without breaking offline play, updates, or account access.",
+      "currentStatus": "Planning admission. Native browser install prompts cannot be reliably entitlement-blocked. The shell remains installable while playable access is enforced by app/server entitlement and offline policy.",
+      "workBreakdown": [
+        "Define manifest, service worker, cache, offline fallback, and update behavior.",
+        "Specify entitlement-aware boot states and offline graceful access.",
+        "Define cache invalidation, asset versioning, diagnostics, and data retention."
+      ],
+      "nextActions": [
+        "Choose PWA strategy and browser matrix.",
+        "Complete offline contract before caching mutable progress."
+      ],
+      "acceptanceCriteria": [
+        "Supported devices can install and open offline.",
+        "Updates cannot silently corrupt checkpoints or assets.",
+        "Access uses entitlement, not install-prompt control."
+      ],
+      "proofPlan": [
+        "Run install/update/offline boot tests in supported profiles."
+      ],
+      "reference": "repos/mazer/public/manifest.webmanifest",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-installable-pwa-offline-shell",
+      "relatedCardIds": [
+        "mazer-offline-first-play-sync-and-conflict-contract",
+        "mazer-account-license-entitlement-contract",
+        "mazer-web-share-metadata-and-preview-asset"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1526324046260732105",
+      "liveMessageId": "1526324046260732105"
+    },
+    {
+      "id": "mazer-account-license-entitlement-contract",
+      "title": "mazer: account license and entitlement contract",
+      "state": "open",
+      "priority": "high",
+      "category": "mazer",
+      "markerName": "Paid account access and entitlement contract",
+      "completionPercent": 0,
+      "summary": "Specify the $5 paid-account model, entitlement state, restoration, offline grace, and server-authoritative access.",
+      "whyItMatters": "A paid game needs a secure durable entitlement model before checkout or client gating exists.",
+      "currentStatus": "Planning admission. The operator direction is a $5 account-bound purchase. Entitlement must not be trusted solely from client storage or conflated with browser installation.",
+      "workBreakdown": [
+        "Define products, entitlement states, account binding, restoration, revocation, support, refund, and migration.",
+        "Define server-authoritative verification and security boundaries.",
+        "Define trial/demo, logged-out, offline-grace, expired, and error behavior."
+      ],
+      "nextActions": [
+        "Choose provider, territories/tax, refund/support policy, and trial policy.",
+        "Review current auth/storage architecture."
+      ],
+      "acceptanceCriteria": [
+        "Every access decision has explicit entitlement source and failure mode.",
+        "Purchase restoration works across supported devices.",
+        "Offline behavior cannot mint permanent entitlement."
+      ],
+      "proofPlan": [
+        "Review entitlement state machine and adversarial client-state fixtures."
+      ],
+      "reference": "repos/mazer/docs/MAZER_SUPABASE_STORAGE.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-account-license-entitlement-contract",
+      "relatedCardIds": [
+        "mazer-auth-gate-persistent-login",
+        "mazer-auth-ui-flow-hardening",
+        "mazer-paid-account-checkout-and-access",
+        "mazer-installable-pwa-offline-shell"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1526324050434195617",
+      "liveMessageId": "1526324050434195617"
+    },
+    {
+      "id": "mazer-paid-account-checkout-and-access",
+      "title": "mazer: paid-account checkout and game access",
+      "state": "backlog",
+      "priority": "high",
+      "category": "mazer",
+      "summary": "Implement the approved checkout, verification, restoration, and player-safe paid access flow.",
+      "whyItMatters": "Purchase flows are security- and policy-sensitive and must follow the entitlement contract.",
+      "currentStatus": "Backlog. Provider, jurisdiction/tax, refund/support, trial, and entitlement policy remain decisions; no payment code or production configuration is planned.",
+      "workBreakdown": [
+        "Integrate the approved provider with server verification.",
+        "Persist and restore entitlement without payment secrets.",
+        "Build purchase, restore, pending, denied, and support UI."
+      ],
+      "nextActions": [
+        "Wait for entitlement contract and payment policy."
+      ],
+      "acceptanceCriteria": [
+        "No client-only flag grants paid access.",
+        "Verified purchase and restoration are tested.",
+        "Support/refund/error paths are accessible."
+      ],
+      "proofPlan": [
+        "Run provider sandbox and webhook replay tests after implementation approval."
+      ],
+      "reference": "repos/mazer/docs/MAZER_SUPABASE_STORAGE.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-paid-account-checkout-and-access",
+      "relatedCardIds": [
+        "mazer-account-license-entitlement-contract",
+        "mazer-auth-gate-persistent-login"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1526324053999357982",
+      "liveMessageId": "1526324053999357982"
+    },
+    {
+      "id": "mazer-obstacle-trap-puzzle-environment-contract",
+      "title": "mazer: obstacle, trap, puzzle, and environment contract",
+      "state": "open",
+      "priority": "medium",
+      "category": "mazer",
+      "markerName": "Environment gameplay contract",
+      "completionPercent": 0,
+      "summary": "Define later Endless obstacle, trap, puzzle, and environment systems: legality, interaction, failure, and content-band rollout.",
+      "whyItMatters": "These systems add depth after coins, enemies, and items, but uncontrolled additions can break maze legality, replay, and expectations.",
+      "currentStatus": "Planning admission. This work follows coins, enemies, and player items. No environmental mechanic is selected for implementation.",
+      "workBreakdown": [
+        "Classify environment systems by graph, collision, turn, and save impact.",
+        "Define legal placement and winnable-route guarantees.",
+        "Define failure/reset and checkpoint interaction.",
+        "Assign content gates, observability, accessibility, and readability."
+      ],
+      "nextActions": [
+        "Choose first independently testable mechanic after prior bands deliver."
+      ],
+      "acceptanceCriteria": [
+        "Every enabled mechanic has legality, interaction, and persistence rules.",
+        "Generation cannot create unwinnable mandatory routes.",
+        "Failure respects current-attempt checkpoint policy."
+      ],
+      "proofPlan": [
+        "Run generated-route solvability and deterministic turn/collision traces."
+      ],
+      "reference": "repos/mazer/src/legacy-runtime/legacyMaze.ts",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-obstacle-trap-puzzle-environment-contract",
+      "relatedCardIds": [
+        "mazer-endless-content-band-manifest",
+        "mazer-procedural-difficulty-generator-shaping",
+        "mazer-turn-synchronous-world-simulation",
+        "mazer-enemy-pursuit-ai"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1526324056893161655",
+      "liveMessageId": "1526324056893161655"
+    },
+    {
+      "id": "mazer-social-profiles-friends-and-events-contract",
+      "title": "mazer: social profiles, friends, and events contract",
+      "state": "backlog",
+      "priority": "medium",
+      "category": "mazer",
+      "summary": "Define later social identity, friends, events, sharing, privacy, moderation, and notification boundaries.",
+      "whyItMatters": "Social features must compose verified rankings/events without exposing account data or creating an unmoderated surface.",
+      "currentStatus": "Backlog. Leaderboards and shared challenges come first; friends, profiles, events, and notifications are not designed or implemented.",
+      "workBreakdown": [
+        "Define public profile fields, privacy, friend model, blocking/reporting, and safety policy.",
+        "Define events, sharing, notifications, and moderation ownership.",
+        "Separate social display from progression and entitlement data."
+      ],
+      "nextActions": [
+        "Wait for verified leaderboard and challenge foundations.",
+        "Choose whether launch is profiles-only or has no friend graph."
+      ],
+      "acceptanceCriteria": [
+        "Privacy, moderation, and reporting are explicit.",
+        "Social data remains separate from credentials/entitlements.",
+        "Events consume trusted shared-seed and leaderboard contracts."
+      ],
+      "proofPlan": [
+        "Review privacy and abuse-case matrices before backend work."
+      ],
+      "reference": "repos/mazer/docs/MAZER_SUPABASE_STORAGE.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-social-profiles-friends-and-events-contract",
+      "relatedCardIds": [
+        "mazer-run-quality-leaderboard-admission",
+        "mazer-shared-seed-daily-weekly-challenges",
+        "mazer-auth-gate-persistent-login"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1526324059707801794",
+      "liveMessageId": "1526324059707801794"
     }
   ]
 }
