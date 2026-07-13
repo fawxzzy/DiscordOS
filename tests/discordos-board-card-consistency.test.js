@@ -106,3 +106,17 @@ test("explicitly superseded archived thread is retained as history without card 
   assert.equal(row.supersededThreadId, "456");
   assert.deepEqual(row.reasonCodes, []);
 });
+
+test("archived active-board source with a Completed link is a valid retained pair", () => {
+  const row = _internals.inspectThread({
+    board: { id: "fitness", role: "active" },
+    thread: { id: "123", name: "Completed source", thread_metadata: { archived: true } },
+    starter: {
+      content: `${journal.CARD_START}\nATLAS-CARD-ID: \`FIT-1\`\n- state: \`review\`\n- updated: \`2026-07-13\`\nATLAS-COMPLETED-CARD: https://discord.com/channels/guild/456\n${journal.CARD_END}`,
+    },
+    messages: [{ content: "ATLAS-JOURNAL-EVENT-ID: `evt-1`" }],
+  });
+  assert.equal(row.ok, true);
+  assert.equal(row.completedThreadIdLink, "456");
+  assert(!row.reasonCodes.includes("active_card_archived"));
+});

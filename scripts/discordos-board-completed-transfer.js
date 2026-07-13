@@ -181,9 +181,18 @@ function buildCompletedMessage(options) {
 
 function buildSourceMessage({ sourceContent, destinationUrl, cardId }) {
   const marker = `ATLAS-COMPLETED-CARD: ${destinationUrl}`;
-  if (String(sourceContent || "").includes(marker)) return String(sourceContent || "");
-  const suffix = `\n\n## Archived completion\n- card id: \`${cardId}\`\n- completed card: ${destinationUrl}\n${marker}`;
-  return `${truncateForSuffix(sourceContent, suffix)}${suffix}`.slice(0, MAX_MESSAGE_LENGTH);
+  const value = String(sourceContent || "").trim();
+  if (value.includes(marker) && value.includes(journal.CARD_END)) return value;
+  const completion = `\n\n## Archived completion\n- card id: \`${cardId}\`\n- completed card: ${destinationUrl}\n${marker}`;
+  if (value.includes(journal.CARD_START)) {
+    const end = value.indexOf(journal.CARD_END);
+    const managed = (end >= 0 ? value.slice(0, end) : value)
+      .replace(/\n+## Archived completion[\s\S]*$/i, "")
+      .trimEnd();
+    const suffix = `${completion}\n${journal.CARD_END}`;
+    return `${truncateForSuffix(managed, suffix)}${suffix}`.slice(0, MAX_MESSAGE_LENGTH);
+  }
+  return `${truncateForSuffix(value, completion)}${completion}`.slice(0, MAX_MESSAGE_LENGTH);
 }
 
 async function listForumThreads({ forumChannelId, guildId, token, fetchImpl = fetch }) {
