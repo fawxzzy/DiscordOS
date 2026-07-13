@@ -144,8 +144,8 @@ test("mazer feedback board reads committed cards", async () => {
   assert.equal(result.legacyForumChannelId, "1524844302981926972");
   assert.equal(result.cardCount, 42);
   assert.equal(result.openCardCount, 26);
-  assert.equal(result.readyCardCount, 1);
-  assert.equal(result.completedCardCount, 3);
+  assert.equal(result.readyCardCount, 0);
+  assert.equal(result.completedCardCount, 4);
   assert.equal(result.blockedCardCount, 0);
   assert.equal(result.backlogCardCount, 12);
   assert.equal(result.reactionReadyCardCount, 42);
