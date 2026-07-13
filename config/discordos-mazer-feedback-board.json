@@ -334,7 +334,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-13T02:38:21.828Z"
+    "liveSyncedAt": "2026-07-13T02:48:17.393Z"
   },
   "cards": [
     {
@@ -704,7 +704,7 @@
       "completionPercent": 41,
       "summary": "Replace snappy tile jumps and hard-coded stick segments with smoother player motion, dynamic directional intent, and bounded assistance through unambiguous zigzag corridors.",
       "whyItMatters": "Fast timed play will fail if the controls feel segmented, sticky, or jumpy. The player should feel like they are steering through a path, not stepping through a debug grid.",
-      "currentStatus": "Tap/hold parity, canonical movement plumbing, ordered stick candidates, and wrap snap improvements exist. The current controller can select legal adjacent moves but does not yet preserve a macro direction through a bounded, unambiguous alternating corridor; that behavior must not become branch selection or wall clipping.",
+      "currentStatus": "Tap/hold parity, canonical movement plumbing, ordered stick candidates, and wrap snap improvements exist. Merged PR #54 adds a maintained keyboard-versus-stick matrix: keyboard completed 95/95 and stick 149/149 planned moves with exact accepted-turn parity, lifecycle/lock/fresh-ready proof, 60 FPS, and zero recent spikes. The 41% marker remains unchanged because macro direction through bounded alternating corridors and broader feel tuning are separate unfinished outcomes.",
       "workBreakdown": [
         "Make stick angle represent movement intent rather than hard-coded segment commands.",
         "Resolve intent against legal graph neighbors dynamically every movement step.",
@@ -1195,14 +1195,14 @@
     {
       "id": "mazer-player-input-movement-correctness",
       "title": "mazer: player input and movement correctness",
-      "state": "ready",
+      "state": "completed",
       "priority": "high",
       "category": "mazer",
       "markerName": "Player input and movement correctness",
-      "completionPercent": 90,
+      "completionPercent": 100,
       "summary": "Fix the movement correctness defects where diagonal movement can be faster than cardinal movement and one arrow-key action can move the player twice.",
       "whyItMatters": "Skill, score, route efficiency, and maze difficulty all depend on movement being fair and measurable. Input bugs poison progression analytics.",
-      "currentStatus": "Ready at an unchanged 90% for one bounded input-equivalence harness slice. PR #40 proves keyboard first-tap and repeat correctness; PR #53 proves sustained stick completion across three cycles. The admitted slice composes the existing live-play QA into a maintained keyboard-versus-stick matrix and requires both methods to preserve legal route progress, accepted-world-turn parity, lifecycle locks, fresh ready state, visible/appropriate controls, and frame health without changing the cardinal-step planner. Ownership is limited to analysis scripts, package entrypoints, focused tests, and evidence docs.",
+      "currentStatus": "Completed by merged Mazer PR #54 with prior PR #40 and PR #53 evidence. The maintained phone equivalence matrix completed keyboard 95/95 and stick 149/149 planned moves, with accepted world turns exactly matching each route, no failed movement, full lifecycle and lock-probe proof, fresh ready mazes at turn zero, 60 FPS, and zero recent spikes. The three-cycle stick soak separately completed 272/272 moves and all 12 lock probes. Focused verification passed 19 tests and full verification passed 43 files / 338 tests plus build. Cardinal input correctness is proof-backed at 100%; macro-corridor assistance remains on the separate fluid-controls card.",
       "workBreakdown": [
         "Audit keydown, keyup, browser repeat, and duplicate listener paths. First pass complete for buffered keyboard path.",
         "Ensure one accepted arrow-key command produces one visible movement step. Source-level guard added; browser proof still needed.",
@@ -1228,9 +1228,9 @@
       ],
       "reference": "repos/mazer/docs/ops/MAZER-PLAYER-INPUT-MOVEMENT-CORRECTNESS-PACKET-2026-07-11.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-player-input-movement-correctness",
-      "reactionStatus": "failure",
-      "reactionEmojiName": "failure",
-      "reactionEmojiId": "1507384094424694785",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851",
       "liveThreadId": "1525045147769770085",
       "liveMessageId": "1525045147769770085"
     },
