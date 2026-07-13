@@ -508,7 +508,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-13T20:33:26.188Z"
+    "liveSyncedAt": "2026-07-13T21:27:38.605Z"
   },
   "cards": [
     {
@@ -2911,7 +2911,7 @@
       "completionPercent": 0,
       "summary": "Define Endless as the canonical mode: level chain, completion checkpoint, current-attempt reset, durable resume, private score envelope, and result receipt.",
       "whyItMatters": "Coins, enemies, items, content gates, challenges, leaderboards, and offline recovery need one stable base-mode contract.",
-      "currentStatus": "In progress on Mazer branch codex/endless-progression-lifecycle from 6245efb9. The bounded first PR adds only a pure, versioned Endless attempt/checkpoint resolver and table-driven fixtures. Existing MenuScene behavior, progression storage version, remote writes, Supabase, enemies, economy, and leaderboard authority remain unchanged.",
+      "currentStatus": "Review/review-ready: Mazer PR #59 merged at c53d5787465dbd3523c2dd9d3b7728cc86cf4340 from codex/endless-progression-lifecycle-v2. The focused slice adds only a pure, versioned Endless attempt/checkpoint resolver and regression fixtures. Existing MenuScene behavior, progression storage version, remote writes, Supabase, enemies, economy, and leaderboard authority remain unchanged. The broader card remains active at 0% because scene wiring, persistence migration, and result authority are not part of this reviewed slice.",
       "workBreakdown": [
         "Define run, attempt, completion, checkpoint, resume, abandon, retry, and failure states.",
         "Define deterministic seed/level sequencing and versioned result receipts.",
@@ -2920,8 +2920,8 @@
         "First PR: add the pure lifecycle resolver and fixture tests without runtime wiring or storage migration."
       ],
       "nextActions": [
-        "Implement and test the pure lifecycle resolver beside legacyPlayLifecycle.ts.",
-        "Run focused lifecycle/progression tests, lint, and full Mazer verification before review."
+        "Review merged PR #59 and retain its resolver as the contract boundary.",
+        "Admit a separate scene/persistence integration slice only after review; do not widen this PR."
       ],
       "acceptanceCriteria": [
         "Completion, failure, abandon, and resume have non-overlapping deterministic outcomes.",
@@ -2929,8 +2929,9 @@
         "Existing progression is preserved until a reviewed migration exists."
       ],
       "proofPlan": [
-        "Run lifecycle fixtures for completion, failure, abandon/resume intent, and reset scope.",
-        "Run full Mazer verification before moving the card to review."
+        "Focused proof: 3 test files, 33 tests passed, including checkpoint preservation and retry reset coverage.",
+        "Repository proof: lint passed; full verification passed with 45 test files and 341 tests; production build passed.",
+        "Review boundary: no runtime wiring, storage migration, Supabase, economy, enemies, leaderboard, or production deployment."
       ],
       "reference": "repos/mazer/src/legacy-runtime/legacyPlayLifecycle.ts",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-endless-progression-mode-contract",
