@@ -334,7 +334,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-13T00:41:57.445Z"
+    "liveSyncedAt": "2026-07-13T00:43:43.952Z"
   },
   "cards": [
     {
@@ -2017,14 +2017,14 @@
     {
       "id": "mazer-cross-viewport-ui-reliability",
       "title": "mazer: cross-viewport UI reliability and layout hardening",
-      "state": "open",
+      "state": "ready",
       "priority": "high",
       "category": "mazer",
       "markerName": "Cross-viewport UI reliability",
       "completionPercent": 78,
       "summary": "Coordinate the mobile safe-area/portrait and browser layout-persistence lanes through one viewport contract and proof matrix without turning either delivery into an offset patch.",
       "whyItMatters": "The same UI can be valid in a desktop canvas, narrow browser, mobile browser, installed PWA, or restored window only if viewport state, safe areas, and restoration behavior share deliberate rules.",
-      "currentStatus": "Merged Mazer PR #47 fixes the desktop Pause-overlay bottom-scroll proof timeout by using a real desktop capture context and the product's wheel-input path while retaining mobile pointer-drag proof and exact max-offset assertions. Focused capture-contract tests, desktop Pause bottom-state proof, mobile UI-surface proof, and full Mazer verification passed. The marker remains 78 because broader browser persistence, real-device safe areas, installed-PWA, authenticated overlays, and deterministic transitions remain open. Desktop proof also exposed a separate menu progression-badge/action gap of 8.5px against the required 10px; that product geometry issue is the next bounded candidate.",
+      "currentStatus": "Merged Mazer PR #47 fixes desktop Pause bottom-scroll proof and preserves mobile drag proof. The next product slice is Ready at unchanged 78%: raise desktop menu progression-badge/action separation from the proven 8.5px failure to the established 10px contract through canonical shared layout geometry, with focused and route-aware desktop/mobile regression proof. Broader browser persistence, real-device safe areas, installed-PWA, authenticated overlays, and deterministic transitions remain open.",
       "workBreakdown": [
         "Define canonical viewport, safe-area, visible-height, and no-overlap invariants for menu, Options, play, Pause, dialogs, HUD, controls, and scroll rails.",
         "Maintain the child boundary between mobile shell/device behavior and browser layout-state persistence.",
