@@ -62,6 +62,10 @@ test("canonical body normalizes metadata and preserves legacy context", () => {
 
 test("card titles repair mojibake and normalize dash separators", () => {
   assert.equal(
+    _internals.normalizeCardTitle("Feature: History \u00c3\u00a2\u00e2\u201a\u00ac\u00e2\u20ac\u009d Progress"),
+    "Feature: History - Progress"
+  );
+  assert.equal(
     _internals.normalizeCardTitle("Feature: History â€” Progress"),
     "Feature: History - Progress"
   );
@@ -78,6 +82,25 @@ test("managed card refresh replaces stale managed content without duplicating it
   assert.equal((body.match(/ATLAS-CARD-ID/g) || []).length, 1);
   assert(!body.includes("- state: `planning`"));
   assert(body.includes("Operator note"));
+});
+
+test("board provenance links survive canonical body compaction", () => {
+  const normalized = _internals.normalizeEvent(event({
+    card: {
+      ...event().card,
+      summary: "Historical record",
+      acceptanceCriteria: Array.from({ length: 30 }, (_, index) => `Long acceptance criterion ${index} ${"x".repeat(80)}`),
+      evidence: [
+        "proof passed",
+        "original card: https://discord.com/channels/guild/source-thread",
+      ],
+    },
+  }));
+  const body = _internals.buildCanonicalBody(normalized, "Legacy context");
+  assert(body.includes("## Board links"));
+  assert(body.includes("original card: https://discord.com/channels/guild/source-thread"));
+  assert(body.endsWith(_internals.CARD_END));
+  assert(body.length <= 2000);
 });
 
 test("journal entry contains stable identity, discoveries, and task correlation", () => {
