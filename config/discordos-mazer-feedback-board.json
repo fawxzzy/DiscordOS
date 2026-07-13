@@ -334,13 +334,13 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-13T00:54:55.635Z"
+    "liveSyncedAt": "2026-07-13T00:57:54.186Z"
   },
   "cards": [
     {
       "id": "mazer-ai-run-corpus-quality-calibration",
       "title": "mazer: AI run corpus quality, retention, and calibration",
-      "state": "open",
+      "state": "ready",
       "priority": "high",
       "category": "mazer",
       "markerName": "AI run corpus quality and calibration",
@@ -2024,7 +2024,7 @@
       "completionPercent": 78,
       "summary": "Coordinate the mobile safe-area/portrait and browser layout-persistence lanes through one viewport contract and proof matrix without turning either delivery into an offset patch.",
       "whyItMatters": "The same UI can be valid in a desktop canvas, narrow browser, mobile browser, installed PWA, or restored window only if viewport state, safe areas, and restoration behavior share deliberate rules.",
-      "currentStatus": "Merged Mazer PR #48 raises desktop menu progression-badge/action separation to the established 10px contract through canonical shared layout geometry while preserving the existing play-shell cadence. Focused layout tests passed 18/18, route-aware 1440x900 and 390x844 UI-surface proof passed including Pause bottom reachability, and full Mazer verification passed. The marker remains 78 because broader browser persistence, real-device safe areas, installed-PWA, authenticated overlays, and deterministic transitions remain open.",
+      "currentStatus": "Merged Mazer PR #48 raises desktop menu progression-badge/action separation to the established 10px contract through canonical shared layout geometry while preserving the existing play-shell cadence. The next bounded slice is Ready at unchanged 78%: port the preserved verification-only transition harness onto current main and prove deterministic guest/auth menu, play, and Pause geometry through 360x720 -> 1440x900 -> 360x720 -> 405x958 endpoints. This owns only the capture driver, shared capture tooling, package entry, and focused contract tests; broader real-device safe areas and installed-PWA proof remain open.",
       "workBreakdown": [
         "Define canonical viewport, safe-area, visible-height, and no-overlap invariants for menu, Options, play, Pause, dialogs, HUD, controls, and scroll rails.",
         "Maintain the child boundary between mobile shell/device behavior and browser layout-state persistence.",
