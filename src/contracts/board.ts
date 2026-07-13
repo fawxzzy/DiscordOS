@@ -12,11 +12,72 @@ export type DiscordOSBoardCardKind =
   | "moderation";
 
 export type DiscordOSBoardCardState =
+  | "intake"
+  | "planning"
+  | "ready"
   | "opened"
   | "in_progress"
+  | "review"
   | "blocked"
   | "completed"
+  | "archived"
   | "closed";
+
+export type DiscordOSBoardCardJournalKind =
+  | "admitted"
+  | "started"
+  | "checkpoint"
+  | "discovery"
+  | "blocker"
+  | "review"
+  | "completed"
+  | "correction";
+
+export interface DiscordOSBoardCardSnapshot {
+  id: string;
+  project: string;
+  sourceForumChannelId: string;
+  threadId: string | null;
+  title: string;
+  type: DiscordOSBoardCardKind;
+  state: DiscordOSBoardCardState;
+  priority: string;
+  owner: string;
+  progress: string;
+  summary: string;
+  objective: string;
+  acceptanceCriteria: string[];
+  discoveries: string[];
+  nextActions: string[];
+  blockers: string[];
+  evidence: string[];
+}
+
+export interface DiscordOSBoardCardJournalEntry {
+  kind: DiscordOSBoardCardJournalKind;
+  headline: string;
+  completed: string[];
+  discovered: string[];
+  next: string[];
+  blockers: string[];
+  evidence: string[];
+}
+
+export interface DiscordOSBoardCardJournalEvent {
+  schemaVersion: "atlas.board-card-journal.v1";
+  eventId: string;
+  occurredAt: string;
+  actor: string;
+  card: DiscordOSBoardCardSnapshot;
+  entry: DiscordOSBoardCardJournalEntry;
+  correlation: {
+    taskId: string | null;
+    jobId: string | null;
+    branch: string | null;
+    commit: string | null;
+    receipt: string | null;
+  };
+}
 
 export interface DiscordOSBoardCardIdentity {
   cardId: string;
