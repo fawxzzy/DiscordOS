@@ -334,7 +334,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-13T01:10:51.750Z"
+    "liveSyncedAt": "2026-07-13T01:22:11.800Z"
   },
   "cards": [
     {
@@ -2024,7 +2024,7 @@
       "completionPercent": 78,
       "summary": "Coordinate the mobile safe-area/portrait and browser layout-persistence lanes through one viewport contract and proof matrix without turning either delivery into an offset patch.",
       "whyItMatters": "The same UI can be valid in a desktop canvas, narrow browser, mobile browser, installed PWA, or restored window only if viewport state, safe areas, and restoration behavior share deliberate rules.",
-      "currentStatus": "The current-main transition harness now proves deterministic geometry through 360x720 -> 1440x900 -> 360x720 -> 405x958 endpoints. The authenticated Menu/Options/Play/Pause matrix passes, and the guest matrix passes every restoration and layout check except the existing native auth email input, whose desktop right edge resolves to 3720px outside the 1440px viewport. That blocker belongs to mazer-auth-ui-flow-hardening, so this card returns to Open at unchanged 78% and the uncommitted harness remains preserved until the auth owner clears it. Broader real-device safe areas and installed-PWA proof also remain open.",
+      "currentStatus": "Merged Mazer PR #49 clears the native auth-input blocker by mapping fixed DOM input placement through current layout dimensions instead of stale Phaser scale dimensions. The preserved guest transition matrix now passes all checks through 360x720 -> 1440x900 -> 360x720 -> 405x958, with the desktop email field bounded at 510..930 inside 1440px; the authenticated matrix already passed. The marker remains 78 until the transition harness is merged and broader real-device safe-area and installed-PWA proof are completed.",
       "workBreakdown": [
         "Define canonical viewport, safe-area, visible-height, and no-overlap invariants for menu, Options, play, Pause, dialogs, HUD, controls, and scroll rails.",
         "Maintain the child boundary between mobile shell/device behavior and browser layout-state persistence.",
@@ -2214,14 +2214,14 @@
     {
       "id": "mazer-auth-ui-flow-hardening",
       "title": "mazer: auth UI and flow hardening",
-      "state": "ready",
+      "state": "open",
       "priority": "high",
       "category": "mazer",
       "markerName": "Auth UI and flow hardening",
       "completionPercent": 0,
       "summary": "Harden login and account-creation presentation, native input geometry, mobile keyboard behavior, autofill, password-manager integration, and player-safe error states without changing auth ownership.",
       "whyItMatters": "Authentication is the front door to account-backed play. Input overlays that shift behind browser chrome, fight the software keyboard, or expose raw provider errors can block otherwise healthy persistence and progression systems.",
-      "currentStatus": "Ready at unchanged 0% for one bounded native-input geometry slice. The current-main guest transition harness reproduces the desktop defect: the auth email input reaches right=3720px in a 1440px viewport after 360x720 -> 1440x900 transition, while all non-auth transition geometry passes. The implementation owns only MenuScene native input placement and focused regression coverage, must use canonical canvas/viewport geometry, and must make the preserved guest matrix pass without changing auth provider, session, or account data behavior.",
+      "currentStatus": "Merged Mazer PR #49 fixes compact-to-desktop native auth-input overflow through a tested canonical layout-to-canvas CSS mapper. Focused auth geometry and MenuScene tests passed 51/51, type checking passed, the preserved guest transition matrix passed with the desktop email field bounded at 510..930 inside 1440px, and full Mazer verification passed 43 files / 334 tests plus build after one unrelated edge-wrap timeout passed on retry. The marker remains 0 because keyboard, autofill, player-safe errors, creation/recovery, and restored-session flow work remain open and no deterministic denominator has been established.",
       "workBreakdown": [
         "Audit login, account creation, session restoration, logout, and error-state presentation without changing the auth provider contract.",
         "Place native email/password inputs from canonical viewport and safe-area geometry instead of independent DOM offsets.",
@@ -2232,7 +2232,7 @@
         "Capture authenticated and unauthenticated phone/desktop proof across login, creation, validation, recovery, and restored-session states."
       ],
       "nextActions": [
-        "Fix the desktop native auth-input overflow through canonical overlay and viewport geometry, then rerun the preserved guest transition harness.",
+        "Define the deterministic auth UI-flow denominator before moving this marker.",
         "Inventory the existing native input bridge and auth-state transitions before changing presentation.",
         "Build a focused keyboard/autofill/error-state matrix using Mazer routes and QA-safe accounts.",
         "Investigate the reported local account reachability issue only through credential-free, read-only diagnostics after a QA-safe auth path exists; never use chat-supplied credentials."
