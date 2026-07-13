@@ -52,3 +52,26 @@ test("duplicate identities are reported across boards", () => {
   assert.equal(duplicates.length, 1);
   assert.equal(duplicates[0].cardId, "fit-1");
 });
+
+test("reciprocal archived source and completed clone are an allowed identity pair", () => {
+  const result = _internals.classifyIdentities([
+    {
+      cardId: "FIT-1",
+      boardId: "fitness",
+      boardRole: "active",
+      threadId: "source",
+      archived: true,
+      completedThreadIdLink: "completed",
+    },
+    {
+      cardId: "fit-1",
+      boardId: "completed",
+      boardRole: "completed",
+      threadId: "completed",
+      sourceThreadIdLink: "source",
+    },
+  ]);
+  assert.equal(result.duplicates.length, 0);
+  assert.equal(result.linkedPairs.length, 1);
+  assert.equal(result.linkedPairs[0].cardId, "fit-1");
+});
