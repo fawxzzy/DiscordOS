@@ -55,9 +55,78 @@ test("canonical body normalizes metadata and preserves legacy context", () => {
   assert(body.includes("ATLAS-CARD-ID: `FIT-42`"));
   assert(body.includes("- state: `in_progress`"));
   assert(body.includes("## Acceptance criteria"));
+  assert(body.includes("- autonomous implementation: `not_admitted`"));
   assert(body.includes("Legacy planning notes"));
   assert(body.endsWith(_internals.CARD_END));
   assert(body.length <= 2000);
+});
+
+test("canonical body can be parsed back into the autonomy contract", () => {
+  const normalized = _internals.normalizeEvent(event({
+    card: { ...event().card, state: "ready" },
+  }));
+  const parsed = _internals.parseManagedCardBody(_internals.buildCanonicalBody(normalized));
+  assert.equal(parsed.id, "FIT-42");
+  assert.equal(parsed.project, "Fitness");
+  assert.equal(parsed.state, "ready");
+  assert.equal(parsed.objective, "Make work observable while it happens.");
+  assert.deepEqual(parsed.acceptanceCriteria, ["Starter body is canonical", "Progress is appended"]);
+  assert.deepEqual(parsed.nextActions, ["Run live readback"]);
+  assert.deepEqual(parsed.blockers, []);
+});
+
+test("Ready is the only autonomous execution admission state", () => {
+  const ready = _internals.normalizeEvent(event({
+    card: {
+      ...event().card,
+      previousState: "planning",
+      state: "ready",
+    },
+  }));
+  const admission = _internals.evaluateAutonomyAdmission(ready.card);
+  assert.equal(admission.admitted, true);
+  assert.equal(admission.status, "ready_for_autonomous_execution");
+  assert.deepEqual(_internals.validateEvent(ready), []);
+  assert(_internals.buildCanonicalBody(ready).includes("- autonomous implementation: `admitted`"));
+});
+
+test("Ready fails closed when planning is incomplete or blocked", () => {
+  const ready = _internals.normalizeEvent(event({
+    card: {
+      ...event().card,
+      previousState: "planning",
+      state: "ready",
+      owner: "Unassigned",
+      priority: "Unspecified",
+      objective: "",
+      acceptanceCriteria: [],
+      nextActions: [],
+      blockers: ["Architecture decision pending"],
+    },
+  }));
+  const admission = _internals.evaluateAutonomyAdmission(ready.card);
+  assert.equal(admission.admitted, false);
+  assert(admission.reasonCodes.includes("autonomy_objective_missing"));
+  assert(admission.reasonCodes.includes("autonomy_acceptance_criteria_missing"));
+  assert(admission.reasonCodes.includes("autonomy_next_actions_missing"));
+  assert(admission.reasonCodes.includes("autonomy_owner_unassigned"));
+  assert(admission.reasonCodes.includes("autonomy_priority_unassigned"));
+  assert(admission.reasonCodes.includes("autonomy_blockers_present"));
+  assert.deepEqual(_internals.validateEvent(ready), admission.reasonCodes);
+});
+
+test("lifecycle transitions admit the planning path and reject skipped gates", () => {
+  assert.equal(_internals.validateLifecycleTransition("intake", "planning").allowed, true);
+  assert.equal(_internals.validateLifecycleTransition("planning", "ready").allowed, true);
+  assert.equal(_internals.validateLifecycleTransition("ready", "in_progress").allowed, true);
+  assert.equal(_internals.validateLifecycleTransition("in_progress", "review").allowed, true);
+  assert.equal(_internals.validateLifecycleTransition("review", "completed").allowed, true);
+  assert.equal(_internals.validateLifecycleTransition("completed", "archived").allowed, true);
+  assert.equal(_internals.validateLifecycleTransition("in_progress", "in_progress").status, "same_state_checkpoint");
+  assert.deepEqual(
+    _internals.validateLifecycleTransition("planning", "in_progress").reasonCodes,
+    ["card_lifecycle_transition_not_admitted"]
+  );
 });
 
 test("card titles repair mojibake and normalize dash separators", () => {

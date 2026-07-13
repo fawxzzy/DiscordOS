@@ -11,6 +11,19 @@ const CARD_END = "<!-- ATLAS-CARD:END -->";
 const MAX_MESSAGE_LENGTH = 2000;
 const ACTIVE_STATES = new Set(["intake", "planning", "ready", "in_progress", "review", "blocked", "opened"]);
 const ALLOWED_STATES = new Set([...ACTIVE_STATES, "completed", "archived", "closed"]);
+const AUTONOMOUS_EXECUTION_STATE = "ready";
+const LIFECYCLE_TRANSITIONS = Object.freeze({
+  intake: new Set(["planning", "blocked"]),
+  planning: new Set(["ready", "blocked"]),
+  ready: new Set(["in_progress", "planning", "blocked"]),
+  in_progress: new Set(["review", "blocked"]),
+  review: new Set(["completed", "in_progress", "blocked"]),
+  blocked: new Set(["planning", "ready"]),
+  completed: new Set(["archived"]),
+  archived: new Set(),
+  opened: new Set(["planning", "in_progress", "blocked"]),
+  closed: new Set(["archived"]),
+});
 
 function readValue(args, index, code) {
   const value = args[index + 1];
@@ -92,6 +105,7 @@ function normalizeEvent(raw) {
       title: normalizeCardTitle(card.title),
       type: text(card.type) || "feature",
       state: text(card.state).toLowerCase(),
+      previousState: text(card.previousState).toLowerCase() || null,
       priority: text(card.priority) || "Unspecified",
       owner: text(card.owner) || "Unassigned",
       progress: text(card.progress) || "Unmeasured",
@@ -122,6 +136,50 @@ function normalizeEvent(raw) {
   };
 }
 
+function validateLifecycleTransition(previousState, nextState) {
+  const from = text(previousState).toLowerCase();
+  const to = text(nextState).toLowerCase();
+  if (!from) return { allowed: true, status: "previous_state_not_declared", reasonCodes: [] };
+  if (!ALLOWED_STATES.has(from)) {
+    return { allowed: false, status: "blocked", reasonCodes: ["previous_card_state_unsupported"] };
+  }
+  if (!ALLOWED_STATES.has(to)) {
+    return { allowed: false, status: "blocked", reasonCodes: ["card_state_unsupported"] };
+  }
+  if (from === to) return { allowed: true, status: "same_state_checkpoint", reasonCodes: [] };
+  const allowed = LIFECYCLE_TRANSITIONS[from]?.has(to) === true;
+  return {
+    allowed,
+    status: allowed ? "transition_admitted" : "blocked",
+    reasonCodes: allowed ? [] : ["card_lifecycle_transition_not_admitted"],
+  };
+}
+
+function evaluateAutonomyAdmission(card) {
+  const reasonCodes = [];
+  if (card?.state !== AUTONOMOUS_EXECUTION_STATE) reasonCodes.push("autonomy_state_not_ready");
+  if (!card?.id) reasonCodes.push("autonomy_card_id_missing");
+  if (!card?.project) reasonCodes.push("autonomy_project_missing");
+  if (!card?.title) reasonCodes.push("autonomy_title_missing");
+  if (!card?.summary) reasonCodes.push("autonomy_summary_missing");
+  if (!card?.objective) reasonCodes.push("autonomy_objective_missing");
+  if (!Array.isArray(card?.acceptanceCriteria) || card.acceptanceCriteria.length === 0) {
+    reasonCodes.push("autonomy_acceptance_criteria_missing");
+  }
+  if (!Array.isArray(card?.nextActions) || card.nextActions.length === 0) {
+    reasonCodes.push("autonomy_next_actions_missing");
+  }
+  if (!card?.owner || /^unassigned$/i.test(card.owner)) reasonCodes.push("autonomy_owner_unassigned");
+  if (!card?.priority || /^unspecified$/i.test(card.priority)) reasonCodes.push("autonomy_priority_unassigned");
+  if (Array.isArray(card?.blockers) && card.blockers.length > 0) reasonCodes.push("autonomy_blockers_present");
+  return {
+    admitted: reasonCodes.length === 0,
+    status: reasonCodes.length === 0 ? "ready_for_autonomous_execution" : "planning_required",
+    requiredState: AUTONOMOUS_EXECUTION_STATE,
+    reasonCodes,
+  };
+}
+
 function validateEvent(event) {
   const reasonCodes = [];
   if (event.schemaVersion !== "atlas.board-card-journal.v1") reasonCodes.push("journal_schema_version_unsupported");
@@ -134,6 +192,10 @@ function validateEvent(event) {
   else if (!ALLOWED_STATES.has(event.card.state)) reasonCodes.push("card_state_unsupported");
   if (!event.card.summary) reasonCodes.push("card_summary_missing");
   if (!event.entry.headline) reasonCodes.push("journal_headline_missing");
+  reasonCodes.push(...validateLifecycleTransition(event.card.previousState, event.card.state).reasonCodes);
+  if (event.card.state === AUTONOMOUS_EXECUTION_STATE) {
+    reasonCodes.push(...evaluateAutonomyAdmission(event.card).reasonCodes);
+  }
   return [...new Set(reasonCodes)];
 }
 
@@ -175,6 +237,37 @@ function stripManagedCard(content) {
   return remainder;
 }
 
+function parseManagedCardBody(content) {
+  const value = String(content || "");
+  const start = value.indexOf(CARD_START);
+  const end = value.indexOf(CARD_END);
+  if (start < 0 || end <= start) return null;
+  const managed = value.slice(start, end + CARD_END.length);
+  const metadata = (name) => managed.match(new RegExp(`^- ${name}:\\s*\\\`([^\\\`]+)\\\``, "im"))?.[1]?.trim() || "";
+  const section = (heading) => managed.match(new RegExp(`(?:^|\\n)## ${heading}\\s*\\n([\\s\\S]*?)(?=\\n## |\\n${CARD_END.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}|$)`, "i"))?.[1]?.trim() || "";
+  const items = (heading) => section(heading)
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s*-\s*/, "").trim())
+    .filter((line) => line && !/^none$/i.test(line));
+  return {
+    id: managed.match(/ATLAS-CARD-ID:\s*`([^`]+)`/i)?.[1]?.trim() || "",
+    project: metadata("project"),
+    title: "",
+    type: metadata("type"),
+    state: metadata("state").toLowerCase(),
+    priority: metadata("priority"),
+    owner: metadata("owner"),
+    progress: metadata("progress"),
+    summary: section("Summary"),
+    objective: items("Objective")[0] || "",
+    acceptanceCriteria: items("Acceptance criteria"),
+    discoveries: items("Discoveries"),
+    nextActions: items("Next actions"),
+    blockers: items("Blockers"),
+    evidence: items("Evidence"),
+  };
+}
+
 function appendSection(lines, heading, values) {
   const items = list(values);
   if (items.length === 0) return;
@@ -198,6 +291,7 @@ function fitMessage(lines, suffix = "") {
 
 function buildCanonicalBody(event, existingContent = "") {
   const { card } = event;
+  const autonomy = evaluateAutonomyAdmission(card);
   const boardLinks = card.evidence.filter((item) => /^(original|completed) card:/i.test(item));
   const evidence = card.evidence.filter((item) => !/^(original|completed) card:/i.test(item));
   const lines = [
@@ -209,6 +303,7 @@ function buildCanonicalBody(event, existingContent = "") {
     `- priority: \`${card.priority}\``,
     `- owner: \`${card.owner}\``,
     `- progress: \`${card.progress}\``,
+    `- autonomous implementation: \`${autonomy.admitted ? "admitted" : "not_admitted"}\``,
     `- updated: \`${event.occurredAt}\``,
   ];
   appendSection(lines, "Board links", boardLinks);
@@ -633,18 +728,23 @@ module.exports = {
     CARD_END,
     ACTIVE_STATES,
     ALLOWED_STATES,
+    AUTONOMOUS_EXECUTION_STATE,
+    LIFECYCLE_TRANSITIONS,
     parseArgs,
     resolveAdmission,
     normalizeEvent,
     normalizeCardTitle,
     repairMojibakeText,
     findMojibakeRuns,
+    validateLifecycleTransition,
+    evaluateAutonomyAdmission,
     validateEvent,
     cardMarker,
     eventMarker,
     legacySnapshotMarker,
     buildLegacySnapshotMessages,
     stripManagedCard,
+    parseManagedCardBody,
     buildCanonicalBody,
     buildJournalMessage,
     listForumThreads,

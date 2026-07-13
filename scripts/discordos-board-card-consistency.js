@@ -69,6 +69,11 @@ function inspectThread({ board, thread, starter, messages }) {
   }
   const cardId = parseCardId(content);
   const state = parseCardState(content);
+  const parsedCard = journal.parseManagedCardBody(content);
+  const autonomy = journal.evaluateAutonomyAdmission({
+    ...(parsedCard || {}),
+    title: thread?.name || "",
+  });
   const archived = thread?.thread_metadata?.archived === true;
   const completedThreadIdLink = content.match(/ATLAS-COMPLETED-CARD:\s*https:\/\/discord\.com\/channels\/[^/]+\/([0-9]+)/i)?.[1] || null;
   const reasonCodes = [];
@@ -80,6 +85,9 @@ function inspectThread({ board, thread, starter, messages }) {
   if (!state) reasonCodes.push("canonical_card_state_missing");
   if (!/^- updated:\s*`[^`]+`/im.test(content)) reasonCodes.push("canonical_updated_timestamp_missing");
   if (!hasJournal(messages)) reasonCodes.push("card_journal_history_missing");
+  if (state === journal.AUTONOMOUS_EXECUTION_STATE && !autonomy.admitted) {
+    reasonCodes.push("ready_card_autonomy_contract_incomplete");
+  }
   if (journal.findMojibakeRuns(thread?.name).length > 0) reasonCodes.push("card_title_encoding_corrupt");
   if (journal.findMojibakeRuns(content).length > 0) reasonCodes.push("card_starter_encoding_corrupt");
   if ((Array.isArray(messages) ? messages : []).some((message) =>
@@ -103,10 +111,13 @@ function inspectThread({ board, thread, starter, messages }) {
     title: thread.name || null,
     cardId,
     state,
+    priority: parsedCard?.priority || null,
+    owner: parsedCard?.owner || null,
     archived,
     completedThreadIdLink,
     sourceThreadIdLink: content.match(/original card:\s*https:\/\/discord\.com\/channels\/[^/]+\/([0-9]+)/i)?.[1] || null,
     journalPresent: hasJournal(messages),
+    autonomy,
     superseded: false,
     reasonCodes,
   };
@@ -226,6 +237,18 @@ async function buildBoardCardConsistency({ payload, env = process.env, fetchImpl
     driftCounts,
     duplicates,
     linkedPairs,
+    autonomyAdmittedCardCount: currentRows.filter((row) => row.autonomy?.admitted).length,
+    autonomyBlockedReadyCardCount: currentRows.filter((row) =>
+      row.state === journal.AUTONOMOUS_EXECUTION_STATE && !row.autonomy?.admitted
+    ).length,
+    executableQueue: currentRows.filter((row) => row.autonomy?.admitted).map((row) => ({
+      boardId: row.boardId,
+      threadId: row.threadId,
+      cardId: row.cardId,
+      title: row.title,
+      priority: row.priority,
+      owner: row.owner,
+    })),
     rows,
     reasonCodes: [...new Set(reasonCodes)],
   };
@@ -240,6 +263,8 @@ function renderMarkdown(result) {
     `- cards: \`${result.cardCount || 0}\``,
     `- healthy: \`${result.healthyCardCount || 0}\``,
     `- drifted: \`${result.driftedCardCount || 0}\``,
+    `- autonomous-ready: \`${result.autonomyAdmittedCardCount || 0}\``,
+    `- invalid-ready: \`${result.autonomyBlockedReadyCardCount || 0}\``,
   ];
   for (const [code, count] of Object.entries(result.driftCounts || {})) lines.push(`- ${code}: \`${count}\``);
   return `${lines.join("\n")}\n`;
