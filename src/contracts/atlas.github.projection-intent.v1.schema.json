@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "atlas://packages/contracts/atlas.github.projection-intent.v1.schema.json",
+  "title": "Atlas GitHub projection intent contract v1",
+  "description": "Formatting-free projection intent emitted by Atlas after GitHub event admission and before any DiscordOS write.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "projection_id", "idempotency_key", "created_at", "admission_ref", "source_event", "decision", "destination", "operation", "route", "normalized_fact_refs", "reason_codes", "authority", "external_mutation", "evidence_refs"],
+  "properties": {
+    "contract_version": {"type": "string", "const": "atlas.github.projection-intent.v1"},
+    "projection_id": {"type": "string", "pattern": "^ghp_[a-z0-9][a-z0-9_-]*$"},
+    "idempotency_key": {"type": "string", "pattern": "^ghpk_[a-z0-9][a-z0-9_-]*$"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "admission_ref": {"$ref": "#/$defs/admissionRef"},
+    "source_event": {"$ref": "#/$defs/sourceEvent"},
+    "decision": {"type": "string", "enum": ["admitted", "suppressed", "requires_review", "blocked"]},
+    "destination": {"type": "string", "enum": ["atlas_ledger", "discordos_board", "discordos_update", "discordos_alerts"]},
+    "operation": {"type": "string", "enum": ["record", "create", "update", "transition", "publish", "alert", "none"]},
+    "route": {"$ref": "#/$defs/route"},
+    "normalized_fact_refs": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "reason_codes": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$"}},
+    "authority": {"$ref": "#/$defs/authority"},
+    "external_mutation": {"type": "string", "const": "denied"},
+    "evidence_refs": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "summary": {"type": ["string", "null"], "minLength": 1},
+    "extensions": {"type": "object"}
+  },
+  "$defs": {
+    "admissionRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["admission_id", "decision"],
+      "properties": {
+        "admission_id": {"type": "string", "pattern": "^gha_[a-z0-9][a-z0-9_-]*$"},
+        "decision": {"type": "string", "enum": ["accepted", "duplicate", "rejected", "quarantined"]}
+      }
+    },
+    "sourceEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_id", "event_family", "digest_algorithm", "digest_value"],
+      "properties": {
+        "event_id": {"type": "string", "pattern": "^ghr_[a-z0-9][a-z0-9_-]*$"},
+        "event_family": {"type": "string", "enum": ["repository", "branch", "pull_request", "issue", "workflow_run", "release", "security_alert"]},
+        "digest_algorithm": {"type": "string", "const": "sha256"},
+        "digest_value": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project_id", "card_id", "board_id", "channel_id", "thread_id"],
+      "properties": {
+        "project_id": {"type": ["string", "null"], "minLength": 1},
+        "card_id": {"type": ["string", "null"], "minLength": 1},
+        "board_id": {"type": ["string", "null"], "minLength": 1},
+        "channel_id": {"type": ["string", "null"], "minLength": 1},
+        "thread_id": {"type": ["string", "null"], "minLength": 1}
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["intent_producer", "external_writer"],
+      "properties": {
+        "intent_producer": {"type": "string", "const": "Atlas"},
+        "external_writer": {"type": "string", "const": "DiscordOS"}
+      }
+    }
+  }
+}

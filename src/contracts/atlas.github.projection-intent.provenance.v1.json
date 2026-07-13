@@ -1,0 +1,15 @@
+{
+  "contract_id": "atlas.github.projection-intent.v1",
+  "contract_version": "v1",
+  "atlas_owner_repository": "ATLAS",
+  "atlas_owner_ref": "root-commit",
+  "atlas_owner_commit": "5cca402e10e98db668f3f3d35d5304848c511e16",
+  "canonical_schema_path": "packages/atlas-contracts/schemas/atlas.github.projection-intent.v1.schema.json",
+  "canonical_sha256": "1205438c82d4f36ba86b2b56087b26e6cc4108433ad3b10249ee59a3ef3baf1e",
+  "mirror_path": "src/contracts/atlas.github.projection-intent.v1.schema.json",
+  "mirror_sha256": "1205438c82d4f36ba86b2b56087b26e6cc4108433ad3b10249ee59a3ef3baf1e",
+  "synchronization_command": "Copy-Item (Join-Path $AtlasRoot 'packages/atlas-contracts/schemas/atlas.github.projection-intent.v1.schema.json') 'src/contracts/atlas.github.projection-intent.v1.schema.json' -Force",
+  "deterministic_check": "Get-FileHash canonical and mirror schema files with SHA256 and require exact digest equality.",
+  "fallback_scope": "isolated_discordos_ci_only",
+  "fallback_statement": "Mirror fallback is for isolated DiscordOS CI only."
+}
