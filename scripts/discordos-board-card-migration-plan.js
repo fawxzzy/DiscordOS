@@ -242,6 +242,13 @@ function buildMigrationEvent({ board, thread, source, guildId, existingContent =
     completedCardUrl ? `completed card: ${completedCardUrl}` : null,
     sourceCardEvidence,
   ].filter(Boolean);
+  const progress = board.role === "completed" ? "100%" : source.progress;
+  const nextActions = board.role === "completed"
+    ? [
+      "Retain this completed record as historical evidence",
+      "Create or reopen active work only when new evidence changes the accepted outcome",
+    ]
+    : source.nextActions;
   return {
     schemaVersion: "atlas.board-card-journal.v1",
     eventId: `migration:${board.id}:${thread.id}:v1`,
@@ -257,12 +264,12 @@ function buildMigrationEvent({ board, thread, source, guildId, existingContent =
       state,
       priority: source.priority,
       owner: source.owner,
-      progress: source.progress,
+      progress,
       summary: source.summary,
       objective: source.objective,
       acceptanceCriteria: source.acceptanceCriteria,
       discoveries: source.discoveries,
-      nextActions: source.nextActions,
+      nextActions,
       blockers: source.blockers,
       evidence,
     },
@@ -271,7 +278,7 @@ function buildMigrationEvent({ board, thread, source, guildId, existingContent =
       headline: "Historical card normalized",
       completed: ["Assigned stable card identity", "Refreshed the canonical starter summary", "Preserved the pre-contract starter body in the card thread"],
       discovered: source.discoveries,
-      next: source.nextActions,
+      next: nextActions,
       blockers: source.blockers,
       evidence,
     },
