@@ -90,6 +90,16 @@ function mapMazerState(card, boardRole) {
   return "in_progress";
 }
 
+function mapLegacyState(state, boardRole) {
+  if (boardRole === "completed") return "completed";
+  const normalized = text(state).toLowerCase();
+  if (normalized === "completed") return "completed";
+  if (normalized === "blocked") return "blocked";
+  if (normalized === "review") return "review";
+  if (normalized === "open" || normalized === "in_progress") return "in_progress";
+  return "planning";
+}
+
 function fitnessProject(card) {
   const area = text(card?.area).toLowerCase();
   const title = text(card?.title).toLowerCase();
@@ -212,10 +222,10 @@ function fallbackSource({ board, thread, starter }) {
 
 function buildMigrationEvent({ board, thread, source, guildId, existingContent = "" }) {
   const state = source.sourceType === "fitness_export"
-    ? mapFitnessState({ status: source.rawState }, board.role)
-    : source.sourceType === "mazer_board"
-      ? mapMazerState({ state: source.rawState, completionPercent: Number.parseInt(source.progress, 10) }, board.role)
-      : board.role === "completed" ? "completed" : source.rawState;
+      ? mapFitnessState({ status: source.rawState }, board.role)
+      : source.sourceType === "mazer_board"
+        ? mapMazerState({ state: source.rawState, completionPercent: Number.parseInt(source.progress, 10) }, board.role)
+        : mapLegacyState(source.rawState, board.role);
   const completedCardUrl = existingContent.match(/ATLAS-COMPLETED-CARD:\s*(https:\/\/discord\.com\/channels\/[^\s]+)/i)?.[1] || null;
   const sourceCardUrl = board.role === "completed"
     && source.sourceThreadId
@@ -386,6 +396,7 @@ module.exports = {
     firstUsefulLine,
     mapFitnessState,
     mapMazerState,
+    mapLegacyState,
     fitnessDisplayTitle,
     normalizeFitnessSource,
     normalizeMazerSource,

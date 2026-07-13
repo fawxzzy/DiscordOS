@@ -74,6 +74,12 @@ test("fallback identity is deterministic from board and thread", () => {
   assert.equal(source.rawState, "completed");
 });
 
+test("legacy open threads map into the canonical in-progress lifecycle", () => {
+  assert.equal(_internals.mapLegacyState("open", "active"), "in_progress");
+  assert.equal(_internals.mapLegacyState("backlog", "active"), "planning");
+  assert.equal(_internals.mapLegacyState("open", "completed"), "completed");
+});
+
 test("completed migration event carries the original source-card link", () => {
   const event = _internals.buildMigrationEvent({
     board: { id: "completed", project: "Fitness", role: "completed", forumChannelId: "forum" },
