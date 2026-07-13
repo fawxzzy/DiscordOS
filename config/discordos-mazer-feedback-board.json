@@ -334,7 +334,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-13T00:27:53.724Z"
+    "liveSyncedAt": "2026-07-13T00:41:57.445Z"
   },
   "cards": [
     {
@@ -2017,14 +2017,14 @@
     {
       "id": "mazer-cross-viewport-ui-reliability",
       "title": "mazer: cross-viewport UI reliability and layout hardening",
-      "state": "ready",
+      "state": "open",
       "priority": "high",
       "category": "mazer",
       "markerName": "Cross-viewport UI reliability",
       "completionPercent": 78,
       "summary": "Coordinate the mobile safe-area/portrait and browser layout-persistence lanes through one viewport contract and proof matrix without turning either delivery into an offset patch.",
       "whyItMatters": "The same UI can be valid in a desktop canvas, narrow browser, mobile browser, installed PWA, or restored window only if viewport state, safe areas, and restoration behavior share deliberate rules.",
-      "currentStatus": "Merged Mazer PR #46 makes play-shell geometry reserve top HUD and controller lanes before maze sizing across viewport classes, keeps the controller visible, and keeps the compass inside the controller cluster. Focused geometry/HUD tests passed 23/23, the eight-viewport route-aware play matrix passed with zero overlap/offscreen diagnostics, and full Mazer verification passed. The next bounded slice is Ready at unchanged 78%: reproduce and fix the desktop Pause-overlay bottom-scroll reachability timeout without weakening the existing scroll diagnostics or changing play-shell geometry. Broader browser persistence, real-device safe areas, installed-PWA, authenticated overlays, and the deterministic transition harness remain open.",
+      "currentStatus": "Merged Mazer PR #47 fixes the desktop Pause-overlay bottom-scroll proof timeout by using a real desktop capture context and the product's wheel-input path while retaining mobile pointer-drag proof and exact max-offset assertions. Focused capture-contract tests, desktop Pause bottom-state proof, mobile UI-surface proof, and full Mazer verification passed. The marker remains 78 because broader browser persistence, real-device safe areas, installed-PWA, authenticated overlays, and deterministic transitions remain open. Desktop proof also exposed a separate menu progression-badge/action gap of 8.5px against the required 10px; that product geometry issue is the next bounded candidate.",
       "workBreakdown": [
         "Define canonical viewport, safe-area, visible-height, and no-overlap invariants for menu, Options, play, Pause, dialogs, HUD, controls, and scroll rails.",
         "Maintain the child boundary between mobile shell/device behavior and browser layout-state persistence.",
@@ -2032,7 +2032,7 @@
         "Require route, mode, viewport, safe-area state, scroll position, and layout diagnostics beside visual proof."
       ],
       "nextActions": [
-        "Resolve the desktop pause-overlay scroll proof timeout without weakening its reachability contract.",
+        "Fix the desktop menu progression-badge/action separation from 8.5px to the established 10px contract through shared layout geometry.",
         "Complete deterministic guest/auth transition coverage across compact and expanded play endpoints.",
         "Keep browser-layout, mobile-shell, and visual-proof cards as linked owners for persistence, device harness, and proof-policy follow-through."
       ],
