@@ -334,7 +334,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-13T01:54:28.635Z"
+    "liveSyncedAt": "2026-07-13T02:18:25.393Z"
   },
   "cards": [
     {
@@ -626,7 +626,7 @@
       "completionPercent": 46,
       "summary": "Raise the full game visual system toward a crisp 2026 cyber-arcade target: sharper tiles, cleaner borders, less blur, stronger material consistency.",
       "whyItMatters": "The game feel depends heavily on the maze being readable and premium on mobile. Blurry tiles or inconsistent materials make the app feel older than the current design target.",
-      "currentStatus": "HiDPI backing and several green/cyan material passes have landed, but the visual language still needs one consistent high-tech arcade material system across all surfaces.",
+      "currentStatus": "HiDPI backing and several green/cyan material passes have landed. Merged Mazer PR #52 adds the fixed green player/trail plus one white fading shine, explicit material diagnostics, and passing route-aware 405x958 DPR-2 plus 1440x900 menu/play proof. The 46% marker is unchanged because the broader title, border, button, grid, icon-target, and cross-surface material consistency work remains open.",
       "workBreakdown": [
         "Remove accidental blur/fuzz from canvas scaling, tile seams, title pieces, and UI text.",
         "Unify path, trail, pulse, player, title, border, buttons, compass, and background under one material palette.",
@@ -1000,7 +1000,7 @@
       "completionPercent": 50,
       "summary": "Design and tune a future midnight-rainbow material for player halo, trail, and pulse while keeping the core player readable and separated from path color.",
       "whyItMatters": "The player and trail need to communicate progression and AI thinking without blending into pale path tiles or becoming visually noisy.",
-      "currentStatus": "Runtime material helpers and tests exist. This card is a later experimental successor, not a duplicate of the shipping readability contract. The fixed green player/trail plus one white fading shine must land and pass route-aware proof under `mazer-player-trail-readability-lock` before iridescent palette work can alter halo, accent, or cosmetic layers.",
+      "currentStatus": "Runtime material helpers and tests exist. Merged Mazer PR #52 completes the predecessor readability lock with a fixed green player/trail, one white fading shine, explicit diagnostics, 110 focused tests, full 43-file / 334-test verification plus build, and passing phone/desktop route proof. This later experimental successor remains Open at 50%: any midnight-rainbow halo, accent, or cosmetic layer must preserve that release baseline and prove it does not reduce gameplay readability.",
       "workBreakdown": [
         "Keep the player core locked to a high-contrast green readability anchor.",
         "Shift halo, accent, trail, and pulse through a controlled midnight-rainbow palette.",
@@ -1008,7 +1008,7 @@
         "Use AI memory/target overlays without confusing them with the active trail."
       ],
       "nextActions": [
-        "Capture dense-maze screenshots with player, green trail, purple pulse, memory, and target overlays visible after the fixed readability lock has its own proof.",
+        "Design the bounded experimental palette on top of the now-proven green player/trail and white-shine release baseline.",
         "Tune alpha and saturation for mobile readability.",
         "Document material rules for future progression color tiers."
       ],
@@ -1082,7 +1082,7 @@
       "completionPercent": 99,
       "summary": "Require screenshots and visual claims to prove they are on the intended route, mode, overlay, and viewport before being accepted.",
       "whyItMatters": "Several visual passes were weakened by vague screenshots. Mazer needs route-aware proof so fixes are validated on the exact surface the user asked about.",
-      "currentStatus": "Merged Mazer PR #50 makes deterministic guest and authenticated transition proof durable across 360x720 -> 1440x900 -> 360x720 -> 405x958 for Menu/Auth or Options, Play, and Pause, with exact restored stable diagnostics and zero bounds/collision failures. Full verification passed 43 files / 334 tests plus build. The marker remains 99 because physical-device safe-area and installed-PWA proof are still open.",
+      "currentStatus": "Merged Mazer PR #50 makes deterministic guest and authenticated transition proof durable across 360x720 -> 1440x900 -> 360x720 -> 405x958. Merged PR #52 extends the reusable UI-surface matrix with explicit menu/play white-shine checks and passing 405x958 DPR-2 plus 1440x900 route proof; full verification again passed 43 files / 334 tests plus build. The marker remains 99 because physical-device safe-area and installed-PWA proof are still open.",
       "workBreakdown": [
         "Fail captures when route, mode, overlay, or viewport contract does not match.",
         "Record actual URL, diagnostics mode, surface, and viewport beside screenshots.",
@@ -2166,14 +2166,14 @@
     {
       "id": "mazer-player-trail-readability-lock",
       "title": "mazer: green player/trail and white shine readability lock",
-      "state": "ready",
+      "state": "completed",
       "priority": "medium",
       "category": "mazer",
       "markerName": "Fixed green player/trail and white shine",
-      "completionPercent": 0,
+      "completionPercent": 100,
       "summary": "Ship one fixed readability contract: a green player and trail with one white fading trail shine at the existing pulse cadence, separated from future iridescent material experiments.",
       "whyItMatters": "The active player and trail must be immediately readable on every maze material tier. A fixed release contract prevents visual experimentation from changing gameplay recognition or adding cosmetic scope.",
-      "currentStatus": "Ready for one bounded implementation slice at an unchanged 0% marker. The current baseline uses a green player/trail and one purple pulse; the admitted slice replaces only that pulse with exactly one white fading shine while preserving the existing 2600ms travel period and 33ms redraw cadence. Ownership is limited to the shared progression palette, MenuScene trail renderer and diagnostics, material/render regression tests, and route-aware phone/desktop proof. Existing contrast helpers and visual-proof tooling satisfy the dependency seams for this slice. Rainbow, shop, cosmetic unlock, and material-tier work remain out of scope.",
+      "currentStatus": "Completed by merged Mazer PR #52. The shared progression palette and material resolver now keep player/trail green and render exactly one white fading shine with core 0xffffff and edge 0xe8fff5 while preserving the 2600ms travel period, 33ms redraw cadence, and persisted toggle key. Explicit menu/play shine diagnostics and capture checks landed; focused verification passed 110 tests, full verification passed 43 files / 334 tests plus build, and route-aware 405x958 DPR-2 plus 1440x900 matrices passed with visual inspection. The fixed release contract is complete; experimental iridescent work remains isolated on its existing successor card.",
       "workBreakdown": [
         "Lock player core and trail to the high-contrast green readability anchor on menu and play surfaces.",
         "Replace the purple pulse with exactly one white fading shine that follows the existing travel cadence and never competes with a second trail animation.",
@@ -2181,10 +2181,8 @@
         "Add dense-maze contrast rules and diagnostics so path material changes cannot make the player or trail ambiguous."
       ],
       "nextActions": [
-        "Audit every player/trail render path before changing colors or timing.",
-        "Capture dense menu and play mazes with player, trail, white shine, memory, and target overlays simultaneously visible.",
-        "Keep future iridescent work behind its separate material card after this fixed baseline is proven.",
-        "Replace the purple trail pulse with the already-required single white fading shine at the existing cadence."
+        "Keep future iridescent work behind its separate material card and preserve this fixed release baseline.",
+        "Retain the menu/play shine diagnostics and route-aware phone/desktop checks in future visual closeouts."
       ],
       "acceptanceCriteria": [
         "Player core and trail remain green and visibly distinct from maze path materials at supported contrast tiers.",
@@ -2205,9 +2203,9 @@
         "mazer-crisp-cyber-arcade-graphics",
         "mazer-visual-proof-discipline"
       ],
-      "reactionStatus": "failure",
-      "reactionEmojiName": "failure",
-      "reactionEmojiId": "1507384094424694785",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851",
       "liveThreadId": "1525337759315919001",
       "liveMessageId": "1525337759315919001"
     },
