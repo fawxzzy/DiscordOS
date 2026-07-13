@@ -60,6 +60,17 @@ test("canonical body normalizes metadata and preserves legacy context", () => {
   assert(body.length <= 2000);
 });
 
+test("card titles repair mojibake and normalize dash separators", () => {
+  assert.equal(
+    _internals.normalizeCardTitle("Feature: History â€” Progress"),
+    "Feature: History - Progress"
+  );
+  assert.equal(
+    _internals.normalizeCardTitle("Feature: History — Progress"),
+    "Feature: History - Progress"
+  );
+});
+
 test("managed card refresh replaces stale managed content without duplicating it", () => {
   const normalized = _internals.normalizeEvent(event());
   const oldBody = `${_internals.CARD_START}\nATLAS-CARD-ID: \`FIT-42\`\n- state: \`planning\`\n${_internals.CARD_END}\n\nOperator note`;
@@ -220,6 +231,63 @@ test("legacy starter is preserved in thread messages before normalization", asyn
   assert.equal(result.results[0].legacySnapshot.action, "created");
   assert(snapshotBody.includes(legacyBody));
   assert(starter.includes(_internals.CARD_START));
+});
+
+test("archived historical card is reopened for journaling and restored afterward", async () => {
+  const completedEvent = event({
+    card: {
+      ...event().card,
+      sourceForumChannelId: "completed-forum",
+      threadId: "archived-thread",
+      title: "Feature: Completed history",
+      state: "completed",
+      progress: "100%",
+    },
+  });
+  const normalized = _internals.normalizeEvent(completedEvent);
+  let starter = _internals.buildCanonicalBody(normalized, "");
+  let journalBody = "";
+  const stateChanges = [];
+  const result = await _internals.buildBoardCardJournal({
+    payload: completedEvent,
+    apply: true,
+    allowApply: true,
+    env: {
+      DISCORDOS_BOT_TOKEN: "token",
+      DISCORDOS_BOARD_CARD_JOURNAL: "enabled",
+    },
+    fetchImpl: async (url, init) => {
+      if (url.endsWith("/channels/completed-forum") && init.method === "GET") return response({ payload: { guild_id: "guild" } });
+      if (url.endsWith("/guilds/guild/threads/active")) return response({ payload: { threads: [] } });
+      if (url.endsWith("/channels/completed-forum/threads/archived/public?limit=100")) {
+        return response({ payload: { threads: [{ id: "archived-thread", name: "Old title", parent_id: "completed-forum", thread_metadata: { archived: true, locked: true } }] } });
+      }
+      if (url.endsWith("/channels/archived-thread") && init.method === "PATCH") {
+        const body = JSON.parse(init.body);
+        if (Object.hasOwn(body, "archived")) stateChanges.push(body);
+        return response({ payload: { id: "archived-thread", ...body } });
+      }
+      if (url.endsWith("/channels/archived-thread/messages/archived-thread") && init.method === "GET") return response({ payload: { id: "archived-thread", content: starter } });
+      if (url.endsWith("/channels/archived-thread/messages/archived-thread") && init.method === "PATCH") {
+        starter = JSON.parse(init.body).content;
+        return response({ payload: { id: "archived-thread", content: starter } });
+      }
+      if (url.endsWith("/channels/archived-thread/messages?limit=100")) return response({ payload: [] });
+      if (url.endsWith("/channels/archived-thread/messages") && init.method === "POST") {
+        journalBody = JSON.parse(init.body).content;
+        return response({ status: 201, payload: { id: "journal-message", content: journalBody } });
+      }
+      if (url.endsWith("/channels/archived-thread/messages/journal-message")) return response({ payload: { id: "journal-message", content: journalBody } });
+      throw new Error(`unexpected ${init.method} ${url}`);
+    },
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.results[0].archiveRestore, "restored");
+  assert.deepEqual(stateChanges, [
+    { archived: false, locked: false },
+    { archived: true, locked: true },
+  ]);
+  assert.equal(result.results[0].journalAction, "created");
 });
 
 test("duplicate stable identities block instead of guessing", async () => {

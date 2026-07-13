@@ -59,6 +59,13 @@ function list(value) {
   return Array.isArray(value) ? value.map(text).filter(Boolean) : [];
 }
 
+function normalizeCardTitle(value) {
+  return text(value)
+    .replace(/\u00e2\u20ac[\u201c\u201d]/g, " - ")
+    .replace(/[\u2013\u2014]/g, " - ")
+    .replace(/\s+-\s+/g, " - ");
+}
+
 function normalizeEvent(raw) {
   const card = raw?.card || {};
   const entry = raw?.entry || {};
@@ -73,7 +80,7 @@ function normalizeEvent(raw) {
       project: text(card.project),
       sourceForumChannelId: text(card.sourceForumChannelId),
       threadId: text(card.threadId) || null,
-      title: text(card.title),
+      title: normalizeCardTitle(card.title),
       type: text(card.type) || "feature",
       state: text(card.state).toLowerCase(),
       priority: text(card.priority) || "Unspecified",
@@ -379,10 +386,21 @@ async function applyCardEvent({ event: rawEvent, apply, admission, token, fetchI
   }
 
   let thread = located.match;
+  const originalThreadState = thread
+    ? { archived: thread.archived, locked: thread.locked }
+    : null;
+  let historicalThreadReopened = false;
   if (thread?.archived && ACTIVE_STATES.has(event.card.state)) {
     const reopened = await setThreadState({ threadId: thread.id, archived: false, locked: false, token, fetchImpl });
     if (!reopened.ok) reasonCodes.push("active_card_reopen_failed");
     else thread = { ...thread, archived: false, locked: false };
+  } else if (thread?.archived) {
+    const reopened = await setThreadState({ threadId: thread.id, archived: false, locked: false, token, fetchImpl });
+    if (!reopened.ok) reasonCodes.push("historical_card_reopen_failed");
+    else {
+      historicalThreadReopened = true;
+      thread = { ...thread, archived: false, locked: false };
+    }
   }
   if (reasonCodes.length > 0) {
     return { ok: false, status: "blocked", apply, eventId: event.eventId, cardId: event.card.id, preview, reasonCodes };
@@ -439,6 +457,16 @@ async function applyCardEvent({ event: rawEvent, apply, admission, token, fetchI
       }
     }
     if (reasonCodes.length > 0) {
+      if (historicalThreadReopened) {
+        const restored = await setThreadState({
+          threadId,
+          archived: true,
+          locked: originalThreadState.locked,
+          token,
+          fetchImpl,
+        });
+        if (!restored.ok) reasonCodes.push("historical_card_archive_restore_failed");
+      }
       return {
         ok: false,
         status: "blocked",
@@ -498,6 +526,18 @@ async function applyCardEvent({ event: rawEvent, apply, admission, token, fetchI
   if (!journalReadback.ok || !String(journalReadback.payload?.content || "").includes(eventMarker(event.eventId))) {
     reasonCodes.push("card_journal_readback_failed");
   }
+  let archiveRestore = "not_required";
+  if (historicalThreadReopened) {
+    const restored = await setThreadState({
+      threadId,
+      archived: true,
+      locked: originalThreadState.locked,
+      token,
+      fetchImpl,
+    });
+    if (!restored.ok) reasonCodes.push("historical_card_archive_restore_failed");
+    else archiveRestore = "restored";
+  }
 
   return {
     ok: reasonCodes.length === 0,
@@ -510,6 +550,7 @@ async function applyCardEvent({ event: rawEvent, apply, admission, token, fetchI
     journalAction,
     journalMessageId,
     legacySnapshot,
+    archiveRestore,
     matchedBy: located.matchedBy,
     readback: {
       starter: starterReadback.ok && String(starterReadback.payload?.content || "").includes(cardMarker(event.card.id)),
@@ -584,6 +625,7 @@ module.exports = {
     parseArgs,
     resolveAdmission,
     normalizeEvent,
+    normalizeCardTitle,
     validateEvent,
     cardMarker,
     eventMarker,
