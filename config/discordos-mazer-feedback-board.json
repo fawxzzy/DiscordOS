@@ -334,7 +334,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-13T01:08:36.925Z"
+    "liveSyncedAt": "2026-07-13T01:10:51.750Z"
   },
   "cards": [
     {
@@ -2214,14 +2214,14 @@
     {
       "id": "mazer-auth-ui-flow-hardening",
       "title": "mazer: auth UI and flow hardening",
-      "state": "open",
+      "state": "ready",
       "priority": "high",
       "category": "mazer",
       "markerName": "Auth UI and flow hardening",
       "completionPercent": 0,
       "summary": "Harden login and account-creation presentation, native input geometry, mobile keyboard behavior, autofill, password-manager integration, and player-safe error states without changing auth ownership.",
       "whyItMatters": "Authentication is the front door to account-backed play. Input overlays that shift behind browser chrome, fight the software keyboard, or expose raw provider errors can block otherwise healthy persistence and progression systems.",
-      "currentStatus": "The existing auth gate and persistent-login card owns session and state continuity at 94%, while account-scoped settings owns preference identity. This successor owns UI and flow hardening only. The current-main guest transition harness reproduces the pending desktop native-input defect: the auth email input reaches right=3720px in a 1440px viewport after 360x720 -> 1440x900 transition, while all non-auth transition geometry passes. The next product slice must fix native input placement through canonical overlay/viewport geometry without weakening the collision assertion or changing auth ownership.",
+      "currentStatus": "Ready at unchanged 0% for one bounded native-input geometry slice. The current-main guest transition harness reproduces the desktop defect: the auth email input reaches right=3720px in a 1440px viewport after 360x720 -> 1440x900 transition, while all non-auth transition geometry passes. The implementation owns only MenuScene native input placement and focused regression coverage, must use canonical canvas/viewport geometry, and must make the preserved guest matrix pass without changing auth provider, session, or account data behavior.",
       "workBreakdown": [
         "Audit login, account creation, session restoration, logout, and error-state presentation without changing the auth provider contract.",
         "Place native email/password inputs from canonical viewport and safe-area geometry instead of independent DOM offsets.",
