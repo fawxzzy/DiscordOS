@@ -120,3 +120,17 @@ test("archived active-board source with a Completed link is a valid retained pai
   assert.equal(row.completedThreadIdLink, "456");
   assert(!row.reasonCodes.includes("active_card_archived"));
 });
+
+test("Ready card with an incomplete planning contract is drift", () => {
+  const row = _internals.inspectThread({
+    board: { id: "fitness", role: "active" },
+    thread: { id: "123", name: "Incomplete Ready card", thread_metadata: { archived: false } },
+    starter: {
+      content: `${journal.CARD_START}\nATLAS-CARD-ID: \`FIT-READY-1\`\n- project: \`Fitness\`\n- type: \`feature\`\n- state: \`ready\`\n- priority: \`Unspecified\`\n- owner: \`Unassigned\`\n- progress: \`0%\`\n- updated: \`2026-07-13\`\n\n## Summary\nCaptured idea only\n\n## Blockers\n- None\n${journal.CARD_END}`,
+    },
+    messages: [{ content: "ATLAS-JOURNAL-EVENT-ID: `evt-ready-1`" }],
+  });
+  assert.equal(row.ok, false);
+  assert.equal(row.autonomy.admitted, false);
+  assert(row.reasonCodes.includes("ready_card_autonomy_contract_incomplete"));
+});
