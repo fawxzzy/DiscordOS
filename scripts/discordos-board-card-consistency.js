@@ -76,6 +76,8 @@ function inspectThread({ board, thread, starter, messages }) {
     cardId,
     state,
     archived,
+    completedThreadIdLink: content.match(/ATLAS-COMPLETED-CARD:\s*https:\/\/discord\.com\/channels\/[^/]+\/([0-9]+)/i)?.[1] || null,
+    sourceThreadIdLink: content.match(/original card:\s*https:\/\/discord\.com\/channels\/[^/]+\/([0-9]+)/i)?.[1] || null,
     journalPresent: hasJournal(messages),
     reasonCodes,
   };
@@ -91,17 +93,35 @@ async function listThreads({ board, guildId, token, fetchImpl = fetch }) {
   return listed;
 }
 
-function findDuplicates(rows) {
+function classifyIdentities(rows) {
   const grouped = new Map();
   for (const row of rows.filter((candidate) => candidate.cardId)) {
     const key = row.cardId.toLowerCase();
     const values = grouped.get(key) || [];
-    values.push({ boardId: row.boardId, threadId: row.threadId });
+    values.push(row);
     grouped.set(key, values);
   }
-  return [...grouped.entries()]
-    .filter(([, values]) => values.length > 1)
-    .map(([cardId, locations]) => ({ cardId, locations }));
+  const duplicates = [];
+  const linkedPairs = [];
+  for (const [cardId, values] of grouped.entries()) {
+    if (values.length < 2) continue;
+    const completed = values.find((row) => row.boardRole === "completed");
+    const source = values.find((row) => row.boardRole === "active");
+    const isReciprocalPair = values.length === 2
+      && completed
+      && source
+      && source.archived
+      && source.completedThreadIdLink === completed.threadId
+      && completed.sourceThreadIdLink === source.threadId;
+    const locations = values.map((row) => ({ boardId: row.boardId, threadId: row.threadId }));
+    if (isReciprocalPair) linkedPairs.push({ cardId, locations });
+    else duplicates.push({ cardId, locations });
+  }
+  return { duplicates, linkedPairs };
+}
+
+function findDuplicates(rows) {
+  return classifyIdentities(rows).duplicates;
 }
 
 async function buildBoardCardConsistency({ payload, env = process.env, fetchImpl = fetch } = {}) {
@@ -147,7 +167,7 @@ async function buildBoardCardConsistency({ payload, env = process.env, fetchImpl
       }));
     }
   }
-  const duplicates = findDuplicates(rows);
+  const { duplicates, linkedPairs } = classifyIdentities(rows);
   if (duplicates.length > 0) reasonCodes.push("duplicate_card_identity_across_boards");
   const driftCounts = {};
   for (const row of rows) {
@@ -162,6 +182,7 @@ async function buildBoardCardConsistency({ payload, env = process.env, fetchImpl
     driftedCardCount: rows.filter((row) => !row.ok).length,
     driftCounts,
     duplicates,
+    linkedPairs,
     rows,
     reasonCodes: [...new Set(reasonCodes)],
   };
@@ -203,6 +224,7 @@ module.exports = {
     parseCardState,
     hasJournal,
     inspectThread,
+    classifyIdentities,
     findDuplicates,
     buildBoardCardConsistency,
   },

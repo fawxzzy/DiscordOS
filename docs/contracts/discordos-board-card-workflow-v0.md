@@ -84,6 +84,14 @@ The cross-board consistency scanner reads the active Fitness board, active Mazer
 npm run ops:production-env:run -- npm run ops:discordos:board-card-consistency:json -- --input <boards.json>
 ```
 
+Legacy normalization is planned before it is applied. The migration planner joins live threads to owner records by explicit thread ID, stable card ID, or one unique normalized title. Unmatched threads receive a deterministic `legacy-<board>-<thread>` identity; ambiguous source matches block.
+
+```powershell
+npm run ops:production-env:run -- npm run ops:discordos:board-card-migration-plan:json -- --boards <boards.json> --fitness-export <fitness.json> --mazer-board <mazer.json> --output <events.json>
+```
+
+Fitness `fixed` records on an active board normalize to `review`, not `completed`, until proof-backed completion review authorizes transfer. Mazer records already marked `completed` remain terminal and are eligible for the guarded Completed-board transfer after normalization.
+
 ```powershell
 npm run ops:production-env:run -- npm run ops:discordos:board-card-journal:json -- --input <event.json> --dry-run
 
