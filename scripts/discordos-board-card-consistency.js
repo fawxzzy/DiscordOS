@@ -47,6 +47,26 @@ function hasJournal(messages) {
 
 function inspectThread({ board, thread, starter, messages }) {
   const content = String(starter?.content || "");
+  const supersededThreadId = content.match(/ATLAS-SUPERSEDED-CARD:\s*`([0-9]+)`/i)?.[1] || null;
+  if (supersededThreadId) {
+    const archived = thread?.thread_metadata?.archived === true;
+    return {
+      ok: archived,
+      boardId: board.id,
+      boardRole: board.role,
+      threadId: thread.id,
+      title: thread.name || null,
+      cardId: null,
+      state: "superseded",
+      archived,
+      superseded: true,
+      supersededThreadId,
+      completedThreadIdLink: null,
+      sourceThreadIdLink: null,
+      journalPresent: hasJournal(messages),
+      reasonCodes: archived ? [] : ["superseded_card_not_archived"],
+    };
+  }
   const cardId = parseCardId(content);
   const state = parseCardState(content);
   const archived = thread?.thread_metadata?.archived === true;
@@ -84,6 +104,7 @@ function inspectThread({ board, thread, starter, messages }) {
     completedThreadIdLink: content.match(/ATLAS-COMPLETED-CARD:\s*https:\/\/discord\.com\/channels\/[^/]+\/([0-9]+)/i)?.[1] || null,
     sourceThreadIdLink: content.match(/original card:\s*https:\/\/discord\.com\/channels\/[^/]+\/([0-9]+)/i)?.[1] || null,
     journalPresent: hasJournal(messages),
+    superseded: false,
     reasonCodes,
   };
 }
@@ -172,19 +193,25 @@ async function buildBoardCardConsistency({ payload, env = process.env, fetchImpl
       }));
     }
   }
-  const { duplicates, linkedPairs } = classifyIdentities(rows);
+  const currentRows = rows.filter((row) => !row.superseded);
+  const supersededRows = rows.filter((row) => row.superseded);
+  const { duplicates, linkedPairs } = classifyIdentities(currentRows);
   if (duplicates.length > 0) reasonCodes.push("duplicate_card_identity_across_boards");
   const driftCounts = {};
-  for (const row of rows) {
+  for (const row of currentRows) {
+    for (const code of row.reasonCodes) driftCounts[code] = (driftCounts[code] || 0) + 1;
+  }
+  for (const row of supersededRows) {
     for (const code of row.reasonCodes) driftCounts[code] = (driftCounts[code] || 0) + 1;
   }
   return {
     ok: reasonCodes.length === 0 && rows.every((row) => row.ok),
     status: reasonCodes.length === 0 && rows.every((row) => row.ok) ? "consistent" : "drift_detected",
     boardCount: boards.length,
-    cardCount: rows.length,
-    healthyCardCount: rows.filter((row) => row.ok).length,
-    driftedCardCount: rows.filter((row) => !row.ok).length,
+    cardCount: currentRows.length,
+    supersededRecordCount: supersededRows.length,
+    healthyCardCount: currentRows.filter((row) => row.ok).length,
+    driftedCardCount: currentRows.filter((row) => !row.ok).length + supersededRows.filter((row) => !row.ok).length,
     driftCounts,
     duplicates,
     linkedPairs,

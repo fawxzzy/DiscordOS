@@ -93,3 +93,16 @@ test("reciprocal archived source and completed clone are an allowed identity pai
   assert.equal(result.linkedPairs.length, 1);
   assert.equal(result.linkedPairs[0].cardId, "fit-1");
 });
+
+test("explicitly superseded archived thread is retained as history without card drift", () => {
+  const row = _internals.inspectThread({
+    board: { id: "fitness", role: "active" },
+    thread: { id: "old", name: "Archived encoding record", thread_metadata: { archived: true } },
+    starter: { content: "ATLAS-SUPERSEDED-CARD: `456`\nReplacement: https://discord.com/channels/guild/456" },
+    messages: [{ content: "Historical message \u00e2\u20ac\u201d retained" }],
+  });
+  assert.equal(row.ok, true);
+  assert.equal(row.superseded, true);
+  assert.equal(row.supersededThreadId, "456");
+  assert.deepEqual(row.reasonCodes, []);
+});
