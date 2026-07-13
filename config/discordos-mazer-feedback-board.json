@@ -334,7 +334,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-13T01:23:50.140Z"
+    "liveSyncedAt": "2026-07-13T01:30:32.117Z"
   },
   "cards": [
     {
@@ -1082,7 +1082,7 @@
       "completionPercent": 99,
       "summary": "Require screenshots and visual claims to prove they are on the intended route, mode, overlay, and viewport before being accepted.",
       "whyItMatters": "Several visual passes were weakened by vague screenshots. Mazer needs route-aware proof so fixes are validated on the exact surface the user asked about.",
-      "currentStatus": "Merged Mazer PR #39 established route-aware phone menu/play proof, exact 390x844 -> 1440x900 -> 390x844 bounds restoration, and a four-target iPhone/Android/macOS/Windows matrix. Merged PRs #47 and #48 extend that discipline with exact desktop Pause bottom reachability and desktop/mobile menu-lane regression proof. The latest focused and full verification passed. The marker remains 99 because physical-device safe-area proof and the remaining authenticated overlay endpoints are still open.",
+      "currentStatus": "Merged Mazer PR #50 makes deterministic guest and authenticated transition proof durable across 360x720 -> 1440x900 -> 360x720 -> 405x958 for Menu/Auth or Options, Play, and Pause, with exact restored stable diagnostics and zero bounds/collision failures. Full verification passed 43 files / 334 tests plus build. The marker remains 99 because physical-device safe-area and installed-PWA proof are still open.",
       "workBreakdown": [
         "Fail captures when route, mode, overlay, or viewport contract does not match.",
         "Record actual URL, diagnostics mode, surface, and viewport beside screenshots.",
@@ -2017,14 +2017,14 @@
     {
       "id": "mazer-cross-viewport-ui-reliability",
       "title": "mazer: cross-viewport UI reliability and layout hardening",
-      "state": "ready",
+      "state": "open",
       "priority": "high",
       "category": "mazer",
       "markerName": "Cross-viewport UI reliability",
       "completionPercent": 78,
       "summary": "Coordinate the mobile safe-area/portrait and browser layout-persistence lanes through one viewport contract and proof matrix without turning either delivery into an offset patch.",
       "whyItMatters": "The same UI can be valid in a desktop canvas, narrow browser, mobile browser, installed PWA, or restored window only if viewport state, safe areas, and restoration behavior share deliberate rules.",
-      "currentStatus": "Ready at unchanged 78% to merge the now-green deterministic transition harness only. Mazer PR #49 cleared the native auth-input blocker; preserved guest and authenticated matrices pass through 360x720 -> 1440x900 -> 360x720 -> 405x958 with exact restored diagnostics and zero layout violations. The bounded implementation owns the capture driver, shared capture tooling, package entry, and focused contract tests. Broader real-device safe-area and installed-PWA proof remain open.",
+      "currentStatus": "Merged Mazer PR #50 adds a durable deterministic transition harness for guest and authenticated Menu/Auth or Options, Play, and Pause surfaces across 360x720 -> 1440x900 -> 360x720 -> 405x958. Both matrices pass exact restored stable diagnostics and all bounds/collision checks; full verification passed 43 files / 334 tests plus build. The marker remains 78 because real-device safe-area, installed-PWA, and browser-chrome/maximize proof remain open and no denominator change is established.",
       "workBreakdown": [
         "Define canonical viewport, safe-area, visible-height, and no-overlap invariants for menu, Options, play, Pause, dialogs, HUD, controls, and scroll rails.",
         "Maintain the child boundary between mobile shell/device behavior and browser layout-state persistence.",
@@ -2032,8 +2032,8 @@
         "Require route, mode, viewport, safe-area state, scroll position, and layout diagnostics beside visual proof."
       ],
       "nextActions": [
-        "Complete deterministic guest/auth transition coverage across compact and expanded play endpoints.",
         "Complete real-device safe-area and installed-PWA proof for the shared menu and play geometry.",
+        "Complete native browser-chrome and maximize/restore proof without replacing the deterministic transition harness.",
         "Keep browser-layout, mobile-shell, and visual-proof cards as linked owners for persistence, device harness, and proof-policy follow-through."
       ],
       "acceptanceCriteria": [
@@ -2071,7 +2071,7 @@
       "completionPercent": 75,
       "summary": "Normalize responsive browser UI geometry so a narrow-window layout cannot overlap, escape, or expand incorrectly after resize, maximize, restore, or reload. Persist semantic intent only if the product later introduces it.",
       "whyItMatters": "The root-cause pass proved that Mazer has no user-adjustable panel geometry to restore. Derived dimensions must be recomputed from one viewport snapshot instead of being saved and replayed across browser states.",
-      "currentStatus": "Merged Mazer PR #39 keeps derived geometry non-persistent, replaces ratio-first sizing with a pure lane solver, and proves deterministic narrow-to-wide-to-narrow restoration. Side-tab 390x844 -> 1440x900 -> 390x844 readback restored title, board, and rank bounds exactly; macOS and Windows browser matrix targets passed with zero overlap/offscreen violations. Native maximize/restore automation, browser-chrome changes, and all authenticated overlays remain open, so this card advances to 75.",
+      "currentStatus": "Merged Mazer PR #50 makes narrow-to-wide-to-narrow plus alternate-phone-endpoint restoration executable for guest and authenticated Menu/Auth or Options, Play, and Pause surfaces. Exact stable diagnostics and bounds/collision checks pass across 360x720 -> 1440x900 -> 360x720 -> 405x958. The marker remains 75 because native maximize/restore automation and browser-chrome changes remain open.",
       "workBreakdown": [
         "Document the intentional no-persisted-geometry contract and keep semantic toggle/account preference state separate.",
         "Normalize layout-derived state on reload, resize, maximize, restore, narrow-to-wide, wide-to-narrow, mobile emulation, and orientation transitions.",
@@ -2079,7 +2079,7 @@
         "Introduce a versioned semantic layout schema only if a supported user-adjustable intent is added later."
       ],
       "nextActions": [
-        "Run deterministic desktop reload, narrow-to-wide, wide-to-narrow, maximize, and restore transition fixtures.",
+        "Extend the deterministic fixture to native maximize/restore and browser-chrome changes.",
         "Classify any future state as semantic user intent, transient overlay state, account preference, or viewport-derived geometry before persisting it.",
         "Add a migration/fallback matrix only if supported semantic layout state is introduced.",
         "Validate browser behavior separately from mobile safe-area work, then feed both into the cross-viewport proof matrix."
