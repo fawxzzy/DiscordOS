@@ -70,6 +70,7 @@ function inspectThread({ board, thread, starter, messages }) {
   const cardId = parseCardId(content);
   const state = parseCardState(content);
   const archived = thread?.thread_metadata?.archived === true;
+  const completedThreadIdLink = content.match(/ATLAS-COMPLETED-CARD:\s*https:\/\/discord\.com\/channels\/[^/]+\/([0-9]+)/i)?.[1] || null;
   const reasonCodes = [];
   if (!starter) reasonCodes.push("card_starter_message_missing");
   if (!cardId) reasonCodes.push("stable_card_id_missing");
@@ -85,7 +86,9 @@ function inspectThread({ board, thread, starter, messages }) {
     journal.findMojibakeRuns(message?.content).length > 0
   )) reasonCodes.push("card_history_encoding_corrupt");
   if (board.role === "active") {
-    if (state && journal.ACTIVE_STATES.has(state) && archived) reasonCodes.push("active_card_archived");
+    if (state && journal.ACTIVE_STATES.has(state) && archived && !completedThreadIdLink) {
+      reasonCodes.push("active_card_archived");
+    }
     if (state === "completed" && !/ATLAS-COMPLETED-CARD:/i.test(content)) reasonCodes.push("completed_card_left_on_active_board");
   }
   if (board.role === "completed") {
@@ -101,7 +104,7 @@ function inspectThread({ board, thread, starter, messages }) {
     cardId,
     state,
     archived,
-    completedThreadIdLink: content.match(/ATLAS-COMPLETED-CARD:\s*https:\/\/discord\.com\/channels\/[^/]+\/([0-9]+)/i)?.[1] || null,
+    completedThreadIdLink,
     sourceThreadIdLink: content.match(/original card:\s*https:\/\/discord\.com\/channels\/[^/]+\/([0-9]+)/i)?.[1] || null,
     journalPresent: hasJournal(messages),
     superseded: false,

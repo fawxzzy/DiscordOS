@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const { _internals } = require("../scripts/discordos-board-completed-transfer");
+const { _internals: journal } = require("../scripts/discordos-board-card-journal");
 
 function response({ ok = true, status = 200, payload = null } = {}) {
   return { ok, status, json: async () => payload };
@@ -185,6 +186,39 @@ test("completed message identity makes retries deterministic", () => {
   assert(content.includes("ATLAS-CARD-ID: `CARD-42`"));
   assert(content.includes("- state: `completed`"));
   assert(content.includes("https://discord.com/channels/guild/source"));
+  assert(content.length <= 2000);
+});
+
+test("completed transfer preserves the managed-card boundary for long source cards", () => {
+  const destinationUrl = "https://discord.com/channels/guild/completed-thread";
+  const sourceContent = `${journal.CARD_START}\nATLAS-CARD-ID: \`CARD-42\`\n- state: \`review\`\n\n${"Detailed work evidence. ".repeat(120)}\n${journal.CARD_END}`;
+  const content = _internals.buildSourceMessage({
+    sourceContent,
+    destinationUrl,
+    cardId: "CARD-42",
+  });
+
+  assert(content.startsWith(journal.CARD_START));
+  assert(content.includes("## Archived completion"));
+  assert(content.includes(`ATLAS-COMPLETED-CARD: ${destinationUrl}`));
+  assert(content.endsWith(journal.CARD_END));
+  assert.equal(content.match(new RegExp(journal.CARD_END, "g"))?.length, 1);
+  assert(content.length <= 2000);
+});
+
+test("completed transfer repairs a source card whose closing boundary was truncated", () => {
+  const destinationUrl = "https://discord.com/channels/guild/completed-thread";
+  const brokenSource = `${journal.CARD_START}\nATLAS-CARD-ID: \`CARD-42\`\n- state: \`review\`\n\nExisting details\n\n## Archived completion\n- card id: \`CARD-42\`\n- completed card: ${destinationUrl}\nATLAS-COMPLETED-CARD: ${destinationUrl}`;
+  const content = _internals.buildSourceMessage({
+    sourceContent: brokenSource,
+    destinationUrl,
+    cardId: "CARD-42",
+  });
+
+  assert(content.startsWith(journal.CARD_START));
+  assert(content.endsWith(journal.CARD_END));
+  assert.equal(content.match(/## Archived completion/g)?.length, 1);
+  assert.equal(content.match(new RegExp(journal.CARD_END, "g"))?.length, 1);
   assert(content.length <= 2000);
 });
 
