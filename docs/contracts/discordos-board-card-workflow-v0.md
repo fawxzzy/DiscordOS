@@ -30,6 +30,19 @@ The admitted v0 card states are:
 
 The matching code-facing state union is `DiscordOSBoardCardState` in `src/contracts/board.ts`.
 
+## Completed-board transfer
+
+Discord forum threads cannot be re-parented. A proof-complete card therefore moves through an idempotent clone-and-link operation owned by DiscordOS:
+
+1. Create or reuse exactly one card in the shared `completed` forum using the stable card ID.
+2. Preserve the original card content and append completion evidence plus a link to the source card.
+3. Apply and read back the required success reaction on the completed card.
+4. Add the completed-card link to the source card.
+5. Archive and lock the source card only after destination readback succeeds.
+6. Read back both surfaces and return a correlated receipt.
+
+The source thread is never deleted. A destination failure leaves the source card active and produces a recoverable blocker. Live apply requires both `--allow-apply` and `DISCORDOS_BOARD_COMPLETED_TRANSFER=enabled`; dry-run is the default.
+
 ## Transition Contract
 
 Every transition should include:
