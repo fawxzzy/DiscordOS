@@ -334,7 +334,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-13T01:30:32.117Z"
+    "liveSyncedAt": "2026-07-13T01:33:47.088Z"
   },
   "cards": [
     {
@@ -1970,14 +1970,14 @@
     {
       "id": "mazer-player-rank-only-progression-display",
       "title": "mazer: rank-only player progression display",
-      "state": "open",
+      "state": "ready",
       "priority": "high",
       "category": "mazer",
       "markerName": "Rank-only public progression display",
       "completionPercent": 0,
       "summary": "Remove player-facing Skill and Player Skill labels and present one consistent public rank display without deleting hidden progression data.",
       "whyItMatters": "Players should not have to reconcile skill, rating, rank, level, and score as competing public measures. Rank is the chosen public progression signal; score remains run quality.",
-      "currentStatus": "The current HUD, Options guide, and some player-facing copy still use Skill Lvl terminology. The existing progression record stores more than the public UI needs, so this is a terminology and surface-audit delivery, not a data-deletion task.",
+      "currentStatus": "Ready at unchanged 0% for one complete public-surface slice. Replace badge and guide Skill Lvl / Player Skill wording with Rank or AI Rank while preserving hidden levels, saves, telemetry, and progression formulas. Make the badge span the rendered maze-border width, remove the portrait-only surplus bottom row and upward text offset, retain the shared lane gap between maze and badge, and prove authenticated Menu/Options/Play/Pause at phone and desktop sizes. No storage or schema migration is admitted.",
       "workBreakdown": [
         "Audit HUD, main menu, Options, Pause, completion/results, onboarding, tooltips, accessibility labels, and mobile layouts for player Skill or Player Skill wording.",
         "Replace the public player progression display with rank-only language while preserving score as a separate 0-100 run-quality value.",
@@ -1985,8 +1985,8 @@
         "Make labels, compact badge layouts, and guide explanations consistent across desktop and phone surfaces."
       ],
       "nextActions": [
-        "Use the progression terminology audit as the source for exact public labels and descriptions.",
-        "Build a surface inventory before changing any storage schema or telemetry field.",
+        "Replace the complete audited public terminology surface with rank-only language while preserving internal progression fields.",
+        "Normalize badge width, height, and maze separation through the shared progression-badge renderer.",
         "Capture authenticated menu, Options, play, and Pause proofs at desktop and phone sizes."
       ],
       "acceptanceCriteria": [
