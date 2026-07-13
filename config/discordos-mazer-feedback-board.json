@@ -334,7 +334,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-13T01:50:14.256Z"
+    "liveSyncedAt": "2026-07-13T01:54:28.635Z"
   },
   "cards": [
     {
@@ -2166,14 +2166,14 @@
     {
       "id": "mazer-player-trail-readability-lock",
       "title": "mazer: green player/trail and white shine readability lock",
-      "state": "open",
+      "state": "ready",
       "priority": "medium",
       "category": "mazer",
       "markerName": "Fixed green player/trail and white shine",
       "completionPercent": 0,
       "summary": "Ship one fixed readability contract: a green player and trail with one white fading trail shine at the existing pulse cadence, separated from future iridescent material experiments.",
       "whyItMatters": "The active player and trail must be immediately readable on every maze material tier. A fixed release contract prevents visual experimentation from changing gameplay recognition or adding cosmetic scope.",
-      "currentStatus": "The current baseline uses a green player/trail and one purple pulse. The latest visual requirement selects one white fading shine instead, retaining the existing 2600ms travel period and 33ms redraw cadence unless visual proof demonstrates a readability reason to change it. Rainbow, shop, cosmetic unlock, and material-tier work remain out of scope.",
+      "currentStatus": "Ready for one bounded implementation slice at an unchanged 0% marker. The current baseline uses a green player/trail and one purple pulse; the admitted slice replaces only that pulse with exactly one white fading shine while preserving the existing 2600ms travel period and 33ms redraw cadence. Ownership is limited to the shared progression palette, MenuScene trail renderer and diagnostics, material/render regression tests, and route-aware phone/desktop proof. Existing contrast helpers and visual-proof tooling satisfy the dependency seams for this slice. Rainbow, shop, cosmetic unlock, and material-tier work remain out of scope.",
       "workBreakdown": [
         "Lock player core and trail to the high-contrast green readability anchor on menu and play surfaces.",
         "Replace the purple pulse with exactly one white fading shine that follows the existing travel cadence and never competes with a second trail animation.",
