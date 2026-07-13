@@ -508,7 +508,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-13T20:31:15.668Z"
+    "liveSyncedAt": "2026-07-13T20:33:26.188Z"
   },
   "cards": [
     {
@@ -2904,14 +2904,14 @@
     {
       "id": "mazer-endless-progression-mode-contract",
       "title": "mazer: Endless Progression mode contract",
-      "state": "ready",
+      "state": "open",
       "priority": "high",
       "category": "mazer",
       "markerName": "Canonical Endless mode contract",
       "completionPercent": 0,
       "summary": "Define Endless as the canonical mode: level chain, completion checkpoint, current-attempt reset, durable resume, private score envelope, and result receipt.",
       "whyItMatters": "Coins, enemies, items, content gates, challenges, leaderboards, and offline recovery need one stable base-mode contract.",
-      "currentStatus": "Ready for a bounded first implementation PR. Code inspection confirmed `legacyPlayLifecycle` models only goal reset/regenerate and `legacyProgression` records completed cycles but has no named attempt/checkpoint lifecycle. This slice adds a pure, versioned resolver for start, completion, current-attempt failure, abandon/resume intent, and reset scope with table-driven tests only. It does not wire MenuScene, alter existing saves, write Supabase, add enemies, or designate a leaderboard score.",
+      "currentStatus": "In progress on Mazer branch codex/endless-progression-lifecycle from 6245efb9. The bounded first PR adds only a pure, versioned Endless attempt/checkpoint resolver and table-driven fixtures. Existing MenuScene behavior, progression storage version, remote writes, Supabase, enemies, economy, and leaderboard authority remain unchanged.",
       "workBreakdown": [
         "Define run, attempt, completion, checkpoint, resume, abandon, retry, and failure states.",
         "Define deterministic seed/level sequencing and versioned result receipts.",
@@ -2920,8 +2920,8 @@
         "First PR: add the pure lifecycle resolver and fixture tests without runtime wiring or storage migration."
       ],
       "nextActions": [
-        "Implement the pure lifecycle resolver beside `legacyPlayLifecycle.ts` with focused tests.",
-        "Use the resolver results to specify the subsequent scene/persistence integration slice; do not widen this PR."
+        "Implement and test the pure lifecycle resolver beside legacyPlayLifecycle.ts.",
+        "Run focused lifecycle/progression tests, lint, and full Mazer verification before review."
       ],
       "acceptanceCriteria": [
         "Completion, failure, abandon, and resume have non-overlapping deterministic outcomes.",
