@@ -106,6 +106,12 @@ test("completed migration event carries the original source-card link", () => {
   });
   assert(event.card.evidence.includes("original card: https://discord.com/channels/guild/source-thread"));
   assert.deepEqual(event.entry.evidence, event.card.evidence);
+  assert.equal(event.card.progress, "100%");
+  assert.deepEqual(event.card.nextActions, [
+    "Retain this completed record as historical evidence",
+    "Create or reopen active work only when new evidence changes the accepted outcome",
+  ]);
+  assert.deepEqual(event.entry.next, event.card.nextActions);
 });
 
 test("completed migration never reports its own thread as the original source", () => {
