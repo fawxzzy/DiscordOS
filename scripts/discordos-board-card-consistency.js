@@ -59,6 +59,11 @@ function inspectThread({ board, thread, starter, messages }) {
   if (!state) reasonCodes.push("canonical_card_state_missing");
   if (!/^- updated:\s*`[^`]+`/im.test(content)) reasonCodes.push("canonical_updated_timestamp_missing");
   if (!hasJournal(messages)) reasonCodes.push("card_journal_history_missing");
+  if (journal.findMojibakeRuns(thread?.name).length > 0) reasonCodes.push("card_title_encoding_corrupt");
+  if (journal.findMojibakeRuns(content).length > 0) reasonCodes.push("card_starter_encoding_corrupt");
+  if ((Array.isArray(messages) ? messages : []).some((message) =>
+    journal.findMojibakeRuns(message?.content).length > 0
+  )) reasonCodes.push("card_history_encoding_corrupt");
   if (board.role === "active") {
     if (state && journal.ACTIVE_STATES.has(state) && archived) reasonCodes.push("active_card_archived");
     if (state === "completed" && !/ATLAS-COMPLETED-CARD:/i.test(content)) reasonCodes.push("completed_card_left_on_active_board");

@@ -75,6 +75,24 @@ test("card titles repair mojibake and normalize dash separators", () => {
   );
 });
 
+test("known encoding corruption is repaired in every event text field", () => {
+  const mojibake = "\u00e2\u20ac\u201d";
+  const normalized = _internals.normalizeEvent(event({
+    card: {
+      ...event().card,
+      summary: `Summary ${mojibake} detail`,
+      discoveries: [`Discovery ${mojibake} detail`],
+    },
+    entry: {
+      ...event().entry,
+      headline: `Checkpoint ${mojibake} verified`,
+    },
+  }));
+  assert.equal(normalized.card.summary, "Summary - detail");
+  assert.deepEqual(normalized.card.discoveries, ["Discovery - detail"]);
+  assert.equal(normalized.entry.headline, "Checkpoint - verified");
+});
+
 test("managed card refresh replaces stale managed content without duplicating it", () => {
   const normalized = _internals.normalizeEvent(event());
   const oldBody = `${_internals.CARD_START}\nATLAS-CARD-ID: \`FIT-42\`\n- state: \`planning\`\n${_internals.CARD_END}\n\nOperator note`;
