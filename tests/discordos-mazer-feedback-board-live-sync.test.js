@@ -99,6 +99,16 @@ test("mazer feedback board live sync parses guarded apply args", () => {
   assert.equal(parsed.forumChannelId, "forum-1");
 });
 
+test("mazer feedback board live sync skips completed source cards", () => {
+  const cards = _internals.selectSyncableCards([
+    { id: "active", state: "open" },
+    { id: "completed", state: "completed" },
+    { id: "backlog", state: "backlog" },
+  ]);
+
+  assert.deepEqual(cards.map((card) => card.id), ["active", "backlog"]);
+});
+
 test("mazer feedback board live sync blocks partial guard", async () => {
   const result = await _internals.buildMazerFeedbackBoardLiveSync({
     allowSync: true,

@@ -142,20 +142,20 @@ test("mazer feedback board reads committed cards", async () => {
   assert.equal(result.placement.forumChannelId, "1524889569475170478");
   assert.equal(result.liveForumChannelId, "1524889569475170478");
   assert.equal(result.legacyForumChannelId, "1524844302981926972");
-  assert.equal(result.cardCount, 42);
-  assert.equal(result.openCardCount, 26);
+  assert.equal(result.cardCount, 52);
+  assert.equal(result.openCardCount, 31);
   assert.equal(result.readyCardCount, 0);
   assert.equal(result.completedCardCount, 4);
   assert.equal(result.blockedCardCount, 0);
-  assert.equal(result.backlogCardCount, 12);
-  assert.equal(result.reactionReadyCardCount, 42);
-  assert.equal(result.nextCard.id, "mazer-turn-synchronous-world-simulation");
+  assert.equal(result.backlogCardCount, 17);
+  assert.equal(result.reactionReadyCardCount, 52);
+  assert.equal(result.nextCard.id, "mazer-run-quality-metric-contract-v2");
   assert.deepEqual(result.planning, {
     ok: true,
-    activeCardId: "mazer-turn-synchronous-world-simulation",
+    activeCardId: "mazer-run-quality-metric-contract-v2",
     epicCount: 9,
-    mappedCardCount: 42,
-    dependencyCount: 15,
+    mappedCardCount: 52,
+    dependencyCount: 23,
     parallelTrackCount: 1,
   });
   assert(result.cards.some((card) => card.id === "mazer-account-scoped-settings-persistence"));
@@ -174,6 +174,16 @@ test("mazer feedback board reads committed cards", async () => {
   assert(result.cards.some((card) => card.id === "mazer-browser-layout-persistence"));
   assert(result.cards.some((card) => card.id === "mazer-maze-feature-progression-parity"));
   assert(result.cards.some((card) => card.id === "mazer-player-trail-readability-lock"));
+  assert(result.cards.some((card) => card.id === "mazer-run-quality-metric-contract-v2"));
+  assert(result.cards.some((card) => card.id === "mazer-run-quality-telemetry-capture-v2"));
+  assert(result.cards.some((card) => card.id === "mazer-run-quality-player-results-ui"));
+  assert(result.cards.some((card) => card.id === "mazer-run-quality-leaderboard-admission"));
+  assert(result.cards.some((card) => card.id === "mazer-run-quality-achievement-admission"));
+  assert(result.cards.some((card) => card.id === "mazer-moving-maze-lane-correction-contract"));
+  assert(result.cards.some((card) => card.id === "mazer-moving-maze-one-tile-lane-snap"));
+  assert(result.cards.some((card) => card.id === "mazer-moving-maze-assisted-motion-proof"));
+  assert(result.cards.some((card) => card.id === "mazer-web-share-metadata-and-preview-asset"));
+  assert(result.cards.some((card) => card.id === "mazer-web-share-preview-platform-verification"));
   assert(result.cards.some((card) => card.id === "mazer-auth-ui-flow-hardening"));
   const authCard = result.cards.find((card) => card.id === "mazer-auth-ui-flow-hardening");
   assert.equal(authCard.primaryEpicId, "player-systems");

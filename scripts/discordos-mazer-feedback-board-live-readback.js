@@ -114,6 +114,8 @@ async function buildMazerFeedbackBoardLiveReadback({
 } = {}) {
   const board = await boardInternals.readBoard(boardPath, fsImpl);
   const readModel = boardInternals.buildMazerFeedbackBoardReadModel(board);
+  const readableCards = readModel.cards.filter((card) => card.state !== "completed");
+  const skippedCompletedSourceCardCount = readModel.cards.length - readableCards.length;
   const token = liveSyncInternals.normalizeEnvValue(env.DISCORDOS_BOT_TOKEN);
   const reasonCodes = [...readModel.reasonCodes];
 
@@ -123,7 +125,7 @@ async function buildMazerFeedbackBoardLiveReadback({
 
   const rows = [];
   if (token) {
-    for (const card of readModel.cards) {
+    for (const card of readableCards) {
       if (!card.liveThreadId || !card.liveMessageId) {
         rows.push({
           ok: false,
@@ -167,6 +169,8 @@ async function buildMazerFeedbackBoardLiveReadback({
     boardId: readModel.boardId,
     forumChannelId: readModel.liveForumChannelId || readModel.placement?.forumChannelId || null,
     cardCount: readModel.cardCount,
+    checkedTargetCardCount: readableCards.length,
+    skippedCompletedSourceCardCount,
     checkedCardCount: rows.length,
     readyCardCount: rows.filter((row) => row.ok).length,
     contentLimit,

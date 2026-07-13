@@ -134,6 +134,40 @@ test("mazer feedback board live readback validates rich Discord card sections", 
   assert.equal(result.readyCardCount, 1);
 });
 
+test("mazer feedback board live readback skips completed source cards", async () => {
+  const boardPath = await writeBoard();
+  const board = JSON.parse(await fs.readFile(boardPath, "utf8"));
+  board.cards.push({
+    ...board.cards[0],
+    id: "completed-card",
+    title: "mazer: completed card",
+    state: "completed",
+    completionPercent: 100,
+    reactionStatus: "success",
+    reactionEmojiName: "success",
+    reactionEmojiId: "1507384062166302851",
+    liveThreadId: "archived-thread",
+    liveMessageId: "archived-message",
+  });
+  board.board.planning.epics[0].primaryCardIds.push("completed-card");
+  await fs.writeFile(boardPath, JSON.stringify(board), "utf8");
+
+  const content = ["# mazer", "**Why This Matters**", "**Current State**", "**Work Breakdown**", "**Next Actions**", "**Acceptance Criteria**", "**Proof Plan**"].join("\n");
+  const result = await _internals.buildMazerFeedbackBoardLiveReadback({
+    boardPath,
+    env: { DISCORDOS_BOT_TOKEN: "token" },
+    fetchImpl: async (url) => {
+      assert(url.endsWith("/channels/thread-1/messages/message-1"));
+      return response({ payload: { content } });
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.cardCount, 2);
+  assert.equal(result.checkedCardCount, 1);
+  assert.equal(result.skippedCompletedSourceCardCount, 1);
+});
+
 test("mazer feedback board live readback rejects thin Discord card body", async () => {
   const boardPath = await writeBoard();
   const result = await _internals.buildMazerFeedbackBoardLiveReadback({
