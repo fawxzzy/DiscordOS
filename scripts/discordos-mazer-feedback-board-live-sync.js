@@ -212,6 +212,10 @@ function formatLimitedBullets(items, limit = 1, itemMaxLength = 100) {
   return lines;
 }
 
+function selectSyncableCards(cards = []) {
+  return cards.filter((card) => card.state !== "completed");
+}
+
 function uniqueThreads(threads = []) {
   const seen = new Set();
   return threads.filter((thread) => {
@@ -689,6 +693,8 @@ async function buildMazerFeedbackBoardLiveSync({
     reasonCodes: [],
   };
   const cardSyncResults = [];
+  const syncableCards = selectSyncableCards(readModel.cards);
+  const completedSourceCardCount = readModel.cards.length - syncableCards.length;
   const canSync = apply
     && syncAdmission.admitted
     && readModel.ok
@@ -706,7 +712,7 @@ async function buildMazerFeedbackBoardLiveSync({
   }
 
   if (canSync && threadInventory.ok) {
-    for (const card of readModel.cards) {
+    for (const card of syncableCards) {
       const spec = {
         ...cardContract.buildCanonicalCardSpec({
           board,
@@ -749,7 +755,7 @@ async function buildMazerFeedbackBoardLiveSync({
     written: false,
     path: input.boardPath || boardInternals.DEFAULT_BOARD_PATH,
   };
-  if (canSync && writeBoard && syncedCardCount === readModel.cards.length) {
+  if (canSync && writeBoard && syncedCardCount === syncableCards.length) {
     await writeSyncedBoard({
       boardPath: input.boardPath || boardInternals.DEFAULT_BOARD_PATH,
       board,
@@ -766,7 +772,7 @@ async function buildMazerFeedbackBoardLiveSync({
 
   const uniqueReasonCodes = [...new Set(reasonCodes)];
   const result = {
-    ok: uniqueReasonCodes.length === 0 && (!apply || syncedCardCount === readModel.cards.length),
+    ok: uniqueReasonCodes.length === 0 && (!apply || syncedCardCount === syncableCards.length),
     destructive: false,
     sendsMessages: canSync && cardSyncResults.some((resultRow) => resultRow.action === "created" && resultRow.ok),
     writesArtifacts: boardWrite.written,
@@ -779,6 +785,8 @@ async function buildMazerFeedbackBoardLiveSync({
         : "blocked",
     boardId: readModel.boardId,
     cardCount: readModel.cardCount,
+    syncTargetCardCount: syncableCards.length,
+    skippedCompletedSourceCardCount: completedSourceCardCount,
     readyCardCount: readModel.readyCardCount,
     forumTarget,
     syncAdmission,
@@ -812,6 +820,7 @@ async function buildMazerFeedbackBoardLiveSync({
       dimensions: {
         sendsMessages: result.sendsMessages,
         cardCount: result.cardCount,
+        syncTargetCardCount: result.syncTargetCardCount,
         syncedCardCount: result.syncedCardCount,
         forumChannelId: result.forumTarget.forumChannelId || "none",
       },
@@ -882,6 +891,7 @@ module.exports = {
     parseArgs,
     resolveSyncAdmission,
     normalizeEnvValue,
+    selectSyncableCards,
     buildCardThreadPayload,
     resolveForumTarget,
     listForumThreads,

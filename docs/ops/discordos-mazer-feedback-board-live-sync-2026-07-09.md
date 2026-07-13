@@ -6,16 +6,16 @@
 - calls Discord API: `true`
 - status: `live_board_synced`
 - board: `mazer`
-- cards: `41`
+- cards: `52`
 - ready cards: `0`
 - sync admission: `sync_admitted`
 - forum channel id: `1524889569475170478`
 - guild id: `1504668396338413670`
 - forum created: `false`
-- discovered threads: `42`
-- synced cards: `41`
+- discovered threads: `53`
+- synced cards: `48`
 - created threads: `0`
-- existing threads: `41`
+- existing threads: `48`
 - board config written: `true`
 - receipt written: `true`
 - reason codes: `none`
@@ -32,13 +32,11 @@
 - card mazer-unified-player-message-system: `existing` thread `1524889587699290288` status `200` reaction `200`
 - card mazer-auth-gate-persistent-login: `existing` thread `1524974571059675198` status `200` reaction `200`
 - card mazer-animation-smoothness-lifecycle: `existing` thread `1524974573303627878` status `200` reaction `200`
-- card mazer-play-mode-perpetual-loop: `existing` thread `1524974575182545016` status `200` reaction `200`
 - card mazer-iridescent-player-trail-material: `existing` thread `1524974577178906714` status `200` reaction `200`
 - card mazer-diagonal-path-graph-contract: `existing` thread `1524974579292966983` status `200` reaction `200`
 - card mazer-visual-proof-discipline: `existing` thread `1524974580870025338` status `200` reaction `200`
 - card mazer-discordos-board-discipline: `existing` thread `1524974583348858880` status `200` reaction `200`
 - card mazer-account-scoped-settings-persistence: `existing` thread `1525045144225841257` status `200` reaction `200`
-- card mazer-player-input-movement-correctness: `existing` thread `1525045147769770085` status `200` reaction `200`
 - card mazer-procedural-difficulty-generator-shaping: `existing` thread `1525063353716834354` status `200` reaction `200`
 - card mazer-mobile-shell-device-harness: `existing` thread `1525063357575593995` status `200` reaction `200`
 - card mazer-visual-defaults-menu-controls: `existing` thread `1525063361887338527` status `200` reaction `200`
@@ -55,8 +53,17 @@
 - card mazer-multiplayer-foundation: `existing` thread `1525136082193223720` status `200` reaction `200`
 - card mazer-endless-multiplayer-survival-mode: `existing` thread `1525136087725641865` status `200` reaction `200`
 - card mazer-moving-procedural-maze-mode: `existing` thread `1525136091839991940` status `200` reaction `200`
-- card mazer-player-rank-only-progression-display: `existing` thread `1525337744774140056` status `200` reaction `200`
 - card mazer-cross-viewport-ui-reliability: `existing` thread `1525337748830031875` status `200` reaction `200`
 - card mazer-browser-layout-persistence: `existing` thread `1525337752290197514` status `200` reaction `200`
 - card mazer-maze-feature-progression-parity: `existing` thread `1525337756132442162` status `200` reaction `200`
-- card mazer-player-trail-readability-lock: `existing` thread `1525337759315919001` status `200` reaction `200`
+- card mazer-auth-ui-flow-hardening: `existing` thread `1525635672961060925` status `200` reaction `200`
+- card mazer-run-quality-metric-contract-v2: `existing` thread `1526284203464065185` status `200` reaction `200`
+- card mazer-run-quality-telemetry-capture-v2: `existing` thread `1526284206664056912` status `200` reaction `200`
+- card mazer-run-quality-player-results-ui: `existing` thread `1526284210292133950` status `200` reaction `200`
+- card mazer-run-quality-leaderboard-admission: `existing` thread `1526284213803024565` status `200` reaction `200`
+- card mazer-run-quality-achievement-admission: `existing` thread `1526284221646377191` status `200` reaction `200`
+- card mazer-moving-maze-lane-correction-contract: `existing` thread `1526284226117369866` status `200` reaction `200`
+- card mazer-moving-maze-one-tile-lane-snap: `existing` thread `1526284230597017701` status `200` reaction `200`
+- card mazer-moving-maze-assisted-motion-proof: `existing` thread `1526284233201549425` status `200` reaction `200`
+- card mazer-web-share-metadata-and-preview-asset: `existing` thread `1526284237496516658` status `200` reaction `200`
+- card mazer-web-share-preview-platform-verification: `existing` thread `1526284241061543996` status `200` reaction `200`

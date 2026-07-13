@@ -24,8 +24,8 @@
     },
     "planning": {
       "version": 1,
-      "activeCardId": "mazer-turn-synchronous-world-simulation",
-      "activeSelectionReason": "Mazer PR #41 completed the perpetual play acceptance path with a fresh-seed lifecycle, 4/4 locked-phase input probes, and a 25.3% faster handoff; execution advances to the next primary core-gameplay dependency.",
+      "activeCardId": "mazer-run-quality-metric-contract-v2",
+      "activeSelectionReason": "Planning review identified run-quality metrics as the next product-contract gate: define telemetry-first quality signals before changing rank, score, leaderboards, achievements, or progression calibration.",
       "executionPolicy": "Finish the earliest execution-ready critical-path epic before taking later product work. Advanced AI research stays parallel and cannot block the critical path.",
       "epics": [
         {
@@ -38,7 +38,8 @@
             "mazer-play-mode-perpetual-loop",
             "mazer-turn-synchronous-world-simulation",
             "mazer-mystery-box-usable-item-system",
-            "mazer-invisibility-cloak-item"
+            "mazer-invisibility-cloak-item",
+            "mazer-moving-maze-one-tile-lane-snap"
           ],
           "supportingCardIds": [
             "mazer-fluid-controls-and-motion",
@@ -63,7 +64,8 @@
             "mazer-visual-defaults-menu-controls",
             "mazer-cross-viewport-ui-reliability",
             "mazer-browser-layout-persistence",
-            "mazer-player-trail-readability-lock"
+            "mazer-player-trail-readability-lock",
+            "mazer-moving-maze-assisted-motion-proof"
           ],
           "supportingCardIds": [
             "mazer-player-input-movement-correctness",
@@ -83,7 +85,10 @@
             "mazer-first-time-tutorial-system",
             "mazer-customization-inventory-cosmetic-unlocks",
             "mazer-maze-coin-pickups-cosmetic-currency",
-            "mazer-player-rank-only-progression-display"
+            "mazer-player-rank-only-progression-display",
+            "mazer-run-quality-metric-contract-v2",
+            "mazer-run-quality-player-results-ui",
+            "mazer-run-quality-achievement-admission"
           ],
           "supportingCardIds": [
             "mazer-ai-run-corpus-quality-calibration",
@@ -102,7 +107,8 @@
             "mazer-procedural-difficulty-generator-shaping",
             "mazer-data-driven-cosmetic-theme-catalog",
             "mazer-moving-procedural-maze-mode",
-            "mazer-maze-feature-progression-parity"
+            "mazer-maze-feature-progression-parity",
+            "mazer-moving-maze-lane-correction-contract"
           ],
           "supportingCardIds": [
             "mazer-ai-level-rank-progression",
@@ -135,7 +141,8 @@
           "criticalPath": true,
           "primaryCardIds": [
             "mazer-multiplayer-foundation",
-            "mazer-endless-multiplayer-survival-mode"
+            "mazer-endless-multiplayer-survival-mode",
+            "mazer-run-quality-leaderboard-admission"
           ],
           "supportingCardIds": [
             "mazer-auth-gate-persistent-login",
@@ -148,7 +155,8 @@
           "order": 7,
           "criticalPath": true,
           "primaryCardIds": [
-            "mazer-ai-run-corpus-quality-calibration"
+            "mazer-ai-run-corpus-quality-calibration",
+            "mazer-run-quality-telemetry-capture-v2"
           ],
           "supportingCardIds": [
             "mazer-auth-remote-playbook-sync",
@@ -177,7 +185,9 @@
           "criticalPath": true,
           "primaryCardIds": [
             "mazer-discordos-board-discipline",
-            "mazer-handcrafted-asset-authoring-import-workflow"
+            "mazer-handcrafted-asset-authoring-import-workflow",
+            "mazer-web-share-metadata-and-preview-asset",
+            "mazer-web-share-preview-platform-verification"
           ],
           "supportingCardIds": [
             "mazer-auth-remote-playbook-sync",
@@ -287,9 +297,10 @@
           "cardId": "mazer-ai-level-rank-progression",
           "dependsOnCardIds": [
             "mazer-ai-run-corpus-quality-calibration",
-            "mazer-procedural-difficulty-generator-shaping"
+            "mazer-procedural-difficulty-generator-shaping",
+            "mazer-run-quality-metric-contract-v2"
           ],
-          "reason": "Formula tuning follows quality-approved receipts and measurable generated difficulty."
+          "reason": "Formula tuning follows quality-approved receipts, measurable generated difficulty, and an approved telemetry-first run-quality contract."
         },
         {
           "cardId": "mazer-customization-inventory-cosmetic-unlocks",
@@ -305,6 +316,70 @@
             "mazer-handcrafted-asset-authoring-import-workflow"
           ],
           "reason": "Catalog entries need a governed asset production and import path."
+        },
+        {
+          "cardId": "mazer-run-quality-telemetry-capture-v2",
+          "dependsOnCardIds": [
+            "mazer-run-quality-metric-contract-v2",
+            "mazer-auth-remote-playbook-sync"
+          ],
+          "reason": "Capture must implement approved definitions and preserve the local-first, account-safe receipt boundary."
+        },
+        {
+          "cardId": "mazer-run-quality-player-results-ui",
+          "dependsOnCardIds": [
+            "mazer-run-quality-telemetry-capture-v2",
+            "mazer-cross-viewport-ui-reliability"
+          ],
+          "reason": "Player-facing results require verified data and stable shared viewport geometry."
+        },
+        {
+          "cardId": "mazer-run-quality-leaderboard-admission",
+          "dependsOnCardIds": [
+            "mazer-run-quality-telemetry-capture-v2",
+            "mazer-auth-remote-playbook-sync"
+          ],
+          "reason": "Leaderboard use needs a stable metric version, account-safe receipts, and an explicit anti-cheat/privacy decision."
+        },
+        {
+          "cardId": "mazer-run-quality-achievement-admission",
+          "dependsOnCardIds": [
+            "mazer-run-quality-player-results-ui",
+            "mazer-run-quality-telemetry-capture-v2"
+          ],
+          "reason": "Achievement criteria must derive from understood player-visible metrics rather than a parallel scoring system."
+        },
+        {
+          "cardId": "mazer-moving-maze-lane-correction-contract",
+          "dependsOnCardIds": [
+            "mazer-moving-procedural-maze-mode",
+            "mazer-turn-synchronous-world-simulation",
+            "mazer-fluid-controls-and-motion",
+            "mazer-edge-wrap-topology-and-notch-fill"
+          ],
+          "reason": "Lane correction follows explicit moving-world transforms, phase ordering, control intent, and wrap topology."
+        },
+        {
+          "cardId": "mazer-moving-maze-one-tile-lane-snap",
+          "dependsOnCardIds": [
+            "mazer-moving-maze-lane-correction-contract"
+          ],
+          "reason": "Implementation must consume the approved correction contract instead of inferring dynamic behavior from static-grid controls."
+        },
+        {
+          "cardId": "mazer-moving-maze-assisted-motion-proof",
+          "dependsOnCardIds": [
+            "mazer-moving-maze-one-tile-lane-snap",
+            "mazer-mobile-shell-device-harness"
+          ],
+          "reason": "Route-aware desktop and mobile proof follows the implementation and shared device harness."
+        },
+        {
+          "cardId": "mazer-web-share-preview-platform-verification",
+          "dependsOnCardIds": [
+            "mazer-web-share-metadata-and-preview-asset"
+          ],
+          "reason": "External crawler verification can only evaluate a deployed metadata and absolute-image contract."
         }
       ],
       "parallelTracks": [
@@ -334,7 +409,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-13T02:48:17.393Z"
+    "liveSyncedAt": "2026-07-13T17:51:59.716Z"
   },
   "cards": [
     {
@@ -347,7 +422,7 @@
       "completionPercent": 30,
       "summary": "Turn account-scoped AI run receipts into versioned, quality-gated calibration cohorts without deleting raw evidence or automatically changing live progression.",
       "whyItMatters": "The Fawxzzy account has more than 1,300 completed AI cycles, enough to reveal repeatable navigation, generator, and progression behavior. Mixed receipt schemas, incomplete remote coverage, wrapped-route benchmark drift, and duplicated scoring formulas can produce incorrect tuning unless the corpus is governed first.",
-      "currentStatus": "A 2026-07-11 read-only audit found 1,341 completed AI cycles and 1,139 durable receipts: 1,122 menu-demo and 17 play. There are no exact duplicates and storage is about 2.2 MB. Wave 1 landed on Mazer PR #37 with an export-only redacted quality audit. Wave 2 landed on Mazer PR #38 at merge commit `b380d2bc`: telemetry now benchmarks the legal wrap-aware playable graph while preserving generator `solutionPath`, and runtime, reporting, corpus audit, and calibration consume canonical scorer `mazer.maze-cycle-ai-decision-pressure` version `1.0.0`. Reports preserve historical stored scores separately from current recomputation. Full Mazer verification passed 323 tests across 42 files plus production build; fast verification passed 127 tests and the calibration smoke reached 5/5 goals with zero target leaks. Raw receipts and account progression remain immutable; future receipt versioning, idempotent coverage, seed packs, and offline formula calibration remain open.",
+      "currentStatus": "A 2026-07-11 read-only audit found 1,341 completed AI cycles and 1,139 durable receipts: 1,122 menu-demo and 17 play. There are no exact duplicates and storage is about 2.2 MB. Wave 1 landed on Mazer PR #37 with an export-only redacted quality audit. Wave 2 landed on Mazer PR #38 at merge commit `b380d2bc`: telemetry now benchmarks the legal wrap-aware playable graph while preserving generator `solutionPath`, and runtime, reporting, corpus audit, and calibration consume canonical scorer `mazer.maze-cycle-ai-decision-pressure` version `1.0.0`. Reports preserve historical stored scores separately from current recomputation. The new run-quality v2 design is telemetry-first and forward-only: historical truncated paths are not silently recomputed or backfilled. Raw receipts and account progression remain immutable; receipt versioning, idempotent coverage, seed packs, and offline formula calibration remain open.",
       "workBreakdown": [
         "Create a versioned corpus audit that assigns analytical quality states and reason codes without modifying raw receipts.",
         "Add receipt schema, build, AI algorithm, generator, benchmark-graph, run-origin, cycle-sequence, and progression-context metadata to future receipts.",
@@ -391,7 +466,9 @@
         "mazer-human-configured-ai-runner",
         "mazer-procedural-difficulty-generator-shaping",
         "mazer-edge-wrap-topology-and-notch-fill",
-        "mazer-maze-feature-progression-parity"
+        "mazer-maze-feature-progression-parity",
+        "mazer-run-quality-metric-contract-v2",
+        "mazer-run-quality-telemetry-capture-v2"
       ],
       "reactionStatus": "failure",
       "reactionEmojiName": "failure",
@@ -409,7 +486,7 @@
       "completionPercent": 72,
       "summary": "Document and redesign how player and AI run scores, hidden ratings, rank, target complexity, maze rating, and level bands choose the next maze without punitive regression.",
       "whyItMatters": "Progression must reward strong but imperfect runs, preserve meaningful rank differences, and keep player, AI, and generated-maze semantics explainable without exposing competing public metrics.",
-      "currentStatus": "The current contract stores separate player and AI-runner tracks, uses targetComplexity as the intended source of level/rank, and derives 0-100 paceScore from time, route efficiency, wrong turns, backtracks, reset use, render safety, and AI decision pressure. Current level bands are four target-complexity points wide and rank bands are E/D/C/B/A/S. The public UI still calls the player metric Skill Lvl in some surfaces. Mazer PR #38 removed wrapped-route benchmark and scorer-implementation disagreement for future/runtime recomputation without changing thresholds, rank bands, historical progression, or account state. Formula terminology, representative outcome fixtures, hysteresis, and quality-approved offline calibration remain open; rank-only presentation stays in its linked successor card.",
+      "currentStatus": "The current contract stores separate player and AI-runner tracks, uses targetComplexity as the intended source of level/rank, and derives 0-100 paceScore from time, route efficiency, wrong turns, backtracks, reset use, render safety, and AI decision pressure. Current level bands are four target-complexity points wide and rank bands are E/D/C/B/A/S. Mazer PR #38 removed wrapped-route benchmark and scorer-implementation disagreement without changing thresholds, rank bands, historical progression, or account state. Run-quality v2 is now the prerequisite telemetry contract; no new metric changes rank or score until its multi-route and historical-data policy is approved. Formula terminology, representative outcome fixtures, hysteresis, and quality-approved offline calibration remain open.",
       "workBreakdown": [
         "Inventory every stored, derived, displayed, and telemetry-only progression field before changing formulas or labels.",
         "Define score, hidden rating, rank, level, band, target complexity, measured maze rating, difficulty, and complexity in one versioned contract.",
@@ -449,7 +526,9 @@
         "mazer-procedural-difficulty-generator-shaping",
         "mazer-player-rank-only-progression-display",
         "mazer-maze-feature-progression-parity",
-        "mazer-ai-run-corpus-quality-calibration"
+        "mazer-ai-run-corpus-quality-calibration",
+        "mazer-run-quality-metric-contract-v2",
+        "mazer-run-quality-player-results-ui"
       ],
       "liveThreadId": "1524889572415377519",
       "liveMessageId": "1524889572415377519",
@@ -704,7 +783,7 @@
       "completionPercent": 41,
       "summary": "Replace snappy tile jumps and hard-coded stick segments with smoother player motion, dynamic directional intent, and bounded assistance through unambiguous zigzag corridors.",
       "whyItMatters": "Fast timed play will fail if the controls feel segmented, sticky, or jumpy. The player should feel like they are steering through a path, not stepping through a debug grid.",
-      "currentStatus": "Tap/hold parity, canonical movement plumbing, ordered stick candidates, and wrap snap improvements exist. Merged PR #54 adds a maintained keyboard-versus-stick matrix: keyboard completed 95/95 and stick 149/149 planned moves with exact accepted-turn parity, lifecycle/lock/fresh-ready proof, 60 FPS, and zero recent spikes. The 41% marker remains unchanged because macro direction through bounded alternating corridors and broader feel tuning are separate unfinished outcomes.",
+      "currentStatus": "Tap/hold parity, canonical movement plumbing, ordered stick candidates, and wrap snap improvements exist. Merged PR #54 adds a maintained keyboard-versus-stick matrix with exact accepted-turn parity, lifecycle/lock/fresh-ready proof, 60 FPS, and zero recent spikes. The 41% marker remains unchanged because macro direction through bounded alternating corridors and broader feel tuning are unfinished. Moving-maze one-tile correction is separately gated on a world-transform contract and is not a static-input patch.",
       "workBreakdown": [
         "Make stick angle represent movement intent rather than hard-coded segment commands.",
         "Resolve intent against legal graph neighbors dynamically every movement step.",
@@ -734,7 +813,8 @@
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-fluid-controls-and-motion",
       "relatedCardIds": [
         "mazer-player-input-movement-correctness",
-        "mazer-diagonal-path-graph-contract"
+        "mazer-diagonal-path-graph-contract",
+        "mazer-moving-maze-lane-correction-contract"
       ],
       "liveThreadId": "1524889582590496798",
       "liveMessageId": "1524889582590496798",
@@ -797,7 +877,7 @@
       "completionPercent": 88,
       "summary": "Finish the account-backed progression loop, remote cycle receipts, and Atlas/playbook handoff without exposing internal debug surfaces to players.",
       "whyItMatters": "Mazer needs continuity. Account-backed progress, cycle receipts, and Atlas reports are what let the game learn, tune difficulty, and preserve user/AI history across sessions.",
-      "currentStatus": "Remote cycle receipts, account-scoped progression, Supabase proof, Atlas-safe reports, compact AI decision scores, playable shortest-path comparison, render-safety pressure, and bounded AI reset proof are in place. Mazer PR #38 removes report-side scorer duplication, publishes scorer version `1.0.0`, validates scorer identity in Atlas reports, and preserves stored-versus-recomputed history. Atlas-side consumer wiring, future receipt version metadata, idempotent retry/outbox coverage, and explanation of the 202-cycle durable-receipt gap remain open; no historical row was rewritten or backfilled.",
+      "currentStatus": "Remote cycle receipts, account-scoped progression, Supabase proof, Atlas-safe reports, compact AI decision scores, playable shortest-path comparison, render-safety pressure, and bounded AI reset proof are in place. Mazer PR #38 removes report-side scorer duplication, publishes scorer version `1.0.0`, validates scorer identity in Atlas reports, and preserves stored-versus-recomputed history. Run-quality v2 may add future compact aggregates only after its metric contract; no historical row will be rewritten or backfilled. Atlas-side consumer wiring, future receipt metadata, idempotent retry/outbox coverage, and explanation of the durable-receipt gap remain open.",
       "workBreakdown": [
         "Keep compact remote cycle receipts behind the opt-in env flag and authenticated guard.",
         "Preserve player and AI progression tracks independently.",
@@ -826,7 +906,9 @@
       "reference": "docs/ops/mazer-ai-run-corpus-quality-calibration-plan-2026-07-11.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-auth-remote-playbook-sync",
       "relatedCardIds": [
-        "mazer-ai-run-corpus-quality-calibration"
+        "mazer-ai-run-corpus-quality-calibration",
+        "mazer-run-quality-telemetry-capture-v2",
+        "mazer-run-quality-leaderboard-admission"
       ],
       "liveThreadId": "1524889586021699684",
       "liveMessageId": "1524889586021699684",
@@ -1042,7 +1124,7 @@
       "completionPercent": 8,
       "summary": "Design diagonal tiles and true diagonal travel as a real graph feature before any visual-only diagonal paths are shipped.",
       "whyItMatters": "Diagonal routes can unlock spirals and richer maze shapes, but only if generation, movement, AI distance, compass, trail, and telemetry all agree.",
-      "currentStatus": "The concept is intentionally deferred. Current diagonal controls are directional intent helpers over a cardinal graph, not true diagonal topology.",
+      "currentStatus": "The concept is intentionally deferred. Current diagonal controls are directional intent helpers over a cardinal graph, not true diagonal topology; they do not authorize automatic correction after a dynamic maze transform.",
       "workBreakdown": [
         "Define diagonal neighbor legality and collision rules.",
         "Design diagonal render joins that fill corner-touching gaps cleanly.",
@@ -1065,6 +1147,10 @@
       ],
       "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-diagonal-path-graph-contract",
+      "relatedCardIds": [
+        "mazer-fluid-controls-and-motion",
+        "mazer-moving-maze-lane-correction-contract"
+      ],
       "reactionStatus": "failure",
       "reactionEmojiName": "failure",
       "reactionEmojiId": "1507384094424694785",
@@ -1929,11 +2015,12 @@
       "category": "mazer",
       "summary": "Add a mode where the maze pans in one or more directions while new maze space procedurally generates ahead of the player.",
       "whyItMatters": "A moving maze can create pressure without a fixed endpoint, but it requires streaming topology, camera, AI, trail, and spawn rules to agree.",
-      "currentStatus": "Backlog only. Direction policy, generation window, wrap behavior, enemy/item spawn ownership, and fail conditions are unresolved.",
+      "currentStatus": "Backlog only. Direction policy, generation window, deterministic board-transform events, wrap behavior, enemy/item spawn ownership, and fail conditions are unresolved. One-tile lane correction is a separately planned child and cannot be inferred from current static-grid diagonal assistance.",
       "workBreakdown": [
         "Define whether the maze pans in one fixed direction, changes direction, or supports multiple simultaneous directional pressures.",
         "Stream procedural maze cells ahead of the pan while retiring or locking cells behind the player.",
         "Keep player movement, enemy movement, items, compass, trails, and camera aligned with the moving world frame.",
+        "Publish each shift as a deterministic before/after board transform with phase ordering and player-intent ownership.",
         "Define failure when the player is pushed out, trapped, caught, or falls behind the generated safe region.",
         "Make panning speed scale separately from maze difficulty and survival pressure."
       ],
@@ -1941,7 +2028,8 @@
         "Design the world-window data structure before rendering the panning effect.",
         "Decide if this is solo, multiplayer, or a variant of endless survival.",
         "Prototype deterministic generated chunks with stable joins and no disconnected safe path.",
-        "Define enemy and item spawn rules for newly generated maze bands."
+        "Define enemy and item spawn rules for newly generated maze bands.",
+        "Resolve whether movement assistance consumes a normal move before admitting the linked lane-correction contract."
       ],
       "acceptanceCriteria": [
         "New maze space generates before it is needed and remains connected to the playable region.",
@@ -1958,7 +2046,8 @@
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-moving-procedural-maze-mode",
       "relatedCardIds": [
         "mazer-endless-multiplayer-survival-mode",
-        "mazer-procedural-difficulty-generator-shaping"
+        "mazer-procedural-difficulty-generator-shaping",
+        "mazer-moving-maze-lane-correction-contract"
       ],
       "reactionStatus": "failure",
       "reactionEmojiName": "failure",
@@ -2262,6 +2351,421 @@
       "reactionEmojiId": "1507384094424694785",
       "liveThreadId": "1525635672961060925",
       "liveMessageId": "1525635672961060925"
+    },
+    {
+      "id": "mazer-run-quality-metric-contract-v2",
+      "title": "mazer: run-quality metric contract v2",
+      "state": "open",
+      "priority": "high",
+      "category": "mazer",
+      "markerName": "Telemetry-first run quality definitions",
+      "completionPercent": 0,
+      "summary": "Define versioned, topology-aware run-quality metrics before exposing them as score, rank, leaderboard, or achievement signals.",
+      "whyItMatters": "Completion alone cannot distinguish a clean route from exploration. A shared contract creates useful post-run insight without locking progression to an arbitrary canonical solution path.",
+      "currentStatus": "Planning admission only. Existing telemetry records shortest viable path, route overrun, wrong turns, backtracks, and bounded path previews, but it does not yet define player-facing fidelity, coverage, exploration, or revisit semantics across multi-route and wrap mazes.",
+      "workBreakdown": [
+        "Define optimal steps, actual accepted steps, unique visited tiles, walkable tiles, coverage, exploration, revisit steps, and clean-run semantics.",
+        "Use the playable graph and shortest-path corridor union rather than one arbitrary generator solution path for multi-route fidelity.",
+        "Specify edge-wrap, reset, failed-run, and path-preview truncation behavior plus a forward-only versioning policy.",
+        "Decide which metrics remain telemetry-only and which are eligible for later player-facing adoption."
+      ],
+      "nextActions": [
+        "Write the metric glossary and denominator rules with representative single-route, multi-route, and wrap fixtures.",
+        "Obtain an explicit product decision on score/rank use after telemetry definitions are reviewed.",
+        "Do not recompute or rewrite historical receipts."
+      ],
+      "acceptanceCriteria": [
+        "Every metric has a deterministic numerator, denominator, version, and undefined-state policy.",
+        "Equally short valid routes score equivalently and edge-wrap movement remains legal graph movement.",
+        "Clean Run and Explorer definitions do not conflict with historical immutability or future UI claims.",
+        "Rank and score remain unchanged until a later approved adoption card."
+      ],
+      "proofPlan": [
+        "Run pure metric fixtures for single-route, multi-route, wrap, reset, failure, and truncated-history cases.",
+        "Review a redacted sample against the existing telemetry fields without Supabase writes."
+      ],
+      "reference": "repos/mazer/src/legacy-runtime/mazeCycleTelemetry.ts",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-run-quality-metric-contract-v2",
+      "relatedCardIds": [
+        "mazer-ai-run-corpus-quality-calibration",
+        "mazer-ai-level-rank-progression",
+        "mazer-edge-wrap-topology-and-notch-fill"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1526284203464065185",
+      "liveMessageId": "1526284203464065185"
+    },
+    {
+      "id": "mazer-run-quality-telemetry-capture-v2",
+      "title": "mazer: run-quality telemetry capture v2",
+      "state": "open",
+      "priority": "high",
+      "category": "mazer",
+      "markerName": "Versioned run-quality capture",
+      "completionPercent": 0,
+      "summary": "Capture approved run-quality aggregates locally and, only when enabled, in compact versioned account receipts.",
+      "whyItMatters": "Quality metrics must be captured at movement time; older bounded path previews cannot support reliable retroactive coverage or fidelity calculations.",
+      "currentStatus": "Blocked on the v2 metric contract. Existing local telemetry and opt-in remote receipts are preserved; no schema, historical data, or Supabase write behavior is authorized by this planning card.",
+      "workBreakdown": [
+        "Add movement-time aggregate capture for approved v2 fields without retaining unbounded raw paths.",
+        "Version future local and compact remote receipts, retaining stored-versus-recomputed distinction.",
+        "Define retry, idempotency, disabled-remote, guest, and privacy behavior with bounded diagnostics.",
+        "Add deterministic fixtures proving aggregates agree with the playable graph."
+      ],
+      "nextActions": [
+        "Wait for metric-contract approval.",
+        "Plan any remote schema change as a separate reviewed Supabase migration with RLS proof.",
+        "Preserve historical receipts exactly as stored."
+      ],
+      "acceptanceCriteria": [
+        "Local capture has bounded storage and deterministic results for accepted moves.",
+        "Remote capture is optional, account-scoped, idempotent, and versioned.",
+        "No historical receipt is mutated, synthesized, or treated as complete v2 evidence.",
+        "All new fields are explainable to analytics and later UI consumers."
+      ],
+      "proofPlan": [
+        "Run focused telemetry and graph fixtures plus existing full Mazer verification.",
+        "Use read-only receipt inspection and a QA-safe opt-in path before any remote rollout."
+      ],
+      "reference": "repos/mazer/src/legacy-runtime/mazeCycleTelemetry.ts",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-run-quality-telemetry-capture-v2",
+      "relatedCardIds": [
+        "mazer-run-quality-metric-contract-v2",
+        "mazer-auth-remote-playbook-sync",
+        "mazer-ai-run-corpus-quality-calibration"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1526284206664056912",
+      "liveMessageId": "1526284206664056912"
+    },
+    {
+      "id": "mazer-run-quality-player-results-ui",
+      "title": "mazer: player-facing run-quality results UI",
+      "state": "open",
+      "priority": "medium",
+      "category": "mazer",
+      "markerName": "Run-quality results presentation",
+      "completionPercent": 0,
+      "summary": "Present selected run-quality insights after a maze without duplicating rank, score, or hidden progression terminology.",
+      "whyItMatters": "Players should understand how they solved a maze, but conflicting public scores would undermine the rank-only progression decision and compact mobile layout.",
+      "currentStatus": "Planning only. No result surface, score adoption, or HUD change is implied by existing telemetry.",
+      "workBreakdown": [
+        "Choose a compact post-run surface for approved metrics such as efficiency, coverage, Clean Run, or Explorer.",
+        "Apply player-safe explanations and accessible labels without exposing internal path pressure or AI diagnostics.",
+        "Fit the surface into the verified menu/play layout contract across phone and desktop routes.",
+        "Define absent-data and older-receipt behavior."
+      ],
+      "nextActions": [
+        "Wait for telemetry v2 definitions and capture proof.",
+        "Prototype information hierarchy separately from progression score changes."
+      ],
+      "acceptanceCriteria": [
+        "Visible metrics have approved definitions and do not claim one canonical path is the only valid solution.",
+        "The result surface has no overlap or clipping across the browser/device proof matrix.",
+        "Rank remains the primary public progression display unless a later policy changes it."
+      ],
+      "proofPlan": [
+        "Run route-aware screenshot/browser proof on desktop and mobile result states.",
+        "Validate labels with missing, partial, and completed v2 receipt fixtures."
+      ],
+      "reference": "repos/mazer/src/scenes/MenuScene.ts",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-run-quality-player-results-ui",
+      "relatedCardIds": [
+        "mazer-run-quality-metric-contract-v2",
+        "mazer-run-quality-telemetry-capture-v2",
+        "mazer-ai-level-rank-progression",
+        "mazer-cross-viewport-ui-reliability"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1526284210292133950",
+      "liveMessageId": "1526284210292133950"
+    },
+    {
+      "id": "mazer-run-quality-leaderboard-admission",
+      "title": "mazer: run-quality leaderboard admission",
+      "state": "backlog",
+      "priority": "medium",
+      "category": "mazer",
+      "summary": "Decide whether any versioned run-quality metric is safe and meaningful for a future leaderboard.",
+      "whyItMatters": "Leaderboards require stable definitions, anti-cheat policy, account identity, retention rules, and an intentionally public ranking model; none should be inferred from telemetry receipts.",
+      "currentStatus": "Backlog decision gate. No leaderboard runtime, schema, or public ranking surface exists today.",
+      "workBreakdown": [
+        "Choose eligible metric versions and tie-break rules.",
+        "Define cheat resistance, season/reset, privacy, moderation, and deletion policies.",
+        "Design minimal server-owned read/write boundaries and RLS requirements before implementation."
+      ],
+      "nextActions": [
+        "Revisit only after telemetry v2 and remote receipt governance are proven.",
+        "Do not expose private receipt data or create a leaderboard table during planning."
+      ],
+      "acceptanceCriteria": [
+        "Public ranking semantics, anti-cheat, privacy, retention, and moderation decisions are approved.",
+        "A separate implementation plan identifies backend, UI, and verification ownership."
+      ],
+      "proofPlan": [
+        "Review a threat model and data-flow design before any schema or UI implementation."
+      ],
+      "reference": "repos/mazer/docs/MAZER_SUPABASE_STORAGE.md",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-run-quality-leaderboard-admission",
+      "relatedCardIds": [
+        "mazer-run-quality-telemetry-capture-v2",
+        "mazer-auth-remote-playbook-sync"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1526284213803024565",
+      "liveMessageId": "1526284213803024565"
+    },
+    {
+      "id": "mazer-run-quality-achievement-admission",
+      "title": "mazer: run-quality achievement admission",
+      "state": "backlog",
+      "priority": "medium",
+      "category": "mazer",
+      "summary": "Decide whether Clean Run, Explorer, and future run-quality signals should become durable achievements.",
+      "whyItMatters": "Achievements can reward distinct play styles, but must not create contradictory score incentives or unreliable unlocks from incomplete historical telemetry.",
+      "currentStatus": "Backlog decision gate. Mazer has no achievement system or durable achievement storage yet.",
+      "workBreakdown": [
+        "Choose candidate achievements and exact versioned eligibility rules.",
+        "Define unlock persistence, migration, replay, accessibility, and player messaging behavior.",
+        "Separate achievement completion from rank, cosmetics, and monetization decisions."
+      ],
+      "nextActions": [
+        "Revisit after player-facing telemetry v2 results are validated.",
+        "Do not derive retroactive achievements from truncated historical paths."
+      ],
+      "acceptanceCriteria": [
+        "Each achievement has a deterministic player-visible rule and version policy.",
+        "The future implementation plan covers storage, UI, accessibility, and reset/deletion semantics."
+      ],
+      "proofPlan": [
+        "Review deterministic achievement fixtures before implementation admission."
+      ],
+      "reference": "repos/mazer/src/legacy-runtime/mazeCycleTelemetry.ts",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-run-quality-achievement-admission",
+      "relatedCardIds": [
+        "mazer-run-quality-player-results-ui",
+        "mazer-run-quality-telemetry-capture-v2",
+        "mazer-customization-inventory-cosmetic-unlocks"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1526284221646377191",
+      "liveMessageId": "1526284221646377191"
+    },
+    {
+      "id": "mazer-moving-maze-lane-correction-contract",
+      "title": "mazer: moving-maze lane-correction contract",
+      "state": "open",
+      "priority": "high",
+      "category": "mazer",
+      "markerName": "Deterministic moving-maze lane correction",
+      "completionPercent": 0,
+      "summary": "Specify safe one-tile automatic lane correction after a documented moving-maze shift while preserving player intent and graph legality.",
+      "whyItMatters": "A player holding a direction should not feel arbitrarily stopped by a one-tile shift, but assistance must never silently choose a branch or create illegal movement.",
+      "currentStatus": "Planning only. The static runtime has diagonal intent sequencing, but it has no moving-world transform event from which a correction can be safely inferred.",
+      "workBreakdown": [
+        "Define before/after grid transform, phase ordering, player point, held intent, and correction audit event.",
+        "Allow only one-tile orthogonal correction with exactly one legal alternate continuation.",
+        "Define explicit rejection for ambiguous forks, two-plus-tile shifts, walls, wraps, goal/reset, overlays, released input, and queued transforms.",
+        "Decide whether a correction consumes a normal accepted move and how it appears in telemetry."
+      ],
+      "nextActions": [
+        "Obtain the moving-maze world-transform contract first.",
+        "Build a pure resolver specification with table-driven edge cases.",
+        "Do not change current static-grid control behavior."
+      ],
+      "acceptanceCriteria": [
+        "Correction is deterministic, legal in the same graph as normal movement, and never creates a path.",
+        "Ambiguous or unsafe cases reject cleanly and preserve player control.",
+        "Wrap, reset, and phase boundaries have explicit behavior.",
+        "Keyboard, touch, and stick share the same intent contract."
+      ],
+      "proofPlan": [
+        "Run table-driven resolver tests for all accepted and rejected cases.",
+        "Review seeded transform traces before implementation is admitted."
+      ],
+      "reference": "repos/mazer/src/legacy-runtime/legacyPlayStep.ts",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-moving-maze-lane-correction-contract",
+      "relatedCardIds": [
+        "mazer-moving-procedural-maze-mode",
+        "mazer-turn-synchronous-world-simulation",
+        "mazer-fluid-controls-and-motion",
+        "mazer-edge-wrap-topology-and-notch-fill"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1526284226117369866",
+      "liveMessageId": "1526284226117369866"
+    },
+    {
+      "id": "mazer-moving-maze-one-tile-lane-snap",
+      "title": "mazer: moving-maze one-tile lane snap",
+      "state": "backlog",
+      "priority": "high",
+      "category": "mazer",
+      "summary": "Implement the admitted one-tile correction resolver inside canonical movement processing after moving-world transforms exist.",
+      "whyItMatters": "The code must use the same movement, collision, telemetry, and input path as an ordinary legal move instead of adding a viewport-specific workaround.",
+      "currentStatus": "Backlog implementation slice. It cannot start until the parent correction contract and moving-maze transform are approved.",
+      "workBreakdown": [
+        "Add a pure correction resolver beside canonical play-step logic.",
+        "Apply a correction only after the moving-world phase documents a legal one-tile offset.",
+        "Emit bounded diagnostics and telemetry while preserving explicit-input precedence.",
+        "Keep static maze movement unchanged."
+      ],
+      "nextActions": [
+        "Wait for the parent contract to become Ready.",
+        "Use one focused implementation PR with resolver tests."
+      ],
+      "acceptanceCriteria": [
+        "Every automated correction maps to exactly one legal graph transition.",
+        "No correction occurs at ambiguity, a wall, a wrap, reset, goal, overlay, or released input.",
+        "Normal player controls and telemetry remain deterministic."
+      ],
+      "proofPlan": [
+        "Run focused play-step tests and fixed moving-world phase traces.",
+        "Run full Mazer verification before review."
+      ],
+      "reference": "repos/mazer/src/legacy-runtime/legacyPlayStep.ts",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-moving-maze-one-tile-lane-snap",
+      "relatedCardIds": [
+        "mazer-moving-maze-lane-correction-contract",
+        "mazer-moving-procedural-maze-mode",
+        "mazer-fluid-controls-and-motion"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1526284230597017701",
+      "liveMessageId": "1526284230597017701"
+    },
+    {
+      "id": "mazer-moving-maze-assisted-motion-proof",
+      "title": "mazer: moving-maze assisted-motion proof",
+      "state": "backlog",
+      "priority": "medium",
+      "category": "mazer",
+      "summary": "Prove moving-maze lane correction across seeded routes, input modes, desktop/mobile viewports, and rejection cases.",
+      "whyItMatters": "Assistance that looks smooth in one route can hide a wrong branch selection, input race, or device-specific control failure.",
+      "currentStatus": "Backlog verification slice. The device matrix is reserved until correction implementation has focused unit proof.",
+      "workBreakdown": [
+        "Create fixed transform schedules for horizontal and vertical one-tile shifts.",
+        "Cover keyboard, touch, stick, release, reversal, ambiguous junction, wall, wrap, goal, and reset cases.",
+        "Capture route-aware desktop and mobile visual proof plus performance diagnostics."
+      ],
+      "nextActions": [
+        "Wait for the implementation card to pass focused tests.",
+        "Reuse the canonical mobile harness instead of creating a one-off browser matrix."
+      ],
+      "acceptanceCriteria": [
+        "Accepted assistance and every rejection path are visible in deterministic evidence.",
+        "No viewport clipping, control loss, or input divergence occurs across the supported matrix.",
+        "Performance remains within the established play-frame budget."
+      ],
+      "proofPlan": [
+        "Run seeded browser traces at desktop and phone dimensions with runtime diagnostics.",
+        "Attach focused and full verification evidence to the implementation review."
+      ],
+      "reference": "repos/mazer/tests/reset/legacy-play-step.test.ts",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-moving-maze-assisted-motion-proof",
+      "relatedCardIds": [
+        "mazer-moving-maze-one-tile-lane-snap",
+        "mazer-mobile-shell-device-harness",
+        "mazer-visual-proof-discipline"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1526284233201549425",
+      "liveMessageId": "1526284233201549425"
+    },
+    {
+      "id": "mazer-web-share-metadata-and-preview-asset",
+      "title": "mazer: web share metadata and preview asset",
+      "state": "open",
+      "priority": "high",
+      "category": "mazer",
+      "markerName": "Share metadata contract",
+      "completionPercent": 0,
+      "summary": "Add a versioned static metadata and share-image contract so Mazer produces rich previews when its public URL is shared.",
+      "whyItMatters": "The current Vite document has icons and a manifest but lacks description, canonical URL, OpenGraph, Twitter metadata, and an explicit share image, so crawlers have no reliable preview contract.",
+      "currentStatus": "Planning admission only. No production deployment is included. Fitness is reference evidence for a complete metadata shape, but Mazer needs a static-Vite-compatible implementation with absolute production URLs.",
+      "workBreakdown": [
+        "Define canonical title, description, production base URL, OpenGraph/Twitter fields, and cache/version policy.",
+        "Create a purpose-built preview image and preserve existing favicon, Apple touch icon, and manifest behavior.",
+        "Add build-level checks that metadata and asset paths are present and absolute where crawlers require it.",
+        "Document platform-specific cache invalidation and the production verification handoff."
+      ],
+      "nextActions": [
+        "Approve copy and visual direction for the share image.",
+        "Implement in one metadata/asset PR without production deployment."
+      ],
+      "acceptanceCriteria": [
+        "The built document exposes title, description, canonical URL, OpenGraph, Twitter, and compatible icon metadata.",
+        "The preview image is crawler-accessible, correctly sized, and versionable.",
+        "Local development does not publish localhost URLs as canonical production metadata."
+      ],
+      "proofPlan": [
+        "Inspect built HTML and static assets in preview/local build output.",
+        "Use the linked platform-verification card only after an authorized current production deployment."
+      ],
+      "reference": "repos/mazer/index.html",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-web-share-metadata-and-preview-asset",
+      "relatedCardIds": [
+        "mazer-handcrafted-asset-authoring-import-workflow",
+        "mazer-web-share-preview-platform-verification"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1526284237496516658",
+      "liveMessageId": "1526284237496516658"
+    },
+    {
+      "id": "mazer-web-share-preview-platform-verification",
+      "title": "mazer: web share preview platform verification",
+      "state": "backlog",
+      "priority": "medium",
+      "category": "mazer",
+      "summary": "Verify deployed Mazer rich-preview behavior and cache handling across supported sharing surfaces.",
+      "whyItMatters": "iMessage, Discord, X, Facebook, and other crawlers cache differently; local or build-only proof cannot demonstrate public preview behavior.",
+      "currentStatus": "Backlog external-verification slice. It requires a current authorized Mazer production target and completed metadata/asset contract.",
+      "workBreakdown": [
+        "Verify public response headers and rendered metadata from the authorized production URL.",
+        "Record iMessage, Discord, X, Facebook, and fallback crawler results with cache timestamps.",
+        "Document cache-refresh behavior and failures without exposing private URLs or credentials."
+      ],
+      "nextActions": [
+        "Wait for metadata implementation and explicit production-deploy authorization.",
+        "Use a bounded verification receipt rather than claiming all external platforms behave identically."
+      ],
+      "acceptanceCriteria": [
+        "The deployed URL returns the expected metadata and share image to crawlers.",
+        "Observed platform results and cache state are recorded per platform.",
+        "No production deploy, cache-bust, or unrelated release is performed without current authorization."
+      ],
+      "proofPlan": [
+        "Capture deployed HTML/header evidence and platform paste/crawler receipts after release approval."
+      ],
+      "reference": "repos/mazer/index.html",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-web-share-preview-platform-verification",
+      "relatedCardIds": [
+        "mazer-web-share-metadata-and-preview-asset"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785",
+      "liveThreadId": "1526284241061543996",
+      "liveMessageId": "1526284241061543996"
     }
   ]
 }
