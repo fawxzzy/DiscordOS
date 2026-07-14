@@ -192,31 +192,45 @@ function inspectThreadMessages({
   const canonical = starter
     ? inspectMessageContent({ card, message: starter, status, ok, contentLimit })
     : null;
-  const journals = messages.map(parseJournalMessage).filter(Boolean);
+  const journals = messages
+    .map((message, sourceIndex) => ({ ...parseJournalMessage(message), sourceIndex }))
+    .filter((message) => message.eventId)
+    .sort((left, right) => {
+      const leftTime = left.timestamp || left.occurredAt || "";
+      const rightTime = right.timestamp || right.occurredAt || "";
+      return rightTime.localeCompare(leftTime) || left.sourceIndex - right.sourceIndex;
+    });
   const selectedJournal = journals[0] || null;
   const allowedLiveStates = allowedLiveStatesForCard(card);
   const usesCanonicalBody = canonical?.ok === true;
+  const starterUsesManagedBody = String(starter?.content || "").includes(journal.CARD_START);
   const reasonCodes = [];
 
   if (!ok) reasonCodes.push("live_thread_messages_read_failed");
   if (truncated) reasonCodes.push("live_thread_message_history_truncated");
   if (!starter) reasonCodes.push("live_starter_message_missing");
-  if (!usesCanonicalBody && !selectedJournal) {
-    reasonCodes.push(...(canonical?.reasonCodes || []), "live_journal_event_missing");
+  if (starterUsesManagedBody && !usesCanonicalBody) reasonCodes.push(...(canonical?.reasonCodes || []));
+  if (!selectedJournal) {
+    if (!starterUsesManagedBody) reasonCodes.push(...(canonical?.reasonCodes || []));
+    reasonCodes.push("live_journal_event_missing");
   }
   if (selectedJournal?.contentLength > contentLimit) reasonCodes.push("live_message_content_limit_exceeded");
-  if (!usesCanonicalBody && !allowedLiveStates.includes(selectedJournal?.state)) {
+  if (selectedJournal && !allowedLiveStates.includes(selectedJournal.state)) {
     reasonCodes.push("live_message_state_mismatch");
   }
   if (selectedJournal?.cardId && selectedJournal.cardId !== card.id) reasonCodes.push("live_message_card_id_mismatch");
-  if (!usesCanonicalBody && selectedJournal && !selectedJournal.occurredAt) {
+  if (selectedJournal && !selectedJournal.occurredAt) {
     reasonCodes.push("live_message_updated_timestamp_missing");
   }
-  if (!usesCanonicalBody && selectedJournal && journal.findMojibakeRuns(selectedJournal.content).length > 0) {
+  if (selectedJournal && journal.findMojibakeRuns(selectedJournal.content).length > 0) {
     reasonCodes.push("live_message_encoding_corrupt");
+  }
+  if (usesCanonicalBody && selectedJournal && canonical.liveState !== selectedJournal.state) {
+    reasonCodes.push("live_card_journal_state_mismatch");
   }
 
   const observedMessage = usesCanonicalBody ? starter : selectedJournal;
+  const observedContent = selectedJournal?.content || starter?.content || "";
   return {
     ok: reasonCodes.length === 0,
     cardId: card.id,
@@ -238,6 +252,9 @@ function inspectThreadMessages({
     observedBoardVersion: boardVersion,
     observedEventId: selectedJournal?.eventId || null,
     observedIdempotencyKey: selectedJournal?.idempotencyKey || null,
+    observedContentDigest: observedContent
+      ? `sha256:${crypto.createHash("sha256").update(observedContent).digest("hex")}`
+      : null,
     journalMessageCount: journals.length,
     reasonCodes,
   };
@@ -251,8 +268,17 @@ function readbackReceiptId(result) {
       cardId: row.cardId,
       threadId: row.threadId,
       messageId: row.messageId,
+      starterMessageId: row.starterMessageId,
+      eventId: row.observedEventId,
       idempotencyKey: row.observedIdempotencyKey,
       state: row.liveState,
+      contentDigest: row.observedContentDigest,
+      ok: row.ok,
+      reasonCodes: [...row.reasonCodes].sort(),
+      messageCount: row.messageCount,
+      journalMessageCount: row.journalMessageCount,
+      pageCount: row.pageCount,
+      truncated: row.truncated,
     })),
   };
   return `dbr_${crypto.createHash("sha256").update(JSON.stringify(identity)).digest("hex").slice(0, 32)}`;

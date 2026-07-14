@@ -9,6 +9,8 @@ const JOURNAL_ENV_VALUE = "enabled";
 const CARD_START = "<!-- ATLAS-CARD:START -->";
 const CARD_END = "<!-- ATLAS-CARD:END -->";
 const MAX_MESSAGE_LENGTH = 2000;
+const MESSAGE_PAGE_LIMIT = 100;
+const MAX_MESSAGE_PAGES = 10;
 const ACTIVE_STATES = new Set(["intake", "planning", "ready", "in_progress", "review", "blocked", "opened"]);
 const ALLOWED_STATES = new Set([...ACTIVE_STATES, "completed", "archived", "closed"]);
 const AUTONOMOUS_EXECUTION_STATE = "ready";
@@ -410,7 +412,32 @@ async function findCardThread({ event, threads, token, fetchImpl = fetch }) {
 }
 
 async function readThreadMessages({ threadId, token, fetchImpl = fetch }) {
-  return cardContract.discordRequest({ path: `/channels/${threadId}/messages?limit=100`, token, fetchImpl });
+  const payload = [];
+  let before = null;
+  let pageCount = 0;
+  let status = null;
+
+  while (pageCount < MAX_MESSAGE_PAGES) {
+    const suffix = before ? `&before=${encodeURIComponent(before)}` : "";
+    const response = await cardContract.discordRequest({
+      path: `/channels/${threadId}/messages?limit=${MESSAGE_PAGE_LIMIT}${suffix}`,
+      token,
+      fetchImpl,
+    });
+    pageCount += 1;
+    status = response.status;
+    if (!response.ok || !Array.isArray(response.payload)) {
+      return { ok: false, status, payload, pageCount, truncated: false };
+    }
+    payload.push(...response.payload);
+    if (response.payload.length < MESSAGE_PAGE_LIMIT) {
+      return { ok: true, status, payload, pageCount, truncated: false };
+    }
+    before = response.payload.at(-1)?.id || null;
+    if (!before) break;
+  }
+
+  return { ok: false, status, payload, pageCount, truncated: true };
 }
 
 async function postJournalMessage({ threadId, content, token, fetchImpl = fetch }) {
