@@ -28,6 +28,19 @@ test("board reaction lifecycle sync maps state to expected reactions", () => {
   assert.equal(_internals.expectedReactionStatusForState("backlog"), "failure");
 });
 
+test("board reaction lifecycle sync accepts archived success without rewriting lifecycle", () => {
+  const card = _internals.reconcileReactionLifecycleCard({
+    id: "card-archived",
+    state: "archived",
+    reactionStatus: "success",
+    reactionEmojiName: "success",
+  });
+
+  assert.equal(card.ok, true);
+  assert.equal(card.expectedReactionStatus, "success");
+  assert.equal(card.lifecycleStateFromReaction, "archived");
+});
+
 test("board reaction lifecycle sync detects mismatches", () => {
   const card = _internals.reconcileReactionLifecycleCard({
     id: "card-1",
