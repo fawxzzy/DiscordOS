@@ -41,10 +41,6 @@ function resolveAdmission({ allowApply, env }) {
   return { requested: true, admitted: false, reasonCodes: ["board_encoding_cleanup_double_guard_missing"] };
 }
 
-function comparable(value) {
-  return journal.repairMojibakeText(value).trim().replace(/\s+/g, " ").toLowerCase();
-}
-
 function classifyMessage({ message, thread, botUserId }) {
   const runs = journal.findMojibakeRuns(message?.content);
   if (runs.length === 0) return { suspicious: false, eligible: false, reasonCodes: [] };
@@ -55,9 +51,6 @@ function classifyMessage({ message, thread, botUserId }) {
     reasonCodes.push("encoding_cleanup_non_bot_message_protected");
   }
   if (journal.findMojibakeRuns(thread?.name).length > 0) reasonCodes.push("encoding_cleanup_current_title_not_clean");
-  if (comparable(message?.content) !== comparable(thread?.name)) {
-    reasonCodes.push("encoding_cleanup_title_mismatch");
-  }
   return {
     suspicious: true,
     eligible: reasonCodes.length === 0,
@@ -217,7 +210,6 @@ module.exports = {
     THREAD_NAME_CHANGE_MESSAGE_TYPE,
     parseArgs,
     resolveAdmission,
-    comparable,
     classifyMessage,
     buildBoardEncodingCleanup,
   },
