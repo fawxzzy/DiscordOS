@@ -110,8 +110,36 @@ npm run ops:production-env:run -- npm run ops:discordos:board-card-consistency:j
 
 Legacy normalization is planned before it is applied. The migration planner joins live threads to owner records by explicit thread ID, stable card ID, or one unique normalized title. Unmatched threads receive a deterministic `legacy-<board>-<thread>` identity; ambiguous source matches block.
 
+The planner reads the complete paginated journal history before emitting an event. For normalization-only events, an existing valid journal state outranks the owner/export baseline, including terminal `completed` and `archived` states. Identity, body, title, and timestamp normalization must not advance, regress, reopen, or complete lifecycle state. Missing journal history keeps the mapped baseline; unreadable, truncated, malformed, identity-conflicting, or ambiguous journal history blocks the affected event.
+
 ```powershell
 npm run ops:production-env:run -- npm run ops:discordos:board-card-migration-plan:json -- --boards <boards.json> --fitness-export <fitness.json> --mazer-board <mazer.json> --output <events.json>
+```
+
+An explicit transition may be supplied only in the board packet's top-level `lifecycleTransitions` array. It must identify one card (and optionally its exact thread), set `authorized: true`, declare a unique event ID, matching `fromState`, allowed `toState`, actor and occurrence time, and include `live_runtime` or `human_verified` proof with a receipt path or Discord message ID. The emitted journal event carries `card.previousState` and the full transition record. Partial, unauthorized, duplicated, stale, or conflicting transition evidence blocks instead of falling back to normalization.
+
+```json
+{
+  "boards": [],
+  "lifecycleTransitions": [
+    {
+      "eventId": "transition:<card-id>:<state>:v1",
+      "cardId": "<card-id>",
+      "threadId": "<thread-id>",
+      "fromState": "in_progress",
+      "toState": "review",
+      "actor": "atlas.operator",
+      "occurredAt": "<ISO-8601 timestamp>",
+      "authorized": true,
+      "proof": {
+        "strength": "human_verified",
+        "receiptPath": "<relative receipt path>",
+        "messageId": null,
+        "generatedAt": "<ISO-8601 timestamp>"
+      }
+    }
+  ]
+}
 ```
 
 Fitness `fixed` records on an active board normalize to `review`, not `completed`, until proof-backed completion review authorizes transfer. Mazer records already marked `completed` remain terminal and are eligible for the guarded Completed-board transfer after normalization.
