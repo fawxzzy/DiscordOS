@@ -16,13 +16,15 @@ The board configuration contains `64` cards. The governed live-sync and live-rea
 | Config cards | `64` |
 | Completed source cards excluded | `4` |
 | Governed sync/readback target cards | `60` |
-| Ready cards | `60` |
+| Readback-ready cards | `60` |
 | Correlated cards | `60` |
 | Idempotency-correlated cards | `60` |
 
 ## Receipt continuity
 
 The first successful full-board readback after the two-card repair produced the required receipt `dbr_cc2d6ce591b32627919ad37755063431`: exact `60/60` ready, correlated, and idempotency-correlated cards, with no reason codes.
+
+Here, `ready` is the readback result (`row.ok`), not the card lifecycle state named `ready`.
 
 The subsequent full-board sync regenerated the canonical full-board sync receipt without creating a thread (`60` existing, `0` created). That command refreshes starter-card bodies; the permitted idempotent journal replay then reused the same two journal messages and restored their canonical managed bodies. The final bot-backed readback remained exact `60/60` with no reason codes and produced `dbr_2eb012f85096d95401b5337555cb707c`. Receipt IDs are deterministic hashes of the observed full-board message identity, so the changed starter-body representation changes the ID without changing the governed correlation result.
 
