@@ -70,7 +70,22 @@ Required publication checkpoints are:
 
 Routine tool chatter does not require a card message. A checkpoint is material when a human reviewer would otherwise lose useful planning or execution context by reading only the starter body.
 
-The cross-board consistency scanner reads the active Fitness board, active Mazer board, and shared Completed board and reports:
+## Authoritative board registry
+
+`config/discordos-board-registry.json` is the single machine-readable denominator for governed Discord project boards. Every entry declares:
+
+- stable board identity and project ownership scope
+- forum channel identity and active, completed, or legacy role
+- source adapter and stable-card namespace
+- lifecycle normalization, reaction, journal, and encoding policies
+- completion destination
+- required, enabled, or explicitly blocked admission state with reason and evidence
+
+Registry validation rejects duplicate board IDs, forum channel IDs, and stable-card namespaces; invalid roles, statuses, and lifecycle states; unknown adapters and policy references; missing or invalid completion targets; and overlapping enabled ownership scopes. A required blocked entry is valid registry structure but blocks consistency success until its admission evidence changes.
+
+The 2026-07-14 read-only Discord discovery denominator is `12` required entries: `5` enabled live surfaces and `7` required-but-blocked project admissions. Enabled surfaces are legacy general feedback, Fitness active, Mazer active, Music Sesh, and shared Completed. Atlas, DiscordOS, Foundation, Lifeline, Cortex, `_stack`, and Playbook remain explicit blocked admissions because no corresponding project forum was present in the live `Project Feedback Boards` category. The `feedback-testing` forum is excluded because its live topic identifies it as private internal QA with no public or community cards.
+
+The registry-driven cross-board consistency scanner reports:
 
 - cards missing stable identities
 - cards missing the canonical managed starter body or update timestamp
@@ -79,10 +94,19 @@ The cross-board consistency scanner reads the active Fitness board, active Mazer
 - completed cards left on active boards
 - invalid Completed-board state or source links
 - duplicate stable card identities across boards
+- registered, enabled, blocked, excluded, and uncovered boards
+- required blocked admissions and live forums absent from the registry
+- incomplete archived-thread or journal-message pagination
+
+The scanner reads archived forum inventory and card history through shared bounded pagination. A failed page, missing pagination cursor, or exhausted page bound fails closed; the scanner must never infer journal absence or completion from only the first 100 messages.
 
 ```powershell
-npm run ops:production-env:run -- npm run ops:discordos:board-card-consistency:json -- --input <boards.json>
+npm run ops:production-env:run -- npm run ops:discordos:board-card-consistency:json
+
+npm run ops:production-env:run -- npm run ops:discordos:board-card-consistency:json -- --registry config/discordos-board-registry.json
 ```
+
+`--input <boards.json>` remains compatible for bounded legacy callers. It reports `inventorySource=legacy_input` and `coverageStatus=not_evaluated` because caller-supplied boards cannot prove the complete live denominator.
 
 Legacy normalization is planned before it is applied. The migration planner joins live threads to owner records by explicit thread ID, stable card ID, or one unique normalized title. Unmatched threads receive a deterministic `legacy-<board>-<thread>` identity; ambiguous source matches block.
 
@@ -229,5 +253,6 @@ Use:
 - `npm run verify:feedback-adapters`
 - `npm run verify:discordos-feature-contract-status`
 - `npm run ops:discordos:board-card-status`
+- `npm run verify:discordos-board-registry`
 - `npm run verify:discordos-board-card-contract`
 - `npm run verify:discordos-board-card-reconciliation`

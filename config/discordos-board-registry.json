@@ -1,0 +1,456 @@
+{
+  "schemaVersion": "discordos.board-registry.v1",
+  "guildId": "1504668396338413670",
+  "discovery": {
+    "observedAt": "2026-07-14",
+    "source": "discord-api-read-only",
+    "forumCategoryChannelId": "1508057063874629684",
+    "forumCategoryName": "Project Feedback Boards",
+    "excludedForumChannelIds": [
+      {
+        "channelId": "1505827424766660780",
+        "channelName": "feedback-testing",
+        "reason": "Private canary forum for internal Feedback Board QA; its live topic explicitly excludes public and community cards."
+      }
+    ],
+    "absentRequiredProjects": [
+      "Atlas",
+      "DiscordOS",
+      "Foundation",
+      "Lifeline",
+      "Cortex",
+      "_stack",
+      "Playbook"
+    ]
+  },
+  "sourceAdapters": {
+    "direct-discord-forum-v1": {
+      "kind": "discord_forum",
+      "readMode": "paginated_live_readback"
+    },
+    "fitness-export-v1": {
+      "kind": "owner_export",
+      "ownerProject": "Fitness",
+      "inputContract": "fitness_board_export_json"
+    },
+    "mazer-config-v1": {
+      "kind": "repo_config",
+      "ownerProject": "Mazer",
+      "configPath": "config/discordos-mazer-feedback-board.json"
+    },
+    "music-sesh-config-v1": {
+      "kind": "repo_config",
+      "ownerProject": "Music Sesh",
+      "configPath": "config/discordos-music-sesh-feedback-board.json"
+    },
+    "unadmitted-v1": {
+      "kind": "blocked_admission",
+      "readMode": "none"
+    }
+  },
+  "lifecycleNormalizationPolicies": {
+    "active-canonical-v1": {
+      "allowedStates": [
+        "intake",
+        "planning",
+        "ready",
+        "opened",
+        "in_progress",
+        "review",
+        "blocked"
+      ],
+      "terminalState": null,
+      "completedBehavior": "clone_link_archive_source"
+    },
+    "completed-terminal-v1": {
+      "allowedStates": [
+        "completed"
+      ],
+      "terminalState": "completed",
+      "completedBehavior": "retain_source_link"
+    },
+    "legacy-read-only-v1": {
+      "allowedStates": [
+        "intake",
+        "planning",
+        "ready",
+        "opened",
+        "in_progress",
+        "review",
+        "blocked",
+        "completed",
+        "archived",
+        "closed"
+      ],
+      "terminalState": null,
+      "completedBehavior": "preserve_until_reconciled"
+    }
+  },
+  "reactionPolicies": {
+    "starter-status-reaction-v1": {
+      "target": "forum_starter_message",
+      "successEmoji": "success:1507384062166302851",
+      "failureEmoji": "failure:1507384094424694785"
+    }
+  },
+  "journalPolicies": {
+    "required-paginated-v1": {
+      "required": true,
+      "pageSize": 100,
+      "maxPages": 10,
+      "truncationBehavior": "fail_closed"
+    }
+  },
+  "encodingPolicies": {
+    "utf8-no-mojibake-v1": {
+      "encoding": "utf-8",
+      "mojibakeBehavior": "report_drift",
+      "historicalReplacementBehavior": "retain_superseded_archive"
+    }
+  },
+  "boards": [
+    {
+      "id": "legacy-general-feedback",
+      "project": "Shared Intake",
+      "required": true,
+      "forumChannelId": "1504673475489562744",
+      "forumChannelName": "feedback",
+      "role": "legacy",
+      "ownershipScope": "shared-intake:legacy",
+      "sourceAdapter": "direct-discord-forum-v1",
+      "stableCardNamespace": "legacy-general-feedback",
+      "lifecycleNormalizationPolicy": "legacy-read-only-v1",
+      "reactionPolicy": "starter-status-reaction-v1",
+      "journalPolicy": "required-paginated-v1",
+      "completionDestination": "shared-completed",
+      "encodingPolicy": "utf8-no-mojibake-v1",
+      "status": "enabled",
+      "relationships": {
+        "replaces": [],
+        "replacedBy": [
+          "fitness-active",
+          "mazer-active",
+          "music-sesh-active"
+        ]
+      },
+      "blockers": [],
+      "evidence": [
+        "Live Discord channel inventory identifies this as the original general feedback forum.",
+        "Read-only thread discovery found retained archived DiscordOS history on 2026-07-14."
+      ]
+    },
+    {
+      "id": "fitness-active",
+      "project": "Fitness",
+      "required": true,
+      "forumChannelId": "1508144612957622313",
+      "forumChannelName": "fawxzzy-fitness",
+      "role": "active",
+      "ownershipScope": "fitness:active",
+      "sourceAdapter": "fitness-export-v1",
+      "stableCardNamespace": "fitness",
+      "lifecycleNormalizationPolicy": "active-canonical-v1",
+      "reactionPolicy": "starter-status-reaction-v1",
+      "journalPolicy": "required-paginated-v1",
+      "completionDestination": "shared-completed",
+      "encodingPolicy": "utf8-no-mojibake-v1",
+      "status": "enabled",
+      "relationships": {
+        "replaces": [
+          "legacy-general-feedback"
+        ],
+        "replacedBy": []
+      },
+      "blockers": [],
+      "evidence": [
+        "Live Discord channel inventory identifies fawxzzy-fitness as the Fitness project forum.",
+        "Owner export remains the authoritative source adapter for Fitness card records."
+      ]
+    },
+    {
+      "id": "mazer-active",
+      "project": "Mazer",
+      "required": true,
+      "forumChannelId": "1524889569475170478",
+      "forumChannelName": "mazer",
+      "role": "active",
+      "ownershipScope": "mazer:active",
+      "sourceAdapter": "mazer-config-v1",
+      "stableCardNamespace": "mazer",
+      "lifecycleNormalizationPolicy": "active-canonical-v1",
+      "reactionPolicy": "starter-status-reaction-v1",
+      "journalPolicy": "required-paginated-v1",
+      "completionDestination": "shared-completed",
+      "encodingPolicy": "utf8-no-mojibake-v1",
+      "status": "enabled",
+      "relationships": {
+        "replaces": [
+          "legacy-general-feedback"
+        ],
+        "replacedBy": []
+      },
+      "blockers": [],
+      "evidence": [
+        "Live Discord channel inventory identifies mazer as the Mazer project forum.",
+        "Repository Mazer board config is the admitted owner source adapter."
+      ]
+    },
+    {
+      "id": "music-sesh-active",
+      "project": "Music Sesh",
+      "required": true,
+      "forumChannelId": "1508139160853286942",
+      "forumChannelName": "music-sesh",
+      "role": "active",
+      "ownershipScope": "music-sesh:active",
+      "sourceAdapter": "music-sesh-config-v1",
+      "stableCardNamespace": "music-sesh",
+      "lifecycleNormalizationPolicy": "active-canonical-v1",
+      "reactionPolicy": "starter-status-reaction-v1",
+      "journalPolicy": "required-paginated-v1",
+      "completionDestination": "shared-completed",
+      "encodingPolicy": "utf8-no-mojibake-v1",
+      "status": "enabled",
+      "relationships": {
+        "replaces": [
+          "legacy-general-feedback"
+        ],
+        "replacedBy": []
+      },
+      "blockers": [],
+      "evidence": [
+        "Live Discord channel inventory identifies music-sesh as the Music Sesh project forum; read-only discovery required multiple archived-thread pages.",
+        "Repository Music Sesh board config is the admitted owner source adapter."
+      ]
+    },
+    {
+      "id": "shared-completed",
+      "project": "Shared Completed",
+      "required": true,
+      "forumChannelId": "1508359985602625638",
+      "forumChannelName": "completed",
+      "role": "completed",
+      "ownershipScope": "shared:completed",
+      "sourceAdapter": "direct-discord-forum-v1",
+      "stableCardNamespace": "shared-completed",
+      "lifecycleNormalizationPolicy": "completed-terminal-v1",
+      "reactionPolicy": "starter-status-reaction-v1",
+      "journalPolicy": "required-paginated-v1",
+      "completionDestination": null,
+      "encodingPolicy": "utf8-no-mojibake-v1",
+      "status": "enabled",
+      "relationships": {
+        "replaces": [],
+        "replacedBy": []
+      },
+      "blockers": [],
+      "evidence": [
+        "Live Discord channel inventory identifies completed as the shared terminal forum.",
+        "Completed transfers use clone-link-archive semantics and retain the active source thread."
+      ]
+    },
+    {
+      "id": "atlas-active-admission",
+      "project": "Atlas",
+      "required": true,
+      "forumChannelId": null,
+      "forumChannelName": null,
+      "role": "active",
+      "ownershipScope": "atlas:active",
+      "sourceAdapter": "unadmitted-v1",
+      "stableCardNamespace": "atlas",
+      "lifecycleNormalizationPolicy": "active-canonical-v1",
+      "reactionPolicy": "starter-status-reaction-v1",
+      "journalPolicy": "required-paginated-v1",
+      "completionDestination": "shared-completed",
+      "encodingPolicy": "utf8-no-mojibake-v1",
+      "status": "blocked",
+      "relationships": {
+        "replaces": [],
+        "replacedBy": []
+      },
+      "blockers": [
+        {
+          "code": "project_forum_not_discovered",
+          "reason": "No Atlas project forum is present in the live Project Feedback Boards category.",
+          "evidence": "Read-only guild channel inventory on 2026-07-14."
+        }
+      ],
+      "evidence": []
+    },
+    {
+      "id": "discordos-active-admission",
+      "project": "DiscordOS",
+      "required": true,
+      "forumChannelId": null,
+      "forumChannelName": null,
+      "role": "active",
+      "ownershipScope": "discordos:active",
+      "sourceAdapter": "unadmitted-v1",
+      "stableCardNamespace": "discordos",
+      "lifecycleNormalizationPolicy": "active-canonical-v1",
+      "reactionPolicy": "starter-status-reaction-v1",
+      "journalPolicy": "required-paginated-v1",
+      "completionDestination": "shared-completed",
+      "encodingPolicy": "utf8-no-mojibake-v1",
+      "status": "blocked",
+      "relationships": {
+        "replaces": [],
+        "replacedBy": []
+      },
+      "blockers": [
+        {
+          "code": "project_forum_not_discovered",
+          "reason": "No DiscordOS project forum is present in the live Project Feedback Boards category; the legacy feedback thread is retained separately.",
+          "evidence": "Read-only guild channel and legacy-thread inventory on 2026-07-14."
+        }
+      ],
+      "evidence": []
+    },
+    {
+      "id": "foundation-active-admission",
+      "project": "Foundation",
+      "required": true,
+      "forumChannelId": null,
+      "forumChannelName": null,
+      "role": "active",
+      "ownershipScope": "foundation:active",
+      "sourceAdapter": "unadmitted-v1",
+      "stableCardNamespace": "foundation",
+      "lifecycleNormalizationPolicy": "active-canonical-v1",
+      "reactionPolicy": "starter-status-reaction-v1",
+      "journalPolicy": "required-paginated-v1",
+      "completionDestination": "shared-completed",
+      "encodingPolicy": "utf8-no-mojibake-v1",
+      "status": "blocked",
+      "relationships": {
+        "replaces": [],
+        "replacedBy": []
+      },
+      "blockers": [
+        {
+          "code": "project_forum_not_discovered",
+          "reason": "No Foundation project forum is present in the live Project Feedback Boards category.",
+          "evidence": "Read-only guild channel inventory on 2026-07-14."
+        }
+      ],
+      "evidence": []
+    },
+    {
+      "id": "lifeline-active-admission",
+      "project": "Lifeline",
+      "required": true,
+      "forumChannelId": null,
+      "forumChannelName": null,
+      "role": "active",
+      "ownershipScope": "lifeline:active",
+      "sourceAdapter": "unadmitted-v1",
+      "stableCardNamespace": "lifeline",
+      "lifecycleNormalizationPolicy": "active-canonical-v1",
+      "reactionPolicy": "starter-status-reaction-v1",
+      "journalPolicy": "required-paginated-v1",
+      "completionDestination": "shared-completed",
+      "encodingPolicy": "utf8-no-mojibake-v1",
+      "status": "blocked",
+      "relationships": {
+        "replaces": [],
+        "replacedBy": []
+      },
+      "blockers": [
+        {
+          "code": "project_forum_not_discovered",
+          "reason": "No Lifeline project forum is present in the live Project Feedback Boards category.",
+          "evidence": "Read-only guild channel inventory on 2026-07-14."
+        }
+      ],
+      "evidence": []
+    },
+    {
+      "id": "cortex-active-admission",
+      "project": "Cortex",
+      "required": true,
+      "forumChannelId": null,
+      "forumChannelName": null,
+      "role": "active",
+      "ownershipScope": "cortex:active",
+      "sourceAdapter": "unadmitted-v1",
+      "stableCardNamespace": "cortex",
+      "lifecycleNormalizationPolicy": "active-canonical-v1",
+      "reactionPolicy": "starter-status-reaction-v1",
+      "journalPolicy": "required-paginated-v1",
+      "completionDestination": "shared-completed",
+      "encodingPolicy": "utf8-no-mojibake-v1",
+      "status": "blocked",
+      "relationships": {
+        "replaces": [],
+        "replacedBy": []
+      },
+      "blockers": [
+        {
+          "code": "project_forum_not_discovered",
+          "reason": "No Cortex project forum is present in the live Project Feedback Boards category.",
+          "evidence": "Read-only guild channel inventory on 2026-07-14."
+        }
+      ],
+      "evidence": []
+    },
+    {
+      "id": "stack-active-admission",
+      "project": "_stack",
+      "required": true,
+      "forumChannelId": null,
+      "forumChannelName": null,
+      "role": "active",
+      "ownershipScope": "stack:active",
+      "sourceAdapter": "unadmitted-v1",
+      "stableCardNamespace": "stack",
+      "lifecycleNormalizationPolicy": "active-canonical-v1",
+      "reactionPolicy": "starter-status-reaction-v1",
+      "journalPolicy": "required-paginated-v1",
+      "completionDestination": "shared-completed",
+      "encodingPolicy": "utf8-no-mojibake-v1",
+      "status": "blocked",
+      "relationships": {
+        "replaces": [],
+        "replacedBy": []
+      },
+      "blockers": [
+        {
+          "code": "project_forum_not_discovered",
+          "reason": "No _stack project forum is present in the live Project Feedback Boards category.",
+          "evidence": "Read-only guild channel inventory on 2026-07-14."
+        }
+      ],
+      "evidence": []
+    },
+    {
+      "id": "playbook-active-admission",
+      "project": "Playbook",
+      "required": true,
+      "forumChannelId": null,
+      "forumChannelName": null,
+      "role": "active",
+      "ownershipScope": "playbook:active",
+      "sourceAdapter": "unadmitted-v1",
+      "stableCardNamespace": "playbook",
+      "lifecycleNormalizationPolicy": "active-canonical-v1",
+      "reactionPolicy": "starter-status-reaction-v1",
+      "journalPolicy": "required-paginated-v1",
+      "completionDestination": "shared-completed",
+      "encodingPolicy": "utf8-no-mojibake-v1",
+      "status": "blocked",
+      "relationships": {
+        "replaces": [],
+        "replacedBy": []
+      },
+      "blockers": [
+        {
+          "code": "project_forum_not_discovered",
+          "reason": "No Playbook project forum is present in the live Project Feedback Boards category.",
+          "evidence": "Read-only guild channel inventory on 2026-07-14."
+        }
+      ],
+      "evidence": []
+    }
+  ]
+}
