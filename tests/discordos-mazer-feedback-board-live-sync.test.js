@@ -84,11 +84,155 @@ async function writeBoard() {
   return boardPath;
 }
 
+function incidentCard(index, state = "open") {
+  const id = `mazer-incident-card-${String(index).padStart(2, "0")}`;
+  const completed = state === "completed";
+  return {
+    id,
+    title: `mazer: incident card ${String(index).padStart(2, "0")}`,
+    state,
+    priority: "high",
+    category: "mazer",
+    markerName: `Incident Marker ${index}`,
+    completionPercent: completed ? 100 : 20,
+    summary: `Incident card ${index} summary.`,
+    whyItMatters: `Incident card ${index} objective.`,
+    currentStatus: `Incident card ${index} current state.`,
+    workBreakdown: [`Implement incident card ${index}.`],
+    nextActions: [`Advance incident card ${index}.`],
+    acceptanceCriteria: [`Incident card ${index} remains governed.`],
+    proofPlan: [`Verify incident card ${index}.`],
+    reference: "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
+    nextCommand: `npm run ops:discordos:mazer-feedback-board:json -- --card-id ${id}`,
+    reactionStatus: completed ? "success" : "failure",
+    reactionEmojiName: completed ? "success" : "failure",
+    reactionEmojiId: completed ? "1507384062166302851" : "1507384094424694785",
+    ...(completed ? {
+      liveThreadId: `incident-thread-${index}`,
+      liveMessageId: `incident-thread-${index}`,
+    } : {}),
+  };
+}
+
+async function writeIncidentBoard({ completedFirstCard = false } = {}) {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "discordos-mazer-incident-board-"));
+  const boardPath = path.join(dir, "board.json");
+  const cards = Array.from({ length: 58 }, (_, index) =>
+    incidentCard(index + 1, completedFirstCard && index === 0 ? "completed" : "open")
+  );
+  await fs.writeFile(boardPath, JSON.stringify({
+    version: 1,
+    board: {
+      id: "mazer",
+      label: "mazer",
+      planning: {
+        version: 1,
+        activeCardId: cards[0].id,
+        epics: EPIC_IDS.map((id, index) => ({
+          id,
+          title: id,
+          order: index + 1,
+          criticalPath: true,
+          primaryCardIds: index === 0 ? cards.map((card) => card.id) : [],
+          supportingCardIds: [],
+        })),
+        dependencies: [],
+        parallelTracks: [],
+      },
+      placement: {
+        channelFamily: "project-feedback",
+        forumChannelId: "forum-incident",
+        sortKey: "project:mazer",
+        displayName: "mazer",
+      },
+      liveForumChannelId: "forum-incident",
+      liveGuildId: "guild-incident",
+      sendsMessages: true,
+    },
+    cards,
+  }, null, 2), "utf8");
+  return { boardPath, cards };
+}
+
+function canonicalBody(card, updatedAt = "2026-07-14T22:00:00.000Z") {
+  return [
+    "<!-- ATLAS-CARD:START -->",
+    `ATLAS-CARD-ID: \`${card.id}\``,
+    "- project: `Mazer`",
+    "- type: `feature`",
+    "- state: `planning`",
+    "- priority: `High`",
+    "- owner: `Mazer`",
+    "- progress: `20%`",
+    `- updated: \`${updatedAt}\``,
+    "",
+    "## Summary",
+    card.summary,
+    "",
+    "## Objective",
+    `- ${card.whyItMatters}`,
+    "",
+    "## Acceptance criteria",
+    `- ${card.acceptanceCriteria[0]}`,
+    "",
+    "## Next actions",
+    `- ${card.nextActions[0]}`,
+    "<!-- ATLAS-CARD:END -->",
+  ].join("\n");
+}
+
+function incidentDiscordHarness({ cards, starterBodies }) {
+  const calls = [];
+  const threads = cards.map((card, index) => ({
+    id: `incident-thread-${index + 1}`,
+    name: card.title,
+    parent_id: "forum-incident",
+    thread_metadata: { archived: false },
+  }));
+  const bodyByThread = new Map(threads.map((thread, index) => [thread.id, starterBodies[index]]));
+  const cardByThread = new Map(threads.map((thread, index) => [thread.id, cards[index]]));
+  const fetchImpl = async (url, init) => {
+    calls.push({ url, method: init.method, body: init.body });
+    if (url.endsWith("/channels/forum-incident")) {
+      return response({ payload: { id: "forum-incident", name: "mazer", type: 15, guild_id: "guild-incident" } });
+    }
+    if (url.endsWith("/guilds/guild-incident/threads/active")) {
+      return response({ payload: { threads } });
+    }
+    if (url.endsWith("/channels/forum-incident/threads/archived/public?limit=100")) {
+      return response({ payload: { threads: [] } });
+    }
+    const messageMatch = url.match(/\/channels\/(incident-thread-\d+)\/messages\/\1$/);
+    if (messageMatch && init.method === "GET") {
+      const card = cardByThread.get(messageMatch[1]);
+      return response({
+        payload: {
+          id: messageMatch[1],
+          content: bodyByThread.get(messageMatch[1]),
+          reactions: [{
+            emoji: { name: card.reactionEmojiName, id: card.reactionEmojiId },
+            count: 1,
+            me: true,
+          }],
+        },
+      });
+    }
+    if (messageMatch && init.method === "PATCH") {
+      bodyByThread.set(messageMatch[1], JSON.parse(init.body).content);
+      return response({ payload: { id: messageMatch[1] } });
+    }
+    return response({ ok: false, status: 404, payload: {} });
+  };
+  return { calls, threads, bodyByThread, fetchImpl };
+}
+
 test("mazer feedback board live sync parses guarded apply args", () => {
   const parsed = _internals.parseArgs([
     "--json",
     "--allow-sync",
     "--apply",
+    "--card-id",
+    "mazer-card-1",
     "--forum-channel-id",
     "forum-1",
   ]);
@@ -96,6 +240,8 @@ test("mazer feedback board live sync parses guarded apply args", () => {
   assert.equal(parsed.json, true);
   assert.equal(parsed.allowSync, true);
   assert.equal(parsed.apply, true);
+  assert.equal(parsed.cardId, "mazer-card-1");
+  assert.equal(parsed.fullBoard, false);
   assert.equal(parsed.forumChannelId, "forum-1");
 });
 
@@ -126,6 +272,7 @@ test("mazer feedback board live sync uses project feedback category and creates 
   const calls = [];
   const result = await _internals.buildMazerFeedbackBoardLiveSync({
     boardPath,
+    cardId: "mazer-card-1",
     allowSync: true,
     apply: true,
     receiptFile: null,
@@ -214,6 +361,7 @@ test("mazer feedback board live sync reuses existing card thread", async () => {
   const calls = [];
   const result = await _internals.buildMazerFeedbackBoardLiveSync({
     boardPath,
+    cardId: "mazer-card-1",
     allowSync: true,
     apply: true,
     receiptFile: null,
@@ -277,6 +425,125 @@ test("mazer feedback board live sync reuses existing card thread", async () => {
   assert.equal(result.existingThreadCount, 1);
   assert.equal(result.createdThreadCount, 0);
   assert.equal(result.cardSyncResults[0].reactionStatus, 204);
+});
+
+test("mazer feedback board live sync requires explicit mutation scope", () => {
+  const missing = _internals.resolveMutationScope({ apply: true, cardId: null, fullBoard: false });
+  const bounded = _internals.resolveMutationScope({ apply: true, cardId: "mazer-card-1", fullBoard: false });
+  const fullBoard = _internals.resolveMutationScope({ apply: true, cardId: null, fullBoard: true });
+
+  assert.equal(missing.admitted, false);
+  assert.deepEqual(missing.reasonCodes, ["mazer_feedback_board_explicit_mutation_scope_required"]);
+  assert.equal(bounded.mode, "bounded_card");
+  assert.equal(fullBoard.mode, "full_board");
+});
+
+test("mazer feedback board live sync rejects out-of-scope card mutations", () => {
+  const result = _internals.evaluateCardMutationScope({
+    cardId: "mazer-unadmitted-card",
+    admittedCardIds: ["mazer-admitted-card"],
+  });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.reasonCodes, ["card_mutation_out_of_scope_prevented"]);
+});
+
+test("bounded 58-card sync updates one target without touching 54 canonical unrelated cards and replays idempotently", async () => {
+  const { boardPath, cards } = await writeIncidentBoard();
+  const starterBodies = cards.map((card, index) => {
+    if (index === 0) return "legacy selected body before bounded update";
+    if (index <= 54) return canonicalBody(card);
+    return `legacy unrelated body ${index + 1}`;
+  });
+  const harness = incidentDiscordHarness({ cards, starterBodies });
+  const canonicalSnapshots = new Map(
+    harness.threads.slice(1, 55).map((thread) => [thread.id, harness.bodyByThread.get(thread.id)])
+  );
+  const options = {
+    boardPath,
+    cardId: cards[0].id,
+    allowSync: true,
+    apply: true,
+    receiptFile: null,
+    writeBoard: false,
+    env: {
+      DISCORDOS_BOT_TOKEN: "token",
+      DISCORDOS_MAZER_FEEDBACK_BOARD_SYNC: "enabled",
+      DISCORDOS_MAZER_FORUM_CHANNEL_ID: "forum-incident",
+    },
+    fetchImpl: harness.fetchImpl,
+  };
+
+  const first = await _internals.buildMazerFeedbackBoardLiveSync(options);
+  const firstMutations = harness.calls.filter((call) => ["PATCH", "POST", "PUT", "DELETE"].includes(call.method));
+
+  assert.equal(first.ok, true);
+  assert.equal(first.cardCount, 58);
+  assert.equal(first.syncTargetCardCount, 1);
+  assert.equal(first.preflightCardCount, 1);
+  assert.equal(first.mutationActionCount, 1);
+  assert.equal(first.updatedCardCount, 1);
+  assert.equal(first.cardSyncResults.length, 1);
+  assert.equal(first.cardSyncResults[0].cardId, cards[0].id);
+  assert.equal(first.cardSyncResults[0].action, "updated");
+  assert.equal(firstMutations.length, 1);
+  assert(firstMutations[0].url.endsWith("/channels/incident-thread-1/messages/incident-thread-1"));
+  for (const [threadId, body] of canonicalSnapshots) {
+    assert.equal(harness.bodyByThread.get(threadId), body, threadId);
+  }
+
+  harness.calls.length = 0;
+  const replay = await _internals.buildMazerFeedbackBoardLiveSync(options);
+  const replayMutations = harness.calls.filter((call) => ["PATCH", "POST", "PUT", "DELETE"].includes(call.method));
+
+  assert.equal(replay.ok, true);
+  assert.equal(replay.status, "live_board_unchanged");
+  assert.equal(replay.mutationActionCount, 0);
+  assert.equal(replay.updatedCardCount, 0);
+  assert.equal(replay.unchangedCardCount, 1);
+  assert.equal(replay.cardSyncResults[0].action, "unchanged");
+  assert.equal(replayMutations.length, 0);
+  for (const [threadId, body] of canonicalSnapshots) {
+    assert.equal(harness.bodyByThread.get(threadId), body, threadId);
+  }
+});
+
+test("57-target full-board sync fails atomically before downgrading canonical starters", async () => {
+  const { boardPath, cards } = await writeIncidentBoard({ completedFirstCard: true });
+  const starterBodies = cards.map((card) => canonicalBody(card));
+  const harness = incidentDiscordHarness({ cards, starterBodies });
+  const snapshots = new Map(harness.bodyByThread);
+
+  const result = await _internals.buildMazerFeedbackBoardLiveSync({
+    boardPath,
+    fullBoard: true,
+    allowSync: true,
+    apply: true,
+    receiptFile: null,
+    writeBoard: false,
+    env: {
+      DISCORDOS_BOT_TOKEN: "token",
+      DISCORDOS_MAZER_FEEDBACK_BOARD_SYNC: "enabled",
+      DISCORDOS_MAZER_FORUM_CHANNEL_ID: "forum-incident",
+    },
+    fetchImpl: harness.fetchImpl,
+  });
+  const mutations = harness.calls.filter((call) => ["PATCH", "POST", "PUT", "DELETE"].includes(call.method));
+
+  assert.equal(result.ok, false);
+  assert.equal(result.cardCount, 58);
+  assert.equal(result.syncTargetCardCount, 57);
+  assert.equal(result.preflightCardCount, 57);
+  assert.equal(result.syncedCardCount, 0);
+  assert.equal(result.mutationActionCount, 0);
+  assert.equal(result.preventedDowngradeCardCount, 57);
+  assert(result.reasonCodes.includes("mazer_canonical_card_body_downgrade_prevented"));
+  assert(result.reasonCodes.includes("mazer_card_sync_batch_preflight_blocked"));
+  assert.equal(mutations.length, 0);
+  assert(!harness.calls.some((call) => call.url.includes("incident-thread-1/messages")));
+  for (const [threadId, body] of snapshots) {
+    assert.equal(harness.bodyByThread.get(threadId), body, threadId);
+  }
 });
 
 test("mazer feedback board live sync renders bounded markdown", async () => {
