@@ -10,18 +10,55 @@ function response({ ok = true, status = 200, payload = null } = {}) {
 
 const cleanTitle = "Feature: History - Progress";
 const corruptedTitle = "Feature: History \u00e2\u20ac\u201d Progress";
+const historicalCorruptedTitle = "Feature: Earlier \u00e2\u20ac\u201d Name";
+const doubleCorruptedTitle = "Feature: Earlier \u00c3\u00a2\u00e2\u201a\u00ac\u00e2\u20ac Name";
 const starter = `${journal.CARD_START}\nATLAS-CARD-ID: \`FIT-1\`\n- state: \`review\`\n- updated: \`2026-07-13\`\n${journal.CARD_END}`;
 
-test("only canonical cards with bot-owned matching rename corruption are eligible", () => {
+test("canonical cards with bot-owned historical rename corruption are eligible", () => {
   const result = _internals.classifySource({
     thread: { id: "123", name: cleanTitle },
     starter: { content: starter },
-    messages: [{ id: "rename", type: 4, content: corruptedTitle, author: { id: "bot", bot: true } }],
+    messages: [
+      { id: "rename", type: 4, content: corruptedTitle, author: { id: "bot", bot: true } },
+      { id: "historical", type: 4, content: historicalCorruptedTitle, author: { id: "bot", bot: true } },
+      { id: "double", type: 4, content: doubleCorruptedTitle, author: { id: "bot", bot: true } },
+    ],
     botUserId: "bot",
   });
   assert.equal(result.candidate, true);
   assert.equal(result.eligible, true);
   assert.equal(result.cardId, "FIT-1");
+  assert.deepEqual(result.corruptedMessageIds, ["rename", "historical", "double"]);
+});
+
+test("replacement rejects user content, non-rename messages, and dirty current surfaces", () => {
+  const userContent = _internals.classifySource({
+    thread: { id: "123", name: cleanTitle },
+    starter: { content: starter },
+    messages: [{ id: "note", type: 0, content: corruptedTitle, author: { id: "user", bot: false } }],
+    botUserId: "bot",
+  });
+  assert.equal(userContent.eligible, false);
+  assert(userContent.reasonCodes.includes("replacement_source_non_rename_corruption"));
+  assert(userContent.reasonCodes.includes("replacement_source_non_bot_corruption"));
+
+  const dirtyTitle = _internals.classifySource({
+    thread: { id: "123", name: corruptedTitle },
+    starter: { content: starter },
+    messages: [{ id: "rename", type: 4, content: historicalCorruptedTitle, author: { id: "bot", bot: true } }],
+    botUserId: "bot",
+  });
+  assert.equal(dirtyTitle.eligible, false);
+  assert(dirtyTitle.reasonCodes.includes("replacement_source_title_not_clean"));
+
+  const dirtyStarter = _internals.classifySource({
+    thread: { id: "123", name: cleanTitle },
+    starter: { content: `${starter}\n${corruptedTitle}` },
+    messages: [{ id: "rename", type: 4, content: historicalCorruptedTitle, author: { id: "bot", bot: true } }],
+    botUserId: "bot",
+  });
+  assert.equal(dirtyStarter.eligible, false);
+  assert(dirtyStarter.reasonCodes.includes("replacement_source_starter_not_clean"));
 });
 
 test("replacement and superseded markers preserve one current stable identity", () => {

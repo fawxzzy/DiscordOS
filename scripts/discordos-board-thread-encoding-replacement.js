@@ -43,10 +43,6 @@ function resolveAdmission({ allowApply, env }) {
   return { requested: true, admitted: false, reasonCodes: ["board_thread_replacement_double_guard_missing"] };
 }
 
-function comparable(value) {
-  return journal.repairMojibakeText(value).trim().replace(/\s+/g, " ").toLowerCase();
-}
-
 function parseCardId(content) {
   return String(content || "").match(/ATLAS-CARD-ID:\s*`([^`]+)`/i)?.[1]?.trim() || null;
 }
@@ -79,9 +75,6 @@ function classifySource({ thread, starter, messages, botUserId }) {
     if (message?.type !== THREAD_NAME_CHANGE_MESSAGE_TYPE) reasonCodes.push("replacement_source_non_rename_corruption");
     if (message?.author?.bot !== true || message?.author?.id !== botUserId) {
       reasonCodes.push("replacement_source_non_bot_corruption");
-    }
-    if (comparable(message?.content) !== comparable(thread?.name)) {
-      reasonCodes.push("replacement_source_rename_mismatch");
     }
   }
   return {
@@ -426,7 +419,6 @@ module.exports = {
     REPLACEMENT_ENV_VALUE,
     parseArgs,
     resolveAdmission,
-    comparable,
     parseCardId,
     parseReplacementOf,
     hasSupersededMarker,
