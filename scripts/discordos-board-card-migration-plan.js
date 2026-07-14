@@ -115,11 +115,13 @@ function parseJournalLifecycleMessage(message) {
   const eventId = content.match(/ATLAS-JOURNAL-EVENT-ID:\s*`([^`]+)`/i)?.[1]?.trim() || null;
   if (!eventId) return null;
   const metadata = (name) => content.match(new RegExp(`^- ${name}:\\s*` + "`([^`]+)`", "im"))?.[1]?.trim() || null;
+  const cardMetadataMatch = content.match(/^- card:\s*`([^`]*)`/im);
   const timestamp = text(message?.timestamp) || metadata("occurred");
   return {
     messageId: text(message?.id) || null,
     eventId,
-    cardId: metadata("card"),
+    cardId: cardMetadataMatch?.[1]?.trim() || null,
+    cardMetadataPresent: Boolean(cardMetadataMatch),
     state: metadata("state")?.toLowerCase() || null,
     occurredAt: metadata("occurred"),
     timestamp,
@@ -137,17 +139,82 @@ function compareJournalLifecycle(left, right) {
   return 0;
 }
 
-function resolveJournalLifecycle({ messages, cardId }) {
+function resolveJournalCardIdentity({ entries, cardId, matchedBy = null }) {
+  const explicitCardIds = [...new Set(entries.map((entry) => entry.cardId).filter(Boolean))].sort();
+  const missingCardIdCount = entries.filter((entry) => !entry.cardMetadataPresent).length;
+  const matchingCardIdCount = entries.filter((entry) => entry.cardId?.toLowerCase() === cardId.toLowerCase()).length;
+  const conflictingCardIdCount = entries.length - missingCardIdCount - matchingCardIdCount;
+  const exactSourceThreadIdentity = matchedBy === "source_thread_id";
+  const identity = {
+    decision: "explicit_identity_match",
+    matchedBy,
+    exactSourceThreadIdentity,
+    entryCount: entries.length,
+    missingCardIdCount,
+    matchingCardIdCount,
+    conflictingCardIdCount,
+    explicitCardIds,
+    reasonCodes: ["journal_lifecycle_card_identity_explicit_match"],
+  };
+
+  if (entries.length === 0) {
+    return {
+      ...identity,
+      decision: "journal_absent",
+      reasonCodes: ["journal_lifecycle_card_identity_not_applicable"],
+    };
+  }
+  if (conflictingCardIdCount > 0) {
+    return {
+      ...identity,
+      decision: "explicit_identity_conflict",
+      reasonCodes: ["journal_lifecycle_card_identity_conflict"],
+    };
+  }
+  if (missingCardIdCount > 0 && !exactSourceThreadIdentity) {
+    return {
+      ...identity,
+      decision: "legacy_identity_omission_blocked_non_exact_source",
+      reasonCodes: ["journal_lifecycle_card_identity_omission_requires_exact_source_thread"],
+    };
+  }
+  if (missingCardIdCount > 0 && matchingCardIdCount > 0) {
+    return {
+      ...identity,
+      decision: "mixed_explicit_match_and_legacy_omission_admitted",
+      reasonCodes: ["journal_lifecycle_card_identity_mixed_match_admitted_exact_source_thread"],
+    };
+  }
+  if (missingCardIdCount > 0) {
+    return {
+      ...identity,
+      decision: "legacy_identity_omission_admitted",
+      reasonCodes: ["journal_lifecycle_card_identity_omission_admitted_exact_source_thread"],
+    };
+  }
+  return identity;
+}
+
+function resolveJournalLifecycle({ messages, cardId, matchedBy = null }) {
   const entries = (Array.isArray(messages) ? messages : [])
     .map(parseJournalLifecycleMessage)
     .filter(Boolean);
+  const identityDecision = resolveJournalCardIdentity({ entries, cardId, matchedBy });
   if (entries.length === 0) {
-    return { ok: true, status: "journal_absent", state: null, eventId: null, reasonCodes: [] };
+    return {
+      ok: true,
+      status: "journal_absent",
+      state: null,
+      eventId: null,
+      identityDecision,
+      reasonCodes: [],
+    };
   }
 
   const reasonCodes = [];
-  if (entries.some((entry) => !entry.cardId || entry.cardId.toLowerCase() !== cardId.toLowerCase())) {
-    reasonCodes.push("journal_lifecycle_card_identity_conflict");
+  if (identityDecision.decision === "explicit_identity_conflict"
+    || identityDecision.decision === "legacy_identity_omission_blocked_non_exact_source") {
+    reasonCodes.push(...identityDecision.reasonCodes);
   }
   if (entries.some((entry) => !entry.state || !journal.ALLOWED_STATES.has(entry.state))) {
     reasonCodes.push("journal_lifecycle_state_unsupported");
@@ -159,7 +226,9 @@ function resolveJournalLifecycle({ messages, cardId }) {
   const eventVariants = new Map();
   for (const entry of entries) {
     const variants = eventVariants.get(entry.eventId) || new Set();
-    variants.add(`${entry.cardId || ""}\u0000${entry.state || ""}\u0000${entry.occurredAt || ""}`);
+    const effectiveCardId = entry.cardId
+      || (identityDecision.exactSourceThreadIdentity ? cardId : "");
+    variants.add(`${effectiveCardId}\u0000${entry.state || ""}\u0000${entry.occurredAt || ""}`);
     eventVariants.set(entry.eventId, variants);
   }
   if ([...eventVariants.values()].some((variants) => variants.size > 1)) {
@@ -167,7 +236,14 @@ function resolveJournalLifecycle({ messages, cardId }) {
   }
 
   if (reasonCodes.length > 0) {
-    return { ok: false, status: "blocked", state: null, eventId: null, reasonCodes: [...new Set(reasonCodes)] };
+    return {
+      ok: false,
+      status: "blocked",
+      state: null,
+      eventId: null,
+      identityDecision,
+      reasonCodes: [...new Set(reasonCodes)],
+    };
   }
 
   entries.sort(compareJournalLifecycle);
@@ -179,6 +255,7 @@ function resolveJournalLifecycle({ messages, cardId }) {
       status: "blocked",
       state: null,
       eventId: null,
+      identityDecision,
       reasonCodes: ["journal_lifecycle_latest_state_ambiguous"],
     };
   }
@@ -189,6 +266,7 @@ function resolveJournalLifecycle({ messages, cardId }) {
     eventId: latest.eventId,
     messageId: latest.messageId,
     occurredAt: latest.occurredAt,
+    identityDecision,
     reasonCodes: [],
   };
 }
@@ -510,7 +588,11 @@ async function buildMigrationPlan({ boards, fitnessCards = [], mazerCards = [], 
         reasonCodes.push(`${code}:${thread.id}`);
         continue;
       }
-      const journalLifecycle = resolveJournalLifecycle({ messages: messages.payload, cardId: source.cardId });
+      const journalLifecycle = resolveJournalLifecycle({
+        messages: messages.payload,
+        cardId: source.cardId,
+        matchedBy: selected.matchedBy,
+      });
       const selectedTransition = selectLifecycleTransition({ transitions: lifecycleTransitions, cardId: source.cardId, threadId: thread.id });
       const baselineState = mapSourceState(source, board.role);
       const lifecycle = selectedTransition.reasonCodes.length > 0
@@ -524,6 +606,11 @@ async function buildMigrationPlan({ boards, fitnessCards = [], mazerCards = [], 
           cardId: source.cardId,
           baselineState,
           journalState: journalLifecycle.state,
+          journalLifecycleStatus: journalLifecycle.status,
+          journalIdentityDecision: journalLifecycle.identityDecision,
+          lifecycleDecision: lifecycle.decision,
+          matchedBy: selected.matchedBy,
+          sourceType: source.sourceType,
           eventCreated: false,
           reasonCodes: lifecycle.reasonCodes,
         });
@@ -548,6 +635,8 @@ async function buildMigrationPlan({ boards, fitnessCards = [], mazerCards = [], 
         state: event.card.state,
         baselineState,
         journalState: journalLifecycle.state,
+        journalLifecycleStatus: journalLifecycle.status,
+        journalIdentityDecision: journalLifecycle.identityDecision,
         lifecycleDecision: lifecycle.decision,
         matchedBy: selected.matchedBy,
         sourceType: source.sourceType,
@@ -566,6 +655,10 @@ async function buildMigrationPlan({ boards, fitnessCards = [], mazerCards = [], 
     eventCount: events.length,
     authorizedTransitionCount: rows.filter((row) => row.lifecycleDecision === "authorized_transition").length,
     journalPreservedCount: rows.filter((row) => row.lifecycleDecision === "journal_state_preserved").length,
+    legacyJournalIdentityAdmissionCount: rows.filter((row) => [
+      "legacy_identity_omission_admitted",
+      "mixed_explicit_match_and_legacy_omission_admitted",
+    ].includes(row.journalIdentityDecision?.decision)).length,
     fallbackIdentityCount: rows.filter((row) => row.sourceType === "thread_fallback").length,
     rows,
     events,
@@ -614,6 +707,7 @@ module.exports = {
     mapLegacyState,
     mapSourceState,
     parseJournalLifecycleMessage,
+    resolveJournalCardIdentity,
     resolveJournalLifecycle,
     selectLifecycleTransition,
     validateTransitionProof,

@@ -33,6 +33,26 @@ export type DiscordOSBoardCardJournalKind =
   | "completed"
   | "correction";
 
+export type DiscordOSBoardJournalIdentityDecisionName =
+  | "journal_absent"
+  | "explicit_identity_match"
+  | "legacy_identity_omission_admitted"
+  | "mixed_explicit_match_and_legacy_omission_admitted"
+  | "legacy_identity_omission_blocked_non_exact_source"
+  | "explicit_identity_conflict";
+
+export interface DiscordOSBoardJournalIdentityDecision {
+  decision: DiscordOSBoardJournalIdentityDecisionName;
+  matchedBy: "stable_card_id" | "source_thread_id" | "unique_source_title" | "thread_fallback" | null;
+  exactSourceThreadIdentity: boolean;
+  entryCount: number;
+  missingCardIdCount: number;
+  matchingCardIdCount: number;
+  conflictingCardIdCount: number;
+  explicitCardIds: string[];
+  reasonCodes: string[];
+}
+
 export interface DiscordOSBoardCardSnapshot {
   id: string;
   project: string;

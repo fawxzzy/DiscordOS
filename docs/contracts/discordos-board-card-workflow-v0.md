@@ -112,6 +112,10 @@ Legacy normalization is planned before it is applied. The migration planner join
 
 The planner reads the complete paginated journal history before emitting an event. For normalization-only events, an existing valid journal state outranks the owner/export baseline, including terminal `completed` and `archived` states. Identity, body, title, and timestamp normalization must not advance, regress, reopen, or complete lifecycle state. Missing journal history keeps the mapped baseline; unreadable, truncated, malformed, identity-conflicting, or ambiguous journal history blocks the affected event.
 
+Legacy `ATLAS-JOURNAL-EVENT-ID` entries may omit the `- card:` metadata. Those entries participate only when the owner source was selected by exact `source_thread_id` identity and the complete relevant history contains no explicit mismatched card ID. An all-omitted history and a mixed omitted-plus-matching history are accepted under that exact-thread gate. Any explicit mismatch blocks the card. Stable-card, title-only, fallback, ambiguous, and unmatched source selection cannot admit an omission. This exception changes identity admission only; lifecycle precedence, complete-history pagination, duplicate-event conflict checks, latest-state ambiguity checks, and authorized-transition rules remain unchanged.
+
+Each resolved planner row carries `journalLifecycleStatus` and a deterministic `journalIdentityDecision` containing the source match mode, exact-thread result, total/missing/matching/conflicting counts, sorted explicit card IDs, a decision name, and reason codes. Admission uses `journal_lifecycle_card_identity_omission_admitted_exact_source_thread` or `journal_lifecycle_card_identity_mixed_match_admitted_exact_source_thread`. Non-exact omission uses `journal_lifecycle_card_identity_omission_requires_exact_source_thread`; explicit mismatch retains `journal_lifecycle_card_identity_conflict`.
+
 ```powershell
 npm run ops:production-env:run -- npm run ops:discordos:board-card-migration-plan:json -- --boards <boards.json> --fitness-export <fitness.json> --mazer-board <mazer.json> --output <events.json>
 ```
