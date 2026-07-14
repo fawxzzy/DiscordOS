@@ -155,16 +155,16 @@ test("mazer feedback board reads committed cards", async () => {
   assert.equal(result.liveForumChannelId, "1524889569475170478");
   assert.equal(result.legacyForumChannelId, "1524844302981926972");
   assert.equal(result.cardCount, 64);
-  assert.equal(result.openCardCount, 39);
-  assert.equal(result.readyCardCount, 0);
+  assert.equal(result.openCardCount, 38);
+  assert.equal(result.readyCardCount, 1);
   assert.equal(result.completedCardCount, 6);
   assert.equal(result.blockedCardCount, 0);
   assert.equal(result.backlogCardCount, 19);
   assert.equal(result.reactionReadyCardCount, 64);
-  assert.equal(result.nextCard, null);
+  assert.equal(result.nextCard.id, "mazer-edge-wrap-topology-and-notch-fill");
   assert.deepEqual(result.planning, {
     ok: true,
-    activeCardId: null,
+    activeCardId: "mazer-edge-wrap-topology-and-notch-fill",
     epicCount: 9,
     mappedCardCount: 64,
     dependencyCount: 34,
