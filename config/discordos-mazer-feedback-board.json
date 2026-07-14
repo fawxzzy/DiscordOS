@@ -24,8 +24,8 @@
     },
     "planning": {
       "version": 1,
-      "activeCardId": null,
-      "activeSelectionReason": "PR #60 completed the admitted shared UI standards slice. No Mazer card is currently Ready, so the active selector is intentionally empty until the governed planner admits the next non-conflicting packet.",
+      "activeCardId": "mazer-account-scoped-settings-persistence",
+      "activeSelectionReason": "The operator selected settings completion after PR #58 proved scoped fallback and fixture auth persistence. The remaining bounded slice is guest-only legacy-key migration plus authenticated Options/Pause reload proof; it does not change auth ownership, gameplay, or account data.",
       "executionPolicy": "Finish the earliest execution-ready critical-path epic before taking later product work. Advanced AI research stays parallel and cannot block the critical path.",
       "epics": [
         {
@@ -519,7 +519,7 @@
     "liveForumChannelId": "1524889569475170478",
     "legacyForumChannelId": "1524844302981926972",
     "liveGuildId": "1504668396338413670",
-    "liveSyncedAt": "2026-07-14T20:25:05.768Z"
+    "liveSyncedAt": "2026-07-14T20:33:35.083Z"
   },
   "cards": [
     {
@@ -1380,14 +1380,14 @@
     {
       "id": "mazer-account-scoped-settings-persistence",
       "title": "mazer: account-scoped settings persistence",
-      "state": "open",
+      "state": "ready",
       "priority": "high",
       "category": "mazer",
       "markerName": "Account-scoped settings persistence",
       "completionPercent": 70,
       "summary": "Make changed game settings become the authenticated account's saved defaults instead of one global browser preference.",
       "whyItMatters": "Mazer now has real accounts. If control mode, pause-facing settings, visual toggles, or movement speed leak between accounts, auth-backed progression will feel unreliable.",
-      "currentStatus": "The repo now scopes local game-toggle storage through the existing auth-scoped storage helper, reloads settings on account changes, and has guest/user isolation tests. Browser auth-flow proof and legacy unscoped preference migration remain open.",
+      "currentStatus": "Ready at an unchanged 70% for one bounded completion slice. Merged Mazer PR #58 scopes missing settings to immutable defaults, proves guest/authenticated isolation, and passes a rendered fixture auth persistence soak. The migration decision is now closed: copy a valid legacy unscoped preference once into guest scope only, never infer an authenticated owner, remove the legacy key only after a successful scoped write, and fall back to defaults for missing/corrupt data. The implementation must also prove visible Options and played-game Pause settings survive authenticated reload/re-entry without leaking on logout or account switch.",
       "workBreakdown": [
         "Extend the existing preference path instead of creating a second persistence system. Done locally.",
         "Store settings under the authenticated account when a session exists. Done locally.",
@@ -1396,9 +1396,9 @@
         "Cover controller, pause-facing, movement, background, camera, trail, and theme toggles."
       ],
       "nextActions": [
-        "Run browser auth-flow proof for login/logout/reload settings persistence.",
-        "Decide whether to migrate older unscoped local preferences into guest scope or leave them behind.",
-        "Verify visible Options and play pause toggles load the authenticated account defaults."
+        "Implement idempotent valid-only migration from the legacy unscoped key to guest scope, deleting the legacy key only after a successful scoped write.",
+        "Prove corrupt legacy data falls back safely and cannot overwrite guest or authenticated scoped values.",
+        "Run browser auth-flow proof that visible Options and played-game Pause toggles persist for the authenticated account across reload/re-entry and reset to guest defaults after logout."
       ],
       "acceptanceCriteria": [
         "Settings are stored and loaded under the authenticated account.",
