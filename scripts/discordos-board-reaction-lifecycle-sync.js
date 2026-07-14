@@ -64,8 +64,12 @@ function reconcileReactionLifecycleCard(card = {}) {
   if (expectedReactionStatus && card.reactionStatus !== expectedReactionStatus) {
     reasonCodes.push("reaction_status_lifecycle_mismatch");
   }
-  if (card.reactionStatus === "success" && card.state !== "completed") {
-    reasonCodes.push("success_reaction_requires_completed_state");
+  if (
+    card.reactionStatus === "success"
+    && card.state !== "completed"
+    && card.state !== "archived"
+  ) {
+    reasonCodes.push("success_reaction_requires_terminal_state");
   }
   if (
     card.reactionStatus === "failure"
