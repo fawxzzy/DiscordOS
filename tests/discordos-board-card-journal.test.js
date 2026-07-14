@@ -190,6 +190,45 @@ test("board provenance links survive canonical body compaction", () => {
   assert(body.length <= 2000);
 });
 
+test("long canonical bodies preserve every required section instead of truncating the tail", () => {
+  const long = "section detail ".repeat(40).trim();
+  const normalized = _internals.normalizeEvent(event({
+    card: {
+      ...event().card,
+      summary: long,
+      objective: long,
+      acceptanceCriteria: Array.from({ length: 12 }, (_, index) => `Criterion ${index + 1}: ${long}`),
+      discoveries: Array.from({ length: 6 }, (_, index) => `Discovery ${index + 1}: ${long}`),
+      nextActions: Array.from({ length: 8 }, (_, index) => `Next ${index + 1}: ${long}`),
+      blockers: Array.from({ length: 4 }, (_, index) => `Blocker ${index + 1}: ${long}`),
+      evidence: [
+        "original card: https://discord.com/channels/guild/source-thread",
+        ...Array.from({ length: 8 }, (_, index) => `Evidence ${index + 1}: ${long}`),
+      ],
+    },
+  }));
+  const body = _internals.buildCanonicalBody(normalized, `Legacy ${long}`);
+
+  assert(body.length <= 2000);
+  assert(body.endsWith(_internals.CARD_END));
+  for (const heading of [
+    "## Board links",
+    "## Summary",
+    "## Objective",
+    "## Acceptance criteria",
+    "## Discoveries",
+    "## Next actions",
+    "## Blockers",
+    "## Evidence",
+    "## Original context",
+  ]) {
+    assert(body.includes(heading), heading);
+  }
+  assert(body.includes("journal/source"));
+  const inspected = require("../scripts/discordos-board-card-contract")._internals.inspectCanonicalCardBody(body);
+  assert.equal(inspected.complete, true);
+});
+
 test("journal entry contains stable identity, discoveries, and task correlation", () => {
   const message = _internals.buildJournalMessage(_internals.normalizeEvent(event()));
   assert(message.includes("ATLAS-JOURNAL-EVENT-ID: `evt-001`"));

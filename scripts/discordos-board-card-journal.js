@@ -266,12 +266,117 @@ function fitMessage(lines, suffix = "") {
   return `${accepted.join("\n")}${suffix}`.slice(0, MAX_MESSAGE_LENGTH);
 }
 
+function truncateWithReference(value, maxLength) {
+  const normalized = text(value);
+  if (normalized.length <= maxLength) return normalized;
+  const suffix = "... [see journal/source]";
+  const available = Math.max(1, maxLength - suffix.length);
+  return `${normalized.slice(0, available).trimEnd()}${suffix}`;
+}
+
+function compactSectionValues(values, {
+  maxItems,
+  maxLength,
+  fallback = null,
+}) {
+  const normalized = list(values);
+  if (normalized.length === 0) return fallback ? [fallback] : [];
+  if (normalized.length <= maxItems) {
+    return normalized.map((value) => truncateWithReference(value, maxLength));
+  }
+  const visibleCount = Math.max(1, maxItems - 1);
+  return [
+    ...normalized
+      .slice(0, visibleCount)
+      .map((value) => truncateWithReference(value, maxLength)),
+    `${normalized.length - visibleCount} more item(s) in journal/source`,
+  ];
+}
+
+function renderCanonicalBody({ metadataLines, sections }) {
+  const lines = [...metadataLines];
+  for (const section of sections) {
+    if (section.values.length === 0) continue;
+    lines.push("", `## ${section.heading}`);
+    if (section.style === "plain") {
+      lines.push(section.values[0]);
+    } else {
+      for (const value of section.values) lines.push(`- ${value}`);
+    }
+  }
+  return `${lines.join("\n")}\n${CARD_END}`;
+}
+
+function buildCanonicalSections({ card, existingContent, maxLength = null }) {
+  const boardLinks = card.evidence.filter((item) => /^(original|completed) card:/i.test(item));
+  const evidence = card.evidence.filter((item) => !/^(original|completed) card:/i.test(item));
+  const legacy = stripManagedCard(existingContent);
+  if (maxLength === null) {
+    return [
+      { heading: "Board links", values: boardLinks, style: "list" },
+      { heading: "Summary", values: [card.summary], style: "plain" },
+      { heading: "Objective", values: card.objective ? [card.objective] : ["Not established"], style: "list" },
+      { heading: "Acceptance criteria", values: card.acceptanceCriteria.length ? card.acceptanceCriteria : ["Not established"], style: "list" },
+      { heading: "Discoveries", values: card.discoveries, style: "list" },
+      { heading: "Next actions", values: card.nextActions.length ? card.nextActions : ["Not established"], style: "list" },
+      { heading: "Blockers", values: card.blockers.length ? card.blockers : ["None"], style: "list" },
+      { heading: "Evidence", values: evidence.length ? evidence : ["None"], style: "list" },
+      { heading: "Original context", values: legacy ? [legacy] : [], style: "list" },
+    ];
+  }
+  return [
+    {
+      heading: "Board links",
+      values: compactSectionValues(boardLinks, { maxItems: 2, maxLength }),
+      style: "list",
+    },
+    {
+      heading: "Summary",
+      values: compactSectionValues([card.summary], { maxItems: 1, maxLength: maxLength + 40, fallback: "Not established" }),
+      style: "plain",
+    },
+    {
+      heading: "Objective",
+      values: compactSectionValues(card.objective ? [card.objective] : [], { maxItems: 1, maxLength: maxLength + 20, fallback: "Not established" }),
+      style: "list",
+    },
+    {
+      heading: "Acceptance criteria",
+      values: compactSectionValues(card.acceptanceCriteria, { maxItems: 3, maxLength, fallback: "Not established" }),
+      style: "list",
+    },
+    {
+      heading: "Discoveries",
+      values: compactSectionValues(card.discoveries, { maxItems: 2, maxLength }),
+      style: "list",
+    },
+    {
+      heading: "Next actions",
+      values: compactSectionValues(card.nextActions, { maxItems: 3, maxLength, fallback: "Not established" }),
+      style: "list",
+    },
+    {
+      heading: "Blockers",
+      values: compactSectionValues(card.blockers, { maxItems: 2, maxLength, fallback: "None" }),
+      style: "list",
+    },
+    {
+      heading: "Evidence",
+      values: compactSectionValues(evidence, { maxItems: 2, maxLength, fallback: "None" }),
+      style: "list",
+    },
+    {
+      heading: "Original context",
+      values: compactSectionValues(legacy ? [legacy] : [], { maxItems: 1, maxLength }),
+      style: "list",
+    },
+  ];
+}
+
 function buildCanonicalBody(event, existingContent = "") {
   const { card } = event;
   const autonomy = evaluateAutonomyAdmission(card);
-  const boardLinks = card.evidence.filter((item) => /^(original|completed) card:/i.test(item));
-  const evidence = card.evidence.filter((item) => !/^(original|completed) card:/i.test(item));
-  const lines = [
+  const metadataLines = [
     CARD_START,
     cardMarker(card.id),
     `- project: \`${card.project}\``,
@@ -283,17 +388,20 @@ function buildCanonicalBody(event, existingContent = "") {
     `- autonomous implementation: \`${autonomy.admitted ? "admitted" : "not_admitted"}\``,
     `- updated: \`${event.occurredAt}\``,
   ];
-  appendSection(lines, "Board links", boardLinks);
-  lines.push("", "## Summary", card.summary);
-  if (card.objective) appendSection(lines, "Objective", [card.objective]);
-  appendSection(lines, "Acceptance criteria", card.acceptanceCriteria);
-  appendSection(lines, "Discoveries", card.discoveries);
-  appendSection(lines, "Next actions", card.nextActions);
-  appendSection(lines, "Blockers", card.blockers.length ? card.blockers : ["None"]);
-  appendSection(lines, "Evidence", evidence);
-  const legacy = stripManagedCard(existingContent);
-  if (legacy) appendSection(lines, "Original context", [legacy]);
-  return fitMessage(lines, `\n${CARD_END}`);
+  const fullBody = renderCanonicalBody({
+    metadataLines,
+    sections: buildCanonicalSections({ card, existingContent }),
+  });
+  if (fullBody.length <= MAX_MESSAGE_LENGTH) return fullBody;
+
+  for (let maxLength = 140; maxLength >= 48; maxLength -= 4) {
+    const compactBody = renderCanonicalBody({
+      metadataLines,
+      sections: buildCanonicalSections({ card, existingContent, maxLength }),
+    });
+    if (compactBody.length <= MAX_MESSAGE_LENGTH) return compactBody;
+  }
+  throw new Error("canonical_card_body_section_preserving_compaction_failed");
 }
 
 function appendCorrelation(lines, correlation) {
