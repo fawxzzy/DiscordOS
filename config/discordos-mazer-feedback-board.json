@@ -893,14 +893,14 @@
     {
       "id": "mazer-fluid-controls-and-motion",
       "title": "mazer: fluid controls, player motion, and path feel",
-      "state": "open",
+      "state": "completed",
       "priority": "high",
       "category": "mazer",
       "markerName": "Fluid path/player/control feel",
-      "completionPercent": 41,
+      "completionPercent": 100,
       "summary": "Replace snappy tile jumps and hard-coded stick segments with smoother player motion, dynamic directional intent, and bounded assistance through unambiguous zigzag corridors.",
       "whyItMatters": "Fast timed play will fail if the controls feel segmented, sticky, or jumpy. The player should feel like they are steering through a path, not stepping through a debug grid.",
-      "currentStatus": "Tap/hold parity, canonical movement plumbing, ordered stick candidates, and wrap snap improvements exist. Merged PR #54 adds a maintained keyboard-versus-stick matrix with exact accepted-turn parity, lifecycle/lock/fresh-ready proof, 60 FPS, and zero recent spikes. The 41% marker remains unchanged because macro direction through bounded alternating corridors and broader feel tuning are unfinished. Moving-maze one-tile correction is separately gated on a world-transform contract and is not a static-input patch. The operator has now frozen the next controller contract: a directional press/drag runs as far as legal, turns immediately when the requested direction becomes legal, otherwise keeps only the latest one-slot queued direction and takes the next matching opening; later inputs replace earlier queued intent.",
+      "currentStatus": "Completed by merged Mazer PRs #64 and #65. All input methods share one directional-intent resolver with latest-wins queued turns, bounded zigzag assistance, graph-owned legality, and wrap-safe visual snapping. Movement timing now shares versioned legacy-movement-pace-v1: the persisted Move Speed slider remains the user base, new-player timing is unchanged, established completed-cycle level/pace can apply only a bounded deterministic adjustment, and explicit 0%/100% selections remain hard overrides. Full verification passed 47 files / 355 tests plus TypeScript/Vite/PWA build; clean phone keyboard/stick and true desktop browser proof passed lifecycle, fresh-world, and visual review gates.",
       "workBreakdown": [
         "Make stick angle represent movement intent rather than hard-coded segment commands.",
         "Resolve intent against legal graph neighbors dynamically every movement step.",
@@ -909,13 +909,9 @@
         "Define macro direction, bounded lookahead, and explicit-input precedence for short horizontal and vertical zigzag corridors."
       ],
       "nextActions": [
-        "Design the dynamic intent resolver before changing input visuals again.",
-        "Add QA scripts for tap, hold, diagonal-ish intent, blocked wall, release, and wrap snap cases.",
-        "Tune movement speed with pace/level formulas instead of one fixed feel.",
-        "Add deterministic fixtures for simple zigzags, ambiguous junctions, dead ends, reverse turns, narrow corridors, and repeated alternating turns.",
-        "Implement one shared run-to-block intent resolver for keyboard arrows, on-screen arrows, stick drag, and toggle control.",
-        "Model exactly one latest-wins queued direction; consume it at the first legal opening and never build a multi-input command queue.",
-        "Add dead-end, immediate-turn, delayed-opening, replacement, wrap, intersection, and release fixtures."
+        "Keep the shared intent and pace-profile contracts under their merged deterministic and browser gates.",
+        "Treat moving-maze lane correction, diagonal graph topology, and future visual feel changes as separate governed cards.",
+        "Re-run phone keyboard/stick and true desktop lifecycle proof whenever input timing or graph legality changes."
       ],
       "acceptanceCriteria": [
         "Single presses move exactly once while holds continue only while active.",
@@ -938,9 +934,9 @@
       ],
       "liveThreadId": "1524889582590496798",
       "liveMessageId": "1524889582590496798",
-      "reactionStatus": "failure",
-      "reactionEmojiName": "failure",
-      "reactionEmojiId": "1507384094424694785"
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
     },
     {
       "id": "mazer-play-camera-zoom-minimap",
