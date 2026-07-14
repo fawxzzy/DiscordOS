@@ -7,7 +7,7 @@
 - status: `live_board_synced`
 - board: `mazer`
 - cards: `64`
-- ready cards: `0`
+- ready cards: `1`
 - sync admission: `sync_admitted`
 - forum channel id: `1524889569475170478`
 - guild id: `1504668396338413670`
