@@ -5,17 +5,11 @@ const {
 const {
   _internals: liveSyncInternals,
 } = require("./discordos-mazer-feedback-board-live-sync");
+const {
+  _internals: journal,
+} = require("./discordos-board-card-journal");
 
 const DISCORD_API_BASE = "https://discord.com/api/v10";
-const REQUIRED_CONTENT_MARKERS = [
-  "# mazer",
-  "**Why This Matters**",
-  "**Current State**",
-  "**Work Breakdown**",
-  "**Next Actions**",
-  "**Acceptance Criteria**",
-  "**Proof Plan**",
-];
 
 function readValue(args, index, missingCode) {
   const value = args[index + 1];
@@ -76,7 +70,14 @@ async function discordRequest({
 
 function inspectMessageContent({ card, message, status, ok, contentLimit }) {
   const content = typeof message?.content === "string" ? message.content : "";
-  const missingMarkers = REQUIRED_CONTENT_MARKERS.filter((marker) => !content.includes(marker));
+  const parsed = journal.parseManagedCardBody(content);
+  const expectedState = card.state === "backlog"
+    ? "planning"
+    : card.state === "blocked"
+      ? "blocked"
+      : Number(card.completionPercent) >= 85
+        ? "review"
+        : "in_progress";
   const reasonCodes = [];
   if (!ok) {
     reasonCodes.push("live_message_read_failed");
@@ -84,12 +85,15 @@ function inspectMessageContent({ card, message, status, ok, contentLimit }) {
   if (!content) {
     reasonCodes.push("live_message_content_missing");
   }
-  if (content.length >= contentLimit) {
+  if (content.length > contentLimit) {
     reasonCodes.push("live_message_content_limit_exceeded");
   }
-  if (missingMarkers.length > 0) {
-    reasonCodes.push("live_message_required_markers_missing");
-  }
+  if (!parsed) reasonCodes.push("live_message_canonical_body_missing");
+  if (parsed && parsed.id !== card.id) reasonCodes.push("live_message_card_id_mismatch");
+  if (parsed && parsed.project.toLowerCase() !== "mazer") reasonCodes.push("live_message_project_mismatch");
+  if (parsed && parsed.state !== expectedState) reasonCodes.push("live_message_state_mismatch");
+  if (!/^- updated:\s*`[^`]+`/im.test(content)) reasonCodes.push("live_message_updated_timestamp_missing");
+  if (journal.findMojibakeRuns(content).length > 0) reasonCodes.push("live_message_encoding_corrupt");
 
   return {
     ok: reasonCodes.length === 0,
@@ -99,8 +103,10 @@ function inspectMessageContent({ card, message, status, ok, contentLimit }) {
     messageId: card.liveMessageId || null,
     httpStatus: status,
     contentLength: content.length,
-    requiredMarkerCount: REQUIRED_CONTENT_MARKERS.length,
-    missingMarkers,
+    expectedState,
+    liveCardId: parsed?.id || null,
+    liveProject: parsed?.project || null,
+    liveState: parsed?.state || null,
     reasonCodes,
   };
 }
@@ -135,8 +141,10 @@ async function buildMazerFeedbackBoardLiveReadback({
           messageId: card.liveMessageId || null,
           httpStatus: null,
           contentLength: 0,
-          requiredMarkerCount: REQUIRED_CONTENT_MARKERS.length,
-          missingMarkers: REQUIRED_CONTENT_MARKERS,
+          expectedState: null,
+          liveCardId: null,
+          liveProject: null,
+          liveState: null,
           reasonCodes: ["live_thread_or_message_id_missing"],
         });
         continue;
@@ -197,7 +205,7 @@ function renderMarkdown(result) {
   ];
 
   for (const row of result.rows) {
-    lines.push(`- card ${row.cardId}: \`${row.ok ? "pass" : "fail"}\` length \`${row.contentLength}\` status \`${row.httpStatus || "none"}\` missing \`${row.missingMarkers.join(",") || "none"}\``);
+    lines.push(`- card ${row.cardId}: \`${row.ok ? "pass" : "fail"}\` length \`${row.contentLength}\` status \`${row.httpStatus || "none"}\` state \`${row.liveState || "none"}\` reasons \`${row.reasonCodes.join(",") || "none"}\``);
   }
 
   return `${lines.join("\n")}\n`;
@@ -224,7 +232,6 @@ if (require.main === module) {
 module.exports = {
   _internals: {
     DISCORD_API_BASE,
-    REQUIRED_CONTENT_MARKERS,
     parseArgs,
     discordRequest,
     inspectMessageContent,
