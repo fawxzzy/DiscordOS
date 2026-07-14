@@ -31,5 +31,5 @@ The guarded targeted sync created each thread once (`201`), applied and read bac
 
 - environment admission: `npm run ops:production-env:run -- npm run ops:discordos:env-readiness:json`
 - guarded targeted sync: `DISCORDOS_MAZER_FEEDBACK_BOARD_SYNC=enabled npm run ops:production-env:run -- npm run ops:discordos:mazer-feedback-board-live-sync:json -- --card-id <card-id> --allow-sync --apply`
-- guarded journal: `DISCORDOS_BOARD_CARD_JOURNAL=enabled npm run ops:production-env:run -- npm run ops:discordos:board-card-journal:json -- --input C:\ATLAS\tmp\mazer-board-readback-repair-journal.json --allow-apply --apply`
+- guarded journal: `DISCORDOS_BOARD_CARD_JOURNAL=enabled npm run ops:production-env:run -- npm run ops:discordos:board-card-journal:json -- --input <local-journal-event-file> --allow-apply --apply`
 - source commands: `scripts/discordos-mazer-feedback-board-live-sync.js` and `scripts/discordos-board-card-journal.js`

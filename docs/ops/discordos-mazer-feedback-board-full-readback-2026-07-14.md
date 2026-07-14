@@ -47,5 +47,5 @@ Both final rows used `canonical_card_body` correlation, reported HTTP `200`, had
 
 - full sync: `DISCORDOS_MAZER_FEEDBACK_BOARD_SYNC=enabled npm run ops:production-env:run -- npm run ops:discordos:mazer-feedback-board-live-sync:json -- --allow-sync --apply`
 - final readback: `npm run ops:production-env:run -- node -` invoking `buildMazerFeedbackBoardLiveReadback` from `scripts/discordos-mazer-feedback-board-live-readback.js`
-- journal replay: `DISCORDOS_BOARD_CARD_JOURNAL=enabled npm run ops:production-env:run -- npm run ops:discordos:board-card-journal:json -- --input C:\ATLAS\tmp\mazer-board-readback-repair-journal.json --allow-apply --apply`
+- journal replay: `DISCORDOS_BOARD_CARD_JOURNAL=enabled npm run ops:production-env:run -- npm run ops:discordos:board-card-journal:json -- --input <local-journal-event-file> --allow-apply --apply`
 - source contracts: `scripts/discordos-mazer-feedback-board-live-sync.js`, `scripts/discordos-mazer-feedback-board-live-readback.js`, and `scripts/discordos-board-card-journal.js`
