@@ -336,6 +336,8 @@ function buildJournalMessage(event) {
   const { entry } = event;
   const lines = [
     eventMarker(event.eventId),
+    `- card: \`${event.card.id}\``,
+    `- idempotency: \`${event.eventId}\``,
     `## ${entry.headline}`,
     `- kind: \`${entry.kind}\``,
     `- state: \`${event.card.state}\``,

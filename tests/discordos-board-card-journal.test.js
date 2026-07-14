@@ -193,6 +193,8 @@ test("board provenance links survive canonical body compaction", () => {
 test("journal entry contains stable identity, discoveries, and task correlation", () => {
   const message = _internals.buildJournalMessage(_internals.normalizeEvent(event()));
   assert(message.includes("ATLAS-JOURNAL-EVENT-ID: `evt-001`"));
+  assert(message.includes("- card: `FIT-42`"));
+  assert(message.includes("- idempotency: `evt-001`"));
   assert(message.includes("## Discovered"));
   assert(message.includes("Legacy context must be retained"));
   assert(message.includes("- task: `task-42`"));
