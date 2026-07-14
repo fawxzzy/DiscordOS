@@ -199,6 +199,10 @@ Every live Discord forum card upsert must derive a canonical card spec before to
 
 Thread matching must prefer the stable identity embedded in the starter message, then canonical title, then the proposed title. A title-only match is not sufficient to claim the card is healthy.
 
+Existing canonical starter bodies are protected by a read-before-write preflight. A replacement body must carry the same stable card ID plus project, state, owner, priority, summary, objective, acceptance criteria, next actions, and a valid `updated` timestamp. Changed canonical content is admitted only when that timestamp is strictly newer than the live body. Missing fields, older content, equal-timestamp conflicts, or identity conflicts block before mutation with stable reason codes including `canonical_card_body_downgrade_prevented`, `canonical_card_body_older_than_live`, `canonical_card_body_timestamp_conflict`, and `canonical_card_identity_conflict`.
+
+Board writers must plan every admitted card before executing any write. If one row fails preflight, the batch performs no thread, starter-message, or reaction mutation. Unchanged title/body/reaction triples return `unchanged` and perform no mutation. Execution must reject any row outside the admitted card set with `card_mutation_out_of_scope_prevented`.
+
 ## Title Contract
 
 The default title contract preserves plain board titles. Boards that need an owner prefix must declare it in board config:

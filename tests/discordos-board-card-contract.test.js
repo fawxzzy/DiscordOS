@@ -11,6 +11,37 @@ function response({ ok = true, status = 200, payload = null } = {}) {
   };
 }
 
+function canonicalBody({
+  cardId = "FIT-42",
+  updatedAt = "2026-07-14T22:00:00.000Z",
+  summary = "Canonical summary",
+} = {}) {
+  return [
+    _internals.CANONICAL_CARD_START,
+    `ATLAS-CARD-ID: \`${cardId}\``,
+    "- project: `Fitness`",
+    "- type: `feature`",
+    "- state: `planning`",
+    "- priority: `High`",
+    "- owner: `Fitness`",
+    "- progress: `20%`",
+    `- updated: \`${updatedAt}\``,
+    "",
+    "## Summary",
+    summary,
+    "",
+    "## Objective",
+    "- Deliver the governed outcome.",
+    "",
+    "## Acceptance criteria",
+    "- The result is verified.",
+    "",
+    "## Next actions",
+    "- Run focused verification.",
+    _internals.CANONICAL_CARD_END,
+  ].join("\n");
+}
+
 test("canonical formatter normalizes Mazer titles without double prefixes", () => {
   const board = {
     board: {
@@ -54,6 +85,104 @@ test("plain formatter keeps healthy-board title style deterministic", () => {
     }),
     "Music Sesh Phase 8 - Cross-Service Room Sync + Simple Controls"
   );
+});
+
+test("canonical starter inspection requires the full identity, ownership, body, and timestamp contract", () => {
+  const complete = _internals.inspectCanonicalCardBody(canonicalBody());
+  const incomplete = _internals.inspectCanonicalCardBody([
+    _internals.CANONICAL_CARD_START,
+    "ATLAS-CARD-ID: `FIT-42`",
+    "- project: `Fitness`",
+    "- state: `planning`",
+    "- owner: `Fitness`",
+    "- priority: `High`",
+    "## Summary",
+    "Summary only",
+    _internals.CANONICAL_CARD_END,
+  ].join("\n"));
+
+  assert.equal(complete.complete, true);
+  assert.equal(complete.card.id, "FIT-42");
+  assert.equal(complete.card.updatedAt, "2026-07-14T22:00:00.000Z");
+  assert.deepEqual(incomplete.missingFields, [
+    "objective",
+    "acceptance_criteria",
+    "next_actions",
+    "updated_timestamp",
+  ]);
+});
+
+test("canonical starter update blocks incomplete, older, and equal-timestamp replacement bodies", () => {
+  const existingContent = canonicalBody();
+  const incomplete = _internals.evaluateStarterMessageUpdate({
+    existingContent,
+    proposedContent: "legacy config body",
+  });
+  const older = _internals.evaluateStarterMessageUpdate({
+    existingContent,
+    proposedContent: canonicalBody({ updatedAt: "2026-07-14T21:59:59.000Z", summary: "Older summary" }),
+  });
+  const equalTimestamp = _internals.evaluateStarterMessageUpdate({
+    existingContent,
+    proposedContent: canonicalBody({ summary: "Conflicting summary" }),
+  });
+  const newer = _internals.evaluateStarterMessageUpdate({
+    existingContent,
+    proposedContent: canonicalBody({ updatedAt: "2026-07-14T22:00:01.000Z", summary: "Newer summary" }),
+  });
+
+  assert.deepEqual(incomplete.reasonCodes, ["canonical_card_body_downgrade_prevented"]);
+  assert(older.reasonCodes.includes("canonical_card_body_older_than_live"));
+  assert(equalTimestamp.reasonCodes.includes("canonical_card_body_timestamp_conflict"));
+  assert.equal(newer.ok, true);
+  assert.equal(newer.action, "update");
+});
+
+test("generic forum-card preflight blocks noncanonical source bodies before any board writer mutation", async () => {
+  const calls = [];
+  const spec = {
+    cardId: "FIT-42",
+    canonicalTitle: "Feature: Governed Fitness card",
+    proposedTitle: "Feature: Governed Fitness card",
+    requiredReactions: [{ name: "failure", id: "1507384094424694785" }],
+  };
+  const result = await _internals.upsertDiscordForumCard({
+    spec,
+    existingThread: {
+      id: "fitness-thread-42",
+      name: spec.canonicalTitle,
+      messageId: "fitness-thread-42",
+    },
+    forumChannelId: "fitness-forum",
+    token: "token",
+    apply: true,
+    buildPayload: () => ({
+      name: spec.canonicalTitle,
+      message: { content: "stale noncanonical source body", allowed_mentions: { parse: [] } },
+    }),
+    fetchImpl: async (url, init) => {
+      calls.push({ url, method: init.method });
+      return response({
+        payload: {
+          id: "fitness-thread-42",
+          content: canonicalBody(),
+          reactions: [{
+            emoji: { name: "failure", id: "1507384094424694785" },
+            count: 1,
+            me: true,
+          }],
+        },
+      });
+    },
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.action, "blocked");
+  assert.deepEqual(result.reasonCodes, ["canonical_card_body_downgrade_prevented"]);
+  assert.deepEqual(calls, [{
+    url: `${_internals.DISCORD_API_BASE}/channels/fitness-thread-42/messages/fitness-thread-42`,
+    method: "GET",
+  }]);
 });
 
 test("ensureRequiredReaction is idempotent when bot reaction already exists", async () => {

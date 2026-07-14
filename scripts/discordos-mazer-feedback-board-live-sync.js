@@ -38,6 +38,7 @@ function parseArgs(args) {
     allowSync: false,
     apply: false,
     forumChannelId: null,
+    fullBoard: false,
     receiptFile: DEFAULT_RECEIPT_PATH,
     writeBoard: true,
   };
@@ -53,6 +54,8 @@ function parseArgs(args) {
     } else if (arg === "--forum-channel-id") {
       options.forumChannelId = readValue(args, index, "missing_forum_channel_id_value");
       index += 1;
+    } else if (arg === "--full-board") {
+      options.fullBoard = true;
     } else if (arg === "--receipt-file") {
       options.receiptFile = path.resolve(readValue(args, index, "missing_receipt_file_value"));
       index += 1;
@@ -105,6 +108,57 @@ function resolveSyncAdmission({ allowSync, env }) {
     admitted: false,
     status: "blocked",
     reasonCodes: ["mazer_feedback_board_sync_double_guard_missing"],
+  };
+}
+
+function resolveMutationScope({ apply, cardId, fullBoard }) {
+  if (hasText(cardId) && fullBoard) {
+    return {
+      admitted: false,
+      mode: "blocked",
+      selectedCardIds: [],
+      reasonCodes: ["mazer_feedback_board_mutation_scope_conflict"],
+    };
+  }
+  if (!apply) {
+    return {
+      admitted: false,
+      mode: hasText(cardId) ? "bounded_dry_run" : "read_only",
+      selectedCardIds: hasText(cardId) ? [cardId] : [],
+      reasonCodes: [],
+    };
+  }
+  if (hasText(cardId)) {
+    return {
+      admitted: true,
+      mode: "bounded_card",
+      selectedCardIds: [cardId],
+      reasonCodes: [],
+    };
+  }
+  if (fullBoard) {
+    return {
+      admitted: true,
+      mode: "full_board",
+      selectedCardIds: [],
+      reasonCodes: [],
+    };
+  }
+  return {
+    admitted: false,
+    mode: "blocked",
+    selectedCardIds: [],
+    reasonCodes: ["mazer_feedback_board_explicit_mutation_scope_required"],
+  };
+}
+
+function evaluateCardMutationScope({ cardId, admittedCardIds }) {
+  if (admittedCardIds.includes(cardId)) {
+    return { ok: true, reasonCodes: [] };
+  }
+  return {
+    ok: false,
+    reasonCodes: ["card_mutation_out_of_scope_prevented"],
   };
 }
 
@@ -631,6 +685,17 @@ async function writeSyncedBoard({
   return nextBoard;
 }
 
+function boardRequiresSyncWrite({ board, forumTarget, cardSyncResults }) {
+  if (board?.board?.liveForumChannelId !== forumTarget.forumChannelId) return true;
+  if (board?.board?.liveGuildId !== forumTarget.guildId) return true;
+  return cardSyncResults.some((result) => {
+    if (!result.ok || !result.threadId) return false;
+    const card = board.cards.find((candidate) => candidate.id === result.cardId);
+    return card?.liveThreadId !== result.threadId
+      || card?.liveMessageId !== (result.messageId || result.threadId);
+  });
+}
+
 async function writeReceipt({
   receiptFile,
   result,
@@ -667,6 +732,7 @@ async function buildMazerFeedbackBoardLiveSync({
   allowSync = false,
   apply = false,
   forumChannelId = null,
+  fullBoard = false,
   receiptFile = DEFAULT_RECEIPT_PATH,
   writeBoard = true,
   ...input
@@ -674,7 +740,12 @@ async function buildMazerFeedbackBoardLiveSync({
   const board = await boardInternals.readBoard(input.boardPath || boardInternals.DEFAULT_BOARD_PATH, fsImpl);
   const readModel = boardInternals.buildMazerFeedbackBoardReadModel(board, input);
   const syncAdmission = resolveSyncAdmission({ allowSync, env });
-  const reasonCodes = [...readModel.reasonCodes, ...syncAdmission.reasonCodes];
+  const mutationScope = resolveMutationScope({ apply, cardId: input.cardId, fullBoard });
+  const reasonCodes = [
+    ...readModel.reasonCodes,
+    ...syncAdmission.reasonCodes,
+    ...mutationScope.reasonCodes,
+  ];
   if (apply && !syncAdmission.admitted) {
     reasonCodes.push("mazer_feedback_board_sync_not_admitted");
   }
@@ -683,7 +754,7 @@ async function buildMazerFeedbackBoardLiveSync({
     forumChannelId,
     env,
     fetchImpl,
-    createIfMissing: apply && syncAdmission.admitted,
+    createIfMissing: apply && syncAdmission.admitted && mutationScope.admitted,
   });
   reasonCodes.push(...forumTarget.reasonCodes);
 
@@ -697,6 +768,7 @@ async function buildMazerFeedbackBoardLiveSync({
   const completedSourceCardCount = readModel.cards.length - syncableCards.length;
   const canSync = apply
     && syncAdmission.admitted
+    && mutationScope.admitted
     && readModel.ok
     && forumTarget.ok
     && hasText(normalizeEnvValue(env.DISCORDOS_BOT_TOKEN));
@@ -711,8 +783,16 @@ async function buildMazerFeedbackBoardLiveSync({
     reasonCodes.push(...threadInventory.reasonCodes);
   }
 
+  const admittedCardIds = mutationScope.mode === "full_board"
+    ? syncableCards.map((card) => card.id)
+    : mutationScope.selectedCardIds;
+  const syncPlans = [];
   if (canSync && threadInventory.ok) {
     for (const card of syncableCards) {
+      const scopeDecision = evaluateCardMutationScope({
+        cardId: card.id,
+        admittedCardIds,
+      });
       const spec = {
         ...cardContract.buildCanonicalCardSpec({
           board,
@@ -722,40 +802,97 @@ async function buildMazerFeedbackBoardLiveSync({
         card,
       };
       const existing = cardContract.findExistingThreadForSpec(threadInventory.threads, spec);
-      const upserted = await cardContract.upsertDiscordForumCard({
-        spec,
-        existingThread: existing,
-        forumChannelId: forumTarget.forumChannelId,
-        token: normalizeEnvValue(env.DISCORDOS_BOT_TOKEN),
-        apply: true,
-        fetchImpl,
-        buildPayload: buildCardThreadPayload,
-      });
-      cardSyncResults.push({
-        cardId: card.id,
-        title: spec.canonicalTitle,
-        action: upserted.action === "created" ? "created" : "existing",
-        ok: upserted.ok,
-        httpStatus: upserted.httpStatus,
-        reactionStatus: upserted.reactionResult?.addHttpStatus || upserted.reactionResult?.afterHttpStatus || null,
-        reactionReadbackStatus: upserted.reactionResult?.status || null,
-        threadId: upserted.threadId,
-        messageId: upserted.messageId,
-        reasonCodes: upserted.reasonCodes,
-      });
-      if (!upserted.ok) {
-        reasonCodes.push(...upserted.reasonCodes.map((reasonCode) => `mazer_${reasonCode}`));
+      const preflight = scopeDecision.ok
+        ? await cardContract.buildDiscordForumCardUpsertPreflight({
+          spec,
+          existingThread: existing,
+          token: normalizeEnvValue(env.DISCORDOS_BOT_TOKEN),
+          fetchImpl,
+          buildPayload: buildCardThreadPayload,
+        })
+        : {
+          ok: false,
+          action: "blocked",
+          cardId: card.id,
+          threadId: existing?.id || null,
+          messageId: existing?.messageId || null,
+          reasonCodes: scopeDecision.reasonCodes,
+        };
+      syncPlans.push({ card, spec, existing, preflight });
+      if (!preflight.ok) {
+        reasonCodes.push(...preflight.reasonCodes.map((reasonCode) => `mazer_${reasonCode}`));
+      }
+    }
+
+    const preflightBlocked = syncPlans.some((plan) => !plan.preflight.ok);
+    if (preflightBlocked) {
+      reasonCodes.push("mazer_card_sync_batch_preflight_blocked");
+      for (const plan of syncPlans) {
+        cardSyncResults.push({
+          cardId: plan.card.id,
+          title: plan.spec.canonicalTitle,
+          action: plan.preflight.ok ? "not_executed" : "blocked",
+          plannedAction: plan.preflight.action,
+          ok: false,
+          httpStatus: null,
+          reactionStatus: null,
+          reactionReadbackStatus: null,
+          threadId: plan.preflight.threadId,
+          messageId: plan.preflight.messageId,
+          reasonCodes: plan.preflight.ok
+            ? ["card_sync_batch_preflight_blocked"]
+            : plan.preflight.reasonCodes,
+        });
+      }
+    } else {
+      for (const plan of syncPlans) {
+        const { card, spec, existing, preflight } = plan;
+        const upserted = await cardContract.upsertDiscordForumCard({
+          spec,
+          existingThread: existing,
+          forumChannelId: forumTarget.forumChannelId,
+          token: normalizeEnvValue(env.DISCORDOS_BOT_TOKEN),
+          apply: true,
+          preflight,
+          fetchImpl,
+          buildPayload: buildCardThreadPayload,
+        });
+        cardSyncResults.push({
+          cardId: card.id,
+          title: spec.canonicalTitle,
+          action: upserted.action,
+          plannedAction: preflight.action,
+          ok: upserted.ok,
+          httpStatus: upserted.httpStatus,
+          reactionStatus: upserted.reactionResult?.addHttpStatus || upserted.reactionResult?.afterHttpStatus || null,
+          reactionReadbackStatus: upserted.reactionResult?.status || null,
+          threadId: upserted.threadId,
+          messageId: upserted.messageId,
+          reasonCodes: upserted.reasonCodes,
+        });
+        if (!upserted.ok) {
+          reasonCodes.push(...upserted.reasonCodes.map((reasonCode) => `mazer_${reasonCode}`));
+        }
       }
     }
   }
 
   const syncedCardCount = cardSyncResults.filter((result) => result.ok).length;
+  const createdThreadCount = cardSyncResults.filter((result) => result.action === "created" && result.ok).length;
+  const updatedCardCount = cardSyncResults.filter((result) => result.action === "updated" && result.ok).length;
+  const unchangedCardCount = cardSyncResults.filter((result) => result.action === "unchanged" && result.ok).length;
+  const mutationActionCount = createdThreadCount + updatedCardCount;
   let boardWrite = {
     attempted: false,
     written: false,
     path: input.boardPath || boardInternals.DEFAULT_BOARD_PATH,
   };
-  if (canSync && writeBoard && syncedCardCount === syncableCards.length) {
+  if (
+    canSync
+    && writeBoard
+    && syncedCardCount === syncableCards.length
+    && boardRequiresSyncWrite({ board, forumTarget, cardSyncResults })
+  ) {
     await writeSyncedBoard({
       boardPath: input.boardPath || boardInternals.DEFAULT_BOARD_PATH,
       board,
@@ -781,7 +918,7 @@ async function buildMazerFeedbackBoardLiveSync({
     status: !apply
       ? "dry_run"
       : uniqueReasonCodes.length === 0
-        ? "live_board_synced"
+        ? mutationActionCount === 0 ? "live_board_unchanged" : "live_board_synced"
         : "blocked",
     boardId: readModel.boardId,
     cardCount: readModel.cardCount,
@@ -790,10 +927,21 @@ async function buildMazerFeedbackBoardLiveSync({
     readyCardCount: readModel.readyCardCount,
     forumTarget,
     syncAdmission,
+    mutationScope,
     discoveredThreadCount: threadInventory.threads.length,
+    preflightCardCount: syncPlans.length,
     syncedCardCount,
-    createdThreadCount: cardSyncResults.filter((resultRow) => resultRow.action === "created" && resultRow.ok).length,
-    existingThreadCount: cardSyncResults.filter((resultRow) => resultRow.action === "existing" && resultRow.ok).length,
+    mutationActionCount,
+    createdThreadCount,
+    updatedCardCount,
+    unchangedCardCount,
+    existingThreadCount: cardSyncResults.filter((resultRow) => resultRow.action !== "created" && resultRow.ok).length,
+    preventedDowngradeCardCount: cardSyncResults.filter((resultRow) =>
+      resultRow.reasonCodes.includes("canonical_card_body_downgrade_prevented")
+    ).length,
+    outOfScopeMutationPreventedCount: cardSyncResults.filter((resultRow) =>
+      resultRow.reasonCodes.includes("card_mutation_out_of_scope_prevented")
+    ).length,
     cardSyncResults,
     boardWrite,
     receipt: {
@@ -841,11 +989,16 @@ function renderMarkdown(result) {
     `- cards: \`${result.cardCount}\``,
     `- ready cards: \`${result.readyCardCount}\``,
     `- sync admission: \`${result.syncAdmission.status}\``,
+    `- mutation scope: \`${result.mutationScope.mode}\``,
     `- forum channel id: \`${result.forumTarget.forumChannelId || "none"}\``,
     `- guild id: \`${result.forumTarget.guildId || "none"}\``,
     `- forum created: \`${result.forumTarget.created ? "true" : "false"}\``,
     `- discovered threads: \`${result.discoveredThreadCount}\``,
+    `- mutation actions: \`${result.mutationActionCount}\``,
     `- synced cards: \`${result.syncedCardCount}\``,
+    `- unchanged cards: \`${result.unchangedCardCount}\``,
+    `- prevented downgrades: \`${result.preventedDowngradeCardCount}\``,
+    `- prevented out-of-scope mutations: \`${result.outOfScopeMutationPreventedCount}\``,
     `- created threads: \`${result.createdThreadCount}\``,
     `- existing threads: \`${result.existingThreadCount}\``,
     `- board config written: \`${result.boardWrite.written ? "true" : "false"}\``,
@@ -890,11 +1043,14 @@ module.exports = {
     DEFAULT_RECEIPT_PATH,
     parseArgs,
     resolveSyncAdmission,
+    resolveMutationScope,
+    evaluateCardMutationScope,
     normalizeEnvValue,
     selectSyncableCards,
     buildCardThreadPayload,
     resolveForumTarget,
     listForumThreads,
+    boardRequiresSyncWrite,
     buildMazerFeedbackBoardLiveSync,
     renderMarkdown,
   },

@@ -5,6 +5,8 @@ const {
 const DISCORD_API_BASE = updatePostInternals.DISCORD_API_BASE;
 const DISCORD_THREAD_TITLE_MAX_LENGTH = 100;
 const DEFAULT_AUTO_ARCHIVE_DURATION = 10080;
+const CANONICAL_CARD_START = "<!-- ATLAS-CARD:START -->";
+const CANONICAL_CARD_END = "<!-- ATLAS-CARD:END -->";
 const STATUS_REACTIONS = {
   success: {
     name: "success",
@@ -26,6 +28,115 @@ function normalizeWhitespace(value) {
 
 function normalizeIdentity(value) {
   return normalizeWhitespace(value).toLowerCase();
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function parseCanonicalCardBody(content) {
+  const value = String(content || "");
+  const start = value.indexOf(CANONICAL_CARD_START);
+  const end = value.indexOf(CANONICAL_CARD_END);
+  if (start < 0 || end <= start) return null;
+  const managed = value.slice(start, end + CANONICAL_CARD_END.length);
+  const metadata = (name) => managed.match(new RegExp(`^- ${name}:\\s*\`([^\`]+)\``, "im"))?.[1]?.trim() || "";
+  const section = (heading) => managed.match(new RegExp(`(?:^|\\n)## ${heading}\\s*\\n([\\s\\S]*?)(?=\\n## |\\n${escapeRegExp(CANONICAL_CARD_END)}|$)`, "i"))?.[1]?.trim() || "";
+  const items = (heading) => section(heading)
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s*-\s*/, "").trim())
+    .filter((line) => line && !/^none$/i.test(line));
+  return {
+    id: managed.match(/ATLAS-CARD-ID:\s*`([^`]+)`/i)?.[1]?.trim() || "",
+    project: metadata("project"),
+    title: "",
+    type: metadata("type"),
+    state: metadata("state").toLowerCase(),
+    priority: metadata("priority"),
+    owner: metadata("owner"),
+    progress: metadata("progress"),
+    updatedAt: metadata("updated"),
+    summary: section("Summary"),
+    objective: items("Objective")[0] || "",
+    acceptanceCriteria: items("Acceptance criteria"),
+    discoveries: items("Discoveries"),
+    nextActions: items("Next actions"),
+    blockers: items("Blockers"),
+    evidence: items("Evidence"),
+  };
+}
+
+function inspectCanonicalCardBody(content) {
+  const card = parseCanonicalCardBody(content);
+  const missingFields = [];
+  if (!card) {
+    return {
+      managed: false,
+      complete: false,
+      card: null,
+      updatedTime: null,
+      missingFields: ["canonical_body"],
+    };
+  }
+  if (!hasText(card.id)) missingFields.push("stable_card_id");
+  if (!hasText(card.project)) missingFields.push("project");
+  if (!hasText(card.state)) missingFields.push("state");
+  if (!hasText(card.owner)) missingFields.push("owner");
+  if (!hasText(card.priority)) missingFields.push("priority");
+  if (!hasText(card.summary)) missingFields.push("summary");
+  if (!hasText(card.objective)) missingFields.push("objective");
+  if (card.acceptanceCriteria.length === 0) missingFields.push("acceptance_criteria");
+  if (card.nextActions.length === 0) missingFields.push("next_actions");
+  const updatedTime = Date.parse(card.updatedAt);
+  if (!hasText(card.updatedAt) || !Number.isFinite(updatedTime)) {
+    missingFields.push("updated_timestamp");
+  }
+  return {
+    managed: true,
+    complete: missingFields.length === 0,
+    card,
+    updatedTime: Number.isFinite(updatedTime) ? updatedTime : null,
+    missingFields,
+  };
+}
+
+function evaluateStarterMessageUpdate({ existingContent, proposedContent }) {
+  const currentContent = String(existingContent || "");
+  const nextContent = String(proposedContent || "");
+  if (currentContent === nextContent) {
+    return {
+      ok: true,
+      action: "unchanged",
+      existing: inspectCanonicalCardBody(currentContent),
+      proposed: inspectCanonicalCardBody(nextContent),
+      reasonCodes: [],
+    };
+  }
+
+  const existing = inspectCanonicalCardBody(currentContent);
+  const proposed = inspectCanonicalCardBody(nextContent);
+  if (!existing.managed) {
+    return { ok: true, action: "update", existing, proposed, reasonCodes: [] };
+  }
+
+  const reasonCodes = [];
+  if (!proposed.complete) {
+    reasonCodes.push("canonical_card_body_downgrade_prevented");
+  } else if (existing.card.id && normalizeIdentity(existing.card.id) !== normalizeIdentity(proposed.card.id)) {
+    reasonCodes.push("canonical_card_identity_conflict", "canonical_card_body_downgrade_prevented");
+  } else if (existing.updatedTime !== null && proposed.updatedTime < existing.updatedTime) {
+    reasonCodes.push("canonical_card_body_older_than_live", "canonical_card_body_downgrade_prevented");
+  } else if (existing.updatedTime !== null && proposed.updatedTime === existing.updatedTime) {
+    reasonCodes.push("canonical_card_body_timestamp_conflict", "canonical_card_body_downgrade_prevented");
+  }
+
+  return {
+    ok: reasonCodes.length === 0,
+    action: reasonCodes.length === 0 ? "update" : "blocked",
+    existing,
+    proposed,
+    reasonCodes: [...new Set(reasonCodes)],
+  };
 }
 
 function getBoardId(board) {
@@ -366,6 +477,71 @@ async function updateThreadMessage({
   });
 }
 
+async function buildDiscordForumCardUpsertPreflight({
+  spec,
+  existingThread = null,
+  token,
+  buildPayload,
+  fetchImpl = fetch,
+}) {
+  const payload = buildPayload(spec);
+  if (!existingThread) {
+    return {
+      ok: true,
+      action: "created",
+      cardId: spec.cardId,
+      threadId: null,
+      messageId: null,
+      titleChanged: false,
+      messageChanged: true,
+      reactionChanged: true,
+      payload,
+      reasonCodes: [],
+    };
+  }
+
+  const threadId = existingThread.id;
+  const messageId = existingThread.messageId || existingThread.message?.id || threadId;
+  const starter = await fetchMessage({ channelId: threadId, messageId, token, fetchImpl });
+  if (!starter.ok) {
+    return {
+      ok: false,
+      action: "blocked",
+      cardId: spec.cardId,
+      threadId,
+      messageId,
+      titleChanged: false,
+      messageChanged: false,
+      reactionChanged: false,
+      payload,
+      reasonCodes: ["card_starter_message_preflight_read_failed"],
+    };
+  }
+
+  const messageDecision = evaluateStarterMessageUpdate({
+    existingContent: starter.payload?.content,
+    proposedContent: payload.message?.content,
+  });
+  const reaction = spec.requiredReactions[0];
+  const titleChanged = normalizeThreadTitle(existingThread.name) !== normalizeThreadTitle(spec.canonicalTitle);
+  const reactionChanged = !reactionPresent(summarizeReactions(starter.payload), reaction);
+  const changed = titleChanged || messageDecision.action === "update" || reactionChanged;
+  return {
+    ok: messageDecision.ok,
+    action: messageDecision.ok ? (changed ? "updated" : "unchanged") : "blocked",
+    cardId: spec.cardId,
+    threadId,
+    messageId,
+    titleChanged,
+    messageChanged: messageDecision.action === "update",
+    reactionChanged,
+    existingMessage: starter.payload,
+    messageDecision,
+    payload,
+    reasonCodes: messageDecision.reasonCodes,
+  };
+}
+
 async function upsertDiscordForumCard({
   spec,
   existingThread = null,
@@ -373,9 +549,19 @@ async function upsertDiscordForumCard({
   token,
   buildPayload,
   apply = false,
+  preflight = null,
   fetchImpl = fetch,
 }) {
-  const payload = buildPayload(spec);
+  if (apply && !preflight) {
+    preflight = await buildDiscordForumCardUpsertPreflight({
+      spec,
+      existingThread,
+      token,
+      buildPayload,
+      fetchImpl,
+    });
+  }
+  const payload = preflight?.payload || buildPayload(spec);
   const reasonCodes = [];
   if (!apply) {
     return {
@@ -392,11 +578,43 @@ async function upsertDiscordForumCard({
 
   let threadId = existingThread?.id || null;
   let messageId = existingThread?.messageId || existingThread?.message?.id || existingThread?.id || null;
-  let action = "updated";
+  let action = preflight?.action || "updated";
   let httpStatus = null;
 
+  if (preflight && (
+    preflight.cardId !== spec.cardId
+    || preflight.threadId !== threadId
+    || preflight.messageId !== messageId
+  )) {
+    return {
+      ok: false,
+      action: "blocked",
+      threadId,
+      messageId,
+      canonicalTitle: spec.canonicalTitle,
+      reactionResult: null,
+      httpStatus,
+      reasonCodes: ["card_upsert_preflight_identity_mismatch"],
+    };
+  }
+  if (preflight && !preflight.ok) {
+    return {
+      ok: false,
+      action: "blocked",
+      threadId,
+      messageId,
+      canonicalTitle: spec.canonicalTitle,
+      reactionResult: null,
+      httpStatus,
+      reasonCodes: preflight.reasonCodes,
+    };
+  }
+
   if (existingThread) {
-    if (normalizeThreadTitle(existingThread.name) !== normalizeThreadTitle(spec.canonicalTitle)) {
+    const titleChanged = preflight
+      ? preflight.titleChanged
+      : normalizeThreadTitle(existingThread.name) !== normalizeThreadTitle(spec.canonicalTitle);
+    if (titleChanged) {
       const renamed = await updateThreadName({
         threadId: existingThread.id,
         token,
@@ -408,16 +626,18 @@ async function upsertDiscordForumCard({
         reasonCodes.push("card_thread_rename_failed");
       }
     }
-    const updated = await updateThreadMessage({
-      threadId: existingThread.id,
-      messageId,
-      token,
-      message: payload.message,
-      fetchImpl,
-    });
-    httpStatus = updated.status;
-    if (!updated.ok) {
-      reasonCodes.push("card_thread_message_update_failed");
+    if (!preflight || preflight.messageChanged) {
+      const updated = await updateThreadMessage({
+        threadId: existingThread.id,
+        messageId,
+        token,
+        message: payload.message,
+        fetchImpl,
+      });
+      httpStatus = updated.status;
+      if (!updated.ok) {
+        reasonCodes.push("card_thread_message_update_failed");
+      }
     }
   } else {
     const created = await createForumThread({
@@ -437,13 +657,26 @@ async function upsertDiscordForumCard({
 
   const reaction = spec.requiredReactions[0];
   const reactionResult = threadId && messageId && reasonCodes.length === 0
-    ? await ensureRequiredReaction({
-      channelId: threadId,
-      messageId,
-      token,
-      emoji: reaction,
-      fetchImpl,
-    })
+    ? preflight && !preflight.reactionChanged
+      ? {
+        ok: true,
+        status: "already_present",
+        reactionTarget: { channelId: threadId, messageId },
+        emoji: formatReactionEmoji(reaction),
+        beforeHttpStatus: 200,
+        addHttpStatus: null,
+        afterHttpStatus: 200,
+        alreadyPresent: true,
+        presentAfter: true,
+        reasonCodes: [],
+      }
+      : await ensureRequiredReaction({
+        channelId: threadId,
+        messageId,
+        token,
+        emoji: reaction,
+        fetchImpl,
+      })
     : {
       ok: false,
       status: "not_attempted",
@@ -470,10 +703,15 @@ module.exports = {
     DISCORD_API_BASE,
     DISCORD_THREAD_TITLE_MAX_LENGTH,
     DEFAULT_AUTO_ARCHIVE_DURATION,
+    CANONICAL_CARD_START,
+    CANONICAL_CARD_END,
     STATUS_REACTIONS,
     hasText,
     normalizeWhitespace,
     normalizeIdentity,
+    parseCanonicalCardBody,
+    inspectCanonicalCardBody,
+    evaluateStarterMessageUpdate,
     getTitleContract,
     formatCanonicalCardTitle,
     getRequiredReactionForCard,
@@ -491,6 +729,7 @@ module.exports = {
     createForumThread,
     updateThreadName,
     updateThreadMessage,
+    buildDiscordForumCardUpsertPreflight,
     upsertDiscordForumCard,
   },
 };

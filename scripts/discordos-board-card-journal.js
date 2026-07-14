@@ -6,8 +6,8 @@ const {
 
 const JOURNAL_ENV = "DISCORDOS_BOARD_CARD_JOURNAL";
 const JOURNAL_ENV_VALUE = "enabled";
-const CARD_START = "<!-- ATLAS-CARD:START -->";
-const CARD_END = "<!-- ATLAS-CARD:END -->";
+const CARD_START = cardContract.CANONICAL_CARD_START;
+const CARD_END = cardContract.CANONICAL_CARD_END;
 const MAX_MESSAGE_LENGTH = 2000;
 const MESSAGE_PAGE_LIMIT = 100;
 const MAX_MESSAGE_PAGES = 10;
@@ -242,34 +242,7 @@ function stripManagedCard(content) {
 }
 
 function parseManagedCardBody(content) {
-  const value = String(content || "");
-  const start = value.indexOf(CARD_START);
-  const end = value.indexOf(CARD_END);
-  if (start < 0 || end <= start) return null;
-  const managed = value.slice(start, end + CARD_END.length);
-  const metadata = (name) => managed.match(new RegExp(`^- ${name}:\\s*\\\`([^\\\`]+)\\\``, "im"))?.[1]?.trim() || "";
-  const section = (heading) => managed.match(new RegExp(`(?:^|\\n)## ${heading}\\s*\\n([\\s\\S]*?)(?=\\n## |\\n${CARD_END.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}|$)`, "i"))?.[1]?.trim() || "";
-  const items = (heading) => section(heading)
-    .split(/\r?\n/)
-    .map((line) => line.replace(/^\s*-\s*/, "").trim())
-    .filter((line) => line && !/^none$/i.test(line));
-  return {
-    id: managed.match(/ATLAS-CARD-ID:\s*`([^`]+)`/i)?.[1]?.trim() || "",
-    project: metadata("project"),
-    title: "",
-    type: metadata("type"),
-    state: metadata("state").toLowerCase(),
-    priority: metadata("priority"),
-    owner: metadata("owner"),
-    progress: metadata("progress"),
-    summary: section("Summary"),
-    objective: items("Objective")[0] || "",
-    acceptanceCriteria: items("Acceptance criteria"),
-    discoveries: items("Discoveries"),
-    nextActions: items("Next actions"),
-    blockers: items("Blockers"),
-    evidence: items("Evidence"),
-  };
+  return cardContract.parseCanonicalCardBody(content);
 }
 
 function appendSection(lines, heading, values) {
