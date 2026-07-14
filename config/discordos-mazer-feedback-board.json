@@ -24,8 +24,8 @@
     },
     "planning": {
       "version": 1,
-      "activeCardId": "mazer-endless-progression-mode-contract",
-      "activeSelectionReason": "Endless Progression is admitted for one bounded first PR: define a pure versioned checkpoint/attempt lifecycle resolver and table-driven tests before scene wiring, persistence migration, remote sync, economy, enemies, or leaderboard changes.",
+      "activeCardId": "mazer-ui-component-layout-standards",
+      "activeSelectionReason": "Physical-device screenshots expose cross-surface UI cleanliness regressions. The first bounded Ready slice creates shared geometry primitives and converts menu/Options controls before status-panel, play-shell, controller, or animation follow-ups.",
       "executionPolicy": "Finish the earliest execution-ready critical-path epic before taking later product work. Advanced AI research stays parallel and cannot block the critical path.",
       "epics": [
         {
@@ -66,7 +66,8 @@
             "mazer-cross-viewport-ui-reliability",
             "mazer-browser-layout-persistence",
             "mazer-player-trail-readability-lock",
-            "mazer-moving-maze-assisted-motion-proof"
+            "mazer-moving-maze-assisted-motion-proof",
+            "mazer-ui-component-layout-standards"
           ],
           "supportingCardIds": [
             "mazer-player-input-movement-correctness",
@@ -91,7 +92,8 @@
             "mazer-run-quality-player-results-ui",
             "mazer-run-quality-achievement-admission",
             "mazer-endless-content-band-manifest",
-            "mazer-shop-and-random-item-economy-contract"
+            "mazer-shop-and-random-item-economy-contract",
+            "mazer-shared-run-status-panel"
           ],
           "supportingCardIds": [
             "mazer-ai-run-corpus-quality-calibration",
@@ -476,6 +478,15 @@
             "mazer-shared-seed-daily-weekly-challenges"
           ],
           "reason": "Social features compose verified identity, rankings, and events."
+        },
+        {
+          "cardId": "mazer-shared-run-status-panel",
+          "dependsOnCardIds": [
+            "mazer-ui-component-layout-standards",
+            "mazer-run-quality-metric-contract-v2",
+            "mazer-cross-viewport-ui-reliability"
+          ],
+          "reason": "The shared panel needs canonical component geometry, score authority, and stable viewport lanes."
         }
       ],
       "parallelTracks": [
@@ -711,7 +722,7 @@
       "completionPercent": 82,
       "summary": "Turn the Options menu into a clean player guide that explains controls, compass, toggles, level/rank, and current progression without exposing internal diagnostics.",
       "whyItMatters": "Players should understand the game without seeing internal debug language. The Options screen is the correct place for concise, branded explanations.",
-      "currentStatus": "Merged Mazer PR #51 synchronizes Options and played-game Pause with the completed rank-only public vocabulary. Player Skill and Skill Lvl copy is removed, Rank or AI Rank is the public progression tier, and Score remains described as run quality while hidden progression fields remain compatible. Phone and desktop route-aware proof plus full verification passed. The marker remains 82 because physical-device authenticated safe-area soak and future guide/asset maintenance remain open.",
+      "currentStatus": "Merged Mazer PR #51 synchronizes Options and played-game Pause with the completed rank-only public vocabulary. Player Skill and Skill Lvl copy is removed, Rank or AI Rank is the public progression tier, and Score remains described as run quality while hidden progression fields remain compatible. Phone and desktop route-aware proof plus full verification passed. The marker remains 82 because physical-device authenticated safe-area soak and future guide/asset maintenance remain open. Operator physical-device captures on 2026-07-14 expose a real regression not covered by prior emulation: the guide card clips copy at the right edge, its underline crosses the title, the guide sits outside the effective scroll flow, toggle rows are oversized/misaligned, and Log out is not vertically centered.",
       "workBreakdown": [
         "Move the guide to the top of main-menu Options.",
         "Reuse the guide inside played-game Pause before controls.",
@@ -724,7 +735,9 @@
         "Keep literal board-renderer glyphs in the guide when those assets evolve; do not duplicate their drawing contracts.",
         "Run a physical-device authenticated Options and Pause soak at iPhone safe-area dimensions.",
         "Keep target-complexity and raw diagnostic fields out of normal player Options.",
-        "Maintain rank-only public vocabulary whenever guide or badge fields evolve."
+        "Maintain rank-only public vocabulary whenever guide or badge fields evolve.",
+        "Make the guide part of the same scroll content as the toggles and action row instead of reserving a fixed card above the viewport.",
+        "Normalize compact guide typography, title-rule clearance, row wrapping, toggle alignment, and Log out text centering against the shared UI standards card."
       ],
       "acceptanceCriteria": [
         "The player guide explains every visible badge field without clipping or escaping its card.",
@@ -740,7 +753,8 @@
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-player-facing-options-guide",
       "relatedCardIds": [
         "mazer-player-rank-only-progression-display",
-        "mazer-mobile-shell-device-harness"
+        "mazer-mobile-shell-device-harness",
+        "mazer-ui-component-layout-standards"
       ],
       "liveThreadId": "1524889574092963902",
       "liveMessageId": "1524889574092963902",
@@ -885,7 +899,7 @@
       "completionPercent": 41,
       "summary": "Replace snappy tile jumps and hard-coded stick segments with smoother player motion, dynamic directional intent, and bounded assistance through unambiguous zigzag corridors.",
       "whyItMatters": "Fast timed play will fail if the controls feel segmented, sticky, or jumpy. The player should feel like they are steering through a path, not stepping through a debug grid.",
-      "currentStatus": "Tap/hold parity, canonical movement plumbing, ordered stick candidates, and wrap snap improvements exist. Merged PR #54 adds a maintained keyboard-versus-stick matrix with exact accepted-turn parity, lifecycle/lock/fresh-ready proof, 60 FPS, and zero recent spikes. The 41% marker remains unchanged because macro direction through bounded alternating corridors and broader feel tuning are unfinished. Moving-maze one-tile correction is separately gated on a world-transform contract and is not a static-input patch.",
+      "currentStatus": "Tap/hold parity, canonical movement plumbing, ordered stick candidates, and wrap snap improvements exist. Merged PR #54 adds a maintained keyboard-versus-stick matrix with exact accepted-turn parity, lifecycle/lock/fresh-ready proof, 60 FPS, and zero recent spikes. The 41% marker remains unchanged because macro direction through bounded alternating corridors and broader feel tuning are unfinished. Moving-maze one-tile correction is separately gated on a world-transform contract and is not a static-input patch. The operator has now frozen the next controller contract: a directional press/drag runs as far as legal, turns immediately when the requested direction becomes legal, otherwise keeps only the latest one-slot queued direction and takes the next matching opening; later inputs replace earlier queued intent.",
       "workBreakdown": [
         "Make stick angle represent movement intent rather than hard-coded segment commands.",
         "Resolve intent against legal graph neighbors dynamically every movement step.",
@@ -897,7 +911,10 @@
         "Design the dynamic intent resolver before changing input visuals again.",
         "Add QA scripts for tap, hold, diagonal-ish intent, blocked wall, release, and wrap snap cases.",
         "Tune movement speed with pace/level formulas instead of one fixed feel.",
-        "Add deterministic fixtures for simple zigzags, ambiguous junctions, dead ends, reverse turns, narrow corridors, and repeated alternating turns."
+        "Add deterministic fixtures for simple zigzags, ambiguous junctions, dead ends, reverse turns, narrow corridors, and repeated alternating turns.",
+        "Implement one shared run-to-block intent resolver for keyboard arrows, on-screen arrows, stick drag, and toggle control.",
+        "Model exactly one latest-wins queued direction; consume it at the first legal opening and never build a multi-input command queue.",
+        "Add dead-end, immediate-turn, delayed-opening, replacement, wrap, intersection, and release fixtures."
       ],
       "acceptanceCriteria": [
         "Single presses move exactly once while holds continue only while active.",
@@ -1115,7 +1132,7 @@
       "completionPercent": 40,
       "summary": "Remove visible pauses, loop resets, and buffered animation stalls across title orbit, scanner, background, border glimmer, trail pulse, build, and deconstruct.",
       "whyItMatters": "Mazer depends on continuous motion. Any hitch during build/deconstruct or title/background loops makes the whole app feel laggy even when gameplay logic is correct.",
-      "currentStatus": "Several frame cadence fixes landed, but mobile soak and lifecycle-boundary jitter review remain open.",
+      "currentStatus": "Several frame cadence fixes landed, but mobile soak and lifecycle-boundary jitter review remain open. The approved white trail shine still restarts after reaching the trail origin. The next bounded visual behavior is a continuous ping-pong path: player to trail origin, then origin back to player, retaining dynamic speed and the single-shine readability contract. The maze-build reveal also currently exposes the perfect path first and needs display-order separation without changing generator legality.",
       "workBreakdown": [
         "Keep title, compass, background, and border animations alive during deconstruct pauses.",
         "Make scanner/orbit loops bounce or wrap without visible reset jumps.",
@@ -1125,7 +1142,10 @@
       "nextActions": [
         "Run a long mobile menu loop soak.",
         "Capture lifecycle handoff frames around goal, deconstruct, empty pause, and rebuild.",
-        "Patch any remaining timer or tween coupling that pauses global animations."
+        "Patch any remaining timer or tween coupling that pauses global animations.",
+        "Change the single white shine phase to ping-pong along the current trail without endpoint disappearance or duplicate shines.",
+        "Separate visible maze-build ordering from generator solution-path construction so the animation never previews the perfect route first.",
+        "Add endpoint-continuity, dynamic-speed, one-shine, lifecycle-reset, and no-solution-first-reveal tests."
       ],
       "acceptanceCriteria": [
         "No visible title, compass, or background freeze occurs during maze handoff.",
@@ -1142,7 +1162,11 @@
       "reactionEmojiName": "failure",
       "reactionEmojiId": "1507384094424694785",
       "liveThreadId": "1524974573303627878",
-      "liveMessageId": "1524974573303627878"
+      "liveMessageId": "1524974573303627878",
+      "relatedCardIds": [
+        "mazer-player-trail-readability-lock",
+        "mazer-maze-feature-progression-parity"
+      ]
     },
     {
       "id": "mazer-play-mode-perpetual-loop",
@@ -1279,7 +1303,7 @@
       "completionPercent": 99,
       "summary": "Require screenshots and visual claims to prove they are on the intended route, mode, overlay, and viewport before being accepted.",
       "whyItMatters": "Several visual passes were weakened by vague screenshots. Mazer needs route-aware proof so fixes are validated on the exact surface the user asked about.",
-      "currentStatus": "Merged Mazer PR #50 makes deterministic guest and authenticated transition proof durable across 360x720 -> 1440x900 -> 360x720 -> 405x958. Merged PR #52 extends the reusable UI-surface matrix with explicit menu/play white-shine checks and passing 405x958 DPR-2 plus 1440x900 route proof; full verification again passed 43 files / 334 tests plus build. The marker remains 99 because physical-device safe-area and installed-PWA proof are still open.",
+      "currentStatus": "Merged Mazer PR #50 makes deterministic guest and authenticated transition proof durable across 360x720 -> 1440x900 -> 360x720 -> 405x958. Merged PR #52 extends the reusable UI-surface matrix with explicit menu/play white-shine checks and passing 405x958 DPR-2 plus 1440x900 route proof; full verification again passed 43 files / 334 tests plus build. The marker remains 99 because physical-device safe-area and installed-PWA proof are still open. Operator iPhone screenshots dated 2026-07-14 now supersede the claim that all phone geometry is visually clean: they prove HUD/status-bar collision, Options overflow and mis-centering, and standalone shell bands.",
       "workBreakdown": [
         "Fail captures when route, mode, overlay, or viewport contract does not match.",
         "Record actual URL, diagnostics mode, surface, and viewport beside screenshots.",
@@ -1290,7 +1314,8 @@
         "Run the same contract on a maintained physical-device harness with real safe-area insets.",
         "Require visual closeouts to cite screenContract.pass.",
         "Keep screenshots tied to the exact requested surface.",
-        "Retain the PR #45 360x720 and PR #48 desktop/mobile badge/action-lane proof; level-box sizing and title-diamond clearance remain linked to the viewport geometry owner."
+        "Retain the PR #45 360x720 and PR #48 desktop/mobile badge/action-lane proof; level-box sizing and title-diamond clearance remain linked to the viewport geometry owner.",
+        "Store the 2026-07-14 physical-device captures as regression inputs and require before/after proof on the exact affected menu, Options, play, and Pause surfaces."
       ],
       "acceptanceCriteria": [
         "Visual proof includes actual route, mode, overlay, viewport, and diagnostics contract.",
@@ -1307,7 +1332,11 @@
       "reactionEmojiName": "failure",
       "reactionEmojiId": "1507384094424694785",
       "liveThreadId": "1524974580870025338",
-      "liveMessageId": "1524974580870025338"
+      "liveMessageId": "1524974580870025338",
+      "relatedCardIds": [
+        "mazer-ui-component-layout-standards",
+        "mazer-shared-run-status-panel"
+      ]
     },
     {
       "id": "mazer-discordos-board-discipline",
@@ -1495,7 +1524,7 @@
       "completionPercent": 62,
       "summary": "Prove the phone-shell path for mobile view, safe-area handling, portrait behavior, and real-device confidence without letting browser chrome or device intrusions cover game UI.",
       "whyItMatters": "Mazer is canvas-driven and can pass desktop emulation while still clipping text, controls, HUD, or scrollable overlays behind mobile browser chrome, the Dynamic Island, and home indicators.",
-      "currentStatus": "Merged Mazer PR #39 anchors the app to visual-viewport plus safe-area origins, reserves top rank/Pause and bottom control lanes before sizing the play maze, and adds iPhone Dynamic Island plus Android cutout fixtures and matrix dimensions. Side-tab phone menu/play diagnostics reported zero overlap/offscreen violations. Real-device inset, browser-chrome, installed-PWA, and auth-keyboard proof remains open, so this card advances to 62 rather than closing.",
+      "currentStatus": "Merged Mazer PR #39 anchors the app to visual-viewport plus safe-area origins, reserves top rank/Pause and bottom control lanes before sizing the play maze, and adds iPhone Dynamic Island plus Android cutout fixtures and matrix dimensions. Side-tab phone menu/play diagnostics reported zero overlap/offscreen violations. Real-device inset, browser-chrome, installed-PWA, and auth-keyboard proof remains open, so this card advances to 62 rather than closing. The 2026-07-14 operator screenshots are now canonical physical-device evidence: play HUD/Pause collide with iPhone status hardware, and installed-home-screen menu/options surfaces expose shell bands and inset behavior that differ from browser access.",
       "workBreakdown": [
         "Keep phone-size UI-surface proof at 405x958 for guest, auth, play, and pause surfaces.",
         "Assert active labels fit and progression badge text stays inside its chrome.",
@@ -1508,7 +1537,9 @@
         "Run broader authenticated mobile soak on a real or maintained device harness with safe-area insets.",
         "Choose best-effort web orientation handling versus Capacitor/Tauri/native wrapper support.",
         "Prove play controls, pause scroll, auth native inputs, and longer animation cycles under DPR-2.",
-        "Record real-device or maintained-harness results separately from emulation and capture safe-area screenshots."
+        "Record real-device or maintained-harness results separately from emulation and capture safe-area screenshots.",
+        "Add explicit browser-versus-standalone display-mode fixtures and physical iPhone safe-area captures for menu, Options, play, and Pause.",
+        "Require the app background and content rectangle to cover safe areas while interactive lanes remain inset."
       ],
       "acceptanceCriteria": [
         "Phone portrait layouts keep text, HUD, controls, and maze bounds non-overlapping.",
@@ -1546,7 +1577,7 @@
       "completionPercent": 90,
       "summary": "Lock the fresh-session defaults, menu control placement, and player-safe menu/play control language.",
       "whyItMatters": "A stable default experience keeps new sessions readable and avoids leaking diagnostics or confusing settings into the first-play flow.",
-      "currentStatus": "Fresh sessions default to dark mode, animated background, stick controls, trail fade off, trail pulse on, camera follow off, 30% move speed, green action/player/trail/level palette, guest Login-only, a notch compass, and scroll-rail Options/Pause. Main-menu Options omits Move Speed; played-game Pause retains it, adds concise on/off toggle descriptions, and includes confirmed Reset Progress. Compact Start/Options labels now reserve phone-button breathing room, and 360x720 DPR-2 proof covers both overlay top and lower-control states.",
+      "currentStatus": "Fresh sessions default to dark mode, animated background, stick controls, trail fade off, trail pulse on, camera follow off, 30% move speed, green action/player/trail/level palette, guest Login-only, a notch compass, and scroll-rail Options/Pause. Main-menu Options omits Move Speed; played-game Pause retains it, adds concise on/off toggle descriptions, and includes confirmed Reset Progress. Compact Start/Options labels now reserve phone-button breathing room, and 360x720 DPR-2 proof covers both overlay top and lower-control states. The latest phone captures invalidate the remaining cleanliness assumption: Start, Options, toggle copy/switches, and Log out are visibly off-center or clipped despite prior screenshot checks.",
       "workBreakdown": [
         "Keep the canonical fresh-session default contract aligned with current runtime behavior.",
         "Keep guest entry Login-only and authenticated Start/Options spacing clean.",
@@ -1557,7 +1588,9 @@
       "nextActions": [
         "Run longer physical-device mobile soak across guest, authenticated, Options, play, and pause states.",
         "Keep Start, player, trail, and level colors aligned to the green action language.",
-        "Recheck defaults whenever new settings or controls are added."
+        "Recheck defaults whenever new settings or controls are added.",
+        "Consume canonical button-label and toggle-row alignment primitives from the UI standards card.",
+        "Add optical/text-bound centering diagnostics for every primary action and settings row."
       ],
       "acceptanceCriteria": [
         "Fresh sessions resolve to the documented defaults without stale browser preference leakage.",
@@ -1576,7 +1609,8 @@
       "reactionEmojiId": "1507384094424694785",
       "relatedCardIds": [
         "mazer-player-facing-options-guide",
-        "mazer-auth-gate-persistent-login"
+        "mazer-auth-gate-persistent-login",
+        "mazer-ui-component-layout-standards"
       ],
       "liveThreadId": "1525063361887338527",
       "liveMessageId": "1525063361887338527"
@@ -2235,7 +2269,7 @@
       "completionPercent": 78,
       "summary": "Coordinate the mobile safe-area/portrait and browser layout-persistence lanes through one viewport contract and proof matrix without turning either delivery into an offset patch.",
       "whyItMatters": "The same UI can be valid in a desktop canvas, narrow browser, mobile browser, installed PWA, or restored window only if viewport state, safe areas, and restoration behavior share deliberate rules.",
-      "currentStatus": "Merged Mazer PR #50 adds a durable deterministic transition harness for guest and authenticated Menu/Auth or Options, Play, and Pause surfaces across 360x720 -> 1440x900 -> 360x720 -> 405x958. Both matrices pass exact restored stable diagnostics and all bounds/collision checks; full verification passed 43 files / 334 tests plus build. The marker remains 78 because real-device safe-area, installed-PWA, and browser-chrome/maximize proof remain open and no denominator change is established.",
+      "currentStatus": "Merged Mazer PR #50 adds a durable deterministic transition harness for guest and authenticated Menu/Auth or Options, Play, and Pause surfaces across 360x720 -> 1440x900 -> 360x720 -> 405x958. Both matrices pass exact restored stable diagnostics and all bounds/collision checks; full verification passed 43 files / 334 tests plus build. The marker remains 78 because real-device safe-area, installed-PWA, and browser-chrome/maximize proof remain open and no denominator change is established. Operator iPhone captures on 2026-07-14 show the played HUD still entering the status/Dynamic-Island lane, Pause becoming obstructed, and installed-app top/bottom background gaps; earlier deterministic emulation remains useful but does not override this physical-device evidence.",
       "workBreakdown": [
         "Define canonical viewport, safe-area, visible-height, and no-overlap invariants for menu, Options, play, Pause, dialogs, HUD, controls, and scroll rails.",
         "Maintain the child boundary between mobile shell/device behavior and browser layout-state persistence.",
@@ -2245,7 +2279,9 @@
       "nextActions": [
         "Complete real-device safe-area and installed-PWA proof for the shared menu and play geometry.",
         "Complete native browser-chrome and maximize/restore proof without replacing the deterministic transition harness.",
-        "Keep browser-layout, mobile-shell, and visual-proof cards as linked owners for persistence, device harness, and proof-policy follow-through."
+        "Keep browser-layout, mobile-shell, and visual-proof cards as linked owners for persistence, device harness, and proof-policy follow-through.",
+        "Repair the physical-device play shell so HUD, Pause, maze, controller, and installed-app background consume one safe content rectangle with no status-bar obstruction or unexplained top/bottom band.",
+        "Apply shared centering and spacing tokens from the UI component/layout standards card rather than per-screenshot offsets."
       ],
       "acceptanceCriteria": [
         "Every primary Mazer surface has an owner, supported viewport category, and no-overlap contract.",
@@ -2264,7 +2300,9 @@
         "mazer-mobile-shell-device-harness",
         "mazer-browser-layout-persistence",
         "mazer-player-facing-options-guide",
-        "mazer-visual-proof-discipline"
+        "mazer-visual-proof-discipline",
+        "mazer-ui-component-layout-standards",
+        "mazer-shared-run-status-panel"
       ],
       "reactionStatus": "failure",
       "reactionEmojiName": "failure",
@@ -2330,7 +2368,7 @@
       "completionPercent": 0,
       "summary": "Audit and normalize maze-feature introduction across level bands and menu/play modes through one traceable feature registry or equivalent single source of truth.",
       "whyItMatters": "A numeric difficulty profile is not enough when preview and playable mazes introduce different features or edge paths silently disappear. Every feature must have an intentional band, mode, and difficulty contribution.",
-      "currentStatus": "Current profiles already control scale, checkpoints, shortcuts, wrap requirements, route reinforcement, and perimeter feeders. Menu and play have separate build kinds while sharing high-level selection. There is no complete feature inventory/matrix proving what is always-on, level-gated, mode-specific, experimental, deprecated, or accidentally disconnected. The corpus lane will require future run receipts to retain a bounded feature-set or feature-registry version so topology outcomes can be analyzed by level band without guessing from timestamps. Endless now needs extensible 0-999-plus content bands: coins, then enemies, then player items beginning with mystery boxes, then obstacles, traps, puzzles, and environments.",
+      "currentStatus": "Current profiles already control scale, checkpoints, shortcuts, wrap requirements, route reinforcement, and perimeter feeders. Menu and play have separate build kinds while sharing high-level selection. There is no complete feature inventory/matrix proving what is always-on, level-gated, mode-specific, experimental, deprecated, or accidentally disconnected. The corpus lane will require future run receipts to retain a bounded feature-set or feature-registry version so topology outcomes can be analyzed by level band without guessing from timestamps. Endless now needs extensible 0-999-plus content bands: coins, then enemies, then player items beginning with mystery boxes, then obstacles, traps, puzzles, and environments. The current staged maze presentation exposes solution-path construction order before the rest of the maze, which unintentionally hints the answer. Generation truth should remain unchanged while the shared menu/play display lifecycle uses a non-solution-revealing tile order.",
       "workBreakdown": [
         "Inventory every actual maze-generation, graph, rendering, and parity feature with its code owner and current menu/play behavior.",
         "Create a feature matrix with availability, level-band introduction, parameter range, difficulty contribution, mode compatibility, and intentional exclusion reason.",
@@ -2343,7 +2381,8 @@
         "Audit menu and play entry points plus feature consumers before creating smaller implementation children.",
         "Use the existing generator and edge-topology cards as linked implementation owners for confirmed findings.",
         "Add a child card only when registry, parity, or bleed behavior proves to have a separate delivery boundary.",
-        "Supply feature-registry/version evidence to the corpus lane so generated topology outcomes are not silently mixed across feature eras."
+        "Supply feature-registry/version evidence to the corpus lane so generated topology outcomes are not silently mixed across feature eras.",
+        "Inventory generator output ordering versus visible build ordering and define a shared non-solution-revealing presentation contract for menu and play."
       ],
       "acceptanceCriteria": [
         "All relevant maze-generation and rendering entry points are identified and mapped to actual features.",
@@ -2368,7 +2407,8 @@
         "mazer-ai-level-rank-progression",
         "mazer-ai-run-corpus-quality-calibration",
         "mazer-endless-content-band-manifest",
-        "mazer-obstacle-trap-puzzle-environment-contract"
+        "mazer-obstacle-trap-puzzle-environment-contract",
+        "mazer-animation-smoothness-lifecycle"
       ],
       "reactionStatus": "failure",
       "reactionEmojiName": "failure",
@@ -3316,6 +3356,98 @@
       "reactionEmojiId": "1507384094424694785",
       "liveThreadId": "1526324059707801794",
       "liveMessageId": "1526324059707801794"
+    },
+    {
+      "id": "mazer-ui-component-layout-standards",
+      "title": "mazer: shared UI component and layout standards",
+      "state": "ready",
+      "priority": "high",
+      "category": "mazer",
+      "markerName": "Shared UI cleanliness and component standards",
+      "completionPercent": 0,
+      "summary": "Create canonical text, button, panel, toggle-row, spacing, safe-content, and scroll-layout primitives so menu, Options, play, Pause, and auth cannot drift through one-off geometry.",
+      "whyItMatters": "Physical-device screenshots show repeated centering, clipping, spacing, and inset defects across sibling screens. Fixing each coordinate independently would preserve the source of the inconsistency.",
+      "currentStatus": "Ready for one bounded foundation PR. The owning surface is shared MenuScene UI geometry and render helpers. The first slice defines reusable measurements and diagnostics, then converts primary buttons and settings rows without changing gameplay, progression, auth behavior, or visual theme.",
+      "workBreakdown": [
+        "Define typography roles, minimum font sizes, line-height, optical/text-bound centering, panel padding, inter-lane gaps, and compact/wide breakpoints.",
+        "Define reusable primary/secondary button, toggle row, titled card, scroll section, and safe content rectangle geometry.",
+        "Convert Start/Options, Log out/account actions, Options/Pause toggles, and guide title rules to the shared primitives.",
+        "Publish diagnostics for text fit, centered bounds, row containment, scroll reachability, and safe-area containment."
+      ],
+      "nextActions": [
+        "Extract the current repeated button/toggle/panel measurements into one shared geometry owner.",
+        "Add focused regression tests from the 2026-07-14 iPhone captures before changing rendering.",
+        "Prove menu and Options first at phone portrait plus wide desktop; keep play-shell/status-panel work in its linked card."
+      ],
+      "acceptanceCriteria": [
+        "Primary action labels are optically and geometrically centered in their interactive chrome.",
+        "Toggle labels and switches remain contained, readable, and aligned at supported compact and wide widths.",
+        "Titled cards reserve rule clearance and wrap body copy without horizontal escape.",
+        "Options and Pause use one reachable scroll-content contract with no fixed content stealing the viewport.",
+        "No sibling surface uses a new one-off offset where a shared token or primitive applies."
+      ],
+      "proofPlan": [
+        "Run focused MenuScene geometry tests plus phone/wide route-aware captures for menu and Options top/bottom.",
+        "Require text-fit, center-delta, containment, scroll-max, and safe-content diagnostics to pass."
+      ],
+      "reference": "repos/mazer/src/scenes/MenuScene.ts",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-ui-component-layout-standards",
+      "relatedCardIds": [
+        "mazer-cross-viewport-ui-reliability",
+        "mazer-player-facing-options-guide",
+        "mazer-visual-defaults-menu-controls",
+        "mazer-mobile-shell-device-harness",
+        "mazer-visual-proof-discipline"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785"
+    },
+    {
+      "id": "mazer-shared-run-status-panel",
+      "title": "mazer: shared menu and play run status panel",
+      "state": "open",
+      "priority": "high",
+      "category": "mazer",
+      "markerName": "Shared Rank Score Maze Level status panel",
+      "completionPercent": 0,
+      "summary": "Replace the completed rank-only badge presentation with one shared two-row menu/play status component showing time plus Rank, Score out of 100, and Maze Lvl from the correct context.",
+      "whyItMatters": "The operator wants the menu AI result and active player run to use one legible status language while preserving hidden progression and canonical run-quality data.",
+      "currentStatus": "Planning successor to the completed rank-only delivery. Frozen display interpretation: time alone on the first row; second row shows Rank (AI Rank in menu context), Score: N/100, and Maze Lvl: N. The panel matches the maze border width where space permits and maintains a clean board gap. Score authority must consume the run-quality pipeline rather than inventing a UI-only formula.",
+      "workBreakdown": [
+        "Define one status-panel view model for menu AI completion and active player play.",
+        "Render time on row one and Rank, Score N/100, Maze Lvl N on row two with compact responsive fitting.",
+        "Use the maze border width and shared lane spacing while keeping Pause immediately to the right in play.",
+        "Preserve hidden progression fields and accessibility labels while explicitly superseding rank-only presentation history."
+      ],
+      "nextActions": [
+        "Confirm the current score field that is safe to display as N/100 before implementation.",
+        "Define active-run score behavior before completion versus last completed score.",
+        "Implement only after the shared UI standards foundation and linked run-quality authority are ready."
+      ],
+      "acceptanceCriteria": [
+        "Menu and play consume the same status-panel layout and formatting contract.",
+        "Time is the sole first-row value; Rank, Score N/100, and Maze Lvl occupy the second row.",
+        "Panel text remains centered, contained, and readable at phone and desktop widths.",
+        "Panel width/gap and play Pause placement satisfy shared viewport/safe-area diagnostics.",
+        "Displayed score is traceable to canonical run-quality data, not a presentation-only calculation."
+      ],
+      "proofPlan": [
+        "Run view-model tests for menu/play contexts and score authority.",
+        "Capture authenticated menu/play at physical-phone and wide-desktop widths with text-fit and gap diagnostics."
+      ],
+      "reference": "repos/mazer/src/scenes/MenuScene.ts",
+      "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-shared-run-status-panel",
+      "relatedCardIds": [
+        "mazer-player-rank-only-progression-display",
+        "mazer-run-quality-metric-contract-v2",
+        "mazer-cross-viewport-ui-reliability",
+        "mazer-ui-component-layout-standards",
+        "mazer-visual-proof-discipline"
+      ],
+      "reactionStatus": "failure",
+      "reactionEmojiName": "failure",
+      "reactionEmojiId": "1507384094424694785"
     }
   ]
 }
