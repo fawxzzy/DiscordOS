@@ -5,8 +5,14 @@ Run this packet only after the lifecycle merge fix is merged to `main` and the c
 ```powershell
 $ErrorActionPreference = "Stop"
 $sourceRun = Resolve-Path "..\..\runtime\board-integrity\mazer-normalization-2026-07-14"
-$retryRun = Join-Path $sourceRun "post-merge-four-card-rerun"
+$retryRun = Join-Path $sourceRun "post-merge-legacy-identity-four-card-rerun"
 New-Item -ItemType Directory -Force -Path $retryRun | Out-Null
+
+$envReadinessPath = Join-Path $retryRun "00-env-readiness.json"
+npm run --silent ops:production-env:run -- npm run --silent ops:discordos:env-readiness:json | Set-Content -Encoding utf8 $envReadinessPath
+if ($LASTEXITCODE -ne 0) { throw "DiscordOS environment readiness failed." }
+$envReadiness = Get-Content -Raw $envReadinessPath | ConvertFrom-Json
+if ($envReadiness.status -ne "ready") { throw "DiscordOS environment is not ready." }
 
 $expected = @{
   "1524974571059675198" = @{ cardId = "mazer-auth-gate-persistent-login"; state = "in_progress" }
