@@ -43,7 +43,7 @@ test("music sesh feedback board accepts canonical and legacy lifecycle states", 
     "blocked",
     "archived",
   ]) {
-    const card = _internals.inspectCard({
+    const card = _internals.classifyCard({
       id: `card-${state}`,
       title: `Card ${state}`,
       state,
