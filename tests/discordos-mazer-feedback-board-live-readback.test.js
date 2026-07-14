@@ -5,6 +5,7 @@ const path = require("node:path");
 const test = require("node:test");
 
 const { _internals } = require("../scripts/discordos-mazer-feedback-board-live-readback");
+const { _internals: journal } = require("../scripts/discordos-board-card-journal");
 
 const EPIC_IDS = [
   "core-gameplay",
@@ -87,6 +88,25 @@ async function writeBoard() {
   return boardPath;
 }
 
+function canonicalContent({ id = "card-1", state = "in_progress", project = "Mazer" } = {}) {
+  return [
+    journal.CARD_START,
+    `ATLAS-CARD-ID: \`${id}\``,
+    `- project: \`${project}\``,
+    "- type: `feature`",
+    `- state: \`${state}\``,
+    "- priority: `high`",
+    "- owner: `Mazer`",
+    "- progress: `10%`",
+    "- autonomous implementation: `not_admitted`",
+    "- updated: `2026-07-14T00:00:00.000Z`",
+    "",
+    "## Summary",
+    "Summary.",
+    journal.CARD_END,
+  ].join("\n");
+}
+
 test("mazer feedback board live readback parses args", () => {
   const parsed = _internals.parseArgs(["--json", "--board", "board.json", "--content-limit", "1900"]);
 
@@ -107,17 +127,9 @@ test("mazer feedback board live readback blocks without bot token", async () => 
   assert(result.reasonCodes.includes("bot_token_missing"));
 });
 
-test("mazer feedback board live readback validates rich Discord card sections", async () => {
+test("mazer feedback board live readback validates canonical managed cards", async () => {
   const boardPath = await writeBoard();
-  const content = [
-    "# mazer",
-    "**Why This Matters**",
-    "**Current State**",
-    "**Work Breakdown**",
-    "**Next Actions**",
-    "**Acceptance Criteria**",
-    "**Proof Plan**",
-  ].join("\n\n");
+  const content = canonicalContent();
   const result = await _internals.buildMazerFeedbackBoardLiveReadback({
     boardPath,
     env: { DISCORDOS_BOT_TOKEN: "token" },
@@ -152,7 +164,7 @@ test("mazer feedback board live readback skips completed source cards", async ()
   board.board.planning.epics[0].primaryCardIds.push("completed-card");
   await fs.writeFile(boardPath, JSON.stringify(board), "utf8");
 
-  const content = ["# mazer", "**Why This Matters**", "**Current State**", "**Work Breakdown**", "**Next Actions**", "**Acceptance Criteria**", "**Proof Plan**"].join("\n");
+  const content = canonicalContent();
   const result = await _internals.buildMazerFeedbackBoardLiveReadback({
     boardPath,
     env: { DISCORDOS_BOT_TOKEN: "token" },
@@ -168,7 +180,7 @@ test("mazer feedback board live readback skips completed source cards", async ()
   assert.equal(result.skippedCompletedSourceCardCount, 1);
 });
 
-test("mazer feedback board live readback rejects thin Discord card body", async () => {
+test("mazer feedback board live readback rejects legacy and mismatched card bodies", async () => {
   const boardPath = await writeBoard();
   const result = await _internals.buildMazerFeedbackBoardLiveReadback({
     boardPath,
@@ -177,5 +189,25 @@ test("mazer feedback board live readback rejects thin Discord card body", async 
   });
 
   assert.equal(result.ok, false);
-  assert(result.reasonCodes.includes("live_message_required_markers_missing"));
+  assert(result.reasonCodes.includes("live_message_canonical_body_missing"));
+
+  const mismatch = await _internals.buildMazerFeedbackBoardLiveReadback({
+    boardPath,
+    env: { DISCORDOS_BOT_TOKEN: "token" },
+    fetchImpl: async () => response({ payload: { content: canonicalContent({ id: "wrong", state: "planning" }) } }),
+  });
+  assert.equal(mismatch.ok, false);
+  assert(mismatch.reasonCodes.includes("live_message_card_id_mismatch"));
+  assert(mismatch.reasonCodes.includes("live_message_state_mismatch"));
+});
+
+test("mazer feedback board live readback accepts the Discord 2000 character limit", () => {
+  const row = _internals.inspectMessageContent({
+    card: { id: "card-1", state: "open", completionPercent: 10 },
+    message: { content: canonicalContent().padEnd(2000, " ") },
+    status: 200,
+    ok: true,
+    contentLimit: 2000,
+  });
+  assert.equal(row.ok, true);
 });
