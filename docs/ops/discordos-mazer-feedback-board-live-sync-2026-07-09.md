@@ -7,15 +7,15 @@
 - status: `live_board_synced`
 - board: `mazer`
 - cards: `64`
-- ready cards: `1`
+- ready cards: `0`
 - sync admission: `sync_admitted`
 - forum channel id: `1524889569475170478`
 - guild id: `1504668396338413670`
 - forum created: `false`
 - discovered threads: `65`
-- synced cards: `59`
+- synced cards: `58`
 - created threads: `0`
-- existing threads: `59`
+- existing threads: `58`
 - board config written: `true`
 - receipt written: `true`
 - reason codes: `none`
@@ -36,7 +36,6 @@
 - card mazer-diagonal-path-graph-contract: `existing` thread `1524974579292966983` status `200` reaction `200`
 - card mazer-visual-proof-discipline: `existing` thread `1524974580870025338` status `200` reaction `200`
 - card mazer-discordos-board-discipline: `existing` thread `1524974583348858880` status `200` reaction `200`
-- card mazer-account-scoped-settings-persistence: `existing` thread `1525045144225841257` status `200` reaction `200`
 - card mazer-procedural-difficulty-generator-shaping: `existing` thread `1525063353716834354` status `200` reaction `200`
 - card mazer-mobile-shell-device-harness: `existing` thread `1525063357575593995` status `200` reaction `200`
 - card mazer-visual-defaults-menu-controls: `existing` thread `1525063361887338527` status `200` reaction `200`
