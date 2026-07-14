@@ -19,7 +19,25 @@ $allEventPath = Join-Path $retryRun "all-events.json"
 $planResultPath = Join-Path $retryRun "plan-result.json"
 
 npm run --silent ops:production-env:run -- node scripts/discordos-board-card-migration-plan.js --json --boards (Join-Path $sourceRun "06-mazer-board-scope.json") --mazer-board (Join-Path $sourceRun "03-mazer-owner-snapshot.json") --output $allEventPath | Set-Content -Encoding utf8 $planResultPath
-if ($LASTEXITCODE -ne 0) { throw "Migration planning failed." }
+$planExit = $LASTEXITCODE
+$plan = Get-Content -Raw $planResultPath | ConvertFrom-Json
+$targetRows = @($plan.rows | Where-Object { $expected.ContainsKey([string]$_.threadId) })
+if ($targetRows.Count -ne 4) { throw "Expected exactly four target planner rows." }
+foreach ($row in $targetRows) {
+  if (-not $row.eventCreated -or $row.matchedBy -ne "source_thread_id" -or @($row.reasonCodes).Count -ne 0) {
+    throw "Target planner admission failed for thread $($row.threadId)."
+  }
+  if ($row.journalIdentityDecision.exactSourceThreadIdentity -ne $true) {
+    throw "Exact source-thread identity was not proven for thread $($row.threadId)."
+  }
+  if ($row.journalIdentityDecision.decision -notin @("legacy_identity_omission_admitted", "mixed_explicit_match_and_legacy_omission_admitted", "explicit_identity_match")) {
+    throw "Journal identity was not safely admitted for thread $($row.threadId)."
+  }
+}
+
+# Other board rows may remain blocked by the intentionally strict non-exact identity gate.
+# This packet selects only the four exact-thread events proven above.
+if ($planExit -ne 0 -and $plan.status -ne "blocked") { throw "Migration planning failed unexpectedly." }
 
 $allEvents = @((Get-Content -Raw $allEventPath | ConvertFrom-Json).events)
 $selectedEvents = @($allEvents | Where-Object { $expected.ContainsKey([string]$_.card.threadId) })

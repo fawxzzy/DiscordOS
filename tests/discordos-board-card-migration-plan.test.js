@@ -11,12 +11,13 @@ function journalMessage({
   occurredAt = "2026-07-14T12:00:00.000Z",
   timestamp = "2026-07-14T12:00:01.000Z",
 } = {}) {
+  const cardMetadata = cardId === null ? [] : [`- card: \`${cardId}\``];
   return {
     id,
     timestamp,
     content: [
       `ATLAS-JOURNAL-EVENT-ID: \`${eventId}\``,
-      `- card: \`${cardId}\``,
+      ...cardMetadata,
       `- state: \`${state}\``,
       `- occurred: \`${occurredAt}\``,
     ].join("\n"),
@@ -166,25 +167,134 @@ test("completed migration never reports its own thread as the original source", 
   assert(!event.card.evidence.some((line) => line.includes("/same-thread")));
 });
 
-test("normalization preserves the four exact Mazer journal lifecycle states", () => {
-  const blockedShapes = [
-    ["1524974571059675198", "mazer-auth-gate-persistent-login", "review", "in_progress"],
-    ["1524974583348858880", "mazer-discordos-board-discipline", "review", "in_progress"],
-    ["1525635672961060925", "mazer-auth-ui-flow-hardening", "in_progress", "planning"],
-    ["1526644909241667644", "mazer-shared-run-status-panel", "in_progress", "planning"],
+test("normalization preserves the four exact Mazer journal lifecycle shapes", () => {
+  const realShapes = [
+    ["1524974571059675198", "mazer-auth-gate-persistent-login", "review", "in_progress", true],
+    ["1524974583348858880", "mazer-discordos-board-discipline", "review", "in_progress", true],
+    ["1525635672961060925", "mazer-auth-ui-flow-hardening", "in_progress", "planning", true],
+    ["1526644909241667644", "mazer-shared-run-status-panel", "in_progress", "planning", false],
   ];
 
-  for (const [threadId, cardId, baselineState, journalState] of blockedShapes) {
+  for (const [threadId, cardId, baselineState, journalState, legacyIdentityOmission] of realShapes) {
     const resolved = _internals.resolveJournalLifecycle({
       cardId,
-      messages: [journalMessage({ id: threadId, eventId: `existing:${threadId}`, cardId, state: journalState })],
+      matchedBy: "source_thread_id",
+      messages: [journalMessage({
+        id: threadId,
+        eventId: `existing:${threadId}`,
+        cardId: legacyIdentityOmission ? null : cardId,
+        state: journalState,
+      })],
     });
     const merged = _internals.mergeLifecycleState({ baselineState, journalLifecycle: resolved });
     assert.equal(merged.ok, true, cardId);
     assert.equal(merged.state, journalState, cardId);
     assert.equal(merged.decision, "journal_state_preserved", cardId);
     assert.equal(merged.previousState, null, cardId);
+    assert.equal(
+      resolved.identityDecision.decision,
+      legacyIdentityOmission ? "legacy_identity_omission_admitted" : "explicit_identity_match",
+      cardId,
+    );
   }
+});
+
+test("exact source thread identity admits an all-legacy journal history and preserves its latest state", () => {
+  const resolved = _internals.resolveJournalLifecycle({
+    cardId: "mazer-auth-gate-persistent-login",
+    matchedBy: "source_thread_id",
+    messages: [
+      journalMessage({ id: "10", eventId: "legacy-1", cardId: null, state: "planning", timestamp: "2026-07-14T11:00:00.000Z" }),
+      journalMessage({ id: "11", eventId: "legacy-2", cardId: null, state: "in_progress", timestamp: "2026-07-14T12:00:00.000Z" }),
+    ],
+  });
+  const merged = _internals.mergeLifecycleState({ baselineState: "review", journalLifecycle: resolved });
+
+  assert.equal(resolved.ok, true);
+  assert.equal(resolved.state, "in_progress");
+  assert.deepEqual(resolved.identityDecision, {
+    decision: "legacy_identity_omission_admitted",
+    matchedBy: "source_thread_id",
+    exactSourceThreadIdentity: true,
+    entryCount: 2,
+    missingCardIdCount: 2,
+    matchingCardIdCount: 0,
+    conflictingCardIdCount: 0,
+    explicitCardIds: [],
+    reasonCodes: ["journal_lifecycle_card_identity_omission_admitted_exact_source_thread"],
+  });
+  assert.equal(merged.state, "in_progress");
+  assert.equal(merged.decision, "journal_state_preserved");
+});
+
+test("missing journal identity blocks every non-exact source match", () => {
+  for (const matchedBy of ["stable_card_id", "unique_source_title", "thread_fallback", null]) {
+    const resolved = _internals.resolveJournalLifecycle({
+      cardId: "mazer-card",
+      matchedBy,
+      messages: [journalMessage({ cardId: null })],
+    });
+    assert.equal(resolved.ok, false, matchedBy);
+    assert.equal(resolved.identityDecision.decision, "legacy_identity_omission_blocked_non_exact_source", matchedBy);
+    assert.deepEqual(resolved.reasonCodes, ["journal_lifecycle_card_identity_omission_requires_exact_source_thread"]);
+  }
+});
+
+test("explicit mismatched journal identity blocks even with exact source thread identity", () => {
+  const resolved = _internals.resolveJournalLifecycle({
+    cardId: "mazer-card",
+    matchedBy: "source_thread_id",
+    messages: [journalMessage({ cardId: "mazer-other-card" })],
+  });
+  assert.equal(resolved.ok, false);
+  assert.equal(resolved.identityDecision.decision, "explicit_identity_conflict");
+  assert.deepEqual(resolved.reasonCodes, ["journal_lifecycle_card_identity_conflict"]);
+});
+
+test("explicit empty journal identity is malformed rather than a legacy omission", () => {
+  const message = journalMessage({ cardId: null });
+  message.content = message.content.replace("- state:", "- card: ``\n- state:");
+  const resolved = _internals.resolveJournalLifecycle({
+    cardId: "mazer-card",
+    matchedBy: "source_thread_id",
+    messages: [message],
+  });
+  assert.equal(resolved.ok, false);
+  assert.equal(resolved.identityDecision.missingCardIdCount, 0);
+  assert.equal(resolved.identityDecision.conflictingCardIdCount, 1);
+  assert.deepEqual(resolved.reasonCodes, ["journal_lifecycle_card_identity_conflict"]);
+});
+
+test("mixed legacy omission and matching explicit identity is admitted when exact and unambiguous", () => {
+  const shared = { eventId: "same-event", state: "in_progress", occurredAt: "2026-07-14T12:00:00.000Z" };
+  const resolved = _internals.resolveJournalLifecycle({
+    cardId: "mazer-card",
+    matchedBy: "source_thread_id",
+    messages: [
+      journalMessage({ ...shared, id: "10", cardId: null, timestamp: "2026-07-14T12:00:01.000Z" }),
+      journalMessage({ ...shared, id: "11", cardId: "mazer-card", timestamp: "2026-07-14T12:00:02.000Z" }),
+    ],
+  });
+  assert.equal(resolved.ok, true);
+  assert.equal(resolved.state, "in_progress");
+  assert.equal(resolved.identityDecision.decision, "mixed_explicit_match_and_legacy_omission_admitted");
+  assert.deepEqual(resolved.identityDecision.reasonCodes, [
+    "journal_lifecycle_card_identity_mixed_match_admitted_exact_source_thread",
+  ]);
+});
+
+test("mixed legacy omission and explicit mismatch blocks", () => {
+  const resolved = _internals.resolveJournalLifecycle({
+    cardId: "mazer-card",
+    matchedBy: "source_thread_id",
+    messages: [
+      journalMessage({ id: "10", eventId: "legacy", cardId: null }),
+      journalMessage({ id: "11", eventId: "conflict", cardId: "mazer-other-card" }),
+    ],
+  });
+  assert.equal(resolved.ok, false);
+  assert.equal(resolved.identityDecision.decision, "explicit_identity_conflict");
+  assert(resolved.reasonCodes.includes("journal_lifecycle_card_identity_conflict"));
 });
 
 test("normalization uses the owner baseline when no journal exists", () => {
@@ -351,7 +461,7 @@ test("migration plan reads live journal history before emitting normalization", 
       return response({ id: threadId, content: "Legacy card body" });
     }
     if (target.pathname === `/api/v10/channels/${threadId}/messages`) {
-      return response([journalMessage({ id: "1527000000000000000", cardId, state: "in_progress" })]);
+      return response([journalMessage({ id: "1527000000000000000", cardId: null, state: "in_progress" })]);
     }
     return response({ message: "unexpected route" }, false, 404);
   };
@@ -371,8 +481,12 @@ test("migration plan reads live journal history before emitting normalization", 
   assert.equal(result.ok, true);
   assert.equal(result.eventCount, 1);
   assert.equal(result.journalPreservedCount, 1);
+  assert.equal(result.legacyJournalIdentityAdmissionCount, 1);
   assert.equal(result.rows[0].baselineState, "review");
   assert.equal(result.rows[0].journalState, "in_progress");
+  assert.equal(result.rows[0].journalLifecycleStatus, "journal_resolved");
+  assert.equal(result.rows[0].journalIdentityDecision.decision, "legacy_identity_omission_admitted");
+  assert.equal(result.rows[0].matchedBy, "source_thread_id");
   assert.equal(result.events[0].card.state, "in_progress");
   assert.equal(result.events[0].card.previousState, undefined);
 });
