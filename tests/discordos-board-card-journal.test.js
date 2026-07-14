@@ -193,6 +193,8 @@ test("board provenance links survive canonical body compaction", () => {
 test("journal entry contains stable identity, discoveries, and task correlation", () => {
   const message = _internals.buildJournalMessage(_internals.normalizeEvent(event()));
   assert(message.includes("ATLAS-JOURNAL-EVENT-ID: `evt-001`"));
+  assert(message.includes("- card: `FIT-42`"));
+  assert(message.includes("- idempotency: `evt-001`"));
   assert(message.includes("## Discovered"));
   assert(message.includes("Legacy context must be retained"));
   assert(message.includes("- task: `task-42`"));
@@ -295,6 +297,45 @@ test("retry reuses one journal event instead of posting a duplicate", async () =
       throw new Error(`unexpected ${init.method} ${url}`);
     },
   });
+  assert.equal(result.ok, true);
+  assert.equal(result.results[0].journalAction, "reused");
+  assert.equal(posts, 0);
+});
+
+test("retry finds an existing journal event beyond the first message page", async () => {
+  const normalized = _internals.normalizeEvent(event({ card: { ...event().card, threadId: "existing-thread" } }));
+  const starter = _internals.buildCanonicalBody(normalized, "");
+  const journal = _internals.buildJournalMessage(normalized);
+  const firstPage = Array.from({ length: 100 }, (_, index) => ({
+    id: `new-${100 - index}`,
+    content: "other event",
+  }));
+  let posts = 0;
+  const result = await _internals.buildBoardCardJournal({
+    payload: event({ card: { ...event().card, threadId: "existing-thread" } }),
+    apply: true,
+    allowApply: true,
+    env: {
+      DISCORDOS_BOT_TOKEN: "token",
+      DISCORDOS_BOARD_CARD_JOURNAL: "enabled",
+    },
+    fetchImpl: async (url, init) => {
+      if (url.endsWith("/channels/fitness-forum") && init.method === "GET") return response({ payload: { guild_id: "guild" } });
+      if (url.endsWith("/guilds/guild/threads/active")) return response({ payload: { threads: [{ id: "existing-thread", name: event().card.title, parent_id: "fitness-forum", thread_metadata: { archived: false } }] } });
+      if (url.endsWith("/channels/fitness-forum/threads/archived/public?limit=100")) return response({ payload: { threads: [] } });
+      if (url.endsWith("/channels/existing-thread/messages/existing-thread") && init.method === "GET") return response({ payload: { id: "existing-thread", content: starter } });
+      if (url.endsWith("/channels/existing-thread/messages/existing-thread") && init.method === "PATCH") return response({ payload: { id: "existing-thread", content: starter } });
+      if (url.endsWith("/channels/existing-thread/messages?limit=100")) return response({ payload: firstPage });
+      if (url.endsWith("/channels/existing-thread/messages?limit=100&before=new-1")) return response({ payload: [{ id: "existing-journal", content: journal }] });
+      if (url.endsWith("/channels/existing-thread/messages/existing-journal")) return response({ payload: { id: "existing-journal", content: journal } });
+      if (url.endsWith("/channels/existing-thread/messages") && init.method === "POST") {
+        posts += 1;
+        return response({ status: 201, payload: { id: "unexpected" } });
+      }
+      throw new Error(`unexpected ${init.method} ${url}`);
+    },
+  });
+
   assert.equal(result.ok, true);
   assert.equal(result.results[0].journalAction, "reused");
   assert.equal(posts, 0);
