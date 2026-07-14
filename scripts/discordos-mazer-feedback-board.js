@@ -81,6 +81,7 @@ function buildMazerBoardPlanning(board) {
   const planning = board?.board?.planning;
   const cards = Array.isArray(board?.cards) ? board.cards : [];
   const cardIds = new Set(cards.map((card) => card?.id).filter(hasText));
+  const hasReadyCards = cards.some((card) => card?.state === "ready");
   const epics = Array.isArray(planning?.epics) ? planning.epics : [];
   const primaryEpicByCard = {};
   const supportingEpicIdsByCard = {};
@@ -89,8 +90,14 @@ function buildMazerBoardPlanning(board) {
   if (planning?.version !== 1) {
     reasonCodes.push("board_planning_version_invalid");
   }
-  if (!hasText(planning?.activeCardId) || !cardIds.has(planning.activeCardId)) {
+  if (
+    planning?.activeCardId !== null
+    && (!hasText(planning?.activeCardId) || !cardIds.has(planning.activeCardId))
+  ) {
     reasonCodes.push("board_planning_active_card_invalid");
+  }
+  if (planning?.activeCardId === null && hasReadyCards) {
+    reasonCodes.push("board_planning_active_card_missing_for_ready_work");
   }
   if (epics.length !== EXPECTED_EPIC_IDS.length) {
     reasonCodes.push("board_planning_epic_count_invalid");
@@ -333,7 +340,7 @@ function buildMazerFeedbackBoardReadModel(board, { cardId = null, state = null }
   const filteredCards = cards.filter((card) =>
     (!cardId || card.id === cardId) && (!state || card.state === state)
   );
-  const nextEligibleCards = filteredCards.filter((card) => card.state !== "completed");
+  const nextEligibleCards = filteredCards.filter((card) => card.state === "ready");
   const activeCard = cards.find((card) => card.id === planning.activeCardId && card.state !== "completed") || null;
   if (cardId && filteredCards.length === 0) {
     reasonCodes.push("card_not_found");

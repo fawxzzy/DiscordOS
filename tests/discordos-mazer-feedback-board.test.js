@@ -100,6 +100,18 @@ test("mazer feedback board rejects backlog cards that carry active markers", () 
   assert(card.reasonCodes.includes("card_backlog_completion_percent_present"));
 });
 
+test("mazer feedback board requires an active selector when Ready work exists", async () => {
+  const board = await _internals.readBoard(_internals.DEFAULT_BOARD_PATH);
+  const candidate = board.cards.find((card) => card.state === "open");
+  candidate.state = "ready";
+  board.board.planning.activeCardId = null;
+
+  const planning = _internals.buildMazerBoardPlanning(board);
+
+  assert.equal(planning.ok, false);
+  assert(planning.reasonCodes.includes("board_planning_active_card_missing_for_ready_work"));
+});
+
 test("mazer feedback board rejects incomplete card contract", () => {
   const card = _internals.classifyCard({
     id: "",
@@ -142,20 +154,20 @@ test("mazer feedback board reads committed cards", async () => {
   assert.equal(result.placement.forumChannelId, "1524889569475170478");
   assert.equal(result.liveForumChannelId, "1524889569475170478");
   assert.equal(result.legacyForumChannelId, "1524844302981926972");
-  assert.equal(result.cardCount, 62);
-  assert.equal(result.openCardCount, 39);
+  assert.equal(result.cardCount, 64);
+  assert.equal(result.openCardCount, 40);
   assert.equal(result.readyCardCount, 0);
-  assert.equal(result.completedCardCount, 4);
+  assert.equal(result.completedCardCount, 5);
   assert.equal(result.blockedCardCount, 0);
   assert.equal(result.backlogCardCount, 19);
-  assert.equal(result.reactionReadyCardCount, 62);
-  assert.equal(result.nextCard.id, "mazer-endless-progression-mode-contract");
+  assert.equal(result.reactionReadyCardCount, 64);
+  assert.equal(result.nextCard, null);
   assert.deepEqual(result.planning, {
     ok: true,
-    activeCardId: "mazer-endless-progression-mode-contract",
+    activeCardId: null,
     epicCount: 9,
-    mappedCardCount: 62,
-    dependencyCount: 33,
+    mappedCardCount: 64,
+    dependencyCount: 34,
     parallelTrackCount: 1,
   });
   assert(result.cards.some((card) => card.id === "mazer-account-scoped-settings-persistence"));
@@ -172,6 +184,8 @@ test("mazer feedback board reads committed cards", async () => {
   assert(result.cards.some((card) => card.id === "mazer-ai-run-corpus-quality-calibration"));
   assert(result.cards.some((card) => card.id === "mazer-cross-viewport-ui-reliability"));
   assert(result.cards.some((card) => card.id === "mazer-browser-layout-persistence"));
+  assert(result.cards.some((card) => card.id === "mazer-ui-component-layout-standards"));
+  assert(result.cards.some((card) => card.id === "mazer-shared-run-status-panel"));
   assert(result.cards.some((card) => card.id === "mazer-maze-feature-progression-parity"));
   assert(result.cards.some((card) => card.id === "mazer-player-trail-readability-lock"));
   assert(result.cards.some((card) => card.id === "mazer-run-quality-metric-contract-v2"));
