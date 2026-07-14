@@ -22,8 +22,23 @@ test("board reaction lifecycle sync parses card filter", () => {
 
 test("board reaction lifecycle sync maps state to expected reactions", () => {
   assert.equal(_internals.expectedReactionStatusForState("completed"), "success");
+  assert.equal(_internals.expectedReactionStatusForState("archived"), "success");
   assert.equal(_internals.expectedReactionStatusForState("blocked"), "failure");
-  assert.equal(_internals.expectedReactionStatusForState("ready"), null);
+  assert.equal(_internals.expectedReactionStatusForState("ready"), "failure");
+  assert.equal(_internals.expectedReactionStatusForState("backlog"), "failure");
+});
+
+test("board reaction lifecycle sync accepts archived success without rewriting lifecycle", () => {
+  const card = _internals.reconcileReactionLifecycleCard({
+    id: "card-archived",
+    state: "archived",
+    reactionStatus: "success",
+    reactionEmojiName: "success",
+  });
+
+  assert.equal(card.ok, true);
+  assert.equal(card.expectedReactionStatus, "success");
+  assert.equal(card.lifecycleStateFromReaction, "archived");
 });
 
 test("board reaction lifecycle sync detects mismatches", () => {
@@ -36,7 +51,21 @@ test("board reaction lifecycle sync detects mismatches", () => {
 
   assert.equal(card.ok, false);
   assert(card.reasonCodes.includes("reaction_status_lifecycle_mismatch"));
-  assert(card.reasonCodes.includes("failure_reaction_requires_blocked_state"));
+  assert(card.reasonCodes.includes("failure_reaction_requires_incomplete_state"));
+});
+
+test("board reaction lifecycle sync keeps incomplete reactions independent from lifecycle", () => {
+  for (const state of ["intake", "planning", "open", "backlog", "ready", "in_progress", "review", "blocked"]) {
+    const card = _internals.reconcileReactionLifecycleCard({
+      id: `card-${state}`,
+      state,
+      reactionStatus: "failure",
+      reactionEmojiName: "failure",
+    });
+
+    assert.equal(card.ok, true);
+    assert.equal(card.lifecycleStateFromReaction, state);
+  }
 });
 
 test("board reaction lifecycle sync reads committed board", async () => {

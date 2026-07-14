@@ -51,13 +51,10 @@ function parseArgs(args) {
 
 function expectedReactionStatusForState(state) {
   const normalized = String(state || "").trim().toLowerCase();
-  if (normalized === "completed") {
+  if (normalized === "completed" || normalized === "archived") {
     return "success";
   }
-  if (normalized === "blocked") {
-    return "failure";
-  }
-  return null;
+  return normalized ? "failure" : null;
 }
 
 function reconcileReactionLifecycleCard(card = {}) {
@@ -67,11 +64,18 @@ function reconcileReactionLifecycleCard(card = {}) {
   if (expectedReactionStatus && card.reactionStatus !== expectedReactionStatus) {
     reasonCodes.push("reaction_status_lifecycle_mismatch");
   }
-  if (card.reactionStatus === "success" && card.state !== "completed") {
-    reasonCodes.push("success_reaction_requires_completed_state");
+  if (
+    card.reactionStatus === "success"
+    && card.state !== "completed"
+    && card.state !== "archived"
+  ) {
+    reasonCodes.push("success_reaction_requires_terminal_state");
   }
-  if (card.reactionStatus === "failure" && card.state !== "blocked") {
-    reasonCodes.push("failure_reaction_requires_blocked_state");
+  if (
+    card.reactionStatus === "failure"
+    && (card.state === "completed" || card.state === "archived")
+  ) {
+    reasonCodes.push("failure_reaction_requires_incomplete_state");
   }
   if (card.reactionStatus && card.reactionEmojiName !== card.reactionStatus) {
     reasonCodes.push("reaction_emoji_name_mismatch");
@@ -84,11 +88,7 @@ function reconcileReactionLifecycleCard(card = {}) {
     reactionStatus: card.reactionStatus || null,
     reactionEmojiName: card.reactionEmojiName || null,
     expectedReactionStatus,
-    lifecycleStateFromReaction: card.reactionStatus === "success"
-      ? "completed"
-      : card.reactionStatus === "failure"
-        ? "blocked"
-        : card.state || null,
+    lifecycleStateFromReaction: card.state || null,
     reasonCodes,
   };
 }

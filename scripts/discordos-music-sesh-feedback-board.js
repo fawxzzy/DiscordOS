@@ -2,7 +2,18 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 
 const DEFAULT_BOARD_PATH = path.resolve(process.cwd(), "config", "discordos-music-sesh-feedback-board.json");
-const STATES = new Set(["open", "ready", "blocked", "completed"]);
+const STATES = new Set([
+  "intake",
+  "planning",
+  "open",
+  "backlog",
+  "ready",
+  "in_progress",
+  "review",
+  "blocked",
+  "completed",
+  "archived",
+]);
 const PRIORITIES = new Set(["low", "medium", "high"]);
 const REACTION_STATUSES = new Set(["success", "failure"]);
 const STATUS_REACTIONS = {

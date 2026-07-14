@@ -31,6 +31,33 @@ test("music sesh feedback board classifies card metadata", () => {
   assert.equal(card.priority, "high");
 });
 
+test("music sesh feedback board accepts canonical and legacy lifecycle states", () => {
+  for (const state of [
+    "intake",
+    "planning",
+    "open",
+    "backlog",
+    "ready",
+    "in_progress",
+    "review",
+    "blocked",
+    "archived",
+  ]) {
+    const card = _internals.inspectCard({
+      id: `card-${state}`,
+      title: `Card ${state}`,
+      state,
+      priority: "medium",
+      nextCommand: "npm run example",
+      reactionStatus: "failure",
+      reactionEmojiName: "failure",
+      reactionEmojiId: "1507384094424694785",
+    });
+
+    assert.equal(card.reasonCodes.includes("card_state_invalid"), false);
+  }
+});
+
 test("music sesh feedback board requires completed card reaction metadata", () => {
   const card = _internals.classifyCard({
     id: "card-1",
