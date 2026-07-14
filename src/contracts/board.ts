@@ -41,6 +41,7 @@ export interface DiscordOSBoardCardSnapshot {
   title: string;
   type: DiscordOSBoardCardKind;
   state: DiscordOSBoardCardState;
+  previousState?: DiscordOSBoardCardState;
   priority: string;
   owner: string;
   progress: string;
@@ -77,6 +78,7 @@ export interface DiscordOSBoardCardJournalEvent {
     commit: string | null;
     receipt: string | null;
   };
+  transition?: DiscordOSAuthorizedBoardCardTransition;
 }
 
 export interface DiscordOSBoardCardIdentity {
@@ -95,6 +97,13 @@ export interface DiscordOSBoardCardTransition {
   note: string | null;
   occurredAt: string;
   proof: DiscordOSDataProofContract;
+}
+
+export interface DiscordOSAuthorizedBoardCardTransition
+  extends DiscordOSBoardCardTransition {
+  eventId: string;
+  threadId?: string;
+  authorized: true;
 }
 
 export interface DiscordOSBoardCardContract {

@@ -100,6 +100,180 @@ function mapLegacyState(state, boardRole) {
   return "planning";
 }
 
+function mapSourceState(source, boardRole) {
+  if (source.sourceType === "fitness_export") {
+    return mapFitnessState({ status: source.rawState }, boardRole);
+  }
+  if (source.sourceType === "mazer_board") {
+    return mapMazerState({ state: source.rawState, completionPercent: Number.parseInt(source.progress, 10) }, boardRole);
+  }
+  return mapLegacyState(source.rawState, boardRole);
+}
+
+function parseJournalLifecycleMessage(message) {
+  const content = typeof message?.content === "string" ? message.content : "";
+  const eventId = content.match(/ATLAS-JOURNAL-EVENT-ID:\s*`([^`]+)`/i)?.[1]?.trim() || null;
+  if (!eventId) return null;
+  const metadata = (name) => content.match(new RegExp(`^- ${name}:\\s*` + "`([^`]+)`", "im"))?.[1]?.trim() || null;
+  const timestamp = text(message?.timestamp) || metadata("occurred");
+  return {
+    messageId: text(message?.id) || null,
+    eventId,
+    cardId: metadata("card"),
+    state: metadata("state")?.toLowerCase() || null,
+    occurredAt: metadata("occurred"),
+    timestamp,
+    timestampMs: timestamp ? Date.parse(timestamp) : Number.NaN,
+  };
+}
+
+function compareJournalLifecycle(left, right) {
+  if (left.timestampMs !== right.timestampMs) return right.timestampMs - left.timestampMs;
+  if (/^\d+$/.test(left.messageId || "") && /^\d+$/.test(right.messageId || "")) {
+    const leftId = BigInt(left.messageId);
+    const rightId = BigInt(right.messageId);
+    if (leftId !== rightId) return leftId > rightId ? -1 : 1;
+  }
+  return 0;
+}
+
+function resolveJournalLifecycle({ messages, cardId }) {
+  const entries = (Array.isArray(messages) ? messages : [])
+    .map(parseJournalLifecycleMessage)
+    .filter(Boolean);
+  if (entries.length === 0) {
+    return { ok: true, status: "journal_absent", state: null, eventId: null, reasonCodes: [] };
+  }
+
+  const reasonCodes = [];
+  if (entries.some((entry) => !entry.cardId || entry.cardId.toLowerCase() !== cardId.toLowerCase())) {
+    reasonCodes.push("journal_lifecycle_card_identity_conflict");
+  }
+  if (entries.some((entry) => !entry.state || !journal.ALLOWED_STATES.has(entry.state))) {
+    reasonCodes.push("journal_lifecycle_state_unsupported");
+  }
+  if (entries.some((entry) => !Number.isFinite(entry.timestampMs))) {
+    reasonCodes.push("journal_lifecycle_timestamp_missing");
+  }
+
+  const eventVariants = new Map();
+  for (const entry of entries) {
+    const variants = eventVariants.get(entry.eventId) || new Set();
+    variants.add(`${entry.cardId || ""}\u0000${entry.state || ""}\u0000${entry.occurredAt || ""}`);
+    eventVariants.set(entry.eventId, variants);
+  }
+  if ([...eventVariants.values()].some((variants) => variants.size > 1)) {
+    reasonCodes.push("journal_lifecycle_event_conflict");
+  }
+
+  if (reasonCodes.length > 0) {
+    return { ok: false, status: "blocked", state: null, eventId: null, reasonCodes: [...new Set(reasonCodes)] };
+  }
+
+  entries.sort(compareJournalLifecycle);
+  const latest = entries[0];
+  const tied = entries.filter((entry) => compareJournalLifecycle(entry, latest) === 0);
+  if (new Set(tied.map((entry) => entry.state)).size > 1) {
+    return {
+      ok: false,
+      status: "blocked",
+      state: null,
+      eventId: null,
+      reasonCodes: ["journal_lifecycle_latest_state_ambiguous"],
+    };
+  }
+  return {
+    ok: true,
+    status: "journal_resolved",
+    state: latest.state,
+    eventId: latest.eventId,
+    messageId: latest.messageId,
+    occurredAt: latest.occurredAt,
+    reasonCodes: [],
+  };
+}
+
+function selectLifecycleTransition({ transitions, cardId, threadId }) {
+  const candidates = (Array.isArray(transitions) ? transitions : []).filter((transition) => {
+    const transitionCardId = text(transition?.cardId);
+    const transitionThreadId = text(transition?.threadId);
+    return transitionCardId.toLowerCase() === cardId.toLowerCase()
+      || (transitionThreadId && transitionThreadId === threadId);
+  });
+  if (candidates.length === 0) return { transition: null, reasonCodes: [] };
+  if (candidates.length > 1) return { transition: null, reasonCodes: ["lifecycle_transition_ambiguous"] };
+  const transition = candidates[0];
+  if (text(transition.cardId).toLowerCase() !== cardId.toLowerCase()
+    || (text(transition.threadId) && text(transition.threadId) !== threadId)) {
+    return { transition: null, reasonCodes: ["lifecycle_transition_identity_conflict"] };
+  }
+  return { transition, reasonCodes: [] };
+}
+
+function validateTransitionProof(proof) {
+  const strength = text(proof?.strength).toLowerCase();
+  const hasReference = Boolean(text(proof?.receiptPath) || text(proof?.messageId));
+  return ["live_runtime", "human_verified"].includes(strength) && hasReference;
+}
+
+function mergeLifecycleState({ baselineState, journalLifecycle, transition = null }) {
+  if (!journalLifecycle?.ok) {
+    return { ok: false, state: null, previousState: null, decision: "blocked", reasonCodes: journalLifecycle?.reasonCodes || ["journal_lifecycle_unresolved"] };
+  }
+  const currentState = journalLifecycle.state || baselineState;
+  if (!transition) {
+    return {
+      ok: true,
+      state: journalLifecycle.state || baselineState,
+      previousState: null,
+      decision: journalLifecycle.state
+        ? journalLifecycle.state === baselineState ? "journal_matches_baseline" : "journal_state_preserved"
+        : "baseline_used_no_journal",
+      reasonCodes: [],
+    };
+  }
+
+  const fromState = text(transition.fromState).toLowerCase();
+  const toState = text(transition.toState).toLowerCase();
+  const reasonCodes = [];
+  if (transition.authorized !== true) reasonCodes.push("lifecycle_transition_not_authorized");
+  if (!text(transition.eventId)) reasonCodes.push("lifecycle_transition_event_id_missing");
+  if (!text(transition.actor)) reasonCodes.push("lifecycle_transition_actor_missing");
+  if (!text(transition.occurredAt) || !Number.isFinite(Date.parse(transition.occurredAt))) {
+    reasonCodes.push("lifecycle_transition_timestamp_invalid");
+  }
+  if (!validateTransitionProof(transition.proof)) reasonCodes.push("lifecycle_transition_proof_invalid");
+  if (fromState !== currentState) reasonCodes.push("lifecycle_transition_previous_state_mismatch");
+  reasonCodes.push(...journal.validateLifecycleTransition(fromState, toState).reasonCodes);
+  if (reasonCodes.length > 0) {
+    return { ok: false, state: null, previousState: null, decision: "blocked", reasonCodes: [...new Set(reasonCodes)] };
+  }
+  return {
+    ok: true,
+    state: toState,
+    previousState: fromState,
+    decision: "authorized_transition",
+    transition: {
+      eventId: text(transition.eventId),
+      cardId: text(transition.cardId),
+      ...(text(transition.threadId) ? { threadId: text(transition.threadId) } : {}),
+      fromState,
+      toState,
+      actor: text(transition.actor),
+      note: text(transition.note) || null,
+      occurredAt: text(transition.occurredAt),
+      authorized: true,
+      proof: {
+        strength: text(transition.proof.strength),
+        receiptPath: text(transition.proof.receiptPath) || null,
+        messageId: text(transition.proof.messageId) || null,
+        generatedAt: text(transition.proof.generatedAt) || null,
+      },
+    },
+    reasonCodes: [],
+  };
+}
+
 function fitnessProject(card) {
   const area = text(card?.area).toLowerCase();
   const title = text(card?.title).toLowerCase();
@@ -220,12 +394,10 @@ function fallbackSource({ board, thread, starter }) {
   };
 }
 
-function buildMigrationEvent({ board, thread, source, guildId, existingContent = "" }) {
-  const state = source.sourceType === "fitness_export"
-      ? mapFitnessState({ status: source.rawState }, board.role)
-      : source.sourceType === "mazer_board"
-        ? mapMazerState({ state: source.rawState, completionPercent: Number.parseInt(source.progress, 10) }, board.role)
-        : mapLegacyState(source.rawState, board.role);
+function buildMigrationEvent({ board, thread, source, guildId, existingContent = "", lifecycle = null }) {
+  const baselineState = mapSourceState(source, board.role);
+  const state = lifecycle?.state || baselineState;
+  const transition = lifecycle?.transition || null;
   const completedCardUrl = existingContent.match(/ATLAS-COMPLETED-CARD:\s*(https:\/\/discord\.com\/channels\/[^\s]+)/i)?.[1] || null;
   const sourceCardUrl = board.role === "completed"
     && source.sourceThreadId
@@ -251,9 +423,9 @@ function buildMigrationEvent({ board, thread, source, guildId, existingContent =
     : source.nextActions;
   return {
     schemaVersion: "atlas.board-card-journal.v1",
-    eventId: `migration:${board.id}:${thread.id}:v1`,
-    occurredAt: new Date().toISOString(),
-    actor: "discordos.board-migration",
+    eventId: transition?.eventId || `migration:${board.id}:${thread.id}:v1`,
+    occurredAt: transition?.occurredAt || new Date().toISOString(),
+    actor: transition?.actor || "discordos.board-migration",
     card: {
       id: source.cardId,
       project: source.project,
@@ -262,6 +434,7 @@ function buildMigrationEvent({ board, thread, source, guildId, existingContent =
       title: thread.name,
       type: source.type,
       state,
+      ...(lifecycle?.previousState ? { previousState: lifecycle.previousState } : {}),
       priority: source.priority,
       owner: source.owner,
       progress,
@@ -275,7 +448,7 @@ function buildMigrationEvent({ board, thread, source, guildId, existingContent =
     },
     entry: {
       kind: "correction",
-      headline: "Historical card normalized",
+      headline: transition ? "Authorized lifecycle transition" : "Historical card normalized",
       completed: ["Assigned stable card identity", "Refreshed the canonical starter summary", "Preserved the pre-contract starter body in the card thread"],
       discovered: source.discoveries,
       next: nextActions,
@@ -287,12 +460,13 @@ function buildMigrationEvent({ board, thread, source, guildId, existingContent =
       jobId: null,
       branch: null,
       commit: null,
-      receipt: null,
+      receipt: transition?.proof?.receiptPath || null,
     },
+    ...(transition ? { transition } : {}),
   };
 }
 
-async function buildMigrationPlan({ boards, fitnessCards = [], mazerCards = [], env = process.env, fetchImpl = fetch } = {}) {
+async function buildMigrationPlan({ boards, fitnessCards = [], mazerCards = [], lifecycleTransitions = [], env = process.env, fetchImpl = fetch } = {}) {
   const token = text(env?.DISCORDOS_BOT_TOKEN);
   const reasonCodes = [];
   if (!token) reasonCodes.push("discord_bot_token_missing");
@@ -329,12 +503,40 @@ async function buildMigrationPlan({ boards, fitnessCards = [], mazerCards = [], 
         continue;
       }
       const source = selected.source || fallbackSource({ board, thread, starter: starter.payload });
+      const messages = await journal.readThreadMessages({ threadId: thread.id, token, fetchImpl });
+      if (!messages.ok) {
+        const code = messages.truncated ? "journal_lifecycle_history_truncated" : "journal_lifecycle_history_read_failed";
+        rows.push({ boardId: board.id, threadId: thread.id, title: thread.name, cardId: source.cardId, eventCreated: false, reasonCodes: [code] });
+        reasonCodes.push(`${code}:${thread.id}`);
+        continue;
+      }
+      const journalLifecycle = resolveJournalLifecycle({ messages: messages.payload, cardId: source.cardId });
+      const selectedTransition = selectLifecycleTransition({ transitions: lifecycleTransitions, cardId: source.cardId, threadId: thread.id });
+      const baselineState = mapSourceState(source, board.role);
+      const lifecycle = selectedTransition.reasonCodes.length > 0
+        ? { ok: false, state: null, previousState: null, decision: "blocked", reasonCodes: selectedTransition.reasonCodes }
+        : mergeLifecycleState({ baselineState, journalLifecycle, transition: selectedTransition.transition });
+      if (!lifecycle.ok) {
+        rows.push({
+          boardId: board.id,
+          threadId: thread.id,
+          title: thread.name,
+          cardId: source.cardId,
+          baselineState,
+          journalState: journalLifecycle.state,
+          eventCreated: false,
+          reasonCodes: lifecycle.reasonCodes,
+        });
+        reasonCodes.push(...lifecycle.reasonCodes.map((code) => `${code}:${thread.id}`));
+        continue;
+      }
       const event = buildMigrationEvent({
         board,
         thread,
         source,
         guildId: channel.payload.guild_id,
         existingContent: starter.payload?.content,
+        lifecycle,
       });
       events.push(event);
       rows.push({
@@ -344,6 +546,9 @@ async function buildMigrationPlan({ boards, fitnessCards = [], mazerCards = [], 
         cardId: event.card.id,
         project: event.card.project,
         state: event.card.state,
+        baselineState,
+        journalState: journalLifecycle.state,
+        lifecycleDecision: lifecycle.decision,
         matchedBy: selected.matchedBy,
         sourceType: source.sourceType,
         eventCreated: true,
@@ -359,6 +564,8 @@ async function buildMigrationPlan({ boards, fitnessCards = [], mazerCards = [], 
     boardCount: (boards || []).length,
     sourceCount: sources.length,
     eventCount: events.length,
+    authorizedTransitionCount: rows.filter((row) => row.lifecycleDecision === "authorized_transition").length,
+    journalPreservedCount: rows.filter((row) => row.lifecycleDecision === "journal_state_preserved").length,
     fallbackIdentityCount: rows.filter((row) => row.sourceType === "thread_fallback").length,
     rows,
     events,
@@ -379,6 +586,7 @@ async function main() {
     boards: boardPayload.boards || [],
     fitnessCards: Array.isArray(fitnessCards) ? fitnessCards : fitnessCards.cards || [],
     mazerCards: mazerPayload.cards || [],
+    lifecycleTransitions: boardPayload.lifecycleTransitions || [],
   });
   if (options.outputPath) {
     await fs.mkdir(path.dirname(options.outputPath), { recursive: true });
@@ -404,6 +612,12 @@ module.exports = {
     mapFitnessState,
     mapMazerState,
     mapLegacyState,
+    mapSourceState,
+    parseJournalLifecycleMessage,
+    resolveJournalLifecycle,
+    selectLifecycleTransition,
+    validateTransitionProof,
+    mergeLifecycleState,
     fitnessDisplayTitle,
     normalizeFitnessSource,
     normalizeMazerSource,
