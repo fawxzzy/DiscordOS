@@ -11,6 +11,8 @@ const CARD_END = "<!-- ATLAS-CARD:END -->";
 const MAX_MESSAGE_LENGTH = 2000;
 const MESSAGE_PAGE_LIMIT = 100;
 const MAX_MESSAGE_PAGES = 10;
+const THREAD_PAGE_LIMIT = 100;
+const MAX_THREAD_PAGES = 20;
 const ACTIVE_STATES = new Set(["intake", "planning", "ready", "in_progress", "review", "blocked", "opened"]);
 const ALLOWED_STATES = new Set([...ACTIVE_STATES, "completed", "archived", "closed"]);
 const AUTONOMOUS_EXECUTION_STATE = "ready";
@@ -366,24 +368,71 @@ function summarizeThread(thread) {
   };
 }
 
+async function readArchivedForumThreads({ forumChannelId, token, fetchImpl = fetch }) {
+  const threads = [];
+  let before = null;
+  let pageCount = 0;
+  let status = null;
+
+  while (pageCount < MAX_THREAD_PAGES) {
+    const suffix = before ? `&before=${encodeURIComponent(before)}` : "";
+    const response = await cardContract.discordRequest({
+      path: `/channels/${forumChannelId}/threads/archived/public?limit=${THREAD_PAGE_LIMIT}${suffix}`,
+      token,
+      fetchImpl,
+    });
+    pageCount += 1;
+    status = response.status;
+    if (!response.ok || !Array.isArray(response.payload?.threads)) {
+      return { ok: false, status, threads, pageCount, truncated: false, reasonCodes: ["archived_threads_read_failed"] };
+    }
+    threads.push(...response.payload.threads);
+    if (response.payload.has_more !== true) {
+      return { ok: true, status, threads, pageCount, truncated: false, reasonCodes: [] };
+    }
+    before = response.payload.threads.at(-1)?.thread_metadata?.archive_timestamp || null;
+    if (!before) {
+      return {
+        ok: false,
+        status,
+        threads,
+        pageCount,
+        truncated: true,
+        reasonCodes: ["archived_threads_pagination_cursor_missing"],
+      };
+    }
+  }
+
+  return {
+    ok: false,
+    status,
+    threads,
+    pageCount,
+    truncated: true,
+    reasonCodes: ["archived_threads_read_truncated"],
+  };
+}
+
 async function listForumThreads({ forumChannelId, guildId, token, fetchImpl = fetch }) {
   const [active, archived] = await Promise.all([
     cardContract.discordRequest({ path: `/guilds/${guildId}/threads/active`, token, fetchImpl }),
-    cardContract.discordRequest({
-      path: `/channels/${forumChannelId}/threads/archived/public?limit=100`,
-      token,
-      fetchImpl,
-    }),
+    readArchivedForumThreads({ forumChannelId, token, fetchImpl }),
   ]);
   const reasonCodes = [];
   if (!active.ok) reasonCodes.push("active_threads_read_failed");
-  if (!archived.ok) reasonCodes.push("archived_threads_read_failed");
+  reasonCodes.push(...archived.reasonCodes);
   const seen = new Set();
   const threads = [
     ...(active.payload?.threads || []).filter((thread) => thread.parent_id === forumChannelId),
-    ...(archived.payload?.threads || []),
+    ...archived.threads,
   ].filter((thread) => thread?.id && !seen.has(thread.id) && seen.add(thread.id)).map(summarizeThread);
-  return { ok: reasonCodes.length === 0, threads, reasonCodes };
+  return {
+    ok: reasonCodes.length === 0,
+    threads,
+    archivedPageCount: archived.pageCount,
+    truncated: archived.truncated,
+    reasonCodes,
+  };
 }
 
 async function findCardThread({ event, threads, token, fetchImpl = fetch }) {
@@ -776,7 +825,9 @@ module.exports = {
     parseManagedCardBody,
     buildCanonicalBody,
     buildJournalMessage,
+    readArchivedForumThreads,
     listForumThreads,
+    readThreadMessages,
     findCardThread,
     applyCardEvent,
     buildBoardCardJournal,

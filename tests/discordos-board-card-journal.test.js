@@ -455,3 +455,54 @@ test("duplicate stable identities block instead of guessing", async () => {
   assert.equal(located.match, null);
   assert(located.reasonCodes.includes("duplicate_stable_card_identity"));
 });
+
+test("forum inventory reads every archived thread page", async () => {
+  const firstPage = Array.from({ length: 100 }, (_, index) => ({
+    id: `archived-${index}`,
+    name: `Archived ${index}`,
+    parent_id: "forum",
+    thread_metadata: {
+      archived: true,
+      archive_timestamp: `2026-07-13T${String(index % 24).padStart(2, "0")}:00:00.000Z`,
+    },
+  }));
+  firstPage.at(-1).thread_metadata.archive_timestamp = "2026-07-12T00:00:00.000Z";
+  const result = await _internals.listForumThreads({
+    forumChannelId: "forum",
+    guildId: "guild",
+    token: "token",
+    fetchImpl: async (url) => {
+      if (url.endsWith("/guilds/guild/threads/active")) return response({ payload: { threads: [] } });
+      if (url.endsWith("/channels/forum/threads/archived/public?limit=100")) {
+        return response({ payload: { threads: firstPage, has_more: true } });
+      }
+      if (url.endsWith("/channels/forum/threads/archived/public?limit=100&before=2026-07-12T00%3A00%3A00.000Z")) {
+        return response({ payload: { threads: [{ id: "archived-100", name: "Archived 100", parent_id: "forum", thread_metadata: { archived: true } }], has_more: false } });
+      }
+      throw new Error(`unexpected GET ${url}`);
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.archivedPageCount, 2);
+  assert.equal(result.threads.length, 101);
+});
+
+test("forum inventory fails closed when archived pagination has no cursor", async () => {
+  const result = await _internals.listForumThreads({
+    forumChannelId: "forum",
+    guildId: "guild",
+    token: "token",
+    fetchImpl: async (url) => {
+      if (url.endsWith("/guilds/guild/threads/active")) return response({ payload: { threads: [] } });
+      if (url.endsWith("/channels/forum/threads/archived/public?limit=100")) {
+        return response({ payload: { threads: [], has_more: true } });
+      }
+      throw new Error(`unexpected GET ${url}`);
+    },
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.truncated, true);
+  assert(result.reasonCodes.includes("archived_threads_pagination_cursor_missing"));
+});

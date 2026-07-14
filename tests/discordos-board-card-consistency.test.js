@@ -1,8 +1,18 @@
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 const test = require("node:test");
 
 const { _internals } = require("../scripts/discordos-board-card-consistency");
 const { _internals: journal } = require("../scripts/discordos-board-card-journal");
+
+function response({ ok = true, status = 200, payload = null } = {}) {
+  return { ok, status, json: async () => payload };
+}
+
+function canonicalStarter(cardId = "FIT-1") {
+  return `${journal.CARD_START}\nATLAS-CARD-ID: \`${cardId}\`\n- state: \`review\`\n- updated: \`2026-07-13T00:00:00Z\`\n${journal.CARD_END}`;
+}
 
 test("healthy active card has canonical body and journal history", () => {
   const row = _internals.inspectThread({
@@ -133,4 +143,129 @@ test("Ready card with an incomplete planning contract is drift", () => {
   assert.equal(row.ok, false);
   assert.equal(row.autonomy.admitted, false);
   assert(row.reasonCodes.includes("ready_card_autonomy_contract_incomplete"));
+});
+
+test("required blocked registry board fails closed while remaining visible", async () => {
+  const registry = JSON.parse(fs.readFileSync(path.resolve(__dirname, "..", "config", "discordos-board-registry.json"), "utf8"));
+  registry.boards = registry.boards.filter((board) => new Set(["shared-completed", "atlas-active-admission"]).has(board.id));
+  const result = await _internals.buildBoardCardConsistency({
+    registry,
+    env: { DISCORDOS_BOT_TOKEN: "token" },
+    fetchImpl: async (url) => {
+      if (url.endsWith("/guilds/1504668396338413670/channels")) {
+        return response({ payload: [{ id: "1508359985602625638", name: "completed", type: 15, parent_id: "1508057063874629684" }] });
+      }
+      if (url.endsWith("/channels/1508359985602625638")) {
+        return response({ payload: { id: "1508359985602625638", name: "completed", guild_id: "1504668396338413670" } });
+      }
+      if (url.endsWith("/guilds/1504668396338413670/threads/active")) return response({ payload: { threads: [] } });
+      if (url.endsWith("/channels/1508359985602625638/threads/archived/public?limit=100")) {
+        return response({ payload: { threads: [], has_more: false } });
+      }
+      throw new Error(`unexpected GET ${url}`);
+    },
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "blocked");
+  assert.equal(result.registeredBoardCount, 2);
+  assert.equal(result.enabledBoardCount, 1);
+  assert.equal(result.blockedBoardCount, 1);
+  assert.equal(result.blockedBoards[0].id, "atlas-active-admission");
+  assert(result.reasonCodes.includes("required_board_blocked:atlas-active-admission"));
+});
+
+test("registry discovery reports an uncovered live production forum", async () => {
+  const registry = JSON.parse(fs.readFileSync(path.resolve(__dirname, "..", "config", "discordos-board-registry.json"), "utf8"));
+  const result = await _internals.discoverRegistryForums({
+    registry,
+    token: "token",
+    fetchImpl: async (url) => {
+      assert(url.endsWith("/guilds/1504668396338413670/channels"));
+      return response({ payload: [
+        { id: "1505827424766660780", name: "feedback-testing", type: 15, parent_id: "1508057063874629684" },
+        { id: "new-forum", name: "new-project", type: 15, parent_id: "1508057063874629684" },
+      ] });
+    },
+  });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.uncoveredBoards, [{ channelId: "new-forum", channelName: "new-project", parentId: "1508057063874629684" }]);
+  assert.equal(result.excludedBoards[0].channelId, "1505827424766660780");
+  assert(result.reasonCodes.includes("uncovered_live_board:new-forum"));
+});
+
+test("legacy input remains compatible and reports denominator discovery as not evaluated", async () => {
+  const result = await _internals.buildBoardCardConsistency({
+    payload: { boards: [{ id: "fitness", forumChannelId: "forum", role: "active" }] },
+    env: { DISCORDOS_BOT_TOKEN: "token" },
+    fetchImpl: async (url) => {
+      if (url.endsWith("/channels/forum")) return response({ payload: { guild_id: "guild" } });
+      if (url.endsWith("/guilds/guild/threads/active")) return response({ payload: { threads: [] } });
+      if (url.endsWith("/channels/forum/threads/archived/public?limit=100")) {
+        return response({ payload: { threads: [], has_more: false } });
+      }
+      throw new Error(`unexpected GET ${url}`);
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.status, "consistent");
+  assert.equal(result.inventorySource, "legacy_input");
+  assert.equal(result.coverageStatus, "not_evaluated");
+  assert.equal(result.registeredBoardCount, 1);
+});
+
+test("consistency scan reads journal history beyond the first 100 messages", async () => {
+  const firstPage = Array.from({ length: 100 }, (_, index) => ({ id: `message-${100 - index}`, content: "other history" }));
+  const result = await _internals.buildBoardCardConsistency({
+    payload: { boards: [{ id: "fitness", forumChannelId: "forum", role: "active" }] },
+    env: { DISCORDOS_BOT_TOKEN: "token" },
+    fetchImpl: async (url) => {
+      if (url.endsWith("/channels/forum")) return response({ payload: { guild_id: "guild" } });
+      if (url.endsWith("/guilds/guild/threads/active")) {
+        return response({ payload: { threads: [{ id: "thread", name: "Card", parent_id: "forum", thread_metadata: { archived: false } }] } });
+      }
+      if (url.endsWith("/channels/forum/threads/archived/public?limit=100")) return response({ payload: { threads: [], has_more: false } });
+      if (url.endsWith("/channels/thread")) return response({ payload: { id: "thread", name: "Card", thread_metadata: { archived: false } } });
+      if (url.endsWith("/channels/thread/messages/thread")) return response({ payload: { id: "thread", content: canonicalStarter() } });
+      if (url.endsWith("/channels/thread/messages?limit=100")) return response({ payload: firstPage });
+      if (url.endsWith("/channels/thread/messages?limit=100&before=message-1")) {
+        return response({ payload: [{ id: "journal", content: "ATLAS-JOURNAL-EVENT-ID: `evt-1`" }] });
+      }
+      throw new Error(`unexpected GET ${url}`);
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.rows[0].journalPresent, true);
+  assert.equal(result.rows[0].journalPageCount, 2);
+});
+
+test("consistency scan fails closed when journal history exceeds its page bound", async () => {
+  let page = 0;
+  const result = await _internals.buildBoardCardConsistency({
+    payload: { boards: [{ id: "fitness", forumChannelId: "forum", role: "active" }] },
+    env: { DISCORDOS_BOT_TOKEN: "token" },
+    fetchImpl: async (url) => {
+      if (url.endsWith("/channels/forum")) return response({ payload: { guild_id: "guild" } });
+      if (url.endsWith("/guilds/guild/threads/active")) {
+        return response({ payload: { threads: [{ id: "thread", name: "Card", parent_id: "forum", thread_metadata: { archived: false } }] } });
+      }
+      if (url.endsWith("/channels/forum/threads/archived/public?limit=100")) return response({ payload: { threads: [], has_more: false } });
+      if (url.endsWith("/channels/thread")) return response({ payload: { id: "thread", name: "Card", thread_metadata: { archived: false } } });
+      if (url.endsWith("/channels/thread/messages/thread")) return response({ payload: { id: "thread", content: canonicalStarter() } });
+      if (url.includes("/channels/thread/messages?limit=100")) {
+        page += 1;
+        return response({ payload: Array.from({ length: 100 }, (_, index) => ({ id: `page-${page}-message-${100 - index}`, content: "other history" })) });
+      }
+      throw new Error(`unexpected GET ${url}`);
+    },
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "blocked");
+  assert.equal(result.rows[0].journalHistoryTruncated, true);
+  assert.equal(result.rows[0].journalPageCount, 10);
+  assert(result.reasonCodes.includes("card_journal_history_truncated:thread"));
 });
