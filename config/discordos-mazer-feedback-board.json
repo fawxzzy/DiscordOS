@@ -24,8 +24,8 @@
     },
     "planning": {
       "version": 1,
-      "activeCardId": "mazer-crisp-cyber-arcade-graphics",
-      "activeSelectionReason": "The Core Gameplay epic has no dependency-free unfinished primary card. Crisp cyber-arcade graphics is the first dependency-free high-priority primary card in the next critical-path Feel and polish epic, so it is admitted for one completion-oriented material-system and cross-viewport proof packet.",
+      "activeCardId": null,
+      "activeSelectionReason": "Mazer PR #67 completed the admitted crisp cyber-arcade graphics packet and the exact live card transferred to Completed. No Mazer card is currently Ready, so the active selector is intentionally empty until the governed planner admits the next non-conflicting packet.",
       "executionPolicy": "Finish the earliest execution-ready critical-path epic before taking later product work. Advanced AI research stays parallel and cannot block the critical path.",
       "epics": [
         {
@@ -811,14 +811,14 @@
     {
       "id": "mazer-crisp-cyber-arcade-graphics",
       "title": "mazer: crisp cyber-arcade graphics and art consistency",
-      "state": "ready",
+      "state": "completed",
       "priority": "high",
       "category": "mazer",
       "markerName": "High-tech crisp graphics/art pass",
-      "completionPercent": 46,
+      "completionPercent": 100,
       "summary": "Raise the full game visual system toward a crisp 2026 cyber-arcade target: sharper tiles, cleaner borders, less blur, stronger material consistency.",
       "whyItMatters": "The game feel depends heavily on the maze being readable and premium on mobile. Blurry tiles or inconsistent materials make the app feel older than the current design target.",
-      "currentStatus": "HiDPI backing, integer-snapped maze tiles, and the PR #52 green player/trail plus white shine are already merged. This admitted completion packet centralizes the approved icon's navy/cyan/mint/green material language across title, maze, border, buttons, compass, backdrop, auth, play, and pause surfaces; audits shared chrome for fractional geometry; and adds actual 390-430px plus desktop proof and an icon comparison sheet.",
+      "currentStatus": "Completed through Mazer PR #67 at merge 3e679bd6d1b9f7d63e93ce7ad1ad68cd7078fd72. One versioned cyber-arcade material contract now drives shared menu, backdrop, button, maze-chrome, panel, diagnostics, and visual-capture surfaces; panel bounds remain integer snapped with true half-pixel centers for one-pixel DPR1 strokes. Focused proof passed 56 tests after final geometry correction, architecture passed 18 tests plus the firewall, full verification passed 47 files / 355 tests plus build, and four route-aware viewport profiles passed 34 checks each with clean authenticated Options proof. The exact card transferred to Completed thread 1526776338604888144 with review journal 1526775710033772544 and completion journal 1526776344187371631. The separate wrap stress-fixture topology observation remains outside this graphics card and the default topology gate remains enabled.",
       "workBreakdown": [
         "Remove accidental blur/fuzz from canvas scaling, tile seams, title pieces, and UI text.",
         "Unify path, trail, pulse, player, title, border, buttons, compass, and background under one material palette.",
@@ -826,9 +826,9 @@
         "Track the approved icon image as the current visual quality target."
       ],
       "nextActions": [
-        "Implement one canonical cyber-arcade material token contract and consume it from the shared scene, button, and backdrop owners.",
-        "Normalize shared panel and chrome geometry to integer logical pixels while preserving the existing DPR-aware backing contract.",
-        "Run route-aware menu/auth/options/play/pause proof at 390px, 405px, 430px, and desktop sizes and publish the icon comparison sheet."
+        "Keep future shared chrome and scene materials on the versioned cyber-arcade token contract.",
+        "Preserve integer panel bounds, half-pixel one-pixel stroke centers, and the DPR-aware backing contract.",
+        "Retain route-aware phone and desktop capture proof plus the approved-icon comparison for later visual packets."
       ],
       "acceptanceCriteria": [
         "Canvas backing scale and camera scale stay crisp at mobile and desktop sizes.",
@@ -843,9 +843,9 @@
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-crisp-cyber-arcade-graphics",
       "liveThreadId": "1524889578408771696",
       "liveMessageId": "1524889578408771696",
-      "reactionStatus": "failure",
-      "reactionEmojiName": "failure",
-      "reactionEmojiId": "1507384094424694785"
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
     },
     {
       "id": "mazer-icon-quality-2026-visual-target",
