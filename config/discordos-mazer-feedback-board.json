@@ -24,8 +24,8 @@
     },
     "planning": {
       "version": 1,
-      "activeCardId": null,
-      "activeSelectionReason": "Mazer PR #67 completed the admitted crisp cyber-arcade graphics packet and the exact live card transferred to Completed. No Mazer card is currently Ready, so the active selector is intentionally empty until the governed planner admits the next non-conflicting packet.",
+      "activeCardId": "mazer-icon-quality-2026-visual-target",
+      "activeSelectionReason": "Core Gameplay's remaining primary work is backlog-owned or dependency-blocked. Icon-quality 2026 visual target is the next dependency-free High-priority primary in the active Feel and polish epic; current Git proves its asset wiring and material adoption are already present, so one focused lineage, durability, and current-main proof packet is admitted.",
       "executionPolicy": "Finish the earliest execution-ready critical-path epic before taking later product work. Advanced AI research stays parallel and cannot block the critical path.",
       "epics": [
         {
@@ -850,14 +850,14 @@
     {
       "id": "mazer-icon-quality-2026-visual-target",
       "title": "mazer: icon-quality 2026 visual target",
-      "state": "open",
+      "state": "ready",
       "priority": "high",
       "category": "mazer",
       "markerName": "Icon-quality 2026 visual target",
-      "completionPercent": 5,
+      "completionPercent": 82,
       "summary": "Use the new app icon as the north-star for sharper glow, material depth, palette, and shape language across the game.",
       "whyItMatters": "The icon now communicates the target style better than the in-game visuals. The game should inherit that crisp cyan/green glow, deep glass, and arcade geometry instead of drifting into muddy retro blur.",
-      "currentStatus": "The icon has been provided as a reference, but the game has not fully absorbed its material quality, contrast, or depth.",
+      "currentStatus": "Ready at an evidence-backed 82% marker for one completion-oriented durability packet. Browser/PWA/shortcut icon binaries are already wired and dimension-guarded, both source-linked Atlas references exist with identical SHA-256, and Mazer PR #67 merged the approved icon's navy/cyan/mint/green/red/white material hierarchy into shared runtime surfaces. The remaining owning-card work is to establish one versioned icon-quality authority for canonical and derived assets, hash and delivery-surface lineage, the material-version relationship, and current-main menu/play proof without regenerating approved artwork or reopening the completed graphics card.",
       "workBreakdown": [
         "Save canonical app icon assets for favicon, browser, install surfaces, and future Atlas/link/Stripe references.",
         "Extract the icon palette into a reusable Mazer visual target note.",
@@ -865,9 +865,9 @@
         "Use the icon as the art QA baseline for future screenshots."
       ],
       "nextActions": [
-        "Verify the current icon assets are wired everywhere expected.",
-        "Add Atlas-facing visual reference documentation.",
-        "Start material parity work for title, border, path, player, trail, and buttons."
+        "Add one versioned icon-quality target contract and source-linked Mazer research note.",
+        "Lock canonical and delivery asset dimensions, hashes, HTML links, manifest purposes, and material-version linkage with focused tests.",
+        "Capture current-main menu and play proof correlated to the approved icon target before completion."
       ],
       "acceptanceCriteria": [
         "App icon assets are saved and wired for browser, Vercel, and app surfaces.",
