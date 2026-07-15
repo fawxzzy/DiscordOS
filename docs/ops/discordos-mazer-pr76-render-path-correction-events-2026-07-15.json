@@ -1,0 +1,207 @@
+{
+  "events": [
+    {
+      "schemaVersion": "atlas.board-card-journal.v1",
+      "eventId": "mazer-cross-viewport-ui-reliability-pr76-render-path-correction-20260715",
+      "occurredAt": "2026-07-15T20:15:03.378Z",
+      "actor": "Mazer",
+      "card": {
+        "id": "mazer-cross-viewport-ui-reliability",
+        "project": "Mazer",
+        "sourceForumChannelId": "1524889569475170478",
+        "threadId": "1525337748830031875",
+        "title": "mazer: cross-viewport UI reliability and layout hardening",
+        "type": "feature",
+        "state": "review",
+        "previousState": "review",
+        "priority": "High",
+        "owner": "Mazer",
+        "progress": "92%",
+        "summary": "Coordinate mobile safe-area, shared overlay geometry, and browser layout through one no-overlap contract and proof matrix.",
+        "objective": "Make menu, Options, play, and Pause remain readable and operable across phone, browser, PWA, and restored-window surfaces without per-screenshot offsets.",
+        "acceptanceCriteria": [
+          "Every primary Mazer surface has an owner, supported viewport category, and no-overlap contract.",
+          "Mobile and browser layout work can be verified independently and together through a shared matrix.",
+          "No completion claim relies on desktop-only proof for a phone or restored-window defect.",
+          "Physical-device findings remain open until operator screenshots confirm the deployed behavior."
+        ],
+        "discoveries": [
+          "The operator correctly rejected c7b1540e because logical Phaser bounds were contained while a second text-texture scale still painted glyphs across rails.",
+          "The 2x game canvas must be the sole backing-resolution owner; text textures now stay at resolution 1."
+        ],
+        "nextActions": [
+          "Collect operator iPhone screenshots from exact preview head 4984d16c.",
+          "Keep physical-device and native-browser proof open until the operator confirms the corrected rendering."
+        ],
+        "blockers": [],
+        "evidence": [
+          "Mazer draft PR #76 at head 4984d16c.",
+          "Focused render verification passed 58 tests plus typecheck; full verification passed 363 tests and the production build.",
+          "Exact remote deployment dpl_CV7pHtLRhdH5e626cgGb4eCDTrGx passed manual 393x852 menu, Options, play, Pause, scroll, and zero-console-error inspection."
+        ]
+      },
+      "entry": {
+        "kind": "review",
+        "headline": "Physical glyph double scaling removed from PR 76",
+        "completed": [
+          "Removed Phaser text as a second backing-resolution transform owner.",
+          "Added a capture gate that rejects any surface with textTextureResolution other than 1.",
+          "Manually inspected the exact remote 393x852 menu, play, Options, Pause, and scroll endpoints."
+        ],
+        "discovered": [
+          "The prior verifier measured display-object geometry instead of the larger painted text texture, allowing a visible failure to pass."
+        ],
+        "next": [
+          "Collect operator physical iPhone screenshots before production promotion or completion."
+        ],
+        "blockers": [],
+        "evidence": [
+          "https://github.com/fawxzzy/mazer/pull/76",
+          "Mazer head 4984d16c",
+          "Vercel preview dpl_CV7pHtLRhdH5e626cgGb4eCDTrGx"
+        ]
+      },
+      "correlation": {
+        "taskId": "019f61a0-6b80-7913-b479-f75f2a8a5b77",
+        "branch": "codex/physical-ui-controls-rework-20260715",
+        "commit": "4984d16c",
+        "receipt": "mazer-pr76-render-path-correction-20260715"
+      }
+    },
+    {
+      "schemaVersion": "atlas.board-card-journal.v1",
+      "eventId": "mazer-browser-layout-persistence-pr76-render-path-correction-20260715",
+      "occurredAt": "2026-07-15T20:15:04.378Z",
+      "actor": "Mazer",
+      "card": {
+        "id": "mazer-browser-layout-persistence",
+        "project": "Mazer",
+        "sourceForumChannelId": "1524889569475170478",
+        "threadId": "1525337752290197514",
+        "title": "mazer: normalize browser UI layout across viewports",
+        "type": "feature",
+        "state": "review",
+        "previousState": "review",
+        "priority": "High",
+        "owner": "Mazer",
+        "progress": "91%",
+        "summary": "Normalize responsive browser geometry and preserve only semantic settings so viewport changes cannot replay stale layout.",
+        "objective": "Recompute all menu, Options, play, and Pause geometry from the active content rectangle while preserving explicit player preferences only.",
+        "acceptanceCriteria": [
+          "Layout-derived geometry is never persisted as player preference state.",
+          "A recalculated layout cannot overlap, escape the viewport, or hide essential controls.",
+          "Normal reload preserves supported semantic settings with safe migration defaults.",
+          "Narrow, wide, phone, and restore endpoints have deterministic evidence."
+        ],
+        "discoveries": [
+          "Device-scale canvas rendering plus independent Phaser text resolution created two physical transforms despite correct logical geometry.",
+          "Render-path ownership must be asserted in the capture report, not inferred from bounds."
+        ],
+        "nextActions": [
+          "Complete physical iPhone review of preview head 4984d16c.",
+          "Retain native browser chrome and maximize or restore as separate remaining evidence."
+        ],
+        "blockers": [],
+        "evidence": [
+          "Mazer draft PR #76 at 4984d16c.",
+          "Local 393x852 device-scale-2 capture and exact remote preview inspection both show contained painted text across all touched surface families."
+        ]
+      },
+      "entry": {
+        "kind": "review",
+        "headline": "Browser proof now asserts one text transform owner",
+        "completed": [
+          "Set text textures to the resolution-1 baseline under the existing 2x game canvas.",
+          "Exposed textTransformOwner and textTextureResolution in UI diagnostics.",
+          "Rejected the visibly broken resolution-2 experiment and retained only the passing correction."
+        ],
+        "discovered": [
+          "The former bounds-only gate could not distinguish logical containment from physical glyph overflow."
+        ],
+        "next": [
+          "Use physical screenshots to decide whether this exact preview can advance."
+        ],
+        "blockers": [],
+        "evidence": [
+          "https://github.com/fawxzzy/mazer/pull/76",
+          "Mazer head 4984d16c",
+          "Vercel preview dpl_CV7pHtLRhdH5e626cgGb4eCDTrGx"
+        ]
+      },
+      "correlation": {
+        "taskId": "019f61a0-6b80-7913-b479-f75f2a8a5b77",
+        "branch": "codex/physical-ui-controls-rework-20260715",
+        "commit": "4984d16c",
+        "receipt": "mazer-pr76-render-path-correction-20260715"
+      }
+    },
+    {
+      "schemaVersion": "atlas.board-card-journal.v1",
+      "eventId": "mazer-shared-run-status-panel-pr76-render-path-correction-20260715",
+      "occurredAt": "2026-07-15T20:15:05.378Z",
+      "actor": "Mazer",
+      "card": {
+        "id": "mazer-shared-run-status-panel",
+        "project": "Mazer",
+        "sourceForumChannelId": "1524889569475170478",
+        "threadId": "1526644909241667644",
+        "title": "mazer: shared menu and play run status panel",
+        "type": "feature",
+        "state": "review",
+        "previousState": "review",
+        "priority": "High",
+        "owner": "Mazer",
+        "progress": "32%",
+        "summary": "Use one responsive menu and play status component for time, Rank or AI Rank, Score out of 100, and Maze level from the correct context.",
+        "objective": "Give menu and active play the same compact status language while keeping score authority traceable to the canonical scorer.",
+        "acceptanceCriteria": [
+          "Menu and play consume the same status-panel formatting and layout contract.",
+          "Panel text remains centered, contained, and readable at phone and desktop widths.",
+          "Panel width, gap, and play Pause placement satisfy shared viewport diagnostics.",
+          "Displayed score is traceable to canonical run-quality data rather than a presentation-only calculation."
+        ],
+        "discoveries": [
+          "The play status rail failure came from painted glyph scaling after layout, not from the shared panel's measured rectangle.",
+          "The corrected status rows now use the same single-transform text path as every overlay."
+        ],
+        "nextActions": [
+          "Review corrected menu and play status rows on the operator's physical iPhone.",
+          "Identify and consume the finalized canonical 0 to 100 scorer field before completion."
+        ],
+        "blockers": [],
+        "evidence": [
+          "Mazer draft PR #76 at head 4984d16c.",
+          "Exact remote 393x852 menu and play status screenshots show rail clearance after removing the second text transform.",
+          "Canonical score authority remains explicitly non-terminal."
+        ]
+      },
+      "entry": {
+        "kind": "review",
+        "headline": "Shared status glyphs now match measured panel geometry",
+        "completed": [
+          "Removed post-layout text texture enlargement from the shared status renderer.",
+          "Re-ran local and exact deployed phone-scale status proof.",
+          "Kept the card in Review pending physical operator confirmation and scorer authority."
+        ],
+        "discovered": [
+          "Correct logical padding was being invalidated by the independent texture-resolution multiplier."
+        ],
+        "next": [
+          "Confirm the corrected status presentation with operator iPhone screenshots."
+        ],
+        "blockers": [],
+        "evidence": [
+          "https://github.com/fawxzzy/mazer/pull/76",
+          "Mazer head 4984d16c",
+          "Vercel preview dpl_CV7pHtLRhdH5e626cgGb4eCDTrGx"
+        ]
+      },
+      "correlation": {
+        "taskId": "019f61a0-6b80-7913-b479-f75f2a8a5b77",
+        "branch": "codex/physical-ui-controls-rework-20260715",
+        "commit": "4984d16c",
+        "receipt": "mazer-pr76-render-path-correction-20260715"
+      }
+    }
+  ]
+}
