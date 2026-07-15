@@ -1,0 +1,135 @@
+{
+  "ok": true,
+  "status": "dry_run",
+  "apply": false,
+  "admission": {
+    "requested": false,
+    "admitted": false,
+    "status": "journal_guard_not_requested",
+    "reasonCodes": []
+  },
+  "eventCount": 3,
+  "liveIdentityPreflight": {
+    "ok": true,
+    "status": "admitted",
+    "registryPath": "C:\\ATLAS\\tmp\\worktrees\\discordos-mazer-ui-controls-board-20260715\\config\\discordos-board-registry.json",
+    "scanStartedAt": "2026-07-15T19:34:20.414Z",
+    "scanCompletedAt": "2026-07-15T19:37:02.469Z",
+    "scanStatus": "consistent",
+    "scanReasonCodes": [],
+    "scanBlockingReasonCodes": [],
+    "currentIdentityCount": 237,
+    "proposedIdentityCount": 3,
+    "checks": [
+      {
+        "eventIndex": 0,
+        "eventId": "mazer-cross-viewport-ui-reliability-pr76-visible-text-correction-20260715",
+        "cardId": "mazer-cross-viewport-ui-reliability",
+        "normalizedCardId": "mazer-cross-viewport-ui-reliability",
+        "targetThreadId": "1525337748830031875",
+        "matchingLocations": [
+          {
+            "boardId": "mazer-active",
+            "forumChannelId": "1524889569475170478",
+            "threadId": "1525337748830031875",
+            "title": "cross-viewport UI reliability and layout hardening",
+            "cardId": "mazer-cross-viewport-ui-reliability"
+          }
+        ],
+        "collisionLocations": [],
+        "admitted": true,
+        "reasonCodes": []
+      },
+      {
+        "eventIndex": 1,
+        "eventId": "mazer-browser-layout-persistence-pr76-visible-text-correction-20260715",
+        "cardId": "mazer-browser-layout-persistence",
+        "normalizedCardId": "mazer-browser-layout-persistence",
+        "targetThreadId": "1525337752290197514",
+        "matchingLocations": [
+          {
+            "boardId": "mazer-active",
+            "forumChannelId": "1524889569475170478",
+            "threadId": "1525337752290197514",
+            "title": "normalize browser UI layout across viewports",
+            "cardId": "mazer-browser-layout-persistence"
+          }
+        ],
+        "collisionLocations": [],
+        "admitted": true,
+        "reasonCodes": []
+      },
+      {
+        "eventIndex": 2,
+        "eventId": "mazer-shared-run-status-panel-pr76-visible-text-correction-20260715",
+        "cardId": "mazer-shared-run-status-panel",
+        "normalizedCardId": "mazer-shared-run-status-panel",
+        "targetThreadId": "1526644909241667644",
+        "matchingLocations": [
+          {
+            "boardId": "mazer-active",
+            "forumChannelId": "1524889569475170478",
+            "threadId": "1526644909241667644",
+            "title": "shared menu and play run status panel",
+            "cardId": "mazer-shared-run-status-panel"
+          }
+        ],
+        "collisionLocations": [],
+        "admitted": true,
+        "reasonCodes": []
+      }
+    ],
+    "reasonCodes": []
+  },
+  "results": [
+    {
+      "ok": true,
+      "status": "dry_run",
+      "apply": false,
+      "eventId": "mazer-cross-viewport-ui-reliability-pr76-visible-text-correction-20260715",
+      "cardId": "mazer-cross-viewport-ui-reliability",
+      "preview": {
+        "matchedBy": "explicit_thread_id",
+        "action": "update_card_and_append_journal",
+        "threadId": "1525337748830031875",
+        "canonicalTitle": "cross-viewport UI reliability and layout hardening",
+        "canonicalBody": "<!-- ATLAS-CARD:START -->\nATLAS-CARD-ID: `mazer-cross-viewport-ui-reliability`\n- project: `Mazer`\n- type: `feature`\n- state: `review`\n- priority: `High`\n- owner: `Mazer`\n- progress: `90%`\n- autonomous implementation: `not_admitted`\n- updated: `2026-07-15T19:31:32.106Z`\n\n## Summary\nCoordinate mobile safe-area, shared overlay geometry, and browser layout through one no-overlap contract and proof matrix.\n\n## Objective\n- Make menu, Options, play, and Pause remain readable and operable across phone, browser, PWA, and restored-window surfaces without per-screenshot offsets.\n\n## Acceptance criteria\n- Every primary Mazer surface has an owner, supported viewport category, and no-overlap contract.\n- Mobile and browser layout work can be verified independently and together through a shared matrix.\n- No completion claim relies on desktop-only proof for a phone or restored-window defect.\n- Physical-device findings remain open until operator screenshots confirm the deployed behavior.\n\n## Discoveries\n- Operator production screenshots correctly rejected the earlier review evidence because status, guide, and action text still visibly touched or crossed chrome.\n- Logical Phaser bounds under-reported physical painted text width, so the proof contract now requires stronger insets and excludes text from active scroll-fade bands.\n\n## Next actions\n- Review commit c7b1540e on a physical iPhone using the exact corrected preview and attach menu, Options, play, and Pause screenshots.\n- Keep native browser chrome and maximize or restore proof open until physical evidence passes.\n\n## Blockers\n- None\n\n## Evidence\n- Mazer draft PR #76 at head c7b1540e.\n- Focused visible-text verification passed 62 tests; full verification passed 363 tests and the production build.\n- Preview dpl_FGKmMPHb64mGqdGykzQAmZ6YspNX passed exact deployed 393x852 containment, fade-clearance, overlap, and console checks.\n<!-- ATLAS-CARD:END -->",
+        "journalBody": "ATLAS-JOURNAL-EVENT-ID: `mazer-cross-viewport-ui-reliability-pr76-visible-text-correction-20260715`\n- card: `mazer-cross-viewport-ui-reliability`\n- idempotency: `mazer-cross-viewport-ui-reliability-pr76-visible-text-correction-20260715`\n## Operator-visible text bleed corrected on the exact PR 76 preview\n- kind: `review`\n- state: `review`\n- actor: `Mazer`\n- occurred: `2026-07-15T19:31:32.106Z`\n\n## Completed\n- Added physical safety insets to shared run-status, guide, toggle, and action text.\n- Prevented partial guide or row text from rendering beneath active scroll fades.\n- Re-proved the exact deployed 393x852 menu, Options, play, and Pause surfaces.\n\n## Discovered\n- The previous automated pass was insufficient because it measured logical bounds more optimistically than the phone painted glyphs.\n\n## Next\n- Collect operator iPhone screenshots from the corrected preview before production promotion or completion.\n\n## Blockers\n- None\n\n## Evidence\n- https://github.com/fawxzzy/mazer/pull/76\n- Mazer head c7b1540e\n- Vercel deployment dpl_FGKmMPHb64mGqdGykzQAmZ6YspNX\n\n## Correlation\n- task: `019f61a0-6b80-7913-b479-f75f2a8a5b77`\n- branch: `codex/physical-ui-controls-rework-20260715`\n- commit: `c7b1540e`\n- receipt: `mazer-pr76-visible-text-correction-20260715`"
+      },
+      "reasonCodes": []
+    },
+    {
+      "ok": true,
+      "status": "dry_run",
+      "apply": false,
+      "eventId": "mazer-browser-layout-persistence-pr76-visible-text-correction-20260715",
+      "cardId": "mazer-browser-layout-persistence",
+      "preview": {
+        "matchedBy": "explicit_thread_id",
+        "action": "update_card_and_append_journal",
+        "threadId": "1525337752290197514",
+        "canonicalTitle": "normalize browser UI layout across viewports",
+        "canonicalBody": "<!-- ATLAS-CARD:START -->\nATLAS-CARD-ID: `mazer-browser-layout-persistence`\n- project: `Mazer`\n- type: `feature`\n- state: `review`\n- priority: `High`\n- owner: `Mazer`\n- progress: `89%`\n- autonomous implementation: `not_admitted`\n- updated: `2026-07-15T19:31:33.106Z`\n\n## Summary\nNormalize responsive browser geometry and preserve only semantic settings so viewport changes cannot replay stale layout.\n\n## Objective\n- Recompute all menu, Options, play, and Pause geometry from the active content rectangle while preserving explicit player preferences only.\n\n## Acceptance criteria\n- Layout-derived geometry is never persisted as player preference state.\n- A recalculated layout cannot overlap, escape the viewport, or hide essential controls.\n- Normal reload preserves supported semantic settings with safe migration defaults.\n- Narrow, wide, phone, and restore endpoints have deterministic evidence.\n\n## Discoveries\n- A logical bounds pass did not guarantee that antialiased physical glyphs stayed visually clear of the panel rails.\n- Scroll fades must reserve an explicit no-text render viewport rather than merely overlaying alpha on clipped content.\n\n## Next actions\n- Complete physical iPhone review of the corrected c7b1540e preview.\n- Retain native browser chrome and maximize or restore as separate remaining evidence.\n\n## Blockers\n- None\n\n## Evidence\n- Mazer draft PR #76 at c7b1540e.\n- Exact 393x852 deployed preview proof passed with no text under scroll fades and no console or page errors.\n<!-- ATLAS-CARD:END -->",
+        "journalBody": "ATLAS-JOURNAL-EVENT-ID: `mazer-browser-layout-persistence-pr76-visible-text-correction-20260715`\n- card: `mazer-browser-layout-persistence`\n- idempotency: `mazer-browser-layout-persistence-pr76-visible-text-correction-20260715`\n## Physical text containment and scroll-fade clearance strengthened\n- kind: `review`\n- state: `review`\n- actor: `Mazer`\n- occurred: `2026-07-15T19:31:33.106Z`\n\n## Completed\n- Reserved fade-safe scroll render bands for guide and settings content.\n- Applied fitted typography to every overlay and menu action button.\n- Added deployed checks for action-label insets and scroll-fade text clearance.\n\n## Discovered\n- Production screenshots remained on the older release while the corrected candidate was still in preview, which made the edit appear absent.\n\n## Next\n- Use operator physical screenshots to decide whether the corrected candidate may advance to production.\n\n## Blockers\n- None\n\n## Evidence\n- https://github.com/fawxzzy/mazer/pull/76\n- Mazer head c7b1540e\n- Vercel deployment dpl_FGKmMPHb64mGqdGykzQAmZ6YspNX\n\n## Correlation\n- task: `019f61a0-6b80-7913-b479-f75f2a8a5b77`\n- branch: `codex/physical-ui-controls-rework-20260715`\n- commit: `c7b1540e`\n- receipt: `mazer-pr76-visible-text-correction-20260715`"
+      },
+      "reasonCodes": []
+    },
+    {
+      "ok": true,
+      "status": "dry_run",
+      "apply": false,
+      "eventId": "mazer-shared-run-status-panel-pr76-visible-text-correction-20260715",
+      "cardId": "mazer-shared-run-status-panel",
+      "preview": {
+        "matchedBy": "explicit_thread_id",
+        "action": "update_card_and_append_journal",
+        "threadId": "1526644909241667644",
+        "canonicalTitle": "shared menu and play run status panel",
+        "canonicalBody": "<!-- ATLAS-CARD:START -->\nATLAS-CARD-ID: `mazer-shared-run-status-panel`\n- project: `Mazer`\n- type: `feature`\n- state: `review`\n- priority: `High`\n- owner: `Mazer`\n- progress: `30%`\n- autonomous implementation: `not_admitted`\n- updated: `2026-07-15T19:31:34.106Z`\n\n## Summary\nUse one responsive menu and play status component for time, Rank or AI Rank, Score out of 100, and Maze level from the correct context.\n\n## Objective\n- Give menu and active play the same compact status language while keeping score authority traceable to the canonical scorer.\n\n## Acceptance criteria\n- Menu and play consume the same status-panel formatting and layout contract.\n- Panel text remains centered, contained, and readable at phone and desktop widths.\n- Panel width, gap, and play Pause placement satisfy shared viewport diagnostics.\n- Displayed score is traceable to canonical run-quality data rather than a presentation-only calculation.\n\n## Discoveries\n- The play Maze value visibly touched the right rail even though the previous logical fit calculation passed.\n- Physical containment needs conservative horizontal padding and a lower glyph-width safety ratio.\n\n## Next actions\n- Review the corrected menu and play status rows on a physical iPhone.\n- Identify and consume the finalized canonical 0 to 100 scorer field before completion.\n\n## Blockers\n- None\n\n## Evidence\n- Mazer draft PR #76 at head c7b1540e uses the corrected shared status geometry.\n- Exact deployed 393x852 menu and play status proof now has explicit rail clearance.\n- Canonical score authority remains explicitly non-terminal.\n<!-- ATLAS-CARD:END -->",
+        "journalBody": "ATLAS-JOURNAL-EVENT-ID: `mazer-shared-run-status-panel-pr76-visible-text-correction-20260715`\n- card: `mazer-shared-run-status-panel`\n- idempotency: `mazer-shared-run-status-panel-pr76-visible-text-correction-20260715`\n## Shared status text now keeps physical rail clearance\n- kind: `review`\n- state: `review`\n- actor: `Mazer`\n- occurred: `2026-07-15T19:31:34.106Z`\n\n## Completed\n- Increased compact status-panel width and padding while reducing fitted font size.\n- Strengthened the diagnostic to require horizontal and vertical text insets.\n- Re-proved menu and play status rows on the exact preview deployment.\n\n## Discovered\n- The earlier shallow fit check was not a reliable proxy for painted phone glyph width.\n\n## Next\n- Confirm presentation with operator iPhone screenshots, then continue the scorer-owned dependency separately.\n\n## Blockers\n- None\n\n## Evidence\n- https://github.com/fawxzzy/mazer/pull/76\n- Mazer head c7b1540e\n- Vercel deployment dpl_FGKmMPHb64mGqdGykzQAmZ6YspNX\n\n## Correlation\n- task: `019f61a0-6b80-7913-b479-f75f2a8a5b77`\n- branch: `codex/physical-ui-controls-rework-20260715`\n- commit: `c7b1540e`\n- receipt: `mazer-pr76-visible-text-correction-20260715`"
+      },
+      "reasonCodes": []
+    }
+  ],
+  "reasonCodes": []
+}
