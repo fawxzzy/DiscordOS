@@ -155,20 +155,20 @@ test("mazer feedback board reads committed cards", async () => {
   assert.equal(result.liveForumChannelId, "1524889569475170478");
   assert.equal(result.legacyForumChannelId, "1524844302981926972");
   assert.equal(result.cardCount, 64);
-  assert.equal(result.openCardCount, 34);
-  assert.equal(result.readyCardCount, 1);
-  assert.equal(result.completedCardCount, 10);
+  assert.equal(result.openCardCount, 31);
+  assert.equal(result.readyCardCount, 0);
+  assert.equal(result.completedCardCount, 14);
   assert.equal(result.blockedCardCount, 0);
   assert.equal(result.backlogCardCount, 19);
   assert.equal(result.reactionReadyCardCount, 64);
-  assert.equal(result.nextCard.id, "mazer-icon-quality-2026-visual-target");
+  assert.equal(result.nextCard, null);
   assert.equal(result.cards.find((card) => card.id === "mazer-crisp-cyber-arcade-graphics").state, "completed");
-  assert.equal(result.cards.find((card) => card.id === "mazer-icon-quality-2026-visual-target").state, "ready");
+  assert.equal(result.cards.find((card) => card.id === "mazer-icon-quality-2026-visual-target").state, "completed");
   assert.equal(result.cards.find((card) => card.id === "mazer-turn-synchronous-world-simulation").state, "completed");
   assert.equal(result.cards.find((card) => card.id === "mazer-ai-run-corpus-quality-calibration").state, "open");
   assert.deepEqual(result.planning, {
     ok: true,
-    activeCardId: "mazer-icon-quality-2026-visual-target",
+    activeCardId: null,
     epicCount: 9,
     mappedCardCount: 64,
     dependencyCount: 34,
