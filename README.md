@@ -19,6 +19,8 @@ Owner work and project-board export:
 - `npm run ops:discordos:project-board-owner-export:check` fails when the checked-in export is stale.
 - completed owner work remains in the registry for evidence but is excluded from active card records.
 - unknown priority stays explicit as `null`; export generation never authorizes Discord mutation.
+- `npm run ops:discordos:project-board-forum-provision:json` performs a no-write inventory by default for the seven required project forums.
+- live forum creation requires `DISCORDOS_PROJECT_BOARD_FORUM_PROVISION=enabled` plus `--allow-provision --apply`; it is idempotent, creates only type-15 forums under the exact Project Feedback Boards category, and requires exact channel readback. Use `--output <path>` to persist the same non-secret receipt emitted to stdout.
 
 Current governed contract surface:
 
