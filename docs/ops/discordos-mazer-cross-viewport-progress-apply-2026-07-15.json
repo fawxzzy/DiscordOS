@@ -1,0 +1,74 @@
+{
+  "ok": true,
+  "status": "journaled",
+  "apply": true,
+  "admission": {
+    "requested": true,
+    "admitted": true,
+    "status": "journal_admitted",
+    "reasonCodes": []
+  },
+  "eventCount": 1,
+  "liveIdentityPreflight": {
+    "ok": true,
+    "status": "admitted",
+    "registryPath": "C:\\ATLAS\\tmp\\worktrees\\discordos-mazer-cross-viewport-admission\\config\\discordos-board-registry.json",
+    "scanStartedAt": "2026-07-15T08:10:41.754Z",
+    "scanCompletedAt": "2026-07-15T08:12:33.394Z",
+    "scanStatus": "drift_detected",
+    "scanReasonCodes": [],
+    "scanBlockingReasonCodes": [],
+    "currentIdentityCount": 222,
+    "proposedIdentityCount": 1,
+    "checks": [
+      {
+        "eventIndex": 0,
+        "eventId": "mazer-cross-viewport-ui-reliability-progress-20260715",
+        "cardId": "mazer-cross-viewport-ui-reliability",
+        "normalizedCardId": "mazer-cross-viewport-ui-reliability",
+        "targetThreadId": "1525337748830031875",
+        "matchingLocations": [
+          {
+            "boardId": "mazer-active",
+            "forumChannelId": "1524889569475170478",
+            "threadId": "1525337748830031875",
+            "title": "mazer: cross-viewport UI reliability and layout hardening",
+            "cardId": "mazer-cross-viewport-ui-reliability"
+          }
+        ],
+        "collisionLocations": [],
+        "admitted": true,
+        "reasonCodes": []
+      }
+    ],
+    "reasonCodes": []
+  },
+  "results": [
+    {
+      "ok": true,
+      "status": "journaled",
+      "apply": true,
+      "eventId": "mazer-cross-viewport-ui-reliability-progress-20260715",
+      "cardId": "mazer-cross-viewport-ui-reliability",
+      "threadId": "1525337748830031875",
+      "cardAction": "updated",
+      "journalAction": "created",
+      "journalMessageId": "1526864042843705395",
+      "legacySnapshot": {
+        "action": "not_required",
+        "messageIds": [],
+        "partCount": 0
+      },
+      "archiveRestore": "not_required",
+      "matchedBy": "explicit_thread_id",
+      "readback": {
+        "starter": true,
+        "journal": true,
+        "starterCodePointsExact": true,
+        "journalCodePointsExact": true
+      },
+      "reasonCodes": []
+    }
+  ],
+  "reasonCodes": []
+}
