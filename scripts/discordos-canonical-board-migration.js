@@ -501,7 +501,7 @@ function buildResidualRecoveryPlan({ snapshot, socialsOwnerExport }) {
   const reasonCodes = [...(snapshot.reasonCodes || [])];
   const seedBatch = ownerSeed.buildOwnerSeedBatch({ registry: snapshot.registry, ownerExports: [socialsOwnerExport] });
   reasonCodes.push(...seedBatch.reasonCodes);
-  const managedIdentities = new Map();
+  const inspectedIdentityRows = [];
   const titleActions = [];
   const phase8Rows = [];
   let retainedMusicHistoryCount = 0;
@@ -514,16 +514,19 @@ function buildResidualRecoveryPlan({ snapshot, socialsOwnerExport }) {
     }
     for (const row of forumSnapshot.threads || []) {
       const managed = cardContract.parseCanonicalCardBody(row.starter?.content);
+      const inspected = consistency.inspectThread({
+        board,
+        thread: row.thread,
+        starter: row.starter,
+        messages: row.messages || [],
+      });
+      if (inspected.cardId) inspectedIdentityRows.push(inspected);
       const threadId = text(row.thread?.id);
       if (forumSnapshot.boardId === "music-sesh-active" && !managed && threadId !== consistency.MUSIC_SESH_PHASE_8_THREAD_ID) {
         retainedMusicHistoryCount += 1;
       }
       if (threadId === consistency.MUSIC_SESH_PHASE_8_THREAD_ID) phase8Rows.push({ board, row, managed });
       if (!managed?.id) continue;
-      const stableIdentity = text(managed.id).toLowerCase();
-      const locations = managedIdentities.get(stableIdentity) || [];
-      locations.push({ boardId: board.id, threadId });
-      managedIdentities.set(stableIdentity, locations);
       const canonicalTitle = cardContract.formatCanonicalCardTitle({ board, card: { title: row.thread.name } });
       if (text(row.thread.name) !== canonicalTitle) {
         titleActions.push({
@@ -537,27 +540,20 @@ function buildResidualRecoveryPlan({ snapshot, socialsOwnerExport }) {
     }
   }
 
-  for (const [identity, locations] of managedIdentities) {
-    if (locations.length > 1) reasonCodes.push(`residual_managed_identity_duplicate:${identity}`);
-  }
+  const identityClassification = consistency.classifyIdentities(inspectedIdentityRows);
+  reasonCodes.push(...identityClassification.duplicates.map((row) => `residual_managed_identity_duplicate:${row.cardId}`));
 
   const socialsBoard = snapshot.registry.boards.find((board) => board.id === "socials-os-active-admission");
   const socialsForum = (snapshot.forums || []).find((row) => row.boardId === "socials-os-active-admission");
   if (!socialsBoard?.forumChannelId || !socialsForum) reasonCodes.push("residual_socials_forum_missing");
-  const socialLocations = new Map();
+  const socialIdentities = new Set();
   for (const row of socialsForum?.threads || []) {
     const cardId = text(cardContract.parseCanonicalCardBody(row.starter?.content)?.id).toLowerCase();
-    if (!cardId) continue;
-    const locations = socialLocations.get(cardId) || [];
-    locations.push(text(row.thread?.id));
-    socialLocations.set(cardId, locations);
-  }
-  for (const [identity, locations] of socialLocations) {
-    if (locations.length > 1) reasonCodes.push(`residual_socials_identity_duplicate:${identity}`);
+    if (cardId) socialIdentities.add(cardId);
   }
 
   const missingSocialEvents = seedBatch.ok
-    ? seedBatch.events.filter((event) => !socialLocations.has(text(event.card?.id).toLowerCase()))
+    ? seedBatch.events.filter((event) => !socialIdentities.has(text(event.card?.id).toLowerCase()))
     : [];
   const missingSocialIds = new Set(missingSocialEvents.map((event) => text(event.card?.id).toLowerCase()));
   const missingSocialCards = (socialsOwnerExport?.cards || []).filter((card) => missingSocialIds.has(text(card.record?.card_id).toLowerCase()));
@@ -585,14 +581,17 @@ function buildResidualRecoveryPlan({ snapshot, socialsOwnerExport }) {
     boardDenominator: snapshot.registry.boards.filter((board) => board.required && board.status === "enabled").length,
     scannedForumCount: (snapshot.forums || []).length,
     scannedThreadCount: (snapshot.forums || []).reduce((count, forum) => count + (forum.threads || []).length, 0),
-    managedIdentityCount: managedIdentities.size,
+    managedIdentityCount: new Set(inspectedIdentityRows.map((row) => text(row.cardId).toLowerCase())).size,
+    linkedLifecyclePairCount: identityClassification.linkedPairs.length,
+    linkedLifecyclePairs: identityClassification.linkedPairs,
+    trueDuplicateIdentityCount: identityClassification.duplicates.length,
     managedTitleRewriteCount: titleActions.length,
     titleActions,
     phase8StateAction,
     retainedMusicHistoryCount,
     socials: {
       expectedEventCount: seedBatch.eventCount,
-      existingIdentityCount: seedBatch.events.filter((event) => socialLocations.has(text(event.card?.id).toLowerCase())).length,
+      existingIdentityCount: seedBatch.events.filter((event) => socialIdentities.has(text(event.card?.id).toLowerCase())).length,
       missingIdentityCount: missingSocialEvents.length,
       missingCardIds: missingSocialEvents.map((event) => event.card.id),
       missingEvents: missingSocialEvents,

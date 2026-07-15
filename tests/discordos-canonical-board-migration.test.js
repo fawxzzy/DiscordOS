@@ -169,6 +169,59 @@ function residualSnapshot(socialIdentityCount = 12, { phase8Open = false, canoni
   return snapshot;
 }
 
+function managedSnapshotThread({ cardId, threadId, title, state = "review", archived = false, completedThreadIdLink = null, sourceThreadIdLink = null }) {
+  const content = [
+    journal.CARD_START,
+    `ATLAS-CARD-ID: \`${cardId}\``,
+    "- project: `Fixture`",
+    "- type: `feature`",
+    `- state: \`${state}\``,
+    "- priority: `High`",
+    "- owner: `Fixture`",
+    "- progress: `fixture`",
+    "- updated: `2026-07-15T00:00:00.000Z`",
+    completedThreadIdLink ? `ATLAS-COMPLETED-CARD: https://discord.com/channels/guild/${completedThreadIdLink}` : null,
+    sourceThreadIdLink ? `original card: https://discord.com/channels/guild/${sourceThreadIdLink}` : null,
+    journal.CARD_END,
+  ].filter(Boolean).join("\n");
+  return {
+    thread: { id: threadId, name: title, applied_tags: [], thread_metadata: { archived, locked: false } },
+    starter: { id: threadId, content },
+    messages: [{ id: `${threadId}-journal`, content: `ATLAS-JOURNAL-EVENT-ID: \`${threadId}-event\`` }],
+    messagePageCount: 1,
+    messageHistoryTruncated: false,
+  };
+}
+
+function addCompletionPair(snapshot, index, overrides = {}) {
+  const cardId = overrides.cardId || `PAIR-${String(index).padStart(2, "0")}`;
+  const sourceThreadId = overrides.sourceThreadId || `91${String(index).padStart(16, "0")}`;
+  const completedThreadId = overrides.completedThreadId || `92${String(index).padStart(16, "0")}`;
+  const sourceLink = Object.hasOwn(overrides, "sourceCompletedThreadIdLink")
+    ? overrides.sourceCompletedThreadIdLink
+    : completedThreadId;
+  const destinationLink = Object.hasOwn(overrides, "completedSourceThreadIdLink")
+    ? overrides.completedSourceThreadIdLink
+    : sourceThreadId;
+  snapshot.forums.find((forum) => forum.boardId === (overrides.sourceBoardId || "mazer-active")).threads.push(managedSnapshotThread({
+    cardId,
+    threadId: sourceThreadId,
+    title: overrides.title || `Pair ${index}`,
+    state: "completed",
+    archived: overrides.sourceArchived !== false,
+    completedThreadIdLink: sourceLink,
+  }));
+  snapshot.forums.find((forum) => forum.boardId === "shared-completed").threads.push(managedSnapshotThread({
+    cardId,
+    threadId: completedThreadId,
+    title: overrides.title || `Pair ${index}`,
+    state: "completed",
+    archived: false,
+    sourceThreadIdLink: destinationLink,
+  }));
+  return { cardId, sourceThreadId, completedThreadId };
+}
+
 test("one canonical title policy removes exact Fitness, Mazer, and type prefixes without damaging normal words", () => {
   const fitness = registry.boards.find((board) => board.id === "fitness-active");
   const mazer = registry.boards.find((board) => board.id === "mazer-active");
@@ -273,6 +326,92 @@ test("residual plan selects only noncanonical managed titles, exact Phase 8 stat
     appliedTagPreclear: false,
     fullThreadMigration: false,
   });
+});
+
+test("residual plan admits and reports 16 authoritative reciprocal completion pairs", () => {
+  const snapshot = residualSnapshot();
+  for (let index = 0; index < 16; index += 1) addCompletionPair(snapshot, index);
+  const plan = migration.buildResidualRecoveryPlan({ snapshot, socialsOwnerExport: socialsExport() });
+  assert.equal(plan.ok, true);
+  assert.equal(plan.linkedLifecyclePairCount, 16);
+  assert.equal(plan.trueDuplicateIdentityCount, 0);
+  assert.equal(plan.linkedLifecyclePairs.length, 16);
+  assert.ok(plan.linkedLifecyclePairs.every((pair) => pair.locations.length === 2));
+});
+
+test("residual completion-pair classification fails closed for every malformed identity shape", async (t) => {
+  const cases = [
+    {
+      name: "broken source link blocks",
+      cardId: "BROKEN-SOURCE",
+      arrange(snapshot) { addCompletionPair(snapshot, 1, { cardId: this.cardId, sourceCompletedThreadIdLink: "wrong-destination" }); },
+    },
+    {
+      name: "broken destination link blocks",
+      cardId: "BROKEN-DESTINATION",
+      arrange(snapshot) { addCompletionPair(snapshot, 1, { cardId: this.cardId, completedSourceThreadIdLink: "wrong-source" }); },
+    },
+    {
+      name: "unarchived source blocks",
+      cardId: "UNARCHIVED-SOURCE",
+      arrange(snapshot) { addCompletionPair(snapshot, 1, { cardId: this.cardId, sourceArchived: false }); },
+    },
+    {
+      name: "two active rows block",
+      cardId: "TWO-ACTIVE",
+      arrange(snapshot) {
+        const forum = snapshot.forums.find((row) => row.boardId === "mazer-active");
+        forum.threads.push(
+          managedSnapshotThread({ cardId: this.cardId, threadId: "active-one", title: "Active one" }),
+          managedSnapshotThread({ cardId: this.cardId, threadId: "active-two", title: "Active two" }),
+        );
+      },
+    },
+    {
+      name: "two completed rows block",
+      cardId: "TWO-COMPLETED",
+      arrange(snapshot) {
+        const forum = snapshot.forums.find((row) => row.boardId === "shared-completed");
+        forum.threads.push(
+          managedSnapshotThread({ cardId: this.cardId, threadId: "completed-one", title: "Completed one", state: "completed", sourceThreadIdLink: "source-one" }),
+          managedSnapshotThread({ cardId: this.cardId, threadId: "completed-two", title: "Completed two", state: "completed", sourceThreadIdLink: "source-two" }),
+        );
+      },
+    },
+    {
+      name: "more than two locations blocks",
+      cardId: "THREE-LOCATIONS",
+      arrange(snapshot) {
+        addCompletionPair(snapshot, 1, { cardId: this.cardId });
+        snapshot.forums.find((row) => row.boardId === "fitness-active").threads.push(
+          managedSnapshotThread({ cardId: this.cardId, threadId: "third-location", title: "Third location" }),
+        );
+      },
+    },
+    {
+      name: "unrelated wrong-role duplicate blocks",
+      cardId: "UNRELATED-DUPLICATE",
+      arrange(snapshot) {
+        snapshot.forums.find((row) => row.boardId === "legacy-general-feedback").threads.push(
+          managedSnapshotThread({ cardId: this.cardId, threadId: "legacy-location", title: "Legacy location" }),
+        );
+        snapshot.forums.find((row) => row.boardId === "fitness-active").threads.push(
+          managedSnapshotThread({ cardId: this.cardId, threadId: "active-location", title: "Active location" }),
+        );
+      },
+    },
+  ];
+
+  for (const candidate of cases) {
+    await t.test(candidate.name, () => {
+      const snapshot = residualSnapshot();
+      candidate.arrange(snapshot);
+      const plan = migration.buildResidualRecoveryPlan({ snapshot, socialsOwnerExport: socialsExport() });
+      assert.equal(plan.ok, false);
+      assert.equal(plan.trueDuplicateIdentityCount, 1);
+      assert(plan.reasonCodes.includes(`residual_managed_identity_duplicate:${candidate.cardId.toLowerCase()}`));
+    });
+  }
 });
 
 test("guarded residual recovery creates only the missing Socials identity, reopens exact Phase 8, and is idempotent", async () => {
