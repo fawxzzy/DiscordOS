@@ -715,14 +715,14 @@
     {
       "id": "mazer-player-facing-options-guide",
       "title": "mazer: player-facing options and info guide",
-      "state": "open",
+      "state": "completed",
       "priority": "high",
       "category": "mazer",
       "markerName": "Player-facing Options info guide",
-      "completionPercent": 82,
+      "completionPercent": 100,
       "summary": "Turn the Options menu into a clean player guide that explains controls, compass, toggles, level/rank, and current progression without exposing internal diagnostics.",
       "whyItMatters": "Players should understand the game without seeing internal debug language. The Options screen is the correct place for concise, branded explanations.",
-      "currentStatus": "Merged Mazer PR #51 synchronizes Options and played-game Pause with the completed rank-only public vocabulary. Player Skill and Skill Lvl copy is removed, Rank or AI Rank is the public progression tier, and Score remains described as run quality while hidden progression fields remain compatible. Phone and desktop route-aware proof plus full verification passed. The marker remains 82 because physical-device authenticated safe-area soak and future guide/asset maintenance remain open. Operator physical-device captures on 2026-07-14 expose a real regression not covered by prior emulation: the guide card clips copy at the right edge, its underline crosses the title, the guide sits outside the effective scroll flow, toggle rows are oversized/misaligned, and Log out is not vertically centered.",
+      "currentStatus": "Completed through Mazer PR #70 at merge b1e059473eaf1c7ff17115402e087e73f6e88d6e. Options and Pause now share one mobile scroll flow; guide copy, title-rule clearance, row wrapping, toggle alignment, lower-control reachability, and Log out centering are proof-backed across authenticated phone and desktop surfaces. Focused UI/source-contract proof passed 56 tests, architecture passed 18 tests plus the firewall, full verification and production build passed, and three authenticated viewport matrices passed. The source thread 1524889574092963902 is archived and locked with terminal Completed thread 1526844308131545242 and completion journal 1526844314192183386.",
       "workBreakdown": [
         "Move the guide to the top of main-menu Options.",
         "Reuse the guide inside played-game Pause before controls.",
@@ -732,12 +732,9 @@
         "Synchronize guide copy with the rank-only public progression display without exposing hidden skill/rating diagnostics."
       ],
       "nextActions": [
-        "Keep literal board-renderer glyphs in the guide when those assets evolve; do not duplicate their drawing contracts.",
-        "Run a physical-device authenticated Options and Pause soak at iPhone safe-area dimensions.",
-        "Keep target-complexity and raw diagnostic fields out of normal player Options.",
-        "Maintain rank-only public vocabulary whenever guide or badge fields evolve.",
-        "Make the guide part of the same scroll content as the toggles and action row instead of reserving a fixed card above the viewport.",
-        "Normalize compact guide typography, title-rule clearance, row wrapping, toggle alignment, and Log out text centering against the shared UI standards card."
+        "Keep literal board-renderer glyphs and rank-only vocabulary synchronized when guide assets evolve.",
+        "Preserve the shared Options/Pause scroll-flow and centering diagnostics in future UI work.",
+        "Keep target-complexity and raw diagnostic fields out of normal player Options."
       ],
       "acceptanceCriteria": [
         "The player guide explains every visible badge field without clipping or escaping its card.",
@@ -746,8 +743,8 @@
         "The guide uses the same rank-only public vocabulary as HUD, menus, summaries, onboarding, and accessibility labels."
       ],
       "proofPlan": [
-        "Run authenticated `npm run visual:ui-surfaces` at 360x720 DPR-2 and inspect Options/Pause top plus bottom screenshots.",
-        "Confirm screenContract.pass, scroll offset=maxOffset, and lower controls before claiming visual completion."
+        "Completed: authenticated phone and desktop Options/Pause surface matrices passed.",
+        "Completed: screen contract, scroll maximum, lower controls, text fit, and centering diagnostics passed."
       ],
       "reference": "repos/mazer/docs/research/MAZER_BOARD_RECONCILIATION_2026-07-10.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-player-facing-options-guide",
@@ -758,9 +755,9 @@
       ],
       "liveThreadId": "1524889574092963902",
       "liveMessageId": "1524889574092963902",
-      "reactionStatus": "failure",
-      "reactionEmojiName": "failure",
-      "reactionEmojiId": "1507384094424694785"
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
     },
     {
       "id": "mazer-edge-wrap-topology-and-notch-fill",
@@ -1118,14 +1115,14 @@
     {
       "id": "mazer-animation-smoothness-lifecycle",
       "title": "mazer: animation smoothness and lifecycle cadence",
-      "state": "open",
+      "state": "completed",
       "priority": "high",
       "category": "mazer",
       "markerName": "Animation smoothness",
-      "completionPercent": 40,
+      "completionPercent": 100,
       "summary": "Remove visible pauses, loop resets, and buffered animation stalls across title orbit, scanner, background, border glimmer, trail pulse, build, and deconstruct.",
       "whyItMatters": "Mazer depends on continuous motion. Any hitch during build/deconstruct or title/background loops makes the whole app feel laggy even when gameplay logic is correct.",
-      "currentStatus": "Several frame cadence fixes landed, but mobile soak and lifecycle-boundary jitter review remain open. The approved white trail shine still restarts after reaching the trail origin. The next bounded visual behavior is a continuous ping-pong path: player to trail origin, then origin back to player, retaining dynamic speed and the single-shine readability contract. The maze-build reveal also currently exposes the perfect path first and needs display-order separation without changing generator legality.",
+      "currentStatus": "Completed through Mazer PR #69 at merge 58b771a2d6838f0a4cbea6f477a6d85e473a5bec. Shared lifecycle cadence now keeps title, compass, background, border, build, deconstruct, and the single white trail shine continuous; the shine ping-pongs without endpoint disappearance, and visible maze-build ordering no longer previews the solution path while generator legality remains unchanged. Focused proof passed 92 tests, architecture passed 18 tests, full verification passed 358 tests, maze soak passed, phone/desktop surface checks passed 34/34, and the runtime soak observed both shine directions with zero console/page errors. The source thread 1524974573303627878 is archived and locked with terminal Completed thread 1526844973960396810 and completion journal 1526844981556281415.",
       "workBreakdown": [
         "Keep title, compass, background, and border animations alive during deconstruct pauses.",
         "Make scanner/orbit loops bounce or wrap without visible reset jumps.",
@@ -1133,12 +1130,9 @@
         "Record animation proof with actual route and viewport contracts."
       ],
       "nextActions": [
-        "Run a long mobile menu loop soak.",
-        "Capture lifecycle handoff frames around goal, deconstruct, empty pause, and rebuild.",
-        "Patch any remaining timer or tween coupling that pauses global animations.",
-        "Change the single white shine phase to ping-pong along the current trail without endpoint disappearance or duplicate shines.",
-        "Separate visible maze-build ordering from generator solution-path construction so the animation never previews the perfect route first.",
-        "Add endpoint-continuity, dynamic-speed, one-shine, lifecycle-reset, and no-solution-first-reveal tests."
+        "Preserve the shared cadence contract when adding later animations or lifecycle phases.",
+        "Keep endpoint continuity, dynamic-speed, one-shine, lifecycle-reset, and no-solution-first-reveal tests green.",
+        "Admit any new animation behavior on its owning feature card."
       ],
       "acceptanceCriteria": [
         "No visible title, compass, or background freeze occurs during maze handoff.",
@@ -1146,14 +1140,14 @@
         "Runtime diagnostics show stable frame timing during lifecycle transitions."
       ],
       "proofPlan": [
-        "Record route-aware screenshots or video frames through a full menu and play lifecycle.",
-        "Compare frame timing before and after animation handoff changes."
+        "Completed: route-aware menu/play lifecycle soak and phone/desktop surface checks passed.",
+        "Completed: runtime cadence, direction, solution-reveal, and console diagnostics passed."
       ],
       "reference": "repos/mazer/docs/research/MAZER_AUTH_AI_VISUAL_COMPLETION_MARKER.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-animation-smoothness-lifecycle",
-      "reactionStatus": "failure",
-      "reactionEmojiName": "failure",
-      "reactionEmojiId": "1507384094424694785",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851",
       "liveThreadId": "1524974573303627878",
       "liveMessageId": "1524974573303627878",
       "relatedCardIds": [
@@ -1561,14 +1555,14 @@
     {
       "id": "mazer-visual-defaults-menu-controls",
       "title": "mazer: visual defaults and menu controls",
-      "state": "open",
+      "state": "completed",
       "priority": "high",
       "category": "mazer",
       "markerName": "Visual defaults and menu controls",
-      "completionPercent": 90,
+      "completionPercent": 100,
       "summary": "Lock the fresh-session defaults, menu control placement, and player-safe menu/play control language.",
       "whyItMatters": "A stable default experience keeps new sessions readable and avoids leaking diagnostics or confusing settings into the first-play flow.",
-      "currentStatus": "Fresh sessions default to dark mode, animated background, stick controls, trail fade off, trail pulse on, camera follow off, 30% move speed, green action/player/trail/level palette, guest Login-only, a notch compass, and scroll-rail Options/Pause. Main-menu Options omits Move Speed; played-game Pause retains it, adds concise on/off toggle descriptions, and includes confirmed Reset Progress. Compact Start/Options labels now reserve phone-button breathing room, and 360x720 DPR-2 proof covers both overlay top and lower-control states. The latest phone captures invalidate the remaining cleanliness assumption: Start, Options, toggle copy/switches, and Log out are visibly off-center or clipped despite prior screenshot checks.",
+      "currentStatus": "Completed through Mazer PR #71 at merge 4e92cfa88cd3015218cf71a45aa4d80b85bf2278. Fresh guest and authenticated sessions now prove the canonical defaults without stale preference leakage: dark mode and animated background on, stick controls, trail fade and camera follow off, trail shine on, 30% speed, green action/player/trail/level palette, guest Login-only, and clean menu/Options/Pause control placement. Focused proof passed 86 tests plus fresh guest phone, authenticated phone, and authenticated desktop browser matrices. The source thread 1525063361887338527 is archived and locked with terminal Completed thread 1526844415484887090 and completion journal 1526844420903927889.",
       "workBreakdown": [
         "Keep the canonical fresh-session default contract aligned with current runtime behavior.",
         "Keep guest entry Login-only and authenticated Start/Options spacing clean.",
@@ -1577,11 +1571,9 @@
         "Keep the visible play timer owned by the skill badge instead of a duplicate timer panel."
       ],
       "nextActions": [
-        "Run longer physical-device mobile soak across guest, authenticated, Options, play, and pause states.",
+        "Recheck the canonical default contract whenever new settings or controls are added.",
         "Keep Start, player, trail, and level colors aligned to the green action language.",
-        "Recheck defaults whenever new settings or controls are added.",
-        "Consume canonical button-label and toggle-row alignment primitives from the UI standards card.",
-        "Add optical/text-bound centering diagnostics for every primary action and settings row."
+        "Preserve shared button-label, toggle-row, fresh-session, and browser-matrix diagnostics."
       ],
       "acceptanceCriteria": [
         "Fresh sessions resolve to the documented defaults without stale browser preference leakage.",
@@ -1589,15 +1581,14 @@
         "Mobile and desktop layouts show Start/Options, badge, pause, and maze with clear spacing and no text/card escape."
       ],
       "proofPlan": [
-        "Run menu layout and render-frame tests.",
-        "Capture guest, authenticated, Options top/bottom, play, and Pause top/bottom surfaces at phone and desktop sizes.",
-        "Read diagnostics for text fit, scroll affordance, lower-control reachability, and no-overlap state."
+        "Completed: menu layout, render-frame, and fresh-session default tests passed.",
+        "Completed: guest/authenticated phone and desktop browser matrices passed with exact default-state diagnostics."
       ],
       "reference": "repos/mazer/docs/research/MAZER_MECHANICS_MOBILE_COMPLETION_MARKER.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-visual-defaults-menu-controls",
-      "reactionStatus": "failure",
-      "reactionEmojiName": "failure",
-      "reactionEmojiId": "1507384094424694785",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851",
       "relatedCardIds": [
         "mazer-player-facing-options-guide",
         "mazer-auth-gate-persistent-login",

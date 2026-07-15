@@ -45,7 +45,7 @@ The earlier source Review event never mutated Discord because the mandatory regi
 
 - Focused Mazer board, journal, transfer, consistency, and readback suite: `74/74` passed.
 - Full DiscordOS `npm run verify`: exit `0` in `238.6s`.
-- Local board projection: `64` cards, `0 Ready`, `34 Open`, `11 Completed`, `19 Backlog`, and `64/64` reaction-ready.
+- Local board projection after all recovered closeouts: `64` cards, `0 Ready`, `31 Open`, `14 Completed`, `19 Backlog`, and `64/64` reaction-ready.
 - Exact source readback at `2026-07-15T07:04:21.702Z`: stable identity and canonical boundaries exact, source archived and locked, four historical journals preserved, no reason codes.
 - `git diff --check`: passed.
 
