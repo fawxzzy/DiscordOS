@@ -260,6 +260,16 @@ test("Ready card with an incomplete planning contract is drift", () => {
 test("required blocked registry board fails closed while remaining visible", async () => {
   const registry = JSON.parse(fs.readFileSync(path.resolve(__dirname, "..", "config", "discordos-board-registry.json"), "utf8"));
   registry.boards = registry.boards.filter((board) => new Set(["shared-completed", "atlas-active-admission"]).has(board.id));
+  const blockedBoard = registry.boards.find((board) => board.id === "atlas-active-admission");
+  blockedBoard.forumChannelId = null;
+  blockedBoard.forumChannelName = null;
+  blockedBoard.sourceAdapter = "unadmitted-v1";
+  blockedBoard.status = "blocked";
+  blockedBoard.blockers = [{
+    code: "project_forum_not_discovered",
+    reason: "Explicit blocked-board test fixture.",
+    evidence: "Unit-test fixture.",
+  }];
   const result = await _internals.buildBoardCardConsistency({
     registry,
     env: { DISCORDOS_BOT_TOKEN: "token" },

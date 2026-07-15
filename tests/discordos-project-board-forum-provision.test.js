@@ -8,6 +8,13 @@ const {
 } = require("../scripts/discordos-project-board-forum-provision");
 
 const registry = JSON.parse(fs.readFileSync(path.resolve(__dirname, "..", "config", "discordos-board-registry.json"), "utf8"));
+const preAdmissionRegistry = structuredClone(registry);
+for (const board of preAdmissionRegistry.boards.filter((candidate) => candidate.id.endsWith("-active-admission"))) {
+  board.forumChannelId = null;
+  board.forumChannelName = null;
+  board.status = "blocked";
+  board.sourceAdapter = "unadmitted-v1";
+}
 const category = { id: _internals.DEFAULT_CATEGORY_ID, name: "project-feedback-boards", type: 4, parent_id: null };
 const env = {
   DISCORDOS_BOT_TOKEN: "test-token",
@@ -41,6 +48,16 @@ function makeFetch(initialChannels = [category]) {
   return { fetchImpl, channels, calls };
 }
 
+function registryFs(value = preAdmissionRegistry) {
+  return { async readFile() { return JSON.stringify(value); } };
+}
+
+function admittedChannels() {
+  return registry.boards
+    .filter((board) => board.id.endsWith("-active-admission"))
+    .map((board) => ({ id: board.forumChannelId, name: board.forumChannelName, type: 15, parent_id: category.id }));
+}
+
 test("canonical registry selects exactly the seven missing project forums", () => {
   const targets = _internals.selectProvisionTargets(registry);
   assert.equal(targets.length, 7);
@@ -49,12 +66,13 @@ test("canonical registry selects exactly the seven missing project forums", () =
   ]);
 });
 
-test("dry run plans seven creates without posting", async () => {
-  const mock = makeFetch();
+test("dry run reuses seven admitted forums without posting", async () => {
+  const mock = makeFetch([category, ...admittedChannels()]);
   const result = await _internals.buildProjectBoardForumProvision({ env, fetchImpl: mock.fetchImpl });
   assert.equal(result.ok, true);
   assert.equal(result.status, "dry_run_ready");
-  assert.equal(result.plannedCreateCount, 7);
+  assert.equal(result.plannedCreateCount, 0);
+  assert.equal(result.reusedCount, 7);
   assert.equal(result.createdCount, 0);
   assert.equal(result.readback, null);
   assert.equal(mock.calls.filter((call) => call.method === "POST").length, 0);
@@ -67,6 +85,7 @@ test("apply creates every missing forum and proves exact readback", async () => 
     allowProvision: true,
     apply: true,
     fetchImpl: mock.fetchImpl,
+    fsImpl: registryFs(),
   });
   assert.equal(result.ok, true);
   assert.equal(result.status, "provisioned");
@@ -78,14 +97,8 @@ test("apply creates every missing forum and proves exact readback", async () => 
   assert.ok(mock.calls.filter((call) => call.method === "POST").every((call) => call.body.type === 15 && call.body.parent_id === category.id));
 });
 
-test("retry reuses all exact forums and performs no writes", async () => {
-  const existing = _internals.selectProvisionTargets(registry).map((target, index) => ({
-    id: `existing-${index + 1}`,
-    name: target.forumName,
-    type: 15,
-    parent_id: category.id,
-  }));
-  const mock = makeFetch([category, ...existing]);
+test("apply retry reuses all exact admitted forums and performs no writes", async () => {
+  const mock = makeFetch([category, ...admittedChannels()]);
   const result = await _internals.buildProjectBoardForumProvision({
     env,
     allowProvision: true,
@@ -106,6 +119,7 @@ test("name collision blocks the entire batch before mutation", async () => {
     allowProvision: true,
     apply: true,
     fetchImpl: mock.fetchImpl,
+    fsImpl: registryFs(),
   });
   assert.equal(result.ok, false);
   assert.ok(result.reasonCodes.includes("project_board_forum_name_conflict"));
@@ -119,6 +133,7 @@ test("apply requires both the CLI and environment guards", async () => {
     allowProvision: true,
     apply: true,
     fetchImpl: mock.fetchImpl,
+    fsImpl: registryFs(),
   });
   assert.equal(result.ok, false);
   assert.ok(result.reasonCodes.includes("project_board_forum_provision_double_guard_missing"));
