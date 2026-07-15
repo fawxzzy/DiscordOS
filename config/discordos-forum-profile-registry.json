@@ -281,8 +281,8 @@
   },
   "socialsOwnerSeed": {
     "adapterId": "socials-os-roadmap-v1",
-    "expectedEventCount": 12,
-    "expectedStableRecordCount": 21,
+    "expectedEventCount": 13,
+    "expectedStableRecordCount": 22,
     "nullPriorityPolicy": "no_priority_tag",
     "clusterStatus": "implemented_apply_pending"
   },

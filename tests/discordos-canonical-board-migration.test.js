@@ -17,6 +17,10 @@ const guildRoles = [
   { id: "role-security", name: "Fawx Security" },
 ];
 
+function response({ ok = true, status = 200, payload = null } = {}) {
+  return { ok, status, json: async () => payload };
+}
+
 function resolvedRegistry() {
   const value = structuredClone(registry);
   value.boards.find((board) => board.id === "socials-os-active-admission").forumChannelId = "socials-forum";
@@ -103,7 +107,7 @@ function fullLegacySnapshot() {
 }
 
 function socialsExport() {
-  const cards = Array.from({ length: 12 }, (_, index) => ({
+  const cards = Array.from({ length: 13 }, (_, index) => ({
     idempotency_key: `pbk_socials-os_soc-${String(index + 10).padStart(3, "0")}_v1`,
     record_kind: "project-work",
     record_status: "active",
@@ -140,8 +144,29 @@ function socialsExport() {
     source_revision: "sha256:test",
     generated_at: "2026-07-15T06:48:39Z",
     cards,
-    extensions: { selection: { roadmap_record_count: 21, exported_nonterminal_count: 12 } },
+    extensions: { selection: { roadmap_record_count: 22, exported_nonterminal_count: 13 } },
   };
+}
+
+function residualSnapshot(socialIdentityCount = 12, { phase8Open = false, canonicalPhase8Title = false } = {}) {
+  const snapshot = fullLegacySnapshot();
+  const ownerExport = socialsExport();
+  const seed = ownerSeed.buildOwnerSeedBatch({ registry: snapshot.registry, ownerExports: [ownerExport] });
+  const socialsForum = snapshot.forums.find((row) => row.boardId === "socials-os-active-admission");
+  socialsForum.threads = seed.events.slice(0, socialIdentityCount).map((event, index) => ({
+    thread: { id: `social-thread-${index}`, name: event.card.title, applied_tags: [], thread_metadata: { archived: false, locked: false } },
+    starter: { id: `social-thread-${index}`, content: journal.buildCanonicalBody(event, "") },
+    messages: [],
+    messagePageCount: 1,
+    messageHistoryTruncated: false,
+  }));
+  const music = snapshot.forums.find((row) => row.boardId === "music-sesh-active");
+  const phase8 = music.threads.find((row) => row.thread.id === "1508141153835421798");
+  const migrationPlan = migration.buildMigrationPlan({ snapshot, profileRegistry: profiles });
+  phase8.starter.content = journal.buildCanonicalBody(migration.phase8JournalEvent(migrationPlan, snapshot), "");
+  phase8.thread.name = canonicalPhase8Title ? "Cross-service room sync and simple controls" : "Music Sesh: Feature: Cross-service room sync and simple controls";
+  phase8.thread.thread_metadata = { archived: !phase8Open, locked: !phase8Open };
+  return snapshot;
 }
 
 test("one canonical title policy removes exact Fitness, Mazer, and type prefixes without damaging normal words", () => {
@@ -150,7 +175,7 @@ test("one canonical title policy removes exact Fitness, Mazer, and type prefixes
   const atlas = registry.boards.find((board) => board.id === "atlas-active-admission");
   const socials = registry.boards.find((board) => board.id === "socials-os-active-admission");
   assert.equal(cardContract.formatCanonicalCardTitle({ board: fitness, card: { title: "Fitness: Feature: Recovery dashboard" } }), "Recovery dashboard");
-  assert.equal(cardContract.formatCanonicalCardTitle({ board: mazer, card: { title: "Mazer: Bug: Persistent login parity" } }), "Persistent login parity");
+  assert.equal(cardContract.formatCanonicalCardTitle({ board: mazer, card: { title: "mazer: Bug: Persistent login parity" } }), "Persistent login parity");
   assert.equal(cardContract.formatCanonicalCardTitle({ board: atlas, card: { title: "Canonical registry adoption" } }), "Canonical registry adoption");
   assert.equal(cardContract.formatCanonicalCardTitle({ board: socials, card: { title: "Socials OS: Feature: Admit the governed board" } }), "Admit the governed board");
   assert.equal(cardContract.formatCanonicalCardTitle({ board: fitness, card: { title: "Feature flag rollout" } }), "Feature flag rollout");
@@ -207,13 +232,13 @@ test("forum replacement preserves exact same-name IDs and declares canonical ord
   assert.ok(patch.payload.available_tags.every((tag) => tag.moderated === true));
 });
 
-test("Socials owner adapter validates 12 events idempotently and preserves null priority as no tag", () => {
+test("Socials owner adapter validates 13 events idempotently and preserves null priority as no tag", () => {
   const ownerExport = socialsExport();
   const resolved = resolvedRegistry();
   const first = ownerSeed.buildOwnerSeedBatch({ registry: resolved, ownerExports: [ownerExport] });
   const second = ownerSeed.buildOwnerSeedBatch({ registry: resolved, ownerExports: [ownerExport] });
   assert.equal(first.ok, true);
-  assert.equal(first.eventCount, 12);
+  assert.equal(first.eventCount, 13);
   assert.deepEqual(first.events.map((event) => event.eventId), second.events.map((event) => event.eventId));
   assert.ok(first.events.every((event) => event.card.title.startsWith("Outcome ") && event.card.priority === "Unspecified"));
   const semantics = migration.deriveThreadSemantics({
@@ -230,6 +255,127 @@ test("Socials owner adapter validates 12 events idempotently and preserves null 
   const blocked = ownerSeed.buildOwnerSeedBatch({ registry: resolved, ownerExports: [duplicate] });
   assert.equal(blocked.ok, false);
   assert.ok(blocked.reasonCodes.some((code) => code.startsWith("owner_export_card_id_duplicate:")));
+});
+
+test("residual plan selects only noncanonical managed titles, exact Phase 8 state, and missing Socials identities", () => {
+  const plan = migration.buildResidualRecoveryPlan({ snapshot: residualSnapshot(), socialsOwnerExport: socialsExport() });
+  assert.equal(plan.ok, true);
+  assert.equal(plan.boardDenominator, 13);
+  assert.equal(plan.retainedMusicHistoryCount, 150);
+  assert.equal(plan.socials.expectedEventCount, 13);
+  assert.equal(plan.socials.existingIdentityCount, 12);
+  assert.equal(plan.socials.missingIdentityCount, 1);
+  assert.deepEqual(plan.titleActions.map((action) => action.threadId), ["1508141153835421798"]);
+  assert.equal(plan.phase8StateAction.action, "unarchive_unlock");
+  assert.deepEqual(plan.forbiddenReplay, {
+    forumProvision: false,
+    forumProfileReplacement: false,
+    appliedTagPreclear: false,
+    fullThreadMigration: false,
+  });
+});
+
+test("guarded residual recovery creates only the missing Socials identity, reopens exact Phase 8, and is idempotent", async () => {
+  const ownerExport = socialsExport();
+  const firstSnapshot = residualSnapshot();
+  const lastCardId = ownerExport.cards.at(-1).record.card_id;
+  const patches = [];
+  let phase8State = {
+    id: "1508141153835421798",
+    name: "Music Sesh: Feature: Cross-service room sync and simple controls",
+    thread_metadata: { archived: true, locked: true },
+  };
+  let journalCalls = 0;
+  const fetchImpl = async (url, init = {}) => {
+    const method = init.method || "GET";
+    const threadId = url.match(/\/channels\/([^/?]+)$/)?.[1];
+    if (threadId === "1508141153835421798") {
+      if (method === "PATCH") {
+        const body = JSON.parse(init.body);
+        patches.push({ threadId, body });
+        phase8State = {
+          ...phase8State,
+          ...body,
+          thread_metadata: {
+            ...phase8State.thread_metadata,
+            ...(Object.hasOwn(body, "archived") ? { archived: body.archived } : {}),
+            ...(Object.hasOwn(body, "locked") ? { locked: body.locked } : {}),
+          },
+        };
+        return response({ payload: phase8State });
+      }
+      return response({ payload: phase8State });
+    }
+    if (threadId === "social-new" && method === "PATCH") {
+      patches.push({ threadId, body: JSON.parse(init.body) });
+      return response({ payload: { id: threadId } });
+    }
+    throw new Error(`unexpected ${method} ${url}`);
+  };
+  const scanImpl = async () => ({ receipt: {
+    ok: true,
+    status: "consistent",
+    denominator: { requiredBoardCount: 13, inspectedBoardCount: 13 },
+    reasonCodes: [],
+  } });
+  const fsImpl = { mkdir: async () => {}, writeFile: async () => {} };
+  const first = await migration.runResidualBoardRecovery({
+    registry: firstSnapshot.registry,
+    profileRegistry: profiles,
+    socialsOwnerExport: ownerExport,
+    snapshotPath: "C:\\ATLAS\\runtime\\board-integrity\\residual-test.json",
+    allowRecovery: true,
+    apply: true,
+    env: {
+      DISCORDOS_BOT_TOKEN: "token",
+      [migration.RECOVERY_ENV]: migration.RECOVERY_ENV_VALUE,
+    },
+    fetchImpl,
+    fsImpl,
+    captureSnapshotImpl: async () => firstSnapshot,
+    journalImpl: async ({ payload }) => {
+      journalCalls += 1;
+      assert.equal(payload.events.length, 1);
+      assert.equal(payload.events[0].card.id, lastCardId);
+      return {
+        ok: true,
+        eventCount: 1,
+        results: [{ cardId: lastCardId, threadId: "social-new", cardAction: "created", reasonCodes: [] }],
+        reasonCodes: [],
+      };
+    },
+    scanImpl,
+  });
+  assert.equal(first.ok, true);
+  assert.equal(journalCalls, 1);
+  assert.equal(first.mutationTruth.socialsCreated, 1);
+  assert.equal(first.mutationTruth.retainedMusicHistoryWrites, 0);
+  assert.deepEqual([...new Set(patches.map((row) => row.threadId))].sort(), ["1508141153835421798", "social-new"]);
+  assert.equal(patches.some((row) => row.threadId.startsWith("music-history-")), false);
+
+  const secondSnapshot = residualSnapshot(13, { phase8Open: true, canonicalPhase8Title: true });
+  patches.length = 0;
+  const second = await migration.runResidualBoardRecovery({
+    registry: secondSnapshot.registry,
+    profileRegistry: profiles,
+    socialsOwnerExport: ownerExport,
+    snapshotPath: "C:\\ATLAS\\runtime\\board-integrity\\residual-test-2.json",
+    allowRecovery: true,
+    apply: true,
+    env: {
+      DISCORDOS_BOT_TOKEN: "token",
+      [migration.RECOVERY_ENV]: migration.RECOVERY_ENV_VALUE,
+    },
+    fetchImpl,
+    fsImpl,
+    captureSnapshotImpl: async () => secondSnapshot,
+    journalImpl: async () => { throw new Error("idempotent recovery must not replay existing Socials identities"); },
+    scanImpl,
+  });
+  assert.equal(second.ok, true);
+  assert.equal(second.plan.socials.missingIdentityCount, 0);
+  assert.equal(second.mutationTruth.writeCount, 0);
+  assert.deepEqual(patches, []);
 });
 
 test("scanner proves an exact 13-board canonical denominator", async () => {
@@ -289,4 +435,19 @@ test("migration artifacts are runtime-only and apply remains double guarded", ()
   assert.doesNotThrow(() => migration.assertRuntimePath("C:\\ATLAS\\runtime\\board-integrity\\snapshot.json"));
   assert.equal(migration.resolveAdmission({ apply: true, allowMigration: true, env: {} }).admitted, false);
   assert.equal(migration.resolveAdmission({ apply: false, allowMigration: false, env: {} }).status, "dry_run");
+  assert.equal(migration.resolveRecoveryAdmission({ apply: true, allowRecovery: true, env: {} }).admitted, false);
+  assert.equal(migration.resolveRecoveryAdmission({
+    apply: true,
+    allowRecovery: true,
+    env: { [migration.RECOVERY_ENV]: migration.RECOVERY_ENV_VALUE },
+  }).admitted, true);
+  const options = migration.parseArgs([
+    "--recover-residual",
+    "--allow-recovery",
+    "--snapshot-output", "C:\\ATLAS\\runtime\\board-integrity\\snapshot.json",
+    "--output", "C:\\ATLAS\\runtime\\board-integrity\\receipt.json",
+  ]);
+  assert.equal(options.recoverResidual, true);
+  assert.equal(options.allowRecovery, true);
+  assert.equal(options.apply, false);
 });

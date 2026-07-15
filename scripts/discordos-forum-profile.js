@@ -449,6 +449,55 @@ function canonicalAppliedTagNames(row) {
   return names;
 }
 
+function canonicalTagNameOrder(names) {
+  const order = new Map(CANONICAL_TAGS.map(([, , name], index) => [name, index]));
+  return [...names].sort((left, right) => {
+    const leftOrder = order.has(left) ? order.get(left) : Number.MAX_SAFE_INTEGER;
+    const rightOrder = order.has(right) ? order.get(right) : Number.MAX_SAFE_INTEGER;
+    return leftOrder - rightOrder || String(left || "").localeCompare(String(right || ""));
+  });
+}
+
+function inspectAppliedTagSemantics({ row, availableTagById, maxAppliedTags }) {
+  const expectedNames = canonicalTagNameOrder(canonicalAppliedTagNames(row));
+  const appliedTagIds = Array.isArray(row?.appliedTagIds) ? [...row.appliedTagIds] : [];
+  const orphanAppliedTagIds = appliedTagIds.filter((id) => !availableTagById.has(id));
+  const observedNames = appliedTagIds.map((id) => availableTagById.get(id)?.name).filter(Boolean);
+  const canonicalNames = new Set(CANONICAL_TAGS.map(([, , name]) => name));
+  const unknownNames = canonicalTagNameOrder(observedNames.filter((name) => !canonicalNames.has(name)));
+  const nameCounts = new Map();
+  for (const name of observedNames) nameCounts.set(name, (nameCounts.get(name) || 0) + 1);
+  const duplicateNames = canonicalTagNameOrder([...nameCounts.entries()].filter(([, count]) => count > 1).map(([name]) => name));
+  const actualNames = canonicalTagNameOrder(observedNames);
+  const expectedSet = new Set(expectedNames);
+  const actualSet = new Set(observedNames.filter((name) => canonicalNames.has(name)));
+  const missingNames = expectedNames.filter((name) => !actualSet.has(name));
+  const extraNames = canonicalTagNameOrder([...actualSet].filter((name) => !expectedSet.has(name)));
+  const overLimit = appliedTagIds.length > maxAppliedTags;
+  const exact = !overLimit
+    && orphanAppliedTagIds.length === 0
+    && unknownNames.length === 0
+    && duplicateNames.length === 0
+    && missingNames.length === 0
+    && extraNames.length === 0
+    && appliedTagIds.length === expectedNames.length;
+  return {
+    threadId: row.threadId,
+    cardId: row.cardId,
+    retainedLegacyHistory: row.retainedLegacyHistory === true,
+    expectedNames,
+    actualNames,
+    missingNames,
+    extraNames,
+    unknownNames,
+    duplicateNames,
+    orphanAppliedTagIds,
+    appliedTagCount: appliedTagIds.length,
+    overLimit,
+    exact,
+  };
+}
+
 function buildCardProfileSummary({ consistency, forums, maxAppliedTags = 5 }) {
   const reasonCodes = [];
   const forumByBoard = new Map(forums.map((forum) => [forum.boardId, forum]));
@@ -473,13 +522,7 @@ function buildCardProfileSummary({ consistency, forums, maxAppliedTags = 5 }) {
       appliedTagCount: row.appliedTagIds.length,
     }));
     if (overAppliedTagRows.length > 0) reasonCodes.push(`applied_tag_limit_exceeded:${forum.boardId}`);
-    const semanticRows = rows.map((row) => {
-      const expectedNames = canonicalAppliedTagNames(row);
-      const actualNames = (row.appliedTagIds || []).map((id) => availableTagById.get(id)?.name || null);
-      const exact = expectedNames.length === actualNames.length
-        && expectedNames.every((name, index) => name === actualNames[index]);
-      return { threadId: row.threadId, cardId: row.cardId, retainedLegacyHistory: row.retainedLegacyHistory === true, expectedNames, actualNames, exact };
-    });
+    const semanticRows = rows.map((row) => inspectAppliedTagSemantics({ row, availableTagById, maxAppliedTags }));
     if (semanticRows.some((row) => !row.exact)) reasonCodes.push(`card_tag_semantic_mismatch:${forum.boardId}`);
     const lifecycleRows = rows.map((row) => ({
       threadId: row.threadId,
@@ -497,7 +540,10 @@ function buildCardProfileSummary({ consistency, forums, maxAppliedTags = 5 }) {
       managedStarterCount: managedRows.filter((row) => row.starterContentSha256 && !row.reasonCodes?.includes("canonical_card_body_missing")).length,
       journaledCount: managedRows.filter((row) => row.journalPresent).length,
       appliedTagSafety: {
-        ok: orphanAppliedTagIds.length === 0 && ambiguousAppliedTags.length === 0 && semanticRows.every((row) => row.exact),
+        ok: orphanAppliedTagIds.length === 0
+          && ambiguousAppliedTags.length === 0
+          && overAppliedTagRows.length === 0
+          && semanticRows.every((row) => row.exact),
         appliedTagIds,
         orphanAppliedTagIds,
         ambiguousAppliedTags,
@@ -766,6 +812,8 @@ module.exports = {
     inspectForumChannel,
     lifecycleInspection,
     canonicalAppliedTagNames,
+    canonicalTagNameOrder,
+    inspectAppliedTagSemantics,
     buildCardProfileSummary,
     isBlockingReason,
     buildLiveForumProfileScan,
