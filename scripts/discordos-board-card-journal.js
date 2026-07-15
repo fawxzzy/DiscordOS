@@ -6,6 +6,7 @@ const {
 
 const JOURNAL_ENV = "DISCORDOS_BOARD_CARD_JOURNAL";
 const JOURNAL_ENV_VALUE = "enabled";
+const DEFAULT_REGISTRY_PATH = path.resolve(__dirname, "..", "config", "discordos-board-registry.json");
 const CARD_START = cardContract.CANONICAL_CARD_START;
 const CARD_END = cardContract.CANONICAL_CARD_END;
 const MAX_MESSAGE_LENGTH = 2000;
@@ -201,6 +202,148 @@ function validateEvent(event) {
     reasonCodes.push(...evaluateAutonomyAdmission(event.card).reasonCodes);
   }
   return [...new Set(reasonCodes)];
+}
+
+function normalizeCardIdentity(value) {
+  return text(value).toLowerCase();
+}
+
+function isIdentityScanBlockingReason(code) {
+  return /^(board_registry_|uncovered_live_board:|discord_bot_token_missing$|board_inventory_missing$|board_id_missing$|board_forum_channel_id_missing$|board_role_invalid$|board_forum_read_failed:|board_forum_guild_mismatch:|board_forum_name_mismatch:|active_threads_read_failed:|archived_threads_|card_thread_readback_failed:|card_starter_read_failed:|card_journal_read_failed:|card_journal_history_truncated:|live_identity_registry_scan_failed$)/.test(code);
+}
+
+function liveIdentityLocation(row, registeredBoardById) {
+  const board = registeredBoardById.get(text(row?.boardId)) || {};
+  return {
+    boardId: text(row?.boardId) || null,
+    forumChannelId: text(row?.forumChannelId) || text(board?.forumChannelId) || null,
+    threadId: text(row?.threadId) || null,
+    title: text(row?.title) || null,
+    cardId: text(row?.cardId) || null,
+  };
+}
+
+function compareLiveIdentityLocations(left, right) {
+  for (const key of ["boardId", "forumChannelId", "threadId", "title", "cardId"]) {
+    const leftValue = String(left[key] || "");
+    const rightValue = String(right[key] || "");
+    if (leftValue < rightValue) return -1;
+    if (leftValue > rightValue) return 1;
+  }
+  return 0;
+}
+
+function preflightLiveIdentities({ events, scan }) {
+  const normalizedEvents = events.map(normalizeEvent);
+  const scanReasonCodes = [...new Set(
+    Array.isArray(scan?.reasonCodes) ? scan.reasonCodes.map(text).filter(Boolean) : []
+  )].sort();
+  const scanBlockingReasonCodes = scanReasonCodes.filter(isIdentityScanBlockingReason).sort();
+  const scanStatusAccepted = new Set(["consistent", "drift_detected"]).has(scan?.status)
+    || (scan?.status === "blocked"
+      && scanReasonCodes.length > 0
+      && scanReasonCodes.every((code) => code.startsWith("required_board_blocked:")));
+  const scanIsAuthoritative = scan?.inventorySource === "registry"
+    && Array.isArray(scan?.rows)
+    && Array.isArray(scan?.registeredBoards)
+    && scanStatusAccepted
+    && scanBlockingReasonCodes.length === 0
+    && Number(scan?.uncoveredBoardCount || 0) === 0;
+  const registeredBoardById = new Map((scan?.registeredBoards || []).map((board) => [text(board?.id), board]));
+  const currentRows = scanIsAuthoritative
+    ? scan.rows.filter((row) => row?.superseded !== true && normalizeCardIdentity(row?.cardId))
+    : [];
+  const batchCandidates = new Map();
+  for (const [index, event] of normalizedEvents.entries()) {
+    const candidate = normalizeCardIdentity(event.card.id);
+    const indexes = batchCandidates.get(candidate) || [];
+    indexes.push(index);
+    batchCandidates.set(candidate, indexes);
+  }
+
+  const checks = normalizedEvents.map((event, index) => {
+    const normalizedCardId = normalizeCardIdentity(event.card.id);
+    const targetThreadId = text(event.card.threadId) || null;
+    const matchingLocations = currentRows
+      .filter((row) => normalizeCardIdentity(row.cardId) === normalizedCardId)
+      .map((row) => liveIdentityLocation(row, registeredBoardById))
+      .sort(compareLiveIdentityLocations);
+    const collisionLocations = matchingLocations.filter((location) => !targetThreadId || location.threadId !== targetThreadId);
+    const reasonCodes = [];
+    if (!scanIsAuthoritative) reasonCodes.push("live_identity_preflight_stale");
+    if ((batchCandidates.get(normalizedCardId) || []).length > 1) {
+      reasonCodes.push("batch_candidate_identity_duplicate");
+    }
+    if (collisionLocations.length > 0) reasonCodes.push("source_card_id_live_collision");
+    return {
+      eventIndex: index,
+      eventId: event.eventId || null,
+      cardId: event.card.id || null,
+      normalizedCardId,
+      targetThreadId,
+      matchingLocations,
+      collisionLocations,
+      admitted: reasonCodes.length === 0,
+      reasonCodes,
+    };
+  });
+  const reasonCodes = [...new Set(checks.flatMap((check) => check.reasonCodes))].sort();
+  return {
+    ok: reasonCodes.length === 0,
+    status: reasonCodes.length === 0 ? "admitted" : "blocked",
+    registryPath: scan?.registryPath || null,
+    scanStartedAt: scan?.scanStartedAt || null,
+    scanCompletedAt: scan?.scanCompletedAt || null,
+    scanStatus: scan?.status || null,
+    scanReasonCodes,
+    scanBlockingReasonCodes,
+    currentIdentityCount: currentRows.length,
+    proposedIdentityCount: normalizedEvents.length,
+    checks,
+    reasonCodes,
+  };
+}
+
+async function defaultRegistryScan({ registry, env, fetchImpl }) {
+  const {
+    _internals: consistency,
+  } = require("./discordos-board-card-consistency");
+  return consistency.buildBoardCardConsistency({ registry, env, fetchImpl });
+}
+
+async function runLiveIdentityRegistryScan({
+  registry,
+  registryPath = DEFAULT_REGISTRY_PATH,
+  env,
+  fetchImpl,
+  registryScanImpl = defaultRegistryScan,
+  now = () => new Date(),
+}) {
+  const scanStartedAt = now().toISOString();
+  try {
+    const source = registry || JSON.parse(await fs.readFile(registryPath, "utf8"));
+    const result = await registryScanImpl({ registry: source, env, fetchImpl });
+    return {
+      ...result,
+      registryPath,
+      scanStartedAt,
+      scanCompletedAt: now().toISOString(),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      status: "blocked",
+      inventorySource: "registry",
+      registryPath,
+      scanStartedAt,
+      scanCompletedAt: now().toISOString(),
+      registeredBoards: [],
+      uncoveredBoardCount: 0,
+      rows: [],
+      reasonCodes: ["live_identity_registry_scan_failed"],
+      error: text(error?.message) || "unknown_error",
+    };
+  }
 }
 
 function cardMarker(cardId) {
@@ -825,10 +968,95 @@ async function applyCardEvent({ event: rawEvent, apply, admission, token, fetchI
   };
 }
 
-async function buildBoardCardJournal({ payload, allowApply = false, apply = false, env = process.env, fetchImpl = fetch } = {}) {
+function blockedJournalEvent(event, apply, reasonCodes, liveIdentity = null) {
+  return {
+    ok: false,
+    status: "blocked",
+    apply,
+    eventId: event.eventId || null,
+    cardId: event.card.id || null,
+    threadId: event.card.threadId || null,
+    ...(liveIdentity ? { liveIdentity } : {}),
+    reasonCodes: [...new Set(reasonCodes)].sort(),
+  };
+}
+
+async function buildBoardCardJournal({
+  payload,
+  allowApply = false,
+  apply = false,
+  env = process.env,
+  fetchImpl = fetch,
+  registry,
+  registryPath = DEFAULT_REGISTRY_PATH,
+  registryScanImpl = defaultRegistryScan,
+  now,
+} = {}) {
   const admission = resolveAdmission({ allowApply, env });
   const token = text(env?.DISCORDOS_BOT_TOKEN);
-  const events = Array.isArray(payload?.events) ? payload.events : [payload];
+  const events = (Array.isArray(payload?.events) ? payload.events : [payload]).map(normalizeEvent);
+  const validationReasonCodes = events.map((event) => {
+    const reasonCodes = validateEvent(event);
+    if (apply && !admission.admitted) {
+      if (!admission.reasonCodes.includes("board_card_journal_double_guard_missing")) {
+        reasonCodes.push("board_card_journal_double_guard_missing");
+      }
+      reasonCodes.push("board_card_journal_not_admitted");
+    }
+    if (!token) reasonCodes.push("discord_bot_token_missing");
+    return [...new Set(reasonCodes)];
+  });
+  if (validationReasonCodes.some((reasonCodes) => reasonCodes.length > 0)) {
+    const results = events.map((event, index) => blockedJournalEvent(
+      event,
+      apply,
+      validationReasonCodes[index].length > 0
+        ? validationReasonCodes[index]
+        : ["board_card_journal_batch_preflight_failed"]
+    ));
+    return {
+      ok: false,
+      status: "blocked",
+      apply,
+      admission,
+      eventCount: events.length,
+      liveIdentityPreflight: { status: "not_run", reasonCodes: [] },
+      results,
+      reasonCodes: [...new Set(results.flatMap((result) => result.reasonCodes))].sort(),
+    };
+  }
+
+  const scan = await runLiveIdentityRegistryScan({
+    registry,
+    registryPath,
+    env,
+    fetchImpl,
+    registryScanImpl,
+    ...(now ? { now } : {}),
+  });
+  const liveIdentityPreflight = preflightLiveIdentities({ events, scan });
+  if (!liveIdentityPreflight.ok) {
+    const results = events.map((event, index) => {
+      const check = liveIdentityPreflight.checks[index];
+      return blockedJournalEvent(
+        event,
+        apply,
+        check.reasonCodes.length > 0 ? check.reasonCodes : ["live_identity_batch_preflight_failed"],
+        check
+      );
+    });
+    return {
+      ok: false,
+      status: "blocked",
+      apply,
+      admission,
+      eventCount: events.length,
+      liveIdentityPreflight,
+      results,
+      reasonCodes: liveIdentityPreflight.reasonCodes,
+    };
+  }
+
   const results = [];
   for (const event of events) {
     results.push(await applyCardEvent({ event, apply, admission, token, fetchImpl }));
@@ -840,6 +1068,7 @@ async function buildBoardCardJournal({ payload, allowApply = false, apply = fals
     apply,
     admission,
     eventCount: events.length,
+    liveIdentityPreflight,
     results,
     reasonCodes,
   };
@@ -883,6 +1112,7 @@ module.exports = {
   _internals: {
     JOURNAL_ENV,
     JOURNAL_ENV_VALUE,
+    DEFAULT_REGISTRY_PATH,
     CARD_START,
     CARD_END,
     ACTIVE_STATES,
@@ -898,6 +1128,13 @@ module.exports = {
     validateLifecycleTransition,
     evaluateAutonomyAdmission,
     validateEvent,
+    normalizeCardIdentity,
+    isIdentityScanBlockingReason,
+    liveIdentityLocation,
+    compareLiveIdentityLocations,
+    preflightLiveIdentities,
+    defaultRegistryScan,
+    runLiveIdentityRegistryScan,
     cardMarker,
     eventMarker,
     legacySnapshotMarker,
@@ -911,6 +1148,7 @@ module.exports = {
     readThreadMessages,
     findCardThread,
     applyCardEvent,
+    blockedJournalEvent,
     buildBoardCardJournal,
   },
 };

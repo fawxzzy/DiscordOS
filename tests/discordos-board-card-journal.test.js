@@ -7,6 +7,28 @@ function response({ ok = true, status = 200, payload = null } = {}) {
   return { ok, status, json: async () => payload };
 }
 
+function registryScan(rows = [], overrides = {}) {
+  return {
+    ok: true,
+    status: "consistent",
+    inventorySource: "registry",
+    uncoveredBoardCount: 0,
+    registeredBoards: [
+      { id: "fitness-active", forumChannelId: "fitness-forum" },
+      { id: "shared-completed", forumChannelId: "completed-forum" },
+    ],
+    rows,
+    reasonCodes: [],
+    ...overrides,
+  };
+}
+
+const emptyRegistryScan = async () => registryScan();
+
+function registryScanWithRows(rows, overrides = {}) {
+  return async () => registryScan(rows, overrides);
+}
+
 function event(overrides = {}) {
   return {
     schemaVersion: "atlas.board-card-journal.v1",
@@ -252,12 +274,140 @@ test("live mutation requires both journal guards", async () => {
   assert(result.reasonCodes.includes("board_card_journal_not_admitted"));
 });
 
+test("Fitness owner IDs colliding with different same-board threads fail closed case-insensitively", async () => {
+  const calls = [];
+  const result = await _internals.buildBoardCardJournal({
+    payload: {
+      events: [
+        event({
+          eventId: "fitness-recovery-qa",
+          card: { ...event().card, id: " FF-QA-002 ", threadId: "1526664644897280062" },
+        }),
+        event({
+          eventId: "fitness-recovery-soc",
+          card: { ...event().card, id: "FF-SOC-002", threadId: "1526715747290841259" },
+        }),
+      ],
+    },
+    apply: true,
+    allowApply: true,
+    env: {
+      DISCORDOS_BOT_TOKEN: "token",
+      DISCORDOS_BOARD_CARD_JOURNAL: "enabled",
+    },
+    registryScanImpl: registryScanWithRows([
+      {
+        boardId: "fitness-active",
+        threadId: "1526670132448071781",
+        title: "Add Gifted Pro Subscription Credits",
+        cardId: "ff-soc-002",
+        superseded: false,
+      },
+      {
+        boardId: "fitness-active",
+        threadId: "1526635173540794599",
+        title: "Repair Fitness Atlas Contracts CI",
+        cardId: "ff-qa-002",
+        superseded: false,
+      },
+    ]),
+    fetchImpl: async (url, init) => {
+      calls.push({ url, method: init.method });
+      throw new Error(`unexpected ${init.method} ${url}`);
+    },
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.liveIdentityPreflight.status, "blocked");
+  assert.deepEqual(result.reasonCodes, ["source_card_id_live_collision"]);
+  assert.deepEqual(result.liveIdentityPreflight.checks.map((check) => check.normalizedCardId), [
+    "ff-qa-002",
+    "ff-soc-002",
+  ]);
+  assert.deepEqual(result.liveIdentityPreflight.checks[0].collisionLocations, [{
+    boardId: "fitness-active",
+    forumChannelId: "fitness-forum",
+    threadId: "1526635173540794599",
+    title: "Repair Fitness Atlas Contracts CI",
+    cardId: "ff-qa-002",
+  }]);
+  assert(result.results.every((row) => row.reasonCodes.includes("source_card_id_live_collision")));
+  assert.deepEqual(calls, []);
+});
+
+test("a later live collision blocks a valid earlier event before any Discord write", async () => {
+  const calls = [];
+  const result = await _internals.buildBoardCardJournal({
+    payload: {
+      events: [
+        event({ eventId: "new-card", card: { ...event().card, id: "FF-NEW-001" } }),
+        event({
+          eventId: "colliding-card",
+          card: { ...event().card, id: "FF-SOC-002", threadId: "target-thread" },
+        }),
+      ],
+    },
+    apply: true,
+    allowApply: true,
+    env: {
+      DISCORDOS_BOT_TOKEN: "token",
+      DISCORDOS_BOARD_CARD_JOURNAL: "enabled",
+    },
+    registryScanImpl: registryScanWithRows([{
+      boardId: "fitness-active",
+      threadId: "different-thread",
+      title: "Existing card",
+      cardId: "FF-SOC-002",
+      superseded: false,
+    }]),
+    fetchImpl: async (url, init) => {
+      calls.push({ url, method: init.method });
+      throw new Error(`unexpected ${init.method} ${url}`);
+    },
+  });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.results[0].reasonCodes, ["live_identity_batch_preflight_failed"]);
+  assert.deepEqual(result.results[1].reasonCodes, ["source_card_id_live_collision"]);
+  assert.deepEqual(calls, []);
+});
+
+test("duplicate normalized candidates fail the batch before mutation", () => {
+  const result = _internals.preflightLiveIdentities({
+    events: [
+      event({ eventId: "one", card: { ...event().card, id: "FIT-42" } }),
+      event({ eventId: "two", card: { ...event().card, id: " fit-42 " } }),
+    ],
+    scan: registryScan(),
+  });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.reasonCodes, ["batch_candidate_identity_duplicate"]);
+  assert(result.checks.every((check) => check.reasonCodes.includes("batch_candidate_identity_duplicate")));
+});
+
+test("an incomplete live registry scan fails closed as stale", () => {
+  const result = _internals.preflightLiveIdentities({
+    events: [event()],
+    scan: registryScan([], {
+      ok: false,
+      status: "blocked",
+      reasonCodes: ["card_starter_read_failed:unreadable-thread"],
+    }),
+  });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.reasonCodes, ["live_identity_preflight_stale"]);
+  assert.deepEqual(result.scanBlockingReasonCodes, ["card_starter_read_failed:unreadable-thread"]);
+});
+
 test("dry run reads identity and proposes a new card without writes", async () => {
   const calls = [];
   const result = await _internals.buildBoardCardJournal({
     payload: event(),
     apply: false,
     env: { DISCORDOS_BOT_TOKEN: "token" },
+    registryScanImpl: emptyRegistryScan,
     fetchImpl: async (url, init) => {
       calls.push({ url, method: init.method });
       if (url.endsWith("/channels/fitness-forum")) return response({ payload: { id: "fitness-forum", guild_id: "guild" } });
@@ -267,6 +417,7 @@ test("dry run reads identity and proposes a new card without writes", async () =
     },
   });
   assert.equal(result.ok, true);
+  assert.equal(result.liveIdentityPreflight.status, "admitted");
   assert.equal(result.results[0].preview.action, "create_card_and_append_journal");
   assert(calls.every((call) => call.method === "GET"));
 });
@@ -282,6 +433,7 @@ test("apply creates card, appends journal, and reads back both surfaces", async 
       DISCORDOS_BOT_TOKEN: "token",
       DISCORDOS_BOARD_CARD_JOURNAL: "enabled",
     },
+    registryScanImpl: emptyRegistryScan,
     fetchImpl: async (url, init) => {
       if (url.endsWith("/channels/fitness-forum") && init.method === "GET") {
         return response({ payload: { id: "fitness-forum", guild_id: "guild" } });
@@ -303,6 +455,7 @@ test("apply creates card, appends journal, and reads back both surfaces", async 
     },
   });
   assert.equal(result.ok, true);
+  assert.equal(result.liveIdentityPreflight.currentIdentityCount, 0);
   assert.equal(result.results[0].cardAction, "created");
   assert.equal(result.results[0].journalAction, "created");
   assert.deepEqual(result.results[0].readback, { starter: true, journal: true });
@@ -321,6 +474,13 @@ test("retry reuses one journal event instead of posting a duplicate", async () =
       DISCORDOS_BOT_TOKEN: "token",
       DISCORDOS_BOARD_CARD_JOURNAL: "enabled",
     },
+    registryScanImpl: registryScanWithRows([{
+      boardId: "fitness-active",
+      threadId: "existing-thread",
+      title: event().card.title,
+      cardId: "fit-42",
+      superseded: false,
+    }]),
     fetchImpl: async (url, init) => {
       if (url.endsWith("/channels/fitness-forum") && init.method === "GET") return response({ payload: { guild_id: "guild" } });
       if (url.endsWith("/guilds/guild/threads/active")) return response({ payload: { threads: [{ id: "existing-thread", name: event().card.title, parent_id: "fitness-forum", thread_metadata: { archived: false } }] } });
@@ -337,6 +497,7 @@ test("retry reuses one journal event instead of posting a duplicate", async () =
     },
   });
   assert.equal(result.ok, true);
+  assert.equal(result.liveIdentityPreflight.checks[0].matchingLocations[0].threadId, "existing-thread");
   assert.equal(result.results[0].journalAction, "reused");
   assert.equal(posts, 0);
 });
@@ -358,6 +519,7 @@ test("retry finds an existing journal event beyond the first message page", asyn
       DISCORDOS_BOT_TOKEN: "token",
       DISCORDOS_BOARD_CARD_JOURNAL: "enabled",
     },
+    registryScanImpl: emptyRegistryScan,
     fetchImpl: async (url, init) => {
       if (url.endsWith("/channels/fitness-forum") && init.method === "GET") return response({ payload: { guild_id: "guild" } });
       if (url.endsWith("/guilds/guild/threads/active")) return response({ payload: { threads: [{ id: "existing-thread", name: event().card.title, parent_id: "fitness-forum", thread_metadata: { archived: false } }] } });
@@ -394,6 +556,7 @@ test("legacy starter is preserved in thread messages before normalization", asyn
       DISCORDOS_BOT_TOKEN: "token",
       DISCORDOS_BOARD_CARD_JOURNAL: "enabled",
     },
+    registryScanImpl: emptyRegistryScan,
     fetchImpl: async (url, init) => {
       if (url.endsWith("/channels/fitness-forum") && init.method === "GET") return response({ payload: { guild_id: "guild" } });
       if (url.endsWith("/guilds/guild/threads/active")) return response({ payload: { threads: [{ id: "legacy-thread", name: event().card.title, parent_id: "fitness-forum", thread_metadata: { archived: false } }] } });
@@ -446,6 +609,7 @@ test("archived historical card is reopened for journaling and restored afterward
       DISCORDOS_BOT_TOKEN: "token",
       DISCORDOS_BOARD_CARD_JOURNAL: "enabled",
     },
+    registryScanImpl: emptyRegistryScan,
     fetchImpl: async (url, init) => {
       if (url.endsWith("/channels/completed-forum") && init.method === "GET") return response({ payload: { guild_id: "guild" } });
       if (url.endsWith("/guilds/guild/threads/active")) return response({ payload: { threads: [] } });
