@@ -6,6 +6,8 @@ const { _internals: textIntegrity } = require("./discordos-board-text-integrity"
 const DEFAULT_REGISTRY_PATH = path.resolve(__dirname, "..", "config", "discordos-board-registry.json");
 const OWNER_EXPORT_CONTRACT = "atlas.project-board.owner-export.v1";
 const BATCH_CONTRACT = "atlas.board-card-journal.batch.v1";
+const SOCIALS_OWNER_STABLE_RECORD_COUNT = 22;
+const SOCIALS_OWNER_NONTERMINAL_CARD_COUNT = 12;
 const TERMINAL_LIFECYCLES = new Set(["completed", "archived", "closed"]);
 const LIFECYCLE_MAP = new Map([
   ["intake", "intake"],
@@ -104,9 +106,9 @@ function validateExport({ ownerExport, registry, seenCardIds }) {
     }
   }
   if (ownerExport?.adapter_id === "socials-os-roadmap-v1") {
-    if ((ownerExport.cards || []).length !== 13) reasonCodes.push("socials_owner_export_event_count_mismatch");
-    if (ownerExport?.extensions?.selection?.roadmap_record_count !== 22) reasonCodes.push("socials_owner_export_stable_record_count_mismatch");
-    if (ownerExport?.extensions?.selection?.exported_nonterminal_count !== 13) reasonCodes.push("socials_owner_export_nonterminal_count_mismatch");
+    if ((ownerExport.cards || []).length !== SOCIALS_OWNER_NONTERMINAL_CARD_COUNT) reasonCodes.push("socials_owner_export_event_count_mismatch");
+    if (ownerExport?.extensions?.selection?.roadmap_record_count !== SOCIALS_OWNER_STABLE_RECORD_COUNT) reasonCodes.push("socials_owner_export_stable_record_count_mismatch");
+    if (ownerExport?.extensions?.selection?.exported_nonterminal_count !== SOCIALS_OWNER_NONTERMINAL_CARD_COUNT) reasonCodes.push("socials_owner_export_nonterminal_count_mismatch");
   }
   return { board, reasonCodes: [...new Set(reasonCodes)].sort() };
 }
