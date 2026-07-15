@@ -1,4 +1,5 @@
 const path = require("node:path");
+const crypto = require("node:crypto");
 const {
   _internals: cardContract,
 } = require("./discordos-board-card-contract");
@@ -56,6 +57,17 @@ function hasJournal(messages) {
   return (Array.isArray(messages) ? messages : []).some((message) =>
     /ATLAS-JOURNAL-EVENT-ID:\s*`[^`]+`/i.test(String(message?.content || ""))
   );
+}
+
+function sha256(value) {
+  return crypto.createHash("sha256").update(String(value || ""), "utf8").digest("hex");
+}
+
+function journalIntegrityEntries(messages) {
+  return (Array.isArray(messages) ? messages : []).flatMap((message) => {
+    const eventId = String(message?.content || "").match(/ATLAS-JOURNAL-EVENT-ID:\s*`([^`]+)`/i)?.[1]?.trim();
+    return eventId ? [{ eventId, contentSha256: sha256(message.content) }] : [];
+  }).sort((left, right) => left.eventId.localeCompare(right.eventId));
 }
 
 function inspectTextSurface({
@@ -158,6 +170,7 @@ function inspectThread({ board, thread, starter, messages }) {
   if (actionableFindings.some((finding) => finding.surface === "journal")) textReasonCodes.push("card_history_encoding_corrupt");
   if (supersededThreadId) {
     const archived = thread?.thread_metadata?.archived === true;
+    const locked = thread?.thread_metadata?.locked === true;
     const reasonCodes = [...textReasonCodes];
     if (!archived) reasonCodes.push("superseded_card_not_archived");
     return {
@@ -169,11 +182,15 @@ function inspectThread({ board, thread, starter, messages }) {
       cardId: null,
       state: "superseded",
       archived,
+      locked,
+      appliedTagIds: Array.isArray(thread?.applied_tags) ? [...thread.applied_tags].sort() : [],
       superseded: true,
       supersededThreadId,
       completedThreadIdLink: null,
       sourceThreadIdLink: null,
       journalPresent: hasJournal(messages),
+      starterContentSha256: starter ? sha256(content) : null,
+      journalIntegrityEntries: journalIntegrityEntries(messages),
       textIntegrity: textIntegrityResult,
       reasonCodes,
     };
@@ -186,6 +203,7 @@ function inspectThread({ board, thread, starter, messages }) {
     title: thread?.name || "",
   });
   const archived = thread?.thread_metadata?.archived === true;
+  const locked = thread?.thread_metadata?.locked === true;
   const completedThreadIdLink = content.match(/ATLAS-COMPLETED-CARD:\s*https:\/\/discord\.com\/channels\/[^/]+\/([0-9]+)/i)?.[1] || null;
   const reasonCodes = [];
   if (!starter) reasonCodes.push("card_starter_message_missing");
@@ -221,9 +239,13 @@ function inspectThread({ board, thread, starter, messages }) {
     priority: parsedCard?.priority || null,
     owner: parsedCard?.owner || null,
     archived,
+    locked,
+    appliedTagIds: Array.isArray(thread?.applied_tags) ? [...thread.applied_tags].sort() : [],
     completedThreadIdLink,
     sourceThreadIdLink: content.match(/original card:\s*https:\/\/discord\.com\/channels\/[^/]+\/([0-9]+)/i)?.[1] || null,
     journalPresent: hasJournal(messages),
+    starterContentSha256: starter ? sha256(content) : null,
+    journalIntegrityEntries: journalIntegrityEntries(messages),
     autonomy,
     superseded: false,
     textIntegrity: textIntegrityResult,
@@ -461,9 +483,19 @@ async function buildBoardCardConsistency({ payload, registry, env = process.env,
             ? {
                 ...thread,
                 name: threadReadback.payload?.name || thread.name,
-                thread_metadata: threadReadback.payload?.thread_metadata || thread.thread_metadata,
+                thread_metadata: threadReadback.payload?.thread_metadata || {
+                  archived: thread.archived === true,
+                  locked: thread.locked === true,
+                },
+                applied_tags: Array.isArray(threadReadback.payload?.applied_tags)
+                  ? threadReadback.payload.applied_tags
+                  : thread.appliedTags,
               }
-            : thread,
+            : {
+                ...thread,
+                thread_metadata: { archived: thread.archived === true, locked: thread.locked === true },
+                applied_tags: thread.appliedTags,
+              },
           starter: starter.ok ? starter.payload : null,
           messages: messages.payload,
         }),
@@ -592,6 +624,8 @@ module.exports = {
     parseCardId,
     parseCardState,
     hasJournal,
+    sha256,
+    journalIntegrityEntries,
     inspectTextSurface,
     inspectThreadTextIntegrity,
     NON_DELETABLE_SYSTEM_MESSAGE_TYPES,
