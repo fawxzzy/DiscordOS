@@ -60,7 +60,10 @@ test("canonical export is deterministic and current", () => {
   const first = renderProjectBoardOwnerExport(repoRoot);
   const second = renderProjectBoardOwnerExport(repoRoot);
   assert.equal(first, second);
-  assert.equal(first, fs.readFileSync(path.join(repoRoot, "exports", "discordos.project-board.owner-export.v1.json"), "utf8"));
+  assert.equal(
+    first.replace(/\r\n?/g, "\n"),
+    fs.readFileSync(path.join(repoRoot, "exports", "discordos.project-board.owner-export.v1.json"), "utf8").replace(/\r\n?/g, "\n")
+  );
 });
 
 test("check mode rejects stale output and accepts exact output", () => {

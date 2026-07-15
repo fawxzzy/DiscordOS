@@ -22,6 +22,7 @@ const CARD_TYPES = new Set([
 
 const uniqueSorted = (values) => [...new Set(values)].sort((left, right) => left.localeCompare(right));
 const atlasPath = (value) => `repos/DiscordOS/${value.replaceAll("\\", "/")}`;
+const normalizeLineEndings = (value) => String(value).replace(/\r\n?/g, "\n");
 
 function normalizeTimestamp(value) {
   const candidate = /^\d{4}-\d{2}-\d{2}$/.test(value ?? "") ? `${value}T00:00:00.000Z` : value;
@@ -147,7 +148,7 @@ export function runProjectBoardOwnerExport(argv, repoRoot = process.cwd()) {
   const rendered = renderProjectBoardOwnerExport(repoRoot);
   const outputPath = path.join(repoRoot, DEFAULT_OUTPUT_PATH);
   if (check) {
-    if (!fs.existsSync(outputPath) || fs.readFileSync(outputPath, "utf8") !== rendered) {
+    if (!fs.existsSync(outputPath) || normalizeLineEndings(fs.readFileSync(outputPath, "utf8")) !== normalizeLineEndings(rendered)) {
       throw new Error(`${DEFAULT_OUTPUT_PATH} is stale; run npm run ops:discordos:project-board-owner-export`);
     }
     process.stdout.write(`discordos-project-board-owner-export: ok (${JSON.parse(rendered).cards.length} cards)\n`);
