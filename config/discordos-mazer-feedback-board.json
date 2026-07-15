@@ -24,8 +24,8 @@
     },
     "planning": {
       "version": 1,
-      "activeCardId": "mazer-edge-wrap-topology-and-notch-fill",
-      "activeSelectionReason": "Edge-wrap topology is the highest-priority dependency-free unfinished card in the earliest critical-path Core Gameplay epic. The admitted completion packet preserves the direct-floor generator route and playable-wrap telemetry benchmark as separate explicit policies while closing seed-band diagnostics, fixed anomaly invariants, and generator/graph/renderer ownership documentation.",
+      "activeCardId": null,
+      "activeSelectionReason": "Mazer PR #63 completed the admitted edge-wrap topology packet. No Mazer card is currently Ready, so the active selector is intentionally empty until the governed planner admits the next non-conflicting packet.",
       "executionPolicy": "Finish the earliest execution-ready critical-path epic before taking later product work. Advanced AI research stays parallel and cannot block the critical path.",
       "epics": [
         {
@@ -765,14 +765,14 @@
     {
       "id": "mazer-edge-wrap-topology-and-notch-fill",
       "title": "mazer: edge-wrap topology, border fill, and notch safety",
-      "state": "ready",
+      "state": "completed",
       "priority": "high",
       "category": "mazer",
       "markerName": "Maze complexity/path topology",
-      "completionPercent": 52,
+      "completionPercent": 100,
       "summary": "Make wrapped border paths a real graph contract, keep start/goal/navigation aware of wrap edges, and prevent maze path visuals from entering border cutouts.",
       "whyItMatters": "Wrap paths and border notches change both visuals and navigation. They must be graph-owned, not just visual tricks, or AI distance, player movement, and difficulty scoring drift apart.",
-      "currentStatus": "Ready at an unchanged evidence-backed 52% for one completion-oriented topology packet. Mazer PR #38 already separates the direct-floor generator route from the playable-wrap-aware telemetry benchmark, and PR #44 already renders only legal paired non-corner wraps through the shared navigation resolver with notch/corner guards. Current generation also creates required horizontal and vertical pairs, but that guarantee is represented only by bounded tests and not by durable per-maze diagnostics or a fixed anomaly corpus. The admitted packet adds generated wrap-topology diagnostics across seed/scale bands, proves valid completed routes cannot undercut the playable graph shortest path, documents v1 always-on availability and the ownership rule that generation/graph code owns topology legality while renderer masks own decorative cutout exclusion, and reruns route-aware visual proof before completion.",
+      "currentStatus": "Completed after Mazer PR #63 merged at 0db88a153b5ed990664903f031e988fb88c5288e. Generated play and menu mazes now publish versioned legacy-wrap-topology-v1 diagnostics for paired endpoints, required axes, inward connectivity, corner/cutout ownership, direct-floor versus playable-wrap-aware shortest paths, and completed-route lower bounds without exposing raw paths or rewriting historical receipts. Architecture tests passed 15/15, the focused diagnostics/runtime/harness slice passed 12/12, full verification passed 47 files / 352 tests plus the production-mode Vite/PWA build, and exact clean-commit route-aware captures passed at 405x958 DPR 2 and 1280x720 DPR 1 with generated menu/play H/V pairs, valid topology/routes, exact screen contracts, and zero console/page errors. No production deployment, secrets, Supabase data, or protected demo-walker changes were involved.",
       "workBreakdown": [
         "Guarantee at least one horizontal and one vertical wrap candidate only when legal for the current maze bounds.",
         "Represent wrap neighbors in the graph so AI, player movement, compass, trail, and complexity formulas all agree.",
@@ -782,11 +782,7 @@
         "Compute shortest path from the same legal neighbor contract used by movement, telemetry, AI, and player controls, including wraps."
       ],
       "nextActions": [
-        "Publish deterministic per-maze horizontal/vertical wrap-pair, unpaired endpoint, cutout-safety, and direct-versus-playable shortest-path diagnostics.",
-        "Run the diagnostics across representative play/menu seed and scale bands with required-axis guarantees enabled and disabled.",
-        "Add a fixed horizontal, vertical, multi-route, one-sided-invalid, and historical-shortcut anomaly pack proving every legal completed path is at least the playable graph shortest path.",
-        "Document v1 legal wraps as always-on when the active generation profile requires them; generation and the playable graph own topology legality, while the shared renderer owns decorative notch/corner masking.",
-        "Run focused, architecture, full verify, and route-aware notch/edge visual proof, then complete only if every card acceptance criterion passes."
+        "Retain legacy-wrap-topology-v1 and its exact proof as the graph/renderer ownership baseline; no work remains on this completed card."
       ],
       "acceptanceCriteria": [
         "At least one horizontal and one vertical wrap candidate can be generated when complexity allows it.",
@@ -799,7 +795,7 @@
         "Run topology diagnostics against generated mazes with wrap paths enabled.",
         "Capture a visual proof where paths reach the border edges but do not enter the top notch."
       ],
-      "reference": "repos/mazer/docs/research/MAZER_BOARD_RECONCILIATION_2026-07-10.md",
+      "reference": "repos/mazer/docs/ops/MAZER-EDGE-WRAP-TOPOLOGY-COMPLETION-PACKET-2026-07-14.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-edge-wrap-topology-and-notch-fill",
       "relatedCardIds": [
         "mazer-maze-feature-progression-parity",
@@ -808,9 +804,9 @@
       ],
       "liveThreadId": "1524889576651620382",
       "liveMessageId": "1524889576651620382",
-      "reactionStatus": "failure",
-      "reactionEmojiName": "failure",
-      "reactionEmojiId": "1507384094424694785"
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851"
     },
     {
       "id": "mazer-crisp-cyber-arcade-graphics",
