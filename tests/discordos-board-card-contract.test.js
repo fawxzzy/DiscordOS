@@ -280,7 +280,10 @@ test("upsertDiscordForumCard does not mark partial title success as complete whe
         return response({ payload: { id: "message-1" } });
       }
       if (url.endsWith("/channels/thread-1/messages/message-1") && init.method === "GET") {
-        return response({ payload: { reactions: [] } });
+        return response({ payload: { content: "body", reactions: [] } });
+      }
+      if (url.endsWith("/channels/thread-1") && init.method === "GET") {
+        return response({ payload: { id: "thread-1", name: "mazer: card one" } });
       }
       if (url.includes("/reactions/failure%3A1507384094424694785/@me")) {
         return response({ ok: false, status: 403, payload: { message: "Missing Permissions" } });
@@ -292,4 +295,109 @@ test("upsertDiscordForumCard does not mark partial title success as complete whe
   assert.equal(result.ok, false);
   assert(result.reasonCodes.includes("required_reaction_permission_denied"));
   assert(calls.some((call) => call.url.endsWith("/channels/thread-1") && call.method === "PATCH"));
+});
+
+test("proposed corrupt card text blocks before any writer mutation", async () => {
+  const calls = [];
+  const spec = {
+    cardId: "unicode-card",
+    canonicalTitle: "Feature: corrupt \u00e2\u20ac\u201d title",
+    proposedTitle: "Feature: corrupt title",
+    requiredReactions: [{ name: "failure", id: "1507384094424694785" }],
+  };
+  const result = await _internals.upsertDiscordForumCard({
+    spec,
+    forumChannelId: "forum",
+    token: "token",
+    apply: true,
+    buildPayload: () => ({
+      name: spec.canonicalTitle,
+      message: { content: "clean body", allowed_mentions: { parse: [] } },
+    }),
+    fetchImpl: async (url, init) => {
+      calls.push({ url, method: init.method });
+      throw new Error(`unexpected request ${init.method} ${url}`);
+    },
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.action, "blocked");
+  assert(result.reasonCodes.includes("card_proposed_text_integrity_failed"));
+  assert.deepEqual(calls, []);
+});
+
+test("Unicode writes require exact title and starter code-point readback", async () => {
+  const title = "Feature: \u201cJos\u00e9\u201d \u2014 \u674e";
+  const content = "Canonical \u2013 starter for Fran\u00e7ois";
+  let reactionApplied = false;
+  const spec = {
+    cardId: "unicode-card",
+    canonicalTitle: title,
+    proposedTitle: title,
+    requiredReactions: [{ name: "failure", id: "1507384094424694785" }],
+  };
+  const result = await _internals.upsertDiscordForumCard({
+    spec,
+    forumChannelId: "forum",
+    token: "token",
+    apply: true,
+    buildPayload: () => ({
+      name: title,
+      message: { content, allowed_mentions: { parse: [] } },
+    }),
+    fetchImpl: async (url, init) => {
+      if (url.endsWith("/channels/forum/threads") && init.method === "POST") {
+        return response({ status: 201, payload: { id: "unicode-thread", message: { id: "unicode-message" } } });
+      }
+      if (url.endsWith("/channels/unicode-thread") && init.method === "GET") {
+        return response({ payload: { id: "unicode-thread", name: title } });
+      }
+      if (url.endsWith("/channels/unicode-thread/messages/unicode-message") && init.method === "GET") {
+        return response({ payload: {
+          id: "unicode-message",
+          content,
+          reactions: reactionApplied ? [{
+            emoji: { name: "failure", id: "1507384094424694785" },
+            count: 1,
+            me: true,
+          }] : [],
+        } });
+      }
+      if (url.includes("/reactions/failure%3A1507384094424694785/@me") && init.method === "PUT") {
+        reactionApplied = true;
+        return response({ status: 204 });
+      }
+      throw new Error(`unexpected request ${init.method} ${url}`);
+    },
+  });
+
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.equal(result.textReadback.titleExact, true);
+  assert.equal(result.textReadback.starterExact, true);
+  assert.deepEqual(result.textReadback.expectedTitleCodePoints, result.textReadback.actualTitleCodePoints);
+  assert(result.textReadback.actualTitleCodePoints.includes("U+2014"));
+  assert(result.textReadback.actualTitleCodePoints.includes("U+00E9"));
+});
+
+test("ASCII-substituted readback fails exact Unicode verification", async () => {
+  const result = await _internals.readBackExactCardText({
+    threadId: "thread",
+    messageId: "thread",
+    expectedTitle: "History \u2014 Jos\u00e9",
+    expectedContent: "Quoted \u201cproof\u201d",
+    token: "token",
+    fetchImpl: async (url) => {
+      if (url.endsWith("/channels/thread")) return response({ payload: { name: "History - Jose" } });
+      if (url.endsWith("/channels/thread/messages/thread")) return response({ payload: { content: 'Quoted "proof"' } });
+      throw new Error(`unexpected request ${url}`);
+    },
+  });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.reasonCodes, [
+    "card_thread_title_exact_readback_failed",
+    "card_starter_text_exact_readback_failed",
+  ]);
+  assert(result.expectedTitleCodePoints.includes("U+2014"));
+  assert(!result.actualTitleCodePoints.includes("U+2014"));
 });

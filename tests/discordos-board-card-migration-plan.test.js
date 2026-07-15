@@ -34,15 +34,58 @@ test("fitness source preserves stable card identity and maps fixed work to revie
     report_type: "feature",
     report_type_label: "Feature",
     status: "fixed",
-    area: "Progression",
-    title: "Complete Progression Engine V2",
+    area: "Progressi\u00f3n",
+    title: "\u201cComplete\u201d Progression Engine \u2013 Fran\u00e7ois",
     forum_thread_link: "https://discord.com/channels/guild/1514380081219506298",
     latest_update_summary: "Verification passed.",
     card_sections: { acceptance_criteria: ["Deterministic progression"] },
   });
   assert.equal(source.cardId, "FF-CORE-001");
   assert.equal(source.sourceThreadId, "1514380081219506298");
+  assert.equal(source.title, "Feature: Progressi\u00f3n \u2014 \u201cComplete\u201d Progression Engine \u2013 Fran\u00e7ois");
   assert.equal(_internals.mapFitnessState({ status: source.rawState }, "active"), "review");
+});
+
+test("corrupt owner exports fail closed before live reads", async () => {
+  const calls = [];
+  const result = await _internals.buildMigrationPlan({
+    boards: [{ id: "fitness", project: "Fitness", role: "active", forumChannelId: "forum" }],
+    fitnessCards: [{ card_id: "FIT-1", title: "Corrupt \u00e2\u20ac\u201d owner title" }],
+    env: { DISCORDOS_BOT_TOKEN: "token" },
+    fetchImpl: async (url) => {
+      calls.push(url);
+      throw new Error(`unexpected request ${url}`);
+    },
+  });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.eventCount, 0);
+  assert(result.reasonCodes.includes("migration_owner_export_text_integrity_failed"));
+  assert.equal(result.textIntegrityFindings[0].path, "$.migrationInput.fitnessCards[0].title");
+  assert.deepEqual(calls, []);
+});
+
+test("corrupt live titles fail closed with exact thread evidence", async () => {
+  const result = await _internals.buildMigrationPlan({
+    boards: [{ id: "fitness", project: "Fitness", role: "active", forumChannelId: "forum" }],
+    env: { DISCORDOS_BOT_TOKEN: "token" },
+    fetchImpl: async (url) => {
+      if (url.endsWith("/channels/forum")) return response({ id: "forum", guild_id: "guild" });
+      if (url.endsWith("/guilds/guild/threads/active")) {
+        return response({ threads: [{ id: "thread", name: "Corrupt \u00e2\u20ac\u201d title", parent_id: "forum" }] });
+      }
+      if (url.endsWith("/channels/forum/threads/archived/public?limit=100")) {
+        return response({ threads: [], has_more: false });
+      }
+      throw new Error(`unexpected request ${url}`);
+    },
+  });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.rows[0].reasonCodes, ["migration_live_title_text_integrity_failed"]);
+  assert.equal(result.textIntegrityFindings[0].threadId, "thread");
+  assert.equal(result.textIntegrityFindings[0].messageId, null);
+  assert.equal(result.textIntegrityFindings[0].surface, "title");
 });
 
 test("mazer completed source remains completed on the active board for transfer", () => {
