@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "atlas.board-card-journal.v1",
+  "eventId": "mazer-cross-viewport-ui-reliability-progress-20260715",
+  "occurredAt": "2026-07-15T08:07:27.564Z",
+  "actor": "Mazer",
+  "card": {
+    "id": "mazer-cross-viewport-ui-reliability",
+    "project": "Mazer",
+    "sourceForumChannelId": "1524889569475170478",
+    "threadId": "1525337748830031875",
+    "title": "mazer: cross-viewport UI reliability and layout hardening",
+    "type": "feature",
+    "state": "in_progress",
+    "previousState": "in_progress",
+    "priority": "High",
+    "owner": "Mazer",
+    "progress": "94%",
+    "summary": "Repair the shared viewport authority and prove deterministic menu, Options, play, and Pause geometry across compact, wide, restored, and tall-phone surfaces without per-screen offsets.",
+    "objective": "Keep browser-owned layout dimensions and environment-owned safe-area insets live across resize, maximize/restore, and mobile browser-chrome changes, then preserve physical-device proof as the final terminal boundary.",
+    "acceptanceCriteria": [
+      "Every primary Mazer surface has an owner, supported viewport category, and no-overlap contract.",
+      "Physical iPhone safe areas and installed-PWA shell bands do not obstruct HUD, Pause, maze, controls, overlays, or scroll content.",
+      "Native browser resize, maximize, and restore preserve deterministic geometry and current route/overlay state.",
+      "Route-aware evidence records viewport, safe-area, mode, overlay, scroll, and layout diagnostics with no actionable console or page errors."
+    ],
+    "discoveries": [
+      "The viewport resolver preferred document dimensions that were themselves sized from its previously published content rectangle, creating a stale maximize/restore feedback loop.",
+      "The public safe-area CSS variables overwrote their own env(safe-area-inset-*) source after boot, preventing later environment inset changes from being observed.",
+      "The maintained transition runner treated intentionally skipped bottom captures and unrelated random topology as layout failures; transition mode now measures only its captured layout surfaces while dedicated topology gates remain authoritative."
+    ],
+    "nextActions": [
+      "Run PR #72 preview on a physical iPhone Safari session with browser chrome expanded and collapsed.",
+      "Install the same preview as a PWA and capture menu, active play, and Pause against Dynamic Island and home-indicator safe areas.",
+      "Move to Review only if the physical-device evidence preserves the shared content rectangle; otherwise reopen only the shared viewport owner."
+    ],
+    "blockers": [
+      "Post-fix physical iPhone Safari and installed-PWA safe-area/browser-chrome proof is not yet available; deterministic emulation and desktop resize proof do not replace it."
+    ],
+    "evidence": [
+      "Mazer draft PR #72 https://github.com/fawxzzy/mazer/pull/72",
+      "Mazer commit 768c3c633865adb8b6a1ceacab9af222378f7fcf",
+      "Full Mazer verification: 48 files / 360 tests and production bundle passed",
+      "Maintained transition capture C:/ATLAS/tmp/captures/mazer-ui-surfaces/2026-07-15T07-57-26-575Z/summary.json passed",
+      "Vercel preview deployment dpl_5h1c8EkYAHuqUZ8Kx1aAgccoFjpo READY at https://fawxzzy-mazer-qonuksqh7-fawxzzy.vercel.app",
+      "Deployed preview restored 390x844 board/HUD/controller geometry exactly after 1440x900 with no console warnings/errors"
+    ]
+  },
+  "entry": {
+    "kind": "progress",
+    "headline": "Shared viewport authority repaired and preview-proven",
+    "completed": [
+      "Separated environment-owned safe-area inputs from published Mazer CSS values.",
+      "Removed the document-size feedback loop and proved exact maximize/restore geometry.",
+      "Passed full source verification, maintained four-surface transition capture, and deployed preview browser readback."
+    ],
+    "discovered": [
+      "Only physical iPhone Safari and installed-PWA browser-chrome/safe-area evidence remains before terminal review."
+    ],
+    "next": [
+      "Use the PR #72 preview for physical iPhone Safari and installed-PWA proof; do not substitute another emulated matrix."
+    ],
+    "blockers": [
+      "A physical iPhone installed-PWA/browser-chrome proof session is still required."
+    ],
+    "evidence": [
+      "Mazer PR #72 / commit 768c3c63 / preview dpl_5h1c8EkYAHuqUZ8Kx1aAgccoFjpo",
+      "48/48 test files and 360/360 tests passed",
+      "Maintained route-aware transition capture passed"
+    ]
+  },
+  "correlation": {
+    "taskId": "Mazer",
+    "jobId": "mazer-cross-viewport-progress-20260715",
+    "branch": "codex/cross-viewport-reliability-completion",
+    "commit": "768c3c633865adb8b6a1ceacab9af222378f7fcf",
+    "receipt": "docs/ops/discordos-mazer-cross-viewport-progress-receipt-2026-07-15.md"
+  }
+}

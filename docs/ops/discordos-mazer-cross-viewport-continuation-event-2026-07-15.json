@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "atlas.board-card-journal.v1",
+  "eventId": "mazer-cross-viewport-ui-reliability-continuation-20260715",
+  "occurredAt": "2026-07-15T07:25:48.295Z",
+  "actor": "Mazer",
+  "card": {
+    "id": "mazer-cross-viewport-ui-reliability",
+    "project": "Mazer",
+    "sourceForumChannelId": "1524889569475170478",
+    "threadId": "1525337748830031875",
+    "title": "mazer: cross-viewport UI reliability and layout hardening",
+    "type": "feature",
+    "state": "in_progress",
+    "previousState": "in_progress",
+    "priority": "High",
+    "owner": "Mazer",
+    "progress": "84%",
+    "summary": "Continue the shared viewport contract through the remaining physical-device, installed-PWA, browser-chrome, and native resize/maximize/restore proof boundary.",
+    "objective": "Finish cross-viewport reliability without reopening completed shared-component work or replacing real-surface evidence with deterministic emulation.",
+    "acceptanceCriteria": [
+      "Every primary Mazer surface has an owner, supported viewport category, and no-overlap contract.",
+      "Physical iPhone safe areas and installed-PWA shell bands do not obstruct HUD, Pause, maze, controls, overlays, or scroll content.",
+      "Native browser resize, maximize, and restore preserve deterministic geometry and current route/overlay state.",
+      "Route-aware evidence records viewport, safe-area, mode, overlay, scroll, and layout diagnostics with no actionable console or page errors."
+    ],
+    "discoveries": [
+      "PR #60 already completed the shared geometry and deterministic emulated transition foundation.",
+      "PRs #70 and #71 completed the Options/Pause flow and fresh-session defaults, so this packet must not duplicate those UI fixes.",
+      "Exact live readback found one canonical source thread in in_progress state with nine preserved journals and no identity reason codes."
+    ],
+    "nextActions": [
+      "Reconcile the operator physical-device screenshots and current production shell against current main.",
+      "Run or extend supported real browser/device proof for safe areas, installed PWA, browser chrome, resize, maximize, and restore.",
+      "Apply only shared viewport or shell fixes proven necessary by the exact failing surface.",
+      "Close with focused tests, build, route-aware browser proof, production disposition, and exact card lifecycle readback."
+    ],
+    "blockers": [],
+    "evidence": [
+      "Mazer PR #60 merge afc6e8401893c2ddb4c0681db39e6b3b435985ff",
+      "Mazer PR #70 merge b1e059473eaf1c7ff17115402e087e73f6e88d6e",
+      "Mazer PR #71 merge 4e92cfa88cd3015218cf71a45aa4d80b85bf2278",
+      "Exact live source readback 2026-07-15T07:25:48.295Z"
+    ]
+  },
+  "entry": {
+    "kind": "progress",
+    "headline": "Cross-viewport reliability continuation admitted",
+    "completed": [
+      "Reconciled recovered completed cards and removed stale Open projections.",
+      "Selected the earliest dependency-safe High-priority critical-path primary.",
+      "Correlated the exact live source thread, canonical body, lifecycle state, and journal history."
+    ],
+    "discovered": [
+      "The remaining boundary is real-surface proof and any evidence-driven shared shell correction, not another component-layout rewrite."
+    ],
+    "next": [
+      "Inspect current production and source against the preserved physical-device evidence, then implement the smallest proof-backed packet."
+    ],
+    "blockers": [],
+    "evidence": [
+      "DiscordOS recovered completion reconciliation and exact source readback"
+    ]
+  },
+  "correlation": {
+    "taskId": "Mazer",
+    "jobId": "mazer-cross-viewport-continuation-20260715",
+    "branch": "codex/mazer-cross-viewport-admission",
+    "commit": "551afc12292bdcac82f4b3834147f60df5c1c239",
+    "receipt": "docs/ops/discordos-mazer-cross-viewport-continuation-admission-2026-07-15.md"
+  }
+}

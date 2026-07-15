@@ -161,14 +161,14 @@ test("mazer feedback board reads committed cards", async () => {
   assert.equal(result.blockedCardCount, 0);
   assert.equal(result.backlogCardCount, 19);
   assert.equal(result.reactionReadyCardCount, 64);
-  assert.equal(result.nextCard, null);
+  assert.equal(result.nextCard.id, "mazer-cross-viewport-ui-reliability");
   assert.equal(result.cards.find((card) => card.id === "mazer-crisp-cyber-arcade-graphics").state, "completed");
   assert.equal(result.cards.find((card) => card.id === "mazer-icon-quality-2026-visual-target").state, "completed");
   assert.equal(result.cards.find((card) => card.id === "mazer-turn-synchronous-world-simulation").state, "completed");
   assert.equal(result.cards.find((card) => card.id === "mazer-ai-run-corpus-quality-calibration").state, "open");
   assert.deepEqual(result.planning, {
     ok: true,
-    activeCardId: null,
+    activeCardId: "mazer-cross-viewport-ui-reliability",
     epicCount: 9,
     mappedCardCount: 64,
     dependencyCount: 34,
