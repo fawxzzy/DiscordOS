@@ -1,0 +1,153 @@
+{
+  "events": [
+    {
+      "schemaVersion": "atlas.board-card-journal.v1",
+      "eventId": "mazer-cross-viewport-ui-pr72-review-20260715",
+      "occurredAt": "2026-07-15T14:41:00.000Z",
+      "actor": "Mazer",
+      "card": {
+        "id": "mazer-cross-viewport-ui-reliability",
+        "project": "Mazer",
+        "sourceForumChannelId": "1524889569475170478",
+        "threadId": "1525337748830031875",
+        "title": "cross-viewport UI reliability and layout hardening",
+        "type": "feature",
+        "state": "review",
+        "previousState": "in_progress",
+        "priority": "High",
+        "owner": "Mazer",
+        "progress": "94%",
+        "summary": "Unify phone, browser, and installed-app geometry so menu, play, Options, and Pause share measured safe content, status, overlay, and fallback-background rules.",
+        "objective": "Remove physical-device clipping, overlap, inconsistent sibling layouts, fake scroll affordances, and purple safe-area bleed without introducing screenshot-specific offsets.",
+        "acceptanceCriteria": [
+          "Menu and play use one contained two-row status layout beside Pause at phone widths.",
+          "Options and Pause share guide, control-row, scroll, and pinned-action geometry.",
+          "Page, app, Phaser, theme, and installed-app fallback backgrounds do not expose purple safe-area bands.",
+          "Fresh physical iPhone Safari and installed-PWA proof confirms the deployed preview."
+        ],
+        "discoveries": [
+          "The operator's seven iPhone captures exposed status-panel drift, clipped guide and toggle copy, Move Speed overlap, fake rail presentation, and purple top/bottom fallback fields.",
+          "The final deployed diagnostics needed to suppress invisible rail geometry as well as the rail drawing itself."
+        ],
+        "nextActions": [
+          "Review the READY PR #72 preview on physical iPhone Safari and the installed PWA.",
+          "Merge only after the phone review confirms no clipping, overlap, purple bleed, or sibling-surface drift.",
+          "Keep canonical Mazer production unchanged until an explicit project-specific release approval."
+        ],
+        "blockers": [
+          "Fresh operator physical-iPhone Safari and installed-PWA proof is still required."
+        ],
+        "evidence": [
+          "Mazer draft PR #72 at commit 593e871c64e6d18c551efee7d2e248662e1a1436.",
+          "Focused viewport/layout/safe-area/scene checks passed 57/57; correlated repository coverage passed 362/362; lint, build, and diff checks passed.",
+          "READY preview dpl_7zx3HAry5zipJXBwyL6KpSP6RXCS at https://fawxzzy-mazer-6qs7k26v9-fawxzzy.vercel.app.",
+          "Deployed 390x844 proof confirmed textFits status panels, Options track/thumb null without overflow, Pause maxOffset 244, reachable fixed actions, and rgb(2, 8, 15) body/app backgrounds."
+        ]
+      },
+      "entry": {
+        "kind": "review",
+        "headline": "Physical iPhone UI defects corrected and deployed for review",
+        "completed": [
+          "Normalized menu/play status, Options/Pause composition, guide width, described rows, Move Speed lanes, and safe-area fallback colors.",
+          "Added truthful no-overflow scroll diagnostics and route-aware phone preview proof.",
+          "Published the focused correction to existing draft PR #72 without changing production."
+        ],
+        "discovered": [
+          "Desktop and emulated proof alone did not expose all defects visible in the operator's physical iPhone captures."
+        ],
+        "next": [
+          "Collect fresh physical iPhone Safari and installed-PWA screenshots against the READY preview.",
+          "Merge and complete only if that review is clean."
+        ],
+        "blockers": [
+          "Fresh physical iPhone review remains external acceptance evidence."
+        ],
+        "evidence": [
+          "https://github.com/fawxzzy/mazer/pull/72",
+          "https://fawxzzy-mazer-6qs7k26v9-fawxzzy.vercel.app",
+          "docs/ops/MAZER-CROSS-VIEWPORT-UI-RELIABILITY-PACKET-2026-07-15.md"
+        ]
+      },
+      "correlation": {
+        "taskId": "019f61a0-6b80-7913-b479-f75f2a8a5b77",
+        "branch": "codex/cross-viewport-reliability-completion",
+        "commit": "593e871c64e6d18c551efee7d2e248662e1a1436",
+        "receipt": "docs/ops/MAZER-CROSS-VIEWPORT-UI-RELIABILITY-PACKET-2026-07-15.md"
+      }
+    },
+    {
+      "schemaVersion": "atlas.board-card-journal.v1",
+      "eventId": "mazer-shared-run-status-pr72-implementation-20260715",
+      "occurredAt": "2026-07-15T14:42:00.000Z",
+      "actor": "Mazer",
+      "card": {
+        "id": "mazer-shared-run-status-panel",
+        "project": "Mazer",
+        "sourceForumChannelId": "1524889569475170478",
+        "threadId": "1526644909241667644",
+        "title": "shared menu and play run status panel",
+        "type": "feature",
+        "state": "in_progress",
+        "previousState": "opened",
+        "priority": "High",
+        "owner": "Mazer",
+        "progress": "80%",
+        "summary": "Use one two-row status component in menu AI and active play for time, contextual rank, score out of 100, and maze level.",
+        "objective": "Make menu and play progression information visually identical, readable, and contained while preserving the canonical score-data boundary.",
+        "acceptanceCriteria": [
+          "Menu and play consume the same status-panel layout and formatting contract.",
+          "Time and contextual Rank, Score out of 100, and Maze Lvl remain readable at phone and desktop widths.",
+          "The play panel fits its measured lane beside Pause without overlap.",
+          "Displayed score remains traceable to the canonical run-quality contract."
+        ],
+        "discoveries": [
+          "The physical iPhone capture showed the menu badge and active-play badge using different content and geometry.",
+          "A 236 by 58 two-row panel fits the measured phone lane in both contexts."
+        ],
+        "nextActions": [
+          "Review the PR #72 panel on physical iPhone Safari and installed PWA.",
+          "Confirm final score-field authority before terminal completion.",
+          "Merge the shared panel only after the linked viewport review is clean."
+        ],
+        "blockers": [
+          "Fresh physical iPhone proof and final canonical score-field traceability remain required."
+        ],
+        "evidence": [
+          "Mazer draft PR #72 at commit 593e871c64e6d18c551efee7d2e248662e1a1436.",
+          "Focused status/layout proof passed inside the 57/57 UI packet.",
+          "READY preview dpl_7zx3HAry5zipJXBwyL6KpSP6RXCS reported matching 236 by 58 menu/play panels with textFits true."
+        ]
+      },
+      "entry": {
+        "kind": "implementation",
+        "headline": "Shared menu and play status panel implemented",
+        "completed": [
+          "Replaced sibling-specific status geometry with one two-row layout resolver.",
+          "Measured active-play status beside Pause instead of centering into its lane.",
+          "Added phone-width containment and exact deployed diagnostic proof."
+        ],
+        "discovered": [
+          "Final completion still depends on physical-device review and canonical score-field traceability."
+        ],
+        "next": [
+          "Advance to Review after exact implementation journal readback.",
+          "Keep terminal completion blocked on the remaining evidence."
+        ],
+        "blockers": [
+          "Fresh physical iPhone review and canonical score-field traceability remain open."
+        ],
+        "evidence": [
+          "https://github.com/fawxzzy/mazer/pull/72",
+          "https://fawxzzy-mazer-6qs7k26v9-fawxzzy.vercel.app",
+          "docs/ops/MAZER-CROSS-VIEWPORT-UI-RELIABILITY-PACKET-2026-07-15.md"
+        ]
+      },
+      "correlation": {
+        "taskId": "019f61a0-6b80-7913-b479-f75f2a8a5b77",
+        "branch": "codex/cross-viewport-reliability-completion",
+        "commit": "593e871c64e6d18c551efee7d2e248662e1a1436",
+        "receipt": "docs/ops/MAZER-CROSS-VIEWPORT-UI-RELIABILITY-PACKET-2026-07-15.md"
+      }
+    }
+  ]
+}
