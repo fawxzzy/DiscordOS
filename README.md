@@ -12,6 +12,14 @@ Current status:
 - Vercel project linkage exists for `fawxzzy-discordos`
 - feedback contract and guarded runtime surfaces are documented and verified
 
+Owner work and project-board export:
+
+- `config/discordos-owner-work-registry.json` is the owner authority for current DiscordOS project work; Atlas-attributed candidates are not admitted directly.
+- `npm run ops:discordos:project-board-owner-export` writes the deterministic `atlas.project-board.owner-export.v1` artifact at `exports/discordos.project-board.owner-export.v1.json`.
+- `npm run ops:discordos:project-board-owner-export:check` fails when the checked-in export is stale.
+- completed owner work remains in the registry for evidence but is excluded from active card records.
+- unknown priority stays explicit as `null`; export generation never authorizes Discord mutation.
+
 Current governed contract surface:
 
 - `docs/contracts/feedback-runtime.md`

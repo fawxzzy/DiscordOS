@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 1,
+  "projectId": "discordos",
+  "updatedAt": "2026-07-14",
+  "state": "active",
+  "stateReason": "DiscordOS owns the single-writer board and publication plane. Current owner work is limited to evidence-backed admission, integrity, projection, maintainability, and security outcomes.",
+  "sourceRefs": [
+    "README.md",
+    "config/discordos-board-registry.json",
+    "config/discordos-feature-contract-registry.json",
+    "docs/contracts/discordos-board-card-workflow-v0.md",
+    "docs/contracts/discordos-github-projection-application-v1.md"
+  ],
+  "workItems": [
+    {
+      "id": "DOS-101",
+      "title": "Canonical board and publication writer foundations",
+      "status": "complete",
+      "goal": "Keep DiscordOS as the only admitted Discord board and publication writer with guarded apply, idempotency, and exact readback boundaries.",
+      "type": "governance",
+      "priority": null,
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Board and publication mutations route through DiscordOS-owned commands.",
+        "Apply paths fail closed without explicit mutation authority.",
+        "Successful writes require exact live readback and correlated receipts."
+      ],
+      "evidence": [
+        "README.md",
+        "scripts/discord-update-post.js",
+        "scripts/discordos-github-projection-application.js",
+        "docs/contracts/discordos-board-card-workflow-v0.md"
+      ]
+    },
+    {
+      "id": "DOS-102",
+      "title": "Mazer board-truth reconciliation",
+      "status": "complete",
+      "goal": "Reconcile stale Mazer board projections, duplicate identities, card bodies, journals, reactions, and completion state against current live readback.",
+      "type": "reliability",
+      "priority": null,
+      "dependencies": [
+        "DOS-101"
+      ],
+      "acceptanceCriteria": [
+        "Current Mazer cards have stable unique identities.",
+        "Canonical bodies and journals preserve current lifecycle truth.",
+        "Completion and reaction state are backed by exact live readback."
+      ],
+      "evidence": [
+        "config/discordos-board-registry.json",
+        "scripts/discordos-mazer-feedback-board-live-readback.js",
+        "scripts/discordos-board-card-reconciliation.js",
+        "tests/discordos-board-card-reconciliation.test.js"
+      ]
+    },
+    {
+      "id": "DOS-GOV-001",
+      "title": "DiscordOS owner-work registry and deterministic board export",
+      "status": "complete",
+      "goal": "Replace Atlas-attributed DiscordOS candidates with an owner-governed machine registry and contract-valid deterministic export.",
+      "type": "governance",
+      "priority": null,
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Completed and non-complete owner work are explicitly separated.",
+        "Every exported card has stable identity, lifecycle, evidence, dependencies, and acceptance criteria.",
+        "Export generation is deterministic and never authorizes Discord mutation."
+      ],
+      "evidence": [
+        "config/discordos-owner-work-registry.json",
+        "scripts/export-project-board-owner.mjs",
+        "tests/project-board-owner-export.test.mjs"
+      ]
+    },
+    {
+      "id": "DOS-201",
+      "title": "Admit and seed seven missing project boards",
+      "status": "in-progress",
+      "goal": "Create the missing Atlas, DiscordOS, Foundation, Lifeline, Cortex, _stack, and Playbook forums, admit their owner adapters, and seed current owner exports through the single writer.",
+      "type": "migration",
+      "priority": null,
+      "dependencies": [
+        "DOS-101",
+        "DOS-GOV-001"
+      ],
+      "acceptanceCriteria": [
+        "Each missing project forum is created once under the canonical Project Feedback Boards category and read back by exact channel identity.",
+        "Every registry entry names its admitted owner adapter and stable forum channel ID.",
+        "Owner exports seed idempotently with exact card and journal readback; the explicit empty _stack export creates no cards.",
+        "No source priority, lifecycle, or ownership value is guessed during admission."
+      ],
+      "evidence": [
+        "config/discordos-board-registry.json",
+        "scripts/discordos-board-card-migration-plan.js",
+        "scripts/discordos-board-card-reconciliation.js",
+        "docs/contracts/discordos-board-card-workflow-v0.md"
+      ]
+    },
+    {
+      "id": "DOS-202",
+      "title": "Close cross-project board integrity and lifecycle proof",
+      "status": "planned",
+      "goal": "Prove the fixed ten-unit board integrity denominator across every admitted project, board, and card class with recurring fail-closed drift detection.",
+      "type": "reliability",
+      "priority": null,
+      "dependencies": [
+        "DOS-201"
+      ],
+      "acceptanceCriteria": [
+        "All ten integrity units have current code, tests, and denominator-wide live readback or an explicit accepted not-applicable disposition.",
+        "Structural legacy drift is repaired or durably classified without deleting immutable Discord system history.",
+        "A recurring scanner fails closed on identity, lifecycle, reaction, journal, encoding, writer, or readback drift.",
+        "The Atlas marker moves only after evidence satisfies the fixed binary denominator."
+      ],
+      "evidence": [
+        "config/discordos-board-registry.json",
+        "scripts/discordos-board-card-consistency.js",
+        "scripts/discordos-board-text-integrity.js",
+        "scripts/discordos-board-lifecycle-reaction-drift-monitor.js"
+      ]
+    },
+    {
+      "id": "DOS-203",
+      "title": "Run an Atlas GitHub projection no-send canary",
+      "status": "candidate",
+      "goal": "Validate the GitHub projection pipeline with real Atlas-produced intent and receipt artifacts before separately authorizing any live Discord publication.",
+      "type": "automation",
+      "priority": null,
+      "dependencies": [
+        "DOS-101"
+      ],
+      "acceptanceCriteria": [
+        "A real Atlas projection intent and correlated source receipt pass the DiscordOS no-send consumer.",
+        "Replay and idempotency behavior are proven without resolving secrets or sending messages.",
+        "Any later live canary remains separately approval-gated and requires exact Discord readback."
+      ],
+      "evidence": [
+        "scripts/discordos-github-projection-intent-consumer.js",
+        "scripts/discordos-github-projection-application.js",
+        "docs/contracts/discordos-github-projection-application-v1.md",
+        "tests/discordos-github-projection-application.test.js"
+      ]
+    },
+    {
+      "id": "DOS-204",
+      "title": "Converge recursive command families",
+      "status": "planned-later",
+      "goal": "Retain, alias, or retire recursive and excessively long DiscordOS command families without losing supported behavior or evidence history.",
+      "type": "technical-debt",
+      "priority": null,
+      "dependencies": [
+        "DOS-202"
+      ],
+      "acceptanceCriteria": [
+        "Every current command family is classified as canonical, compatibility alias, deprecated, or retired.",
+        "Canonical commands preserve supported behavior and deterministic tests.",
+        "Compatibility and migration guidance prevents silent operator breakage.",
+        "Package scripts and documentation no longer grow through recursive name chaining."
+      ],
+      "evidence": [
+        "package.json",
+        "README.md",
+        "scripts/discordos-operator-dashboard.js",
+        "scripts/repo-hygiene.js"
+      ]
+    },
+    {
+      "id": "DOS-205",
+      "title": "Disposition DiscordOS Supabase security-advisor findings",
+      "status": "candidate",
+      "goal": "Re-read the current DiscordOS Supabase security-advisor state and close or explicitly accept every owner-scoped finding without weakening runtime boundaries.",
+      "type": "reliability",
+      "priority": null,
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "Current advisor findings are re-read from the authoritative DiscordOS project before planning changes.",
+        "Every owner-scoped finding has a fixed, accepted, or not-applicable disposition with evidence.",
+        "Any schema or policy mutation is separately scoped, migration-backed, and verified.",
+        "No secret value is logged, committed, or copied into the board export."
+      ],
+      "evidence": [
+        "supabase/migrations/20260612082758_discordos_feedback_runtime_schema_v1.sql",
+        "docs/contracts/discordos-board-card-persistence-v0.md",
+        "docs/contracts/discordos-moderation-audit-log-schema-admission-v0.md"
+      ]
+    }
+  ]
+}
