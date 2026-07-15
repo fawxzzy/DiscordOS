@@ -1,0 +1,315 @@
+{
+  "contract_version": "atlas.project-board.owner-export.v1",
+  "export_id": "pbe_discordos_owner_registry_da3080670dc3",
+  "project_id": "discordos",
+  "board_id": "discordos:project-feedback:discordos",
+  "owner": "discordos",
+  "adapter_id": "discordos-owner-registry-v1",
+  "source_revision": "sha256:da3080670dc3a5c0998346227eba256c9d7c097399a5678ec36c7c46b5f5dc87",
+  "generated_at": "2026-07-14T00:00:00.000Z",
+  "sources": [
+    {
+      "source_id": "discordos-owner-work-registry",
+      "kind": "json",
+      "repository": "DiscordOS",
+      "path": "repos/DiscordOS/config/discordos-owner-work-registry.json",
+      "revision": "sha256:da3080670dc3a5c0998346227eba256c9d7c097399a5678ec36c7c46b5f5dc87",
+      "observed_at": "2026-07-14T00:00:00.000Z"
+    }
+  ],
+  "cards": [
+    {
+      "idempotency_key": "pbk_discordos_dos-201_v1",
+      "record_kind": "project-work",
+      "record_status": "active",
+      "record": {
+        "contract_version": "atlas.card-record.v2",
+        "card_id": "DOS-201",
+        "project_id": "discordos",
+        "board_id": "discordos:project-feedback:discordos",
+        "title": "Admit and seed seven missing project boards",
+        "description": "Create the missing Atlas, DiscordOS, Foundation, Lifeline, Cortex, _stack, and Playbook forums, admit their owner adapters, and seed current owner exports through the single writer.",
+        "card_type": "migration",
+        "lifecycle": "in-progress",
+        "priority": null,
+        "owner": "discordos",
+        "dependencies": [
+          "DOS-101",
+          "DOS-GOV-001"
+        ],
+        "board_version": 1,
+        "updated_at": "2026-07-14T00:00:00.000Z",
+        "source_ref": "repos/DiscordOS/config/discordos-owner-work-registry.json#DOS-201",
+        "extensions": {
+          "owner_status": "in-progress",
+          "owner_registry_schema_version": 1
+        }
+      },
+      "source": {
+        "source_id": "discordos-owner-work-registry",
+        "source_ref": "repos/DiscordOS/config/discordos-owner-work-registry.json#DOS-201",
+        "source_status": "current",
+        "source_updated_at": "2026-07-14T00:00:00.000Z"
+      },
+      "content": {
+        "summary": "Create the missing Atlas, DiscordOS, Foundation, Lifeline, Cortex, _stack, and Playbook forums, admit their owner adapters, and seed current owner exports through the single writer.",
+        "objective": "Create the missing Atlas, DiscordOS, Foundation, Lifeline, Cortex, _stack, and Playbook forums, admit their owner adapters, and seed current owner exports through the single writer.",
+        "acceptance_criteria": [
+          "Each missing project forum is created once under the canonical Project Feedback Boards category and read back by exact channel identity.",
+          "Every registry entry names its admitted owner adapter and stable forum channel ID.",
+          "Owner exports seed idempotently with exact card and journal readback; the explicit empty _stack export creates no cards.",
+          "No source priority, lifecycle, or ownership value is guessed during admission."
+        ],
+        "discoveries": [],
+        "next_actions": [],
+        "blockers": [],
+        "evidence": [
+          "repos/DiscordOS/config/discordos-board-registry.json",
+          "repos/DiscordOS/docs/contracts/discordos-board-card-workflow-v0.md",
+          "repos/DiscordOS/scripts/discordos-board-card-migration-plan.js",
+          "repos/DiscordOS/scripts/discordos-board-card-reconciliation.js"
+        ]
+      },
+      "relationships": {
+        "parent_card_id": null,
+        "duplicate_of": null,
+        "superseded_by": null
+      }
+    },
+    {
+      "idempotency_key": "pbk_discordos_dos-202_v1",
+      "record_kind": "project-work",
+      "record_status": "active",
+      "record": {
+        "contract_version": "atlas.card-record.v2",
+        "card_id": "DOS-202",
+        "project_id": "discordos",
+        "board_id": "discordos:project-feedback:discordos",
+        "title": "Close cross-project board integrity and lifecycle proof",
+        "description": "Prove the fixed ten-unit board integrity denominator across every admitted project, board, and card class with recurring fail-closed drift detection.",
+        "card_type": "reliability",
+        "lifecycle": "planning",
+        "priority": null,
+        "owner": "discordos",
+        "dependencies": [
+          "DOS-201"
+        ],
+        "board_version": 1,
+        "updated_at": "2026-07-14T00:00:00.000Z",
+        "source_ref": "repos/DiscordOS/config/discordos-owner-work-registry.json#DOS-202",
+        "extensions": {
+          "owner_status": "planned",
+          "owner_registry_schema_version": 1
+        }
+      },
+      "source": {
+        "source_id": "discordos-owner-work-registry",
+        "source_ref": "repos/DiscordOS/config/discordos-owner-work-registry.json#DOS-202",
+        "source_status": "current",
+        "source_updated_at": "2026-07-14T00:00:00.000Z"
+      },
+      "content": {
+        "summary": "Prove the fixed ten-unit board integrity denominator across every admitted project, board, and card class with recurring fail-closed drift detection.",
+        "objective": "Prove the fixed ten-unit board integrity denominator across every admitted project, board, and card class with recurring fail-closed drift detection.",
+        "acceptance_criteria": [
+          "All ten integrity units have current code, tests, and denominator-wide live readback or an explicit accepted not-applicable disposition.",
+          "Structural legacy drift is repaired or durably classified without deleting immutable Discord system history.",
+          "A recurring scanner fails closed on identity, lifecycle, reaction, journal, encoding, writer, or readback drift.",
+          "The Atlas marker moves only after evidence satisfies the fixed binary denominator."
+        ],
+        "discoveries": [],
+        "next_actions": [],
+        "blockers": [],
+        "evidence": [
+          "repos/DiscordOS/config/discordos-board-registry.json",
+          "repos/DiscordOS/scripts/discordos-board-card-consistency.js",
+          "repos/DiscordOS/scripts/discordos-board-lifecycle-reaction-drift-monitor.js",
+          "repos/DiscordOS/scripts/discordos-board-text-integrity.js"
+        ]
+      },
+      "relationships": {
+        "parent_card_id": null,
+        "duplicate_of": null,
+        "superseded_by": null
+      }
+    },
+    {
+      "idempotency_key": "pbk_discordos_dos-203_v1",
+      "record_kind": "project-work",
+      "record_status": "candidate",
+      "record": {
+        "contract_version": "atlas.card-record.v2",
+        "card_id": "DOS-203",
+        "project_id": "discordos",
+        "board_id": "discordos:project-feedback:discordos",
+        "title": "Run an Atlas GitHub projection no-send canary",
+        "description": "Validate the GitHub projection pipeline with real Atlas-produced intent and receipt artifacts before separately authorizing any live Discord publication.",
+        "card_type": "automation",
+        "lifecycle": "intake",
+        "priority": null,
+        "owner": "discordos",
+        "dependencies": [
+          "DOS-101"
+        ],
+        "board_version": 1,
+        "updated_at": "2026-07-14T00:00:00.000Z",
+        "source_ref": "repos/DiscordOS/config/discordos-owner-work-registry.json#DOS-203",
+        "extensions": {
+          "owner_status": "candidate",
+          "owner_registry_schema_version": 1
+        }
+      },
+      "source": {
+        "source_id": "discordos-owner-work-registry",
+        "source_ref": "repos/DiscordOS/config/discordos-owner-work-registry.json#DOS-203",
+        "source_status": "current",
+        "source_updated_at": "2026-07-14T00:00:00.000Z"
+      },
+      "content": {
+        "summary": "Validate the GitHub projection pipeline with real Atlas-produced intent and receipt artifacts before separately authorizing any live Discord publication.",
+        "objective": "Validate the GitHub projection pipeline with real Atlas-produced intent and receipt artifacts before separately authorizing any live Discord publication.",
+        "acceptance_criteria": [
+          "A real Atlas projection intent and correlated source receipt pass the DiscordOS no-send consumer.",
+          "Replay and idempotency behavior are proven without resolving secrets or sending messages.",
+          "Any later live canary remains separately approval-gated and requires exact Discord readback."
+        ],
+        "discoveries": [],
+        "next_actions": [],
+        "blockers": [],
+        "evidence": [
+          "repos/DiscordOS/docs/contracts/discordos-github-projection-application-v1.md",
+          "repos/DiscordOS/scripts/discordos-github-projection-application.js",
+          "repos/DiscordOS/scripts/discordos-github-projection-intent-consumer.js",
+          "repos/DiscordOS/tests/discordos-github-projection-application.test.js"
+        ]
+      },
+      "relationships": {
+        "parent_card_id": null,
+        "duplicate_of": null,
+        "superseded_by": null
+      }
+    },
+    {
+      "idempotency_key": "pbk_discordos_dos-204_v1",
+      "record_kind": "project-work",
+      "record_status": "candidate",
+      "record": {
+        "contract_version": "atlas.card-record.v2",
+        "card_id": "DOS-204",
+        "project_id": "discordos",
+        "board_id": "discordos:project-feedback:discordos",
+        "title": "Converge recursive command families",
+        "description": "Retain, alias, or retire recursive and excessively long DiscordOS command families without losing supported behavior or evidence history.",
+        "card_type": "technical-debt",
+        "lifecycle": "intake",
+        "priority": null,
+        "owner": "discordos",
+        "dependencies": [
+          "DOS-202"
+        ],
+        "board_version": 1,
+        "updated_at": "2026-07-14T00:00:00.000Z",
+        "source_ref": "repos/DiscordOS/config/discordos-owner-work-registry.json#DOS-204",
+        "extensions": {
+          "owner_status": "planned-later",
+          "owner_registry_schema_version": 1
+        }
+      },
+      "source": {
+        "source_id": "discordos-owner-work-registry",
+        "source_ref": "repos/DiscordOS/config/discordos-owner-work-registry.json#DOS-204",
+        "source_status": "current",
+        "source_updated_at": "2026-07-14T00:00:00.000Z"
+      },
+      "content": {
+        "summary": "Retain, alias, or retire recursive and excessively long DiscordOS command families without losing supported behavior or evidence history.",
+        "objective": "Retain, alias, or retire recursive and excessively long DiscordOS command families without losing supported behavior or evidence history.",
+        "acceptance_criteria": [
+          "Every current command family is classified as canonical, compatibility alias, deprecated, or retired.",
+          "Canonical commands preserve supported behavior and deterministic tests.",
+          "Compatibility and migration guidance prevents silent operator breakage.",
+          "Package scripts and documentation no longer grow through recursive name chaining."
+        ],
+        "discoveries": [],
+        "next_actions": [],
+        "blockers": [],
+        "evidence": [
+          "repos/DiscordOS/package.json",
+          "repos/DiscordOS/README.md",
+          "repos/DiscordOS/scripts/discordos-operator-dashboard.js",
+          "repos/DiscordOS/scripts/repo-hygiene.js"
+        ]
+      },
+      "relationships": {
+        "parent_card_id": null,
+        "duplicate_of": null,
+        "superseded_by": null
+      }
+    },
+    {
+      "idempotency_key": "pbk_discordos_dos-205_v1",
+      "record_kind": "project-work",
+      "record_status": "candidate",
+      "record": {
+        "contract_version": "atlas.card-record.v2",
+        "card_id": "DOS-205",
+        "project_id": "discordos",
+        "board_id": "discordos:project-feedback:discordos",
+        "title": "Disposition DiscordOS Supabase security-advisor findings",
+        "description": "Re-read the current DiscordOS Supabase security-advisor state and close or explicitly accept every owner-scoped finding without weakening runtime boundaries.",
+        "card_type": "reliability",
+        "lifecycle": "intake",
+        "priority": null,
+        "owner": "discordos",
+        "dependencies": [],
+        "board_version": 1,
+        "updated_at": "2026-07-14T00:00:00.000Z",
+        "source_ref": "repos/DiscordOS/config/discordos-owner-work-registry.json#DOS-205",
+        "extensions": {
+          "owner_status": "candidate",
+          "owner_registry_schema_version": 1
+        }
+      },
+      "source": {
+        "source_id": "discordos-owner-work-registry",
+        "source_ref": "repos/DiscordOS/config/discordos-owner-work-registry.json#DOS-205",
+        "source_status": "current",
+        "source_updated_at": "2026-07-14T00:00:00.000Z"
+      },
+      "content": {
+        "summary": "Re-read the current DiscordOS Supabase security-advisor state and close or explicitly accept every owner-scoped finding without weakening runtime boundaries.",
+        "objective": "Re-read the current DiscordOS Supabase security-advisor state and close or explicitly accept every owner-scoped finding without weakening runtime boundaries.",
+        "acceptance_criteria": [
+          "Current advisor findings are re-read from the authoritative DiscordOS project before planning changes.",
+          "Every owner-scoped finding has a fixed, accepted, or not-applicable disposition with evidence.",
+          "Any schema or policy mutation is separately scoped, migration-backed, and verified.",
+          "No secret value is logged, committed, or copied into the board export."
+        ],
+        "discoveries": [],
+        "next_actions": [],
+        "blockers": [],
+        "evidence": [
+          "repos/DiscordOS/docs/contracts/discordos-board-card-persistence-v0.md",
+          "repos/DiscordOS/docs/contracts/discordos-moderation-audit-log-schema-admission-v0.md",
+          "repos/DiscordOS/supabase/migrations/20260612082758_discordos_feedback_runtime_schema_v1.sql"
+        ]
+      },
+      "relationships": {
+        "parent_card_id": null,
+        "duplicate_of": null,
+        "superseded_by": null
+      }
+    }
+  ],
+  "extensions": {
+    "source_digest": "sha256:da3080670dc3a5c0998346227eba256c9d7c097399a5678ec36c7c46b5f5dc87",
+    "source_work_item_count": 8,
+    "exported_card_count": 5,
+    "owner_work_state": "active",
+    "atlas_candidates_reconciled": true,
+    "excluded_completed_statuses": [
+      "complete"
+    ],
+    "discord_mutation_authorized": false
+  }
+}
