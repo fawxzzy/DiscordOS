@@ -1,0 +1,137 @@
+{
+  "ok": true,
+  "status": "dry_run",
+  "apply": false,
+  "admission": {
+    "requested": true,
+    "admitted": false,
+    "status": "blocked",
+    "reasonCodes": [
+      "board_card_journal_double_guard_missing"
+    ]
+  },
+  "eventCount": 3,
+  "liveIdentityPreflight": {
+    "ok": true,
+    "status": "admitted",
+    "registryPath": "C:\\ATLAS\\tmp\\worktrees\\discordos-mazer-ui-controls-board-20260715\\config\\discordos-board-registry.json",
+    "scanStartedAt": "2026-07-15T20:52:53.680Z",
+    "scanCompletedAt": "2026-07-15T20:55:11.884Z",
+    "scanStatus": "drift_detected",
+    "scanReasonCodes": [],
+    "scanBlockingReasonCodes": [],
+    "currentIdentityCount": 237,
+    "proposedIdentityCount": 3,
+    "checks": [
+      {
+        "eventIndex": 0,
+        "eventId": "mazer-cross-viewport-ui-reliability-pr76-production-release-20260715",
+        "cardId": "mazer-cross-viewport-ui-reliability",
+        "normalizedCardId": "mazer-cross-viewport-ui-reliability",
+        "targetThreadId": "1525337748830031875",
+        "matchingLocations": [
+          {
+            "boardId": "mazer-active",
+            "forumChannelId": "1524889569475170478",
+            "threadId": "1525337748830031875",
+            "title": "cross-viewport UI reliability and layout hardening",
+            "cardId": "mazer-cross-viewport-ui-reliability"
+          }
+        ],
+        "collisionLocations": [],
+        "admitted": true,
+        "reasonCodes": []
+      },
+      {
+        "eventIndex": 1,
+        "eventId": "mazer-browser-layout-persistence-pr76-production-release-20260715",
+        "cardId": "mazer-browser-layout-persistence",
+        "normalizedCardId": "mazer-browser-layout-persistence",
+        "targetThreadId": "1525337752290197514",
+        "matchingLocations": [
+          {
+            "boardId": "mazer-active",
+            "forumChannelId": "1524889569475170478",
+            "threadId": "1525337752290197514",
+            "title": "normalize browser UI layout across viewports",
+            "cardId": "mazer-browser-layout-persistence"
+          }
+        ],
+        "collisionLocations": [],
+        "admitted": true,
+        "reasonCodes": []
+      },
+      {
+        "eventIndex": 2,
+        "eventId": "mazer-shared-run-status-panel-pr76-production-release-20260715",
+        "cardId": "mazer-shared-run-status-panel",
+        "normalizedCardId": "mazer-shared-run-status-panel",
+        "targetThreadId": "1526644909241667644",
+        "matchingLocations": [
+          {
+            "boardId": "mazer-active",
+            "forumChannelId": "1524889569475170478",
+            "threadId": "1526644909241667644",
+            "title": "shared menu and play run status panel",
+            "cardId": "mazer-shared-run-status-panel"
+          }
+        ],
+        "collisionLocations": [],
+        "admitted": true,
+        "reasonCodes": []
+      }
+    ],
+    "reasonCodes": []
+  },
+  "results": [
+    {
+      "ok": true,
+      "status": "dry_run",
+      "apply": false,
+      "eventId": "mazer-cross-viewport-ui-reliability-pr76-production-release-20260715",
+      "cardId": "mazer-cross-viewport-ui-reliability",
+      "preview": {
+        "matchedBy": "explicit_thread_id",
+        "action": "update_card_and_append_journal",
+        "threadId": "1525337748830031875",
+        "canonicalTitle": "cross-viewport UI reliability and layout hardening",
+        "canonicalBody": "<!-- ATLAS-CARD:START -->\nATLAS-CARD-ID: `mazer-cross-viewport-ui-reliability`\n- project: `Mazer`\n- type: `feature`\n- state: `review`\n- priority: `High`\n- owner: `Mazer`\n- progress: `93%`\n- autonomous implementation: `not_admitted`\n- updated: `2026-07-15T20:50:00.000Z`\n\n## Summary\nCoordinate mobile safe-area, shared overlay geometry, and browser layout through one no-overlap contract and proof matrix.\n\n## Objective\n- Make menu, Options, play, and Pause remain readable and operable across phone, browser, PWA, and restored-window surfaces without per-screenshot offsets.\n\n## Acceptance criteria\n- Every primary Mazer surface has an owner, supported viewport category, and no-overlap contract.\n- Mobile and browser layout work can be verified independently and together through a shared matrix.\n- No completion claim relies on desktop-only proof for a phone or restored-window defect.\n- Physical-device findings remain open until operator screenshots confirm the deployed behavior.\n\n## Discoveries\n- The corrected single-transform text renderer is now live in production from exact head 4984d16c.\n- Production deployment evidence does not replace operator physical-iPhone proof.\n\n## Next actions\n- Collect operator production iPhone screenshots across menu, Options, play, and Pause.\n- Keep the card in Review until the physical screenshots pass.\n\n## Blockers\n- None\n\n## Evidence\n- Mazer draft PR #76 at exact head 4984d16c.\n- Production deployment dpl_5MGsMbcgnSKFH5Kqz5M41w8okaMa is Ready at https://fawxzzy-mazer.vercel.app.\n- Public production load passed with zero browser warnings or errors and no Vercel error logs.\n<!-- ATLAS-CARD:END -->",
+        "journalBody": "ATLAS-JOURNAL-EVENT-ID: `mazer-cross-viewport-ui-reliability-pr76-production-release-20260715`\n- card: `mazer-cross-viewport-ui-reliability`\n- idempotency: `mazer-cross-viewport-ui-reliability-pr76-production-release-20260715`\n## Corrected PR 76 artifact promoted to Mazer production\n- kind: `review`\n- state: `review`\n- actor: `Mazer`\n- occurred: `2026-07-15T20:50:00.000Z`\n\n## Completed\n- Promoted the exact verified 4984d16c artifact under explicit operator approval.\n- Confirmed production Ready and public alias assignment.\n- Verified the live public page loads with zero browser warnings or errors.\n\n## Next\n- Review production on the operator's physical iPhone before completion.\n\n## Blockers\n- None\n\n## Evidence\n- https://github.com/fawxzzy/mazer/pull/76\n- Mazer head 4984d16c\n- Vercel production dpl_5MGsMbcgnSKFH5Kqz5M41w8okaMa\n\n## Correlation\n- task: `019f61a0-6b80-7913-b479-f75f2a8a5b77`\n- branch: `codex/physical-ui-controls-rework-20260715`\n- commit: `4984d16c`\n- receipt: `mazer-pr76-production-release-20260715`"
+      },
+      "reasonCodes": []
+    },
+    {
+      "ok": true,
+      "status": "dry_run",
+      "apply": false,
+      "eventId": "mazer-browser-layout-persistence-pr76-production-release-20260715",
+      "cardId": "mazer-browser-layout-persistence",
+      "preview": {
+        "matchedBy": "explicit_thread_id",
+        "action": "update_card_and_append_journal",
+        "threadId": "1525337752290197514",
+        "canonicalTitle": "normalize browser UI layout across viewports",
+        "canonicalBody": "<!-- ATLAS-CARD:START -->\nATLAS-CARD-ID: `mazer-browser-layout-persistence`\n- project: `Mazer`\n- type: `feature`\n- state: `review`\n- priority: `High`\n- owner: `Mazer`\n- progress: `92%`\n- autonomous implementation: `not_admitted`\n- updated: `2026-07-15T20:50:01.000Z`\n\n## Summary\nNormalize responsive browser geometry and preserve only semantic settings so viewport changes cannot replay stale layout.\n\n## Objective\n- Recompute all menu, Options, play, and Pause geometry from the active content rectangle while preserving explicit player preferences only.\n\n## Acceptance criteria\n- Layout-derived geometry is never persisted as player preference state.\n- A recalculated layout cannot overlap, escape the viewport, or hide essential controls.\n- Normal reload preserves supported semantic settings with safe migration defaults.\n- Narrow, wide, phone, and restore endpoints have deterministic evidence.\n\n## Discoveries\n- The exact preview artifact was promoted as production deployment dpl_5MGsMbcgnSKFH5Kqz5M41w8okaMa.\n- The public production alias serves the corrected layout without runtime warnings or errors.\n\n## Next actions\n- Inspect production through physical iPhone browser chrome.\n- Retain maximize or restore proof as a separate remaining endpoint.\n\n## Blockers\n- None\n\n## Evidence\n- Exact product and PR head 4984d16c.\n- Production Ready at https://fawxzzy-mazer.vercel.app.\n- Vercel error-log scan returned no logs.\n<!-- ATLAS-CARD:END -->",
+        "journalBody": "ATLAS-JOURNAL-EVENT-ID: `mazer-browser-layout-persistence-pr76-production-release-20260715`\n- card: `mazer-browser-layout-persistence`\n- idempotency: `mazer-browser-layout-persistence-pr76-production-release-20260715`\n## Corrected responsive layout is live in production\n- kind: `review`\n- state: `review`\n- actor: `Mazer`\n- occurred: `2026-07-15T20:50:01.000Z`\n\n## Completed\n- Promoted the tested preview artifact without admitting a newer source head.\n- Confirmed public production aliases resolve to the Ready deployment.\n- Completed a post-release public-page and console health check.\n\n## Next\n- Use operator production screenshots for the phone endpoint decision.\n\n## Blockers\n- None\n\n## Evidence\n- https://github.com/fawxzzy/mazer/pull/76\n- Mazer head 4984d16c\n- Vercel production dpl_5MGsMbcgnSKFH5Kqz5M41w8okaMa\n\n## Correlation\n- task: `019f61a0-6b80-7913-b479-f75f2a8a5b77`\n- branch: `codex/physical-ui-controls-rework-20260715`\n- commit: `4984d16c`\n- receipt: `mazer-pr76-production-release-20260715`"
+      },
+      "reasonCodes": []
+    },
+    {
+      "ok": true,
+      "status": "dry_run",
+      "apply": false,
+      "eventId": "mazer-shared-run-status-panel-pr76-production-release-20260715",
+      "cardId": "mazer-shared-run-status-panel",
+      "preview": {
+        "matchedBy": "explicit_thread_id",
+        "action": "update_card_and_append_journal",
+        "threadId": "1526644909241667644",
+        "canonicalTitle": "shared menu and play run status panel",
+        "canonicalBody": "<!-- ATLAS-CARD:START -->\nATLAS-CARD-ID: `mazer-shared-run-status-panel`\n- project: `Mazer`\n- type: `feature`\n- state: `review`\n- priority: `High`\n- owner: `Mazer`\n- progress: `33%`\n- autonomous implementation: `not_admitted`\n- updated: `2026-07-15T20:50:02.000Z`\n\n## Summary\nUse one responsive menu and play status component for time, Rank or AI Rank, Score out of 100, and Maze level from the correct context.\n\n## Objective\n- Give menu and active play the same compact status language while keeping score authority traceable to the canonical scorer.\n\n## Acceptance criteria\n- Menu and play consume the same status-panel formatting and layout contract.\n- Panel text remains centered, contained, and readable at phone and desktop widths.\n- Panel width, gap, and play Pause placement satisfy shared viewport diagnostics.\n- Displayed score is traceable to canonical run-quality data rather than a presentation-only calculation.\n\n## Discoveries\n- The corrected shared status renderer is live from exact head 4984d16c.\n- Canonical scorer authority remains a distinct non-terminal dependency.\n\n## Next actions\n- Confirm menu and play status rail clearance in operator production screenshots.\n- Identify and consume the finalized canonical 0 to 100 scorer field before completion.\n\n## Blockers\n- None\n\n## Evidence\n- Mazer draft PR #76 at exact head 4984d16c.\n- Production deployment dpl_5MGsMbcgnSKFH5Kqz5M41w8okaMa is Ready.\n- Public production status panel loaded inside its rails with zero console warnings or errors.\n<!-- ATLAS-CARD:END -->",
+        "journalBody": "ATLAS-JOURNAL-EVENT-ID: `mazer-shared-run-status-panel-pr76-production-release-20260715`\n- card: `mazer-shared-run-status-panel`\n- idempotency: `mazer-shared-run-status-panel-pr76-production-release-20260715`\n## Single-transform status renderer released to production\n- kind: `review`\n- state: `review`\n- actor: `Mazer`\n- occurred: `2026-07-15T20:50:02.000Z`\n\n## Completed\n- Promoted the corrected shared status renderer to production.\n- Verified the public production panel loads within its chrome.\n- Kept the card in Review pending physical proof and scorer authority.\n\n## Next\n- Review production status rails on the operator's physical iPhone.\n\n## Blockers\n- None\n\n## Evidence\n- https://github.com/fawxzzy/mazer/pull/76\n- Mazer head 4984d16c\n- Vercel production dpl_5MGsMbcgnSKFH5Kqz5M41w8okaMa\n\n## Correlation\n- task: `019f61a0-6b80-7913-b479-f75f2a8a5b77`\n- branch: `codex/physical-ui-controls-rework-20260715`\n- commit: `4984d16c`\n- receipt: `mazer-pr76-production-release-20260715`"
+      },
+      "reasonCodes": []
+    }
+  ],
+  "reasonCodes": []
+}
