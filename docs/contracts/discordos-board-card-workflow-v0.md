@@ -148,6 +148,10 @@ An explicit transition may be supplied only in the board packet's top-level `lif
 
 Fitness `fixed` records on an active board normalize to `review`, not `completed`, until proof-backed completion review authorizes transfer. Mazer records already marked `completed` remain terminal and are eligible for the guarded Completed-board transfer after normalization.
 
+Before either dry-run admission or live apply, the journal command runs one fresh scan against `config/discordos-board-registry.json` and evaluates the complete input batch before processing the first event. Stable card IDs are trimmed and compared case-insensitively across every current non-superseded registry row, including other threads on the same board. An ID is admitted only when it has no live match or every live match is the event's exact explicit `card.threadId`; title and stable-ID fallback matching cannot establish same-thread identity for this gate.
+
+The batch fails closed before any Discord write when a proposed ID belongs to a different current thread (`source_card_id_live_collision`), when normalized candidates repeat within the batch (`batch_candidate_identity_duplicate`), or when the full registry scan is incomplete (`live_identity_preflight_stale`). The result embeds scan timestamps, the registry path, normalized candidates, exact target thread IDs, and deterministically sorted matching and collision locations. Known blocked board-admission rows remain reported by the registry scan but do not make enabled-board identity inventory stale.
+
 ```powershell
 npm run ops:production-env:run -- npm run ops:discordos:board-card-journal:json -- --input <event.json> --dry-run
 
