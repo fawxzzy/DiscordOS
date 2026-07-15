@@ -24,8 +24,8 @@
     },
     "planning": {
       "version": 1,
-      "activeCardId": "mazer-turn-synchronous-world-simulation",
-      "activeSelectionReason": "Turn-synchronous world simulation is the only dependency-free unfinished card in the earliest critical-path Core Gameplay epic. The resumed completion packet finishes the central host, pause/stop gate, explicit timed-mode capability, deterministic phase registration, diagnostics, and proof without implementing entities owned by later cards.",
+      "activeCardId": null,
+      "activeSelectionReason": "Mazer PR #66 completed the admitted turn-synchronous world host packet and the exact live card transferred to Completed. No Mazer card is currently Ready, so the active selector is intentionally empty until the governed planner admits the next non-conflicting packet.",
       "executionPolicy": "Finish the earliest execution-ready critical-path epic before taking later product work. Advanced AI research stays parallel and cannot block the critical path.",
       "epics": [
         {
@@ -1917,14 +1917,14 @@
     {
       "id": "mazer-turn-synchronous-world-simulation",
       "title": "mazer: turn-synchronous world simulation",
-      "state": "ready",
+      "state": "completed",
       "priority": "medium",
       "category": "mazer",
       "markerName": "Turn-synchronous world simulation",
-      "completionPercent": 55,
+      "completionPercent": 100,
       "summary": "Move gameplay-affecting entities onto a centralized turn command so the world advances only when accepted player movement advances the turn.",
       "whyItMatters": "Enemies, projectiles, pickups, and collisions need predictable ordering and should not run ahead while the player is stopped.",
-      "currentStatus": "Ready at the evidence-backed 55% marker for one completion-oriented central-host packet. Mazer PR #43 already routes accepted live player movement through WorldTurnSystem, resets turn truth with maze/reset lifecycle, and publishes turn diagnostics. The remaining owning-card work is to expose an explicit host policy for paused/stopped simulation, opt-in timed-mode ticks, deterministic non-player phase registration, and bounded diagnostics so future enemy, projectile, pickup, item, duration, and collision cards cannot bypass or reorder the central turn. This packet proves the host with fixtures and live player movement without implementing those future entities.",
+      "currentStatus": "Completed through Mazer PR #66 at merge 926bf96e39d066afff25ac51d6c546b9ea00289f. MenuScene now enters one WorldTurnHost with explicit running, paused, and stopped admission, one owned WorldTurnSystem, canonical phase registration and bounded diagnostics, and timed-mode advancement disabled by default. Focused proof passed 60 tests, architecture passed 18 tests plus the firewall, full verification passed 47 files / 355 tests plus build, and clean 390x844 play proof completed 109/109 admitted turns with lifecycle locks and fresh-maze turn zero intact. The exact card transferred to Completed thread 1526754980256550992 with review journal 1526754417200861245 and completion journal 1526754984694386891; future gameplay entities remain in their owning cards.",
       "workBreakdown": [
         "Advance gameplay simulation only after accepted player movement or an explicit timed-mode tick.",
         "Stop enemies, projectiles, and gameplay-affecting moving entities when the player stops unless the mode defines a timed tick.",
@@ -1934,10 +1934,9 @@
         "Document inspiration at a high level without copying third-party assets or implementation."
       ],
       "nextActions": [
-        "Add one scene-consumable world-turn host that owns pause/stop admission and keeps explicit timed-mode capability disabled by default.",
-        "Prove every registered non-player phase runs only after an admitted player move or enabled timed tick, in canonical order, and never while paused or stopped.",
-        "Publish bounded host/phase diagnostics without shipping enemies, projectiles, items, multiplayer conflicts, or moving-maze behavior from their owning cards.",
-        "Run focused, architecture, full, and route-aware live turn-counter proof before completion."
+        "Require every future gameplay entity card to register its handler through WorldTurnHost in canonical phase order.",
+        "Enable timed-mode ticks only from a separately admitted owning mode with explicit capability and pause/stop proof.",
+        "Keep cosmetic render clocks outside gameplay mutation truth and preserve bounded diagnostics."
       ],
       "acceptanceCriteria": [
         "Gameplay-affecting state changes only advance through the central turn command.",
@@ -1952,9 +1951,9 @@
       ],
       "reference": "repos/mazer/docs/architecture/MAZER-WORLD-TURN-CONTRACT.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-turn-synchronous-world-simulation",
-      "reactionStatus": "failure",
-      "reactionEmojiName": "failure",
-      "reactionEmojiId": "1507384094424694785",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851",
       "liveThreadId": "1525045186361692170",
       "liveMessageId": "1525045186361692170",
       "relatedCardIds": [
