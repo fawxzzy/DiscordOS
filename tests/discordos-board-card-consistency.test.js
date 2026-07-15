@@ -17,13 +17,20 @@ function canonicalStarter(cardId = "FIT-1") {
 test("healthy active card has canonical body and journal history", () => {
   const row = _internals.inspectThread({
     board: { id: "fitness", role: "active" },
-    thread: { id: "thread", name: "Card", thread_metadata: { archived: false } },
+    thread: { id: "thread", name: "Card", thread_metadata: { archived: false, locked: false }, applied_tags: ["tag-1"] },
     starter: {
       content: `${journal.CARD_START}\nATLAS-CARD-ID: \`FIT-1\`\n- state: \`review\`\n- updated: \`2026-07-13T00:00:00Z\`\n${journal.CARD_END}`,
     },
     messages: [{ content: "ATLAS-JOURNAL-EVENT-ID: `evt-1`" }],
   });
   assert.equal(row.ok, true);
+  assert.equal(row.locked, false);
+  assert.deepEqual(row.appliedTagIds, ["tag-1"]);
+  assert.match(row.starterContentSha256, /^[a-f0-9]{64}$/);
+  assert.deepEqual(row.journalIntegrityEntries, [{
+    eventId: "evt-1",
+    contentSha256: _internals.sha256("ATLAS-JOURNAL-EVENT-ID: `evt-1`"),
+  }]);
 });
 
 test("legacy card reports every structural drift class", () => {
@@ -260,6 +267,16 @@ test("Ready card with an incomplete planning contract is drift", () => {
 test("required blocked registry board fails closed while remaining visible", async () => {
   const registry = JSON.parse(fs.readFileSync(path.resolve(__dirname, "..", "config", "discordos-board-registry.json"), "utf8"));
   registry.boards = registry.boards.filter((board) => new Set(["shared-completed", "atlas-active-admission"]).has(board.id));
+  const blockedBoard = registry.boards.find((board) => board.id === "atlas-active-admission");
+  blockedBoard.forumChannelId = null;
+  blockedBoard.forumChannelName = null;
+  blockedBoard.sourceAdapter = "unadmitted-v1";
+  blockedBoard.status = "blocked";
+  blockedBoard.blockers = [{
+    code: "project_forum_not_discovered",
+    reason: "Explicit blocked-board test fixture.",
+    evidence: "Unit-test fixture.",
+  }];
   const result = await _internals.buildBoardCardConsistency({
     registry,
     env: { DISCORDOS_BOT_TOKEN: "token" },

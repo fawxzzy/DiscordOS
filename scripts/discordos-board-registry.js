@@ -40,6 +40,8 @@ function boardSummary(board) {
     forumChannelId: text(board?.forumChannelId) || null,
     forumChannelName: text(board?.forumChannelName) || null,
     role: text(board?.role).toLowerCase(),
+    forumProfile: text(board?.forumProfile),
+    permissionProfile: text(board?.permissionProfile),
     sourceAdapter: text(board?.sourceAdapter),
     stableCardNamespace: text(board?.stableCardNamespace),
     lifecycleNormalizationPolicy: text(board?.lifecycleNormalizationPolicy),
@@ -76,6 +78,11 @@ function validateBoardRegistry(registry, { repoRoot = path.resolve(__dirname, ".
   if (registry?.schemaVersion !== SCHEMA_VERSION) reasonCodes.push("board_registry_schema_version_invalid");
   if (!text(registry?.guildId)) reasonCodes.push("board_registry_guild_id_missing");
   if (!text(registry?.discovery?.forumCategoryChannelId)) reasonCodes.push("board_registry_forum_category_missing");
+  const forumProfileRegistry = text(registry?.forumProfileRegistry);
+  if (!forumProfileRegistry) reasonCodes.push("board_registry_forum_profile_registry_missing");
+  else if (!fileExists(path.resolve(repoRoot, forumProfileRegistry))) {
+    reasonCodes.push("board_registry_forum_profile_registry_not_found");
+  }
   if (boards.length === 0) reasonCodes.push("board_registry_empty");
 
   for (const [policyId, policy] of Object.entries(lifecyclePolicies)) {
@@ -116,6 +123,8 @@ function validateBoardRegistry(registry, { repoRoot = path.resolve(__dirname, ".
       "id",
       "project",
       "ownershipScope",
+      "forumProfile",
+      "permissionProfile",
       "sourceAdapter",
       "stableCardNamespace",
       "lifecycleNormalizationPolicy",

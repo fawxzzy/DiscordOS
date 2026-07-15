@@ -1,0 +1,315 @@
+{
+  "schemaVersion": "discordos.forum-profile-registry.v1",
+  "boardRegistrySchemaVersion": "discordos.board-registry.v1",
+  "category": {
+    "channelId": "1508057063874629684",
+    "name": "Project Feedback Boards",
+    "type": 4
+  },
+  "tagTaxonomy": {
+    "maxAppliedTags": 5,
+    "orderedTags": [
+      { "semanticKey": "type.bug", "group": "type", "name": "Bug", "emoji": null },
+      { "semanticKey": "type.feature", "group": "type", "name": "Feature", "emoji": null },
+      { "semanticKey": "state.intake", "group": "state", "name": "Intake", "emoji": null },
+      { "semanticKey": "state.planning", "group": "state", "name": "Planning", "emoji": null },
+      { "semanticKey": "state.ready", "group": "state", "name": "Ready", "emoji": null },
+      { "semanticKey": "state.opened", "group": "state", "name": "Opened", "emoji": null },
+      { "semanticKey": "state.in_progress", "group": "state", "name": "In Progress", "emoji": null },
+      { "semanticKey": "state.review", "group": "state", "name": "Review", "emoji": null },
+      { "semanticKey": "state.blocked", "group": "state", "name": "Blocked", "emoji": null },
+      { "semanticKey": "state.completed", "group": "state", "name": "Completed", "emoji": null },
+      { "semanticKey": "priority.low", "group": "priority", "name": "Low", "emoji": null },
+      { "semanticKey": "priority.medium", "group": "priority", "name": "Medium", "emoji": null },
+      { "semanticKey": "priority.high", "group": "priority", "name": "High", "emoji": null },
+      { "semanticKey": "priority.blocker", "group": "priority", "name": "Blocker", "emoji": null },
+      { "semanticKey": "outcome.duplicate", "group": "outcome", "name": "Duplicate", "emoji": null },
+      { "semanticKey": "outcome.withdrawn", "group": "outcome", "name": "Withdrawn", "emoji": null },
+      { "semanticKey": "record.superseded", "group": "record", "name": "Superseded", "emoji": null }
+    ],
+    "moderationRule": {
+      "type": "moderated_except_community_intake",
+      "state": "moderated",
+      "priority": "moderated",
+      "outcome": "moderated",
+      "record": "moderated"
+    },
+    "legacyIdPolicy": "never_infer_semantics_from_orphan_or_removed_tag_ids"
+  },
+  "permissionProfiles": {
+    "restricted-single-writer-v1": {
+      "roles": [
+        {
+          "semanticKey": "everyone",
+          "roleName": "@everyone",
+          "resolution": "guild_everyone",
+          "allow": [],
+          "deny": ["ViewChannel", "SendMessages"]
+        },
+        {
+          "semanticKey": "verified",
+          "roleName": "Verified",
+          "resolution": "exact_guild_role_name",
+          "allow": ["ViewChannel"],
+          "deny": []
+        },
+        {
+          "semanticKey": "fawx_security",
+          "roleName": "Fawx Security",
+          "resolution": "exact_guild_role_name",
+          "allow": ["ViewChannel", "SendMessages"],
+          "deny": []
+        }
+      ],
+      "unknownOverwriteBehavior": "fail_closed",
+      "receiptRoleIdPolicy": "redact"
+    }
+  },
+  "forumProfiles": {
+    "community-intake-v1": {
+      "permissionProfile": "restricted-single-writer-v1",
+      "typeTagsModerated": false,
+      "defaults": {
+        "defaultReactionEmoji": null,
+        "defaultSortOrder": null,
+        "defaultForumLayout": 0,
+        "rateLimitPerUser": 0,
+        "flags": 0,
+        "nsfw": false
+      },
+      "lifecycle": {
+        "cardNormalization": "deferred_to_legacy_migration_packet",
+        "archiveLock": "not_applicable_until_legacy_disposition"
+      }
+    },
+    "project-active-v1": {
+      "permissionProfile": "restricted-single-writer-v1",
+      "typeTagsModerated": true,
+      "defaults": {
+        "defaultReactionEmoji": null,
+        "defaultSortOrder": null,
+        "defaultForumLayout": 0,
+        "rateLimitPerUser": 0,
+        "flags": 0,
+        "nsfw": false
+      },
+      "lifecycle": {
+        "activeCard": { "archived": false, "locked": false },
+        "completedSource": { "archived": true, "locked": true, "state": "decision_pending" },
+        "supersededRecord": { "archived": true, "locked": true }
+      }
+    },
+    "legacy-active-v1": {
+      "permissionProfile": "restricted-single-writer-v1",
+      "typeTagsModerated": true,
+      "defaults": {
+        "defaultReactionEmoji": null,
+        "defaultSortOrder": null,
+        "defaultForumLayout": 0,
+        "rateLimitPerUser": 0,
+        "flags": 0,
+        "nsfw": false
+      },
+      "lifecycle": {
+        "cardNormalization": "deferred_to_legacy_migration_packet",
+        "archiveLock": "preserve_until_legacy_disposition"
+      }
+    },
+    "shared-completed-v1": {
+      "permissionProfile": "restricted-single-writer-v1",
+      "typeTagsModerated": true,
+      "defaults": {
+        "defaultReactionEmoji": null,
+        "defaultSortOrder": null,
+        "defaultForumLayout": 0,
+        "rateLimitPerUser": 0,
+        "flags": 0,
+        "nsfw": false
+      },
+      "lifecycle": {
+        "completedRecord": { "state": "completed", "archived": "not_applicable_discord_auto_archive_allowed", "locked": false },
+        "supersededRecord": { "archived": true, "locked": true }
+      }
+    }
+  },
+  "boards": {
+    "legacy-general-feedback": {
+      "name": "feedback",
+      "topic": "Community intake for shared feedback; governed project work moves to its project forum.",
+      "parentChannelId": "1508057063874629684",
+      "type": 15,
+      "order": 0,
+      "positionNormalization": "not_applicable_preserve_declared_relative_order",
+      "exceptions": [
+        "community_intake_type_tags_unmoderated",
+        "legacy_card_migration_deferred",
+        "legacy_title_format_preserved"
+      ]
+    },
+    "fitness-active": {
+      "name": "fawxzzy-fitness",
+      "topic": "Project feedback, planning, and governed delivery journal for Fitness.",
+      "parentChannelId": "1508057063874629684",
+      "type": 15,
+      "order": 1,
+      "positionNormalization": "not_applicable_preserve_declared_relative_order",
+      "exceptions": ["owner_owned_plain_titles"]
+    },
+    "mazer-active": {
+      "name": "mazer",
+      "topic": "Project feedback, planning, and governed delivery journal for Mazer.",
+      "parentChannelId": "1508057063874629684",
+      "type": 15,
+      "order": 2,
+      "positionNormalization": "not_applicable_preserve_declared_relative_order",
+      "exceptions": ["title_prefix_mazer_colon_space"]
+    },
+    "atlas-active-admission": {
+      "name": "atlas",
+      "topic": "Project feedback, planning, and governed delivery journal for Atlas.",
+      "parentChannelId": "1508057063874629684",
+      "type": 15,
+      "order": 3,
+      "positionNormalization": "not_applicable_preserve_declared_relative_order",
+      "exceptions": ["owner_export_titles"]
+    },
+    "cortex-active-admission": {
+      "name": "cortex",
+      "topic": "Project feedback, planning, and governed delivery journal for Cortex.",
+      "parentChannelId": "1508057063874629684",
+      "type": 15,
+      "order": 4,
+      "positionNormalization": "not_applicable_preserve_declared_relative_order",
+      "exceptions": ["owner_export_titles"]
+    },
+    "discordos-active-admission": {
+      "name": "discordos",
+      "topic": "Project feedback, planning, and governed delivery journal for DiscordOS.",
+      "parentChannelId": "1508057063874629684",
+      "type": 15,
+      "order": 5,
+      "positionNormalization": "not_applicable_preserve_declared_relative_order",
+      "exceptions": ["owner_export_titles"]
+    },
+    "foundation-active-admission": {
+      "name": "foundation",
+      "topic": "Project feedback, planning, and governed delivery journal for Foundation.",
+      "parentChannelId": "1508057063874629684",
+      "type": 15,
+      "order": 6,
+      "positionNormalization": "not_applicable_preserve_declared_relative_order",
+      "exceptions": ["owner_export_titles"]
+    },
+    "lifeline-active-admission": {
+      "name": "lifeline",
+      "topic": "Project feedback, planning, and governed delivery journal for Lifeline.",
+      "parentChannelId": "1508057063874629684",
+      "type": 15,
+      "order": 7,
+      "positionNormalization": "not_applicable_preserve_declared_relative_order",
+      "exceptions": ["owner_export_titles"]
+    },
+    "playbook-active-admission": {
+      "name": "playbook",
+      "topic": "Project feedback, planning, and governed delivery journal for Playbook.",
+      "parentChannelId": "1508057063874629684",
+      "type": 15,
+      "order": 8,
+      "positionNormalization": "not_applicable_preserve_declared_relative_order",
+      "exceptions": ["owner_export_titles"]
+    },
+    "stack-active-admission": {
+      "name": "stack",
+      "topic": "Project feedback, planning, and governed delivery journal for _stack.",
+      "parentChannelId": "1508057063874629684",
+      "type": 15,
+      "order": 9,
+      "positionNormalization": "not_applicable_preserve_declared_relative_order",
+      "exceptions": ["owner_export_is_explicitly_empty"]
+    },
+    "music-sesh-active": {
+      "name": "music-sesh",
+      "topic": "Project feedback, planning, and governed delivery journal for Music Sesh.",
+      "parentChannelId": "1508057063874629684",
+      "type": 15,
+      "order": 10,
+      "positionNormalization": "not_applicable_preserve_declared_relative_order",
+      "exceptions": [
+        "legacy_151_thread_migration_deferred",
+        "archive_lock_state_preserved_pending_disposition"
+      ]
+    },
+    "shared-completed": {
+      "name": "completed",
+      "topic": "Shared archive of completed, journaled project work with reciprocal source links.",
+      "parentChannelId": "1508057063874629684",
+      "type": 15,
+      "order": 11,
+      "positionNormalization": "not_applicable_preserve_declared_relative_order",
+      "exceptions": ["source_titles_preserved", "orphan_tag_cleanup_deferred"]
+    }
+  },
+  "ownerSeedProof": {
+    "expectedEventCount": 78,
+    "currentState": {
+      "status": "proven_78_of_78",
+      "liveReceipt": "discordos-owner-export-seed-live-2026-07-15.json",
+      "postSeedScanReceipt": "discordos-board-card-consistency-post-seed-2026-07-15.json",
+      "currentCardCount": 367,
+      "healthyCardCount": 215,
+      "remainingLegacyDriftCount": 152,
+      "supersededRecordCount": 49,
+      "duplicateStableIdentityCount": 0,
+      "actionableTextIntegrityFindingCount": 0,
+      "immutableSystemHistoryFindingCount": 124
+    },
+    "expectedByBoard": {
+      "atlas-active-admission": 28,
+      "cortex-active-admission": 2,
+      "discordos-active-admission": 5,
+      "foundation-active-admission": 6,
+      "lifeline-active-admission": 2,
+      "playbook-active-admission": 35,
+      "stack-active-admission": 0
+    },
+    "integrity": "exact_sha256_of_starter_and_journal_content"
+  },
+  "deferredDecisions": {
+    "activeSourceCompletionSemantics": "separate_packet_required",
+    "legacySharedIntakeAndMusicSeshMigration": "separate_packet_required",
+    "orphanTagCleanup": "separate_packet_required",
+    "socialsOsBoard13Admission": "separate_owner_lane_required"
+  },
+  "markerCandidate": {
+    "status": "candidate_only_do_not_move",
+    "candidateMeasurementPercent": 30,
+    "markerMoved": false,
+    "unitCount": 10,
+    "unitWeightPercent": 10,
+    "units": [
+      "intended_registry_denominator",
+      "forum_structural_identity",
+      "permission_single_writer_posture",
+      "canonical_tags_and_applied_tag_integrity",
+      "defaults_topic_order_and_flags",
+      "owner_export_readiness_and_seed_adoption",
+      "stable_identity_title_and_managed_body",
+      "complete_journal_and_pagination",
+      "lifecycle_reactions_links_archive_and_lock",
+      "text_integrity_duplicate_safety_and_exact_readback"
+    ],
+    "currentMeasurements": {
+      "forumStructure": "12/12",
+      "restrictedSingleWriterPermissions": "4/12",
+      "legacyTagPresence": "4/12",
+      "canonicalDeclaredTagProfile": "0/12",
+      "ownerSeedAdoption": "78/78",
+      "healthyCurrentCards": "215/367",
+      "journaledCurrentCards": "215/367",
+      "reciprocalCompletedTransfers": "12/12",
+      "duplicateStableIdentities": 0,
+      "actionableEncodingFindings": 0,
+      "immutableHistoricalFindings": 124
+    }
+  }
+}

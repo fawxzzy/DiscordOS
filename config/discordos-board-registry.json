@@ -1,8 +1,9 @@
 {
   "schemaVersion": "discordos.board-registry.v1",
   "guildId": "1504668396338413670",
+  "forumProfileRegistry": "config/discordos-forum-profile-registry.json",
   "discovery": {
-    "observedAt": "2026-07-14",
+    "observedAt": "2026-07-15",
     "source": "discord-api-read-only",
     "forumCategoryChannelId": "1508057063874629684",
     "forumCategoryName": "Project Feedback Boards",
@@ -13,15 +14,7 @@
         "reason": "Private canary forum for internal Feedback Board QA; its live topic explicitly excludes public and community cards."
       }
     ],
-    "absentRequiredProjects": [
-      "Atlas",
-      "DiscordOS",
-      "Foundation",
-      "Lifeline",
-      "Cortex",
-      "_stack",
-      "Playbook"
-    ]
+    "absentRequiredProjects": []
   },
   "sourceAdapters": {
     "direct-discord-forum-v1": {
@@ -42,6 +35,36 @@
       "kind": "repo_config",
       "ownerProject": "Music Sesh",
       "configPath": "config/discordos-music-sesh-feedback-board.json"
+    },
+    "atlas-full-system-registry-v1": {
+      "kind": "owner_export",
+      "ownerProject": "Atlas",
+      "inputContract": "atlas.project-board.owner-export.v1"
+    },
+    "discordos-owner-registry-v1": {
+      "kind": "owner_export",
+      "ownerProject": "DiscordOS",
+      "inputContract": "atlas.project-board.owner-export.v1"
+    },
+    "foundation-roadmap-v1": {
+      "kind": "owner_export",
+      "ownerProject": "Foundation",
+      "inputContract": "atlas.project-board.owner-export.v1"
+    },
+    "lifeline-roadmap-v1": {
+      "kind": "owner_export",
+      "ownerProject": "Lifeline",
+      "inputContract": "atlas.project-board.owner-export.v1"
+    },
+    "stack-owner-registry-v1": {
+      "kind": "owner_export",
+      "ownerProject": "_stack",
+      "inputContract": "atlas.project-board.owner-export.v1"
+    },
+    "playbook-roadmap-v1": {
+      "kind": "owner_export",
+      "ownerProject": "Playbook",
+      "inputContract": "atlas.project-board.owner-export.v1"
     },
     "unadmitted-v1": {
       "kind": "blocked_admission",
@@ -116,6 +139,8 @@
       "forumChannelId": "1504673475489562744",
       "forumChannelName": "feedback",
       "role": "legacy",
+      "forumProfile": "community-intake-v1",
+      "permissionProfile": "restricted-single-writer-v1",
       "ownershipScope": "shared-intake:legacy",
       "sourceAdapter": "direct-discord-forum-v1",
       "stableCardNamespace": "legacy-general-feedback",
@@ -146,6 +171,8 @@
       "forumChannelId": "1508144612957622313",
       "forumChannelName": "fawxzzy-fitness",
       "role": "active",
+      "forumProfile": "project-active-v1",
+      "permissionProfile": "restricted-single-writer-v1",
       "ownershipScope": "fitness:active",
       "sourceAdapter": "fitness-export-v1",
       "stableCardNamespace": "fitness",
@@ -174,6 +201,8 @@
       "forumChannelId": "1524889569475170478",
       "forumChannelName": "mazer",
       "role": "active",
+      "forumProfile": "project-active-v1",
+      "permissionProfile": "restricted-single-writer-v1",
       "ownershipScope": "mazer:active",
       "sourceAdapter": "mazer-config-v1",
       "stableCardNamespace": "mazer",
@@ -202,6 +231,8 @@
       "forumChannelId": "1508139160853286942",
       "forumChannelName": "music-sesh",
       "role": "active",
+      "forumProfile": "legacy-active-v1",
+      "permissionProfile": "restricted-single-writer-v1",
       "ownershipScope": "music-sesh:active",
       "sourceAdapter": "music-sesh-config-v1",
       "stableCardNamespace": "music-sesh",
@@ -230,6 +261,8 @@
       "forumChannelId": "1508359985602625638",
       "forumChannelName": "completed",
       "role": "completed",
+      "forumProfile": "shared-completed-v1",
+      "permissionProfile": "restricted-single-writer-v1",
       "ownershipScope": "shared:completed",
       "sourceAdapter": "direct-discord-forum-v1",
       "stableCardNamespace": "shared-completed",
@@ -253,204 +286,197 @@
       "id": "atlas-active-admission",
       "project": "Atlas",
       "required": true,
-      "forumChannelId": null,
-      "forumChannelName": null,
+      "forumChannelId": "1526814470486360144",
+      "forumChannelName": "atlas",
       "role": "active",
+      "forumProfile": "project-active-v1",
+      "permissionProfile": "restricted-single-writer-v1",
       "ownershipScope": "atlas:active",
-      "sourceAdapter": "unadmitted-v1",
+      "sourceAdapter": "atlas-full-system-registry-v1",
       "stableCardNamespace": "atlas",
       "lifecycleNormalizationPolicy": "active-canonical-v1",
       "reactionPolicy": "starter-status-reaction-v1",
       "journalPolicy": "required-paginated-v1",
       "completionDestination": "shared-completed",
       "encodingPolicy": "utf8-no-mojibake-v1",
-      "status": "blocked",
+      "status": "enabled",
       "relationships": {
         "replaces": [],
         "replacedBy": []
       },
-      "blockers": [
-        {
-          "code": "project_forum_not_discovered",
-          "reason": "No Atlas project forum is present in the live Project Feedback Boards category.",
-          "evidence": "Read-only guild channel inventory on 2026-07-14."
-        }
-      ],
-      "evidence": []
+      "blockers": [],
+      "evidence": [
+        "Live Discord readback on 2026-07-15 proved forum 1526814470486360144 as type 15 under the Project Feedback Boards category.",
+        "Atlas owner export is docs/registry/project-board-owner-exports/atlas.project-board.owner-export.v1.json."
+      ]
     },
     {
       "id": "discordos-active-admission",
       "project": "DiscordOS",
       "required": true,
-      "forumChannelId": null,
-      "forumChannelName": null,
+      "forumChannelId": "1526814473267187864",
+      "forumChannelName": "discordos",
       "role": "active",
+      "forumProfile": "project-active-v1",
+      "permissionProfile": "restricted-single-writer-v1",
       "ownershipScope": "discordos:active",
-      "sourceAdapter": "unadmitted-v1",
+      "sourceAdapter": "discordos-owner-registry-v1",
       "stableCardNamespace": "discordos",
       "lifecycleNormalizationPolicy": "active-canonical-v1",
       "reactionPolicy": "starter-status-reaction-v1",
       "journalPolicy": "required-paginated-v1",
       "completionDestination": "shared-completed",
       "encodingPolicy": "utf8-no-mojibake-v1",
-      "status": "blocked",
+      "status": "enabled",
       "relationships": {
         "replaces": [],
         "replacedBy": []
       },
-      "blockers": [
-        {
-          "code": "project_forum_not_discovered",
-          "reason": "No DiscordOS project forum is present in the live Project Feedback Boards category; the legacy feedback thread is retained separately.",
-          "evidence": "Read-only guild channel and legacy-thread inventory on 2026-07-14."
-        }
-      ],
-      "evidence": []
+      "blockers": [],
+      "evidence": [
+        "Live Discord readback on 2026-07-15 proved forum 1526814473267187864 as type 15 under the Project Feedback Boards category.",
+        "DiscordOS owner export is exports/discordos.project-board.owner-export.v1.json; legacy feedback remains separate."
+      ]
     },
     {
       "id": "foundation-active-admission",
       "project": "Foundation",
       "required": true,
-      "forumChannelId": null,
-      "forumChannelName": null,
+      "forumChannelId": "1526814474173026438",
+      "forumChannelName": "foundation",
       "role": "active",
+      "forumProfile": "project-active-v1",
+      "permissionProfile": "restricted-single-writer-v1",
       "ownershipScope": "foundation:active",
-      "sourceAdapter": "unadmitted-v1",
+      "sourceAdapter": "foundation-roadmap-v1",
       "stableCardNamespace": "foundation",
       "lifecycleNormalizationPolicy": "active-canonical-v1",
       "reactionPolicy": "starter-status-reaction-v1",
       "journalPolicy": "required-paginated-v1",
       "completionDestination": "shared-completed",
       "encodingPolicy": "utf8-no-mojibake-v1",
-      "status": "blocked",
+      "status": "enabled",
       "relationships": {
         "replaces": [],
         "replacedBy": []
       },
-      "blockers": [
-        {
-          "code": "project_forum_not_discovered",
-          "reason": "No Foundation project forum is present in the live Project Feedback Boards category.",
-          "evidence": "Read-only guild channel inventory on 2026-07-14."
-        }
-      ],
-      "evidence": []
+      "blockers": [],
+      "evidence": [
+        "Live Discord readback on 2026-07-15 proved forum 1526814474173026438 as type 15 under the Project Feedback Boards category.",
+        "Foundation owner export is repos/foundation/exports/foundation.project-board.owner-export.v1.json."
+      ]
     },
     {
       "id": "lifeline-active-admission",
       "project": "Lifeline",
       "required": true,
-      "forumChannelId": null,
-      "forumChannelName": null,
+      "forumChannelId": "1526814475720851497",
+      "forumChannelName": "lifeline",
       "role": "active",
+      "forumProfile": "project-active-v1",
+      "permissionProfile": "restricted-single-writer-v1",
       "ownershipScope": "lifeline:active",
-      "sourceAdapter": "unadmitted-v1",
+      "sourceAdapter": "lifeline-roadmap-v1",
       "stableCardNamespace": "lifeline",
       "lifecycleNormalizationPolicy": "active-canonical-v1",
       "reactionPolicy": "starter-status-reaction-v1",
       "journalPolicy": "required-paginated-v1",
       "completionDestination": "shared-completed",
       "encodingPolicy": "utf8-no-mojibake-v1",
-      "status": "blocked",
+      "status": "enabled",
       "relationships": {
         "replaces": [],
         "replacedBy": []
       },
-      "blockers": [
-        {
-          "code": "project_forum_not_discovered",
-          "reason": "No Lifeline project forum is present in the live Project Feedback Boards category.",
-          "evidence": "Read-only guild channel inventory on 2026-07-14."
-        }
-      ],
-      "evidence": []
+      "blockers": [],
+      "evidence": [
+        "Live Discord readback on 2026-07-15 proved forum 1526814475720851497 as type 15 under the Project Feedback Boards category.",
+        "Lifeline owner export is repos/lifeline/exports/lifeline.project-board.owner-export.v1.json."
+      ]
     },
     {
       "id": "cortex-active-admission",
       "project": "Cortex",
       "required": true,
-      "forumChannelId": null,
-      "forumChannelName": null,
+      "forumChannelId": "1526814471916486821",
+      "forumChannelName": "cortex",
       "role": "active",
+      "forumProfile": "project-active-v1",
+      "permissionProfile": "restricted-single-writer-v1",
       "ownershipScope": "cortex:active",
-      "sourceAdapter": "unadmitted-v1",
+      "sourceAdapter": "atlas-full-system-registry-v1",
       "stableCardNamespace": "cortex",
       "lifecycleNormalizationPolicy": "active-canonical-v1",
       "reactionPolicy": "starter-status-reaction-v1",
       "journalPolicy": "required-paginated-v1",
       "completionDestination": "shared-completed",
       "encodingPolicy": "utf8-no-mojibake-v1",
-      "status": "blocked",
+      "status": "enabled",
       "relationships": {
         "replaces": [],
         "replacedBy": []
       },
-      "blockers": [
-        {
-          "code": "project_forum_not_discovered",
-          "reason": "No Cortex project forum is present in the live Project Feedback Boards category.",
-          "evidence": "Read-only guild channel inventory on 2026-07-14."
-        }
-      ],
-      "evidence": []
+      "blockers": [],
+      "evidence": [
+        "Live Discord readback on 2026-07-15 proved forum 1526814471916486821 as type 15 under the Project Feedback Boards category.",
+        "Cortex owner export is docs/registry/project-board-owner-exports/cortex.project-board.owner-export.v1.json."
+      ]
     },
     {
       "id": "stack-active-admission",
       "project": "_stack",
       "required": true,
-      "forumChannelId": null,
-      "forumChannelName": null,
+      "forumChannelId": "1526814478157742131",
+      "forumChannelName": "stack",
       "role": "active",
+      "forumProfile": "project-active-v1",
+      "permissionProfile": "restricted-single-writer-v1",
       "ownershipScope": "stack:active",
-      "sourceAdapter": "unadmitted-v1",
+      "sourceAdapter": "stack-owner-registry-v1",
       "stableCardNamespace": "stack",
       "lifecycleNormalizationPolicy": "active-canonical-v1",
       "reactionPolicy": "starter-status-reaction-v1",
       "journalPolicy": "required-paginated-v1",
       "completionDestination": "shared-completed",
       "encodingPolicy": "utf8-no-mojibake-v1",
-      "status": "blocked",
+      "status": "enabled",
       "relationships": {
         "replaces": [],
         "replacedBy": []
       },
-      "blockers": [
-        {
-          "code": "project_forum_not_discovered",
-          "reason": "No _stack project forum is present in the live Project Feedback Boards category.",
-          "evidence": "Read-only guild channel inventory on 2026-07-14."
-        }
-      ],
-      "evidence": []
+      "blockers": [],
+      "evidence": [
+        "Live Discord readback on 2026-07-15 proved forum 1526814478157742131 as type 15 under the Project Feedback Boards category.",
+        "_stack owner export is repos/_stack/exports/stack.project-board.owner-export.v1.json and is explicitly empty-ready."
+      ]
     },
     {
       "id": "playbook-active-admission",
       "project": "Playbook",
       "required": true,
-      "forumChannelId": null,
-      "forumChannelName": null,
+      "forumChannelId": "1526814476857376858",
+      "forumChannelName": "playbook",
       "role": "active",
+      "forumProfile": "project-active-v1",
+      "permissionProfile": "restricted-single-writer-v1",
       "ownershipScope": "playbook:active",
-      "sourceAdapter": "unadmitted-v1",
+      "sourceAdapter": "playbook-roadmap-v1",
       "stableCardNamespace": "playbook",
       "lifecycleNormalizationPolicy": "active-canonical-v1",
       "reactionPolicy": "starter-status-reaction-v1",
       "journalPolicy": "required-paginated-v1",
       "completionDestination": "shared-completed",
       "encodingPolicy": "utf8-no-mojibake-v1",
-      "status": "blocked",
+      "status": "enabled",
       "relationships": {
         "replaces": [],
         "replacedBy": []
       },
-      "blockers": [
-        {
-          "code": "project_forum_not_discovered",
-          "reason": "No Playbook project forum is present in the live Project Feedback Boards category.",
-          "evidence": "Read-only guild channel inventory on 2026-07-14."
-        }
-      ],
-      "evidence": []
+      "blockers": [],
+      "evidence": [
+        "Live Discord readback on 2026-07-15 proved forum 1526814476857376858 as type 15 under the Project Feedback Boards category.",
+        "Playbook owner export is exports/playbook.project-board.owner-export.v1.json on Playbook main."
+      ]
     }
   ]
 }

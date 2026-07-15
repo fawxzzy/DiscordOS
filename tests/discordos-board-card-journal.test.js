@@ -25,6 +25,23 @@ function registryScan(rows = [], overrides = {}) {
 
 const emptyRegistryScan = async () => registryScan();
 
+test("journal CLI accepts a durable output receipt path", () => {
+  const options = _internals.parseArgs([
+    "--input",
+    "batch.json",
+    "--output",
+    "receipt.json",
+    "--json",
+    "--allow-apply",
+    "--apply",
+  ]);
+  assert.equal(options.inputPath, require("node:path").resolve("batch.json"));
+  assert.equal(options.outputPath, require("node:path").resolve("receipt.json"));
+  assert.equal(options.json, true);
+  assert.equal(options.allowApply, true);
+  assert.equal(options.apply, true);
+});
+
 function registryScanWithRows(rows, overrides = {}) {
   return async () => registryScan(rows, overrides);
 }
