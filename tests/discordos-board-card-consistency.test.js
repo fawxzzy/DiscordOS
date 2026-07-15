@@ -181,6 +181,54 @@ test("superseded text findings are included in aggregate counts with exact IDs",
   ]);
 });
 
+test("non-deletable system history is retained but does not make a clean superseded row actionable drift", async () => {
+  const mojibake = "\u00e2\u20ac\u201d";
+  const result = await _internals.buildBoardCardConsistency({
+    payload: { boards: [{ id: "fitness", forumChannelId: "forum", role: "active" }] },
+    env: { DISCORDOS_BOT_TOKEN: "token" },
+    fetchImpl: async (url) => {
+      if (url.endsWith("/channels/forum")) return response({ payload: { guild_id: "guild" } });
+      if (url.endsWith("/guilds/guild/threads/active")) {
+        return response({ payload: { threads: [{
+          id: "old",
+          name: "Archived encoding record",
+          parent_id: "forum",
+          thread_metadata: { archived: true },
+        }] } });
+      }
+      if (url.endsWith("/channels/forum/threads/archived/public?limit=100")) {
+        return response({ payload: { threads: [], has_more: false } });
+      }
+      if (url.endsWith("/channels/old")) {
+        return response({ payload: { id: "old", name: "Archived encoding record", thread_metadata: { archived: true } } });
+      }
+      if (url.endsWith("/channels/old/messages/old")) {
+        return response({ payload: { id: "old", content: "ATLAS-SUPERSEDED-CARD: `456`\nContinue in the clean replacement." } });
+      }
+      if (url.endsWith("/channels/old/messages?limit=100")) {
+        return response({ payload: [{
+          id: "immutable-rename",
+          type: 4,
+          author: { id: "bot", bot: true },
+          content: `Historical ${mojibake} rename`,
+        }] });
+      }
+      throw new Error(`unexpected GET ${url}`);
+    },
+  });
+
+  assert.equal(result.status, "consistent");
+  assert.equal(result.driftedCardCount, 0);
+  assert.equal(result.textIntegrityFindingCount, 1);
+  assert.equal(result.actionableTextIntegrityFindingCount, 0);
+  assert.equal(result.immutableSystemHistoryFindingCount, 1);
+  assert.equal(result.textIntegrityFindings[0].messageType, 4);
+  assert.equal(result.textIntegrityFindings[0].nonDeletableSystemMessage, true);
+  assert.equal(result.textIntegrityFindings[0].immutableSystemHistory, true);
+  assert.equal(result.rows[0].ok, true);
+  assert.deepEqual(result.rows[0].reasonCodes, []);
+});
+
 test("archived active-board source with a Completed link is a valid retained pair", () => {
   const row = _internals.inspectThread({
     board: { id: "fitness", role: "active" },
