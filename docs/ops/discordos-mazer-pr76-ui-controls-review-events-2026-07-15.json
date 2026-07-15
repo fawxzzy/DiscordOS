@@ -1,0 +1,206 @@
+{
+  "events": [
+    {
+      "schemaVersion": "atlas.board-card-journal.v1",
+      "eventId": "mazer-cross-viewport-ui-reliability-pr76-review-20260715",
+      "occurredAt": "2026-07-15T18:32:05.696Z",
+      "actor": "Mazer",
+      "card": {
+        "id": "mazer-cross-viewport-ui-reliability",
+        "project": "Mazer",
+        "sourceForumChannelId": "1524889569475170478",
+        "threadId": "1525337748830031875",
+        "title": "mazer: cross-viewport UI reliability and layout hardening",
+        "type": "feature",
+        "state": "review",
+        "previousState": "review",
+        "priority": "High",
+        "owner": "Mazer",
+        "progress": "88%",
+        "summary": "Coordinate mobile safe-area, shared overlay geometry, and browser layout through one no-overlap contract and proof matrix.",
+        "objective": "Make menu, Options, play, and Pause remain readable and operable across phone, browser, PWA, and restored-window surfaces without per-screenshot offsets.",
+        "acceptanceCriteria": [
+          "Every primary Mazer surface has an owner, supported viewport category, and no-overlap contract.",
+          "Mobile and browser layout work can be verified independently and together through a shared matrix.",
+          "No completion claim relies on desktop-only proof for a phone or restored-window defect.",
+          "Physical-device findings remain open until operator screenshots confirm the deployed behavior."
+        ],
+        "discoveries": [
+          "The previous production fix changed small fitting constants while retaining the crowded overlay structure, so the physical iPhone looked nearly unchanged.",
+          "An existing server on the default local proof port could serve stale UI; the corrected proof uses an isolated port and an exact Vercel deployment."
+        ],
+        "nextActions": [
+          "Review PR #76 on a physical iPhone and attach menu, Options, play, and Pause screenshots plus Smart Steering feel notes.",
+          "Keep installed-PWA banding, native browser chrome, and maximize or restore proof open until physical evidence passes."
+        ],
+        "blockers": [],
+        "evidence": [
+          "Mazer draft PR #76 at head 34524bd9.",
+          "Full Mazer verification passed 363 of 363 tests and the production build.",
+          "Focused Smart Steering, settings, UI, and scene verification passed 96 of 96 tests.",
+          "Vercel preview dpl_GRbdcJ4KYMAvesH5VSRegBWsPvXS passed the exact deployed 393x852 menu, Options, play, Pause, containment, overlap, scroll, button, and console gate."
+        ]
+      },
+      "entry": {
+        "kind": "review",
+        "headline": "PR 76 replaces shallow mobile fitting with deployed phone-shape proof",
+        "completed": [
+          "Shortened status, guide, and toggle copy and increased shared row spacing.",
+          "Separated Control Style from Smart Steering in Options and Pause.",
+          "Proved the exact review deployment across menu, Options, play, Pause, and scroll endpoints."
+        ],
+        "discovered": [
+          "Physical-device acceptance remains distinct from deterministic Chromium phone dimensions."
+        ],
+        "next": [
+          "Collect operator iPhone screenshots and feel feedback before production promotion or completion."
+        ],
+        "blockers": [],
+        "evidence": [
+          "https://github.com/fawxzzy/mazer/pull/76",
+          "Mazer head 34524bd9",
+          "Vercel deployment dpl_GRbdcJ4KYMAvesH5VSRegBWsPvXS"
+        ]
+      },
+      "correlation": {
+        "taskId": "019f61a0-6b80-7913-b479-f75f2a8a5b77",
+        "branch": "codex/physical-ui-controls-rework-20260715",
+        "commit": "34524bd9",
+        "receipt": "mazer-pr76-physical-ui-controls-review-20260715"
+      }
+    },
+    {
+      "schemaVersion": "atlas.board-card-journal.v1",
+      "eventId": "mazer-browser-layout-persistence-pr76-implementation-20260715",
+      "occurredAt": "2026-07-15T18:32:06.696Z",
+      "actor": "Mazer",
+      "card": {
+        "id": "mazer-browser-layout-persistence",
+        "project": "Mazer",
+        "sourceForumChannelId": "1524889569475170478",
+        "threadId": "1525337752290197514",
+        "title": "mazer: normalize browser UI layout across viewports",
+        "type": "feature",
+        "state": "in_progress",
+        "previousState": "opened",
+        "priority": "High",
+        "owner": "Mazer",
+        "progress": "84%",
+        "summary": "Normalize responsive browser geometry and preserve only semantic settings so viewport changes cannot replay stale layout.",
+        "objective": "Recompute all menu, Options, play, and Pause geometry from the active content rectangle while preserving explicit player preferences only.",
+        "acceptanceCriteria": [
+          "Layout-derived geometry is never persisted as player preference state.",
+          "A recalculated layout cannot overlap, escape the viewport, or hide essential controls.",
+          "Normal reload preserves supported semantic settings with safe migration defaults.",
+          "Narrow, wide, phone, and restore endpoints have deterministic evidence."
+        ],
+        "discoveries": [
+          "Smart Steering is semantic player intent and must persist separately from the Stick or Arrows control style.",
+          "Vercel share credentials are consumed before application load and must not be treated as route drift by the visual proof contract."
+        ],
+        "nextActions": [
+          "Complete exact deployed phone-shape proof for the new semantic settings and overlay layout.",
+          "Retain native browser chrome and maximize or restore as separate remaining evidence."
+        ],
+        "blockers": [],
+        "evidence": [
+          "Mazer PR #76 implementation commit 81260d21.",
+          "Focused UI and control packet passed before review deployment."
+        ]
+      },
+      "entry": {
+        "kind": "implementation",
+        "headline": "Browser layout and semantic-control correction implemented",
+        "completed": [
+          "Added independently persisted Smart Steering and Control Style fields.",
+          "Reworked shared status, guide, toggle-row, and scroll geometry.",
+          "Updated runtime diagnostics and the surface capture contract."
+        ],
+        "discovered": [
+          "The default proof port was already occupied, so isolated-port and deployed-URL correlation became mandatory."
+        ],
+        "next": [
+          "Run the exact deployed review gate and move the card to Review if it passes."
+        ],
+        "blockers": [],
+        "evidence": [
+          "https://github.com/fawxzzy/mazer/pull/76",
+          "Mazer implementation commit 81260d21"
+        ]
+      },
+      "correlation": {
+        "taskId": "019f61a0-6b80-7913-b479-f75f2a8a5b77",
+        "branch": "codex/physical-ui-controls-rework-20260715",
+        "commit": "81260d21",
+        "receipt": "mazer-pr76-physical-ui-controls-implementation-20260715"
+      }
+    },
+    {
+      "schemaVersion": "atlas.board-card-journal.v1",
+      "eventId": "mazer-shared-run-status-panel-pr76-review-20260715",
+      "occurredAt": "2026-07-15T18:32:08.696Z",
+      "actor": "Mazer",
+      "card": {
+        "id": "mazer-shared-run-status-panel",
+        "project": "Mazer",
+        "sourceForumChannelId": "1524889569475170478",
+        "threadId": "1526644909241667644",
+        "title": "mazer: shared menu and play run status panel",
+        "type": "feature",
+        "state": "review",
+        "previousState": "review",
+        "priority": "High",
+        "owner": "Mazer",
+        "progress": "25%",
+        "summary": "Use one responsive menu and play status component for time, Rank or AI Rank, Score out of 100, and Maze level from the correct context.",
+        "objective": "Give menu and active play the same compact status language while keeping score authority traceable to the canonical scorer.",
+        "acceptanceCriteria": [
+          "Menu and play consume the same status-panel formatting and layout contract.",
+          "Panel text remains centered, contained, and readable at phone and desktop widths.",
+          "Panel width, gap, and play Pause placement satisfy shared viewport diagnostics.",
+          "Displayed score is traceable to canonical run-quality data rather than a presentation-only calculation."
+        ],
+        "discoveries": [
+          "The previous compact status strings were too long for physical phone chrome despite passing shallow fit constants.",
+          "The presentation slice can advance independently while canonical score authority remains open."
+        ],
+        "nextActions": [
+          "Review the PR #76 menu and play status treatment on a physical phone and reconcile final row grouping with the frozen interpretation.",
+          "Identify and consume the one finalized canonical 0 to 100 scorer field before completion."
+        ],
+        "blockers": [],
+        "evidence": [
+          "Mazer draft PR #76 at head 34524bd9 uses one compact menu and play formatter.",
+          "Exact deployed 393x852 menu and play text-containment proof passed.",
+          "Canonical score authority remains explicitly non-terminal."
+        ]
+      },
+      "entry": {
+        "kind": "review",
+        "headline": "Shared run-status presentation advanced without claiming score authority",
+        "completed": [
+          "Shortened Time, Rank, Score, and Maze copy through one menu and play formatter.",
+          "Increased safe padding and proved phone-width containment on the exact preview."
+        ],
+        "discovered": [
+          "Physical-phone row grouping and canonical score ownership remain acceptance work."
+        ],
+        "next": [
+          "Use operator screenshots to settle presentation, then continue the scorer-owned dependency separately."
+        ],
+        "blockers": [],
+        "evidence": [
+          "https://github.com/fawxzzy/mazer/pull/76",
+          "Mazer head 34524bd9",
+          "Vercel deployment dpl_GRbdcJ4KYMAvesH5VSRegBWsPvXS"
+        ]
+      },
+      "correlation": {
+        "taskId": "019f61a0-6b80-7913-b479-f75f2a8a5b77",
+        "branch": "codex/physical-ui-controls-rework-20260715",
+        "commit": "34524bd9",
+        "receipt": "mazer-pr76-physical-ui-controls-review-20260715"
+      }
+    }
+  ]
+}

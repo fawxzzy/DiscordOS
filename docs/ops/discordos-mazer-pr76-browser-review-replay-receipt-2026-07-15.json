@@ -1,0 +1,76 @@
+{
+  "ok": true,
+  "status": "journaled",
+  "apply": true,
+  "admission": {
+    "requested": true,
+    "admitted": true,
+    "status": "journal_admitted",
+    "reasonCodes": []
+  },
+  "eventCount": 1,
+  "liveIdentityPreflight": {
+    "ok": true,
+    "status": "admitted",
+    "registryPath": "C:\\ATLAS\\tmp\\worktrees\\discordos-mazer-ui-controls-board-20260715\\config\\discordos-board-registry.json",
+    "scanStartedAt": "2026-07-15T18:56:54.381Z",
+    "scanCompletedAt": "2026-07-15T18:59:19.295Z",
+    "scanStatus": "consistent",
+    "scanReasonCodes": [],
+    "scanBlockingReasonCodes": [],
+    "currentIdentityCount": 237,
+    "proposedIdentityCount": 1,
+    "checks": [
+      {
+        "eventIndex": 0,
+        "eventId": "mazer-browser-layout-persistence-pr76-review-20260715",
+        "cardId": "mazer-browser-layout-persistence",
+        "normalizedCardId": "mazer-browser-layout-persistence",
+        "targetThreadId": "1525337752290197514",
+        "matchingLocations": [
+          {
+            "boardId": "mazer-active",
+            "forumChannelId": "1524889569475170478",
+            "threadId": "1525337752290197514",
+            "title": "normalize browser UI layout across viewports",
+            "cardId": "mazer-browser-layout-persistence"
+          }
+        ],
+        "collisionLocations": [],
+        "admitted": true,
+        "reasonCodes": []
+      }
+    ],
+    "reasonCodes": []
+  },
+  "results": [
+    {
+      "ok": true,
+      "status": "journaled",
+      "apply": true,
+      "eventId": "mazer-browser-layout-persistence-pr76-review-20260715",
+      "cardId": "mazer-browser-layout-persistence",
+      "threadId": "1525337752290197514",
+      "cardAction": "updated",
+      "journalAction": "reused",
+      "journalMessageId": "1527025328365637783",
+      "legacySnapshot": {
+        "action": "not_required",
+        "messageIds": [],
+        "partCount": 0
+      },
+      "archiveRestore": "not_required",
+      "matchedBy": "explicit_thread_id",
+      "readback": {
+        "starter": true,
+        "journal": true,
+        "starterCodePointsExact": true,
+        "journalCodePointsExact": true,
+        "title": true,
+        "canonicalTitle": "normalize browser UI layout across viewports"
+      },
+      "reasonCodes": []
+    }
+  ],
+  "reasonCodes": []
+}

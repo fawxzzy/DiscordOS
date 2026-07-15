@@ -1,0 +1,71 @@
+{
+  "events": [
+    {
+      "schemaVersion": "atlas.board-card-journal.v1",
+      "eventId": "mazer-browser-layout-persistence-pr76-review-20260715",
+      "occurredAt": "2026-07-15T18:32:07.696Z",
+      "actor": "Mazer",
+      "card": {
+        "id": "mazer-browser-layout-persistence",
+        "project": "Mazer",
+        "sourceForumChannelId": "1524889569475170478",
+        "threadId": "1525337752290197514",
+        "title": "mazer: normalize browser UI layout across viewports",
+        "type": "feature",
+        "state": "review",
+        "previousState": "in_progress",
+        "priority": "High",
+        "owner": "Mazer",
+        "progress": "86%",
+        "summary": "Normalize responsive browser geometry and preserve only semantic settings so viewport changes cannot replay stale layout.",
+        "objective": "Recompute all menu, Options, play, and Pause geometry from the active content rectangle while preserving explicit player preferences only.",
+        "acceptanceCriteria": [
+          "Layout-derived geometry is never persisted as player preference state.",
+          "A recalculated layout cannot overlap, escape the viewport, or hide essential controls.",
+          "Normal reload preserves supported semantic settings with safe migration defaults.",
+          "Narrow, wide, phone, and restore endpoints have deterministic evidence."
+        ],
+        "discoveries": [
+          "The exact deployed preview passes after the share credential is consumed and the application route remains canonical.",
+          "Native browser chrome and physical maximize or restore remain separate from the deterministic phone-shape gate."
+        ],
+        "nextActions": [
+          "Review the exact PR #76 deployment on mobile Safari and record any browser-chrome or restored-layout drift.",
+          "Extend deterministic proof to native maximize or restore without persisting derived geometry."
+        ],
+        "blockers": [],
+        "evidence": [
+          "Mazer draft PR #76 at head 34524bd9.",
+          "Full Mazer verification passed 363 of 363 tests and the production build.",
+          "Vercel preview dpl_GRbdcJ4KYMAvesH5VSRegBWsPvXS passed exact deployed 393x852 surface verification."
+        ]
+      },
+      "entry": {
+        "kind": "review",
+        "headline": "Exact deployed browser and phone-shape review gate passed",
+        "completed": [
+          "Verified menu, Options, play, Pause, scrolling, text containment, overlap, and button fit on the exact deployed preview.",
+          "Added proof support for Vercel share links without weakening route checks."
+        ],
+        "discovered": [
+          "Physical mobile Safari review remains required before production promotion."
+        ],
+        "next": [
+          "Collect physical browser-chrome and restored-layout evidence."
+        ],
+        "blockers": [],
+        "evidence": [
+          "https://github.com/fawxzzy/mazer/pull/76",
+          "Mazer head 34524bd9",
+          "Vercel deployment dpl_GRbdcJ4KYMAvesH5VSRegBWsPvXS"
+        ]
+      },
+      "correlation": {
+        "taskId": "019f61a0-6b80-7913-b479-f75f2a8a5b77",
+        "branch": "codex/physical-ui-controls-rework-20260715",
+        "commit": "34524bd9",
+        "receipt": "mazer-pr76-physical-ui-controls-review-20260715"
+      }
+    }
+  ]
+}
