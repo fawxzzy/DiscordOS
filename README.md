@@ -21,6 +21,8 @@ Owner work and project-board export:
 - unknown priority stays explicit as `null`; export generation never authorizes Discord mutation.
 - `npm run ops:discordos:project-board-forum-provision:json` performs a no-write inventory by default for the seven required project forums.
 - live forum creation requires `DISCORDOS_PROJECT_BOARD_FORUM_PROVISION=enabled` plus `--allow-provision --apply`; it is idempotent, creates only type-15 forums under the exact Project Feedback Boards category, and requires exact channel readback. Use `--output <path>` to persist the same non-secret receipt emitted to stdout.
+- `npm run ops:discordos:project-board-owner-seed:json -- --owner-export <path> ... --output <batch.json>` converts admitted owner exports into a deterministic, no-write journal batch. Terminal owner history is reported and excluded from active-board seeding.
+- `npm run ops:discordos:board-card-journal -- --input <batch.json> --output <receipt.json> --json` performs the guarded journal dry run and persists the full non-secret result. Live apply still requires the existing environment and command double guard.
 
 Current governed contract surface:
 

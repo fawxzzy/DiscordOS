@@ -1,4 +1,5 @@
 const path = require("node:path");
+const fs = require("node:fs/promises");
 const {
   _internals: cardContract,
 } = require("./discordos-board-card-contract");
@@ -39,11 +40,14 @@ function readValue(args, index, code) {
 }
 
 function parseArgs(args) {
-  const options = { inputPath: null, json: false, allowApply: false, apply: false };
+  const options = { inputPath: null, outputPath: null, json: false, allowApply: false, apply: false };
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (arg === "--input") {
       options.inputPath = path.resolve(readValue(args, index, "missing_input_path"));
+      index += 1;
+    } else if (arg === "--output") {
+      options.outputPath = path.resolve(readValue(args, index, "missing_output_path"));
       index += 1;
     } else if (arg === "--json") options.json = true;
     else if (arg === "--allow-apply") options.allowApply = true;
@@ -1129,7 +1133,12 @@ async function main() {
     allowApply: options.allowApply,
     apply: options.apply,
   });
-  process.stdout.write(options.json ? `${JSON.stringify(result, null, 2)}\n` : renderMarkdown(result));
+  const jsonOutput = `${JSON.stringify(result, null, 2)}\n`;
+  if (options.outputPath) {
+    await fs.mkdir(path.dirname(options.outputPath), { recursive: true });
+    await fs.writeFile(options.outputPath, jsonOutput, "utf8");
+  }
+  process.stdout.write(options.json ? jsonOutput : renderMarkdown(result));
   process.exitCode = result.ok ? 0 : 1;
 }
 
