@@ -18,15 +18,19 @@ test("canonical registry covers the full discovered and required denominator", (
   assert.equal(result.ok, true);
   assert.equal(result.boardCount, 12);
   assert.equal(result.requiredBoardCount, 12);
-  assert.equal(result.enabledBoardCount, 5);
-  assert.equal(result.blockedBoardCount, 7);
+  assert.equal(result.enabledBoardCount, 12);
+  assert.equal(result.blockedBoardCount, 0);
   assert.deepEqual(
     result.boards.filter((board) => board.status === "enabled").map((board) => board.id),
-    ["legacy-general-feedback", "fitness-active", "mazer-active", "music-sesh-active", "shared-completed"],
+    [
+      "legacy-general-feedback", "fitness-active", "mazer-active", "music-sesh-active", "shared-completed",
+      "atlas-active-admission", "discordos-active-admission", "foundation-active-admission",
+      "lifeline-active-admission", "cortex-active-admission", "stack-active-admission", "playbook-active-admission",
+    ],
   );
   assert.deepEqual(
     result.boards.filter((board) => board.status === "blocked").map((board) => board.project),
-    ["Atlas", "DiscordOS", "Foundation", "Lifeline", "Cortex", "_stack", "Playbook"],
+    [],
   );
 });
 

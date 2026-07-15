@@ -122,14 +122,12 @@ function selectProvisionTargets(registry) {
   return registry.boards
     .filter((board) => board.required === true
       && board.role === "active"
-      && board.status === "blocked"
-      && !board.forumChannelId
-      && Array.isArray(board.blockers)
-      && board.blockers.some((blocker) => blocker?.code === "project_forum_not_discovered"))
+      && String(board.id || "").endsWith("-active-admission"))
     .map((board) => ({
       boardId: board.id,
       project: board.project,
       forumName: normalizeName(board.forumChannelName || board.stableCardNamespace),
+      expectedForumChannelId: board.forumChannelId || null,
       stableCardNamespace: board.stableCardNamespace,
       sourceAdapter: board.sourceAdapter,
     }))
@@ -158,6 +156,9 @@ function inspectTargets({ channels, categoryId, targets }) {
     const rowReasonCodes = [];
     if (exact.length > 1) rowReasonCodes.push("project_board_forum_duplicate_exact_match");
     if (conflicts.length > 0) rowReasonCodes.push("project_board_forum_name_conflict");
+    if (exact.length === 1 && target.expectedForumChannelId && exact[0].id !== target.expectedForumChannelId) {
+      rowReasonCodes.push("project_board_forum_registry_id_mismatch");
+    }
     reasonCodes.push(...rowReasonCodes);
     rows.push({
       ...target,
@@ -249,7 +250,9 @@ async function buildProjectBoardForumProvision({
 
   const inspection = inspectTargets({ channels, categoryId: resolvedCategoryId, targets });
   reasonCodes.push(...inspection.reasonCodes);
-  const expectedIds = new Map(inspection.rows.filter((row) => row.existing).map((row) => [row.boardId, row.existing.id]));
+  const expectedIds = new Map(inspection.rows
+    .filter((row) => row.expectedForumChannelId || row.existing)
+    .map((row) => [row.boardId, row.expectedForumChannelId || row.existing.id]));
   const created = [];
 
   if (apply && admission.admitted && reasonCodes.length === 0) {
