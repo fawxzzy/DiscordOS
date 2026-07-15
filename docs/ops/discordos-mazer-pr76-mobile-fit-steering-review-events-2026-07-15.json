@@ -1,0 +1,229 @@
+{
+  "events": [
+    {
+      "schemaVersion": "atlas.board-card-journal.v1",
+      "eventId": "mazer-cross-viewport-ui-reliability-pr76-mobile-fit-steering-review-20260715",
+      "occurredAt": "2026-07-15T23:28:12.000Z",
+      "actor": "Mazer",
+      "card": {
+        "id": "mazer-cross-viewport-ui-reliability",
+        "project": "Mazer",
+        "sourceForumChannelId": "1524889569475170478",
+        "threadId": "1525337748830031875",
+        "title": "mazer: cross-viewport UI reliability and layout hardening",
+        "type": "feature",
+        "state": "review",
+        "previousState": "review",
+        "priority": "High",
+        "owner": "Mazer",
+        "progress": "95%",
+        "summary": "Coordinate mobile safe-area, shared overlay geometry, and browser layout through one no-overlap contract and proof matrix.",
+        "objective": "Make menu, Options, play, and Pause remain readable and operable across phone, browser, PWA, and restored-window surfaces without per-screenshot offsets.",
+        "acceptanceCriteria": [
+          "Every primary Mazer surface has an owner, supported viewport category, and no-overlap contract.",
+          "Mobile and browser layout work can be verified independently and together through a shared matrix.",
+          "No completion claim relies on desktop-only proof for a phone or restored-window defect.",
+          "Physical-device findings remain open until operator screenshots confirm the deployed behavior."
+        ],
+        "discoveries": [
+          "The latest production screenshots proved the text-bleed fix was real but left labels too small, Pause half-height, excess scroll dead space, slider/scroll gesture contention, and analog-noise gaps in Smart Steering.",
+          "Smart Steering must retain the held cardinal axis through normal off-axis stick noise before the one-tile lane-shift resolver can operate."
+        ],
+        "nextActions": [
+          "Obtain explicit production authorization for exact head 8ca79d9a.",
+          "Collect physical-iPhone menu, Options, play, Pause, and Smart Steering proof after release.",
+          "Keep installed-PWA, native browser-chrome, and maximize or restore endpoints open."
+        ],
+        "blockers": [
+          "Production still serves the prior explicitly approved 4984d16c artifact.",
+          "Physical-iPhone acceptance for exact head 8ca79d9a has not yet been captured."
+        ],
+        "evidence": [
+          "Mazer draft PR #76 at exact head 8ca79d9a843213cecab4eb8bb6963ed2078db603.",
+          "Focused verification passed 85 of 85; full verification passed 364 of 364; the directional-intent architecture contract, TypeScript check, and production build passed.",
+          "Deterministic 390x844 at 3x menu, Options, play, and Pause capture passed every containment, overlap, scroll, label-fill, height-parity, topology, and console gate.",
+          "Canonical-project preview dpl_HAcz3TXAnQUca929gqnzHQ87rH7Y is Ready and team-SSO protected."
+        ]
+      },
+      "entry": {
+        "kind": "review",
+        "headline": "PR 76 mobile fit and held-axis Smart Steering are proof-ready",
+        "completed": [
+          "Enlarged status, action, guide, toggle, and slider text with measured padding and visual minimum-fill gates.",
+          "Matched active-play Pause to the 62px shared status-panel height and moved the scroll cutoff directly below the title.",
+          "Made guide clipping progressive by geometry while removing only complete text rows.",
+          "Locked overlay scrolling during Move Speed drags.",
+          "Preserved held cardinal stick intent through analog noise so one-tile jogs resolve on all four travel directions."
+        ],
+        "discovered": [
+          "Physical production evidence remains the final authority for this phone-facing packet."
+        ],
+        "next": [
+          "Promote only after explicit operator approval, then collect physical-iPhone screenshots and feel notes."
+        ],
+        "blockers": [
+          "Exact head 8ca79d9a is preview-only pending explicit production approval."
+        ],
+        "evidence": [
+          "https://github.com/fawxzzy/mazer/pull/76",
+          "Mazer head 8ca79d9a",
+          "Vercel preview dpl_HAcz3TXAnQUca929gqnzHQ87rH7Y",
+          "Capture report C:/ATLAS/tmp/captures/mazer-ui-surfaces/2026-07-15T23-14-52-388Z/report.md"
+        ]
+      },
+      "correlation": {
+        "taskId": "019f61a0-6b80-7913-b479-f75f2a8a5b77",
+        "branch": "codex/physical-ui-controls-rework-20260715",
+        "commit": "8ca79d9a",
+        "receipt": "mazer-pr76-mobile-fit-steering-review-20260715"
+      }
+    },
+    {
+      "schemaVersion": "atlas.board-card-journal.v1",
+      "eventId": "mazer-browser-layout-persistence-pr76-mobile-fit-review-20260715",
+      "occurredAt": "2026-07-15T23:28:13.000Z",
+      "actor": "Mazer",
+      "card": {
+        "id": "mazer-browser-layout-persistence",
+        "project": "Mazer",
+        "sourceForumChannelId": "1524889569475170478",
+        "threadId": "1525337752290197514",
+        "title": "mazer: normalize browser UI layout across viewports",
+        "type": "feature",
+        "state": "review",
+        "previousState": "review",
+        "priority": "High",
+        "owner": "Mazer",
+        "progress": "94%",
+        "summary": "Normalize responsive browser geometry and preserve only semantic settings so viewport changes cannot replay stale layout.",
+        "objective": "Recompute all menu, Options, play, and Pause geometry from the active content rectangle while preserving explicit player preferences only.",
+        "acceptanceCriteria": [
+          "Layout-derived geometry is never persisted as player preference state.",
+          "A recalculated layout cannot overlap, escape the viewport, or hide essential controls.",
+          "Normal reload preserves supported semantic settings with safe migration defaults.",
+          "Narrow, wide, phone, and restore endpoints have deterministic evidence."
+        ],
+        "discoveries": [
+          "Guide content needs viewport clipping at the rendering layer, while text rows need clean all-or-nothing visibility to avoid chopped copy.",
+          "The Move Speed slider must own its active pointer so responsive overlay scrolling cannot consume the same gesture."
+        ],
+        "nextActions": [
+          "Review exact head 8ca79d9a through physical mobile Safari after explicit production promotion.",
+          "Complete native browser-chrome and maximize or restore evidence."
+        ],
+        "blockers": [
+          "Anonymous remote screenshot automation is redirected by Vercel team SSO; protection was preserved rather than weakened.",
+          "Physical browser-chrome review remains pending."
+        ],
+        "evidence": [
+          "Mazer draft PR #76 at exact head 8ca79d9a.",
+          "Deterministic 390x844 at 3x capture passed Options/Pause top and bottom scroll endpoints, containment, fade-clearance, reachability, and console gates.",
+          "Canonical preview dpl_HAcz3TXAnQUca929gqnzHQ87rH7Y is Ready and serves the same hashed app artifact as the locally captured build."
+        ]
+      },
+      "entry": {
+        "kind": "review",
+        "headline": "Responsive overlay scroll and typography contract strengthened",
+        "completed": [
+          "Moved the phone overlay render viewport directly beneath the title.",
+          "Added geometry masking with clean text-row visibility.",
+          "Enforced exclusive slider gesture ownership.",
+          "Added minimum action-label fill and exact Pause/status height gates."
+        ],
+        "discovered": [
+          "Vercel team SSO protects preview screenshots but does not block authenticated deployment and artifact readback."
+        ],
+        "next": [
+          "Use operator production screenshots for the mobile browser endpoint and retain native restore proof."
+        ],
+        "blockers": [
+          "Production approval and physical mobile-browser proof remain pending."
+        ],
+        "evidence": [
+          "https://github.com/fawxzzy/mazer/pull/76",
+          "Mazer head 8ca79d9a",
+          "Vercel preview dpl_HAcz3TXAnQUca929gqnzHQ87rH7Y"
+        ]
+      },
+      "correlation": {
+        "taskId": "019f61a0-6b80-7913-b479-f75f2a8a5b77",
+        "branch": "codex/physical-ui-controls-rework-20260715",
+        "commit": "8ca79d9a",
+        "receipt": "mazer-pr76-mobile-fit-steering-review-20260715"
+      }
+    },
+    {
+      "schemaVersion": "atlas.board-card-journal.v1",
+      "eventId": "mazer-shared-run-status-panel-pr76-height-parity-review-20260715",
+      "occurredAt": "2026-07-15T23:28:14.000Z",
+      "actor": "Mazer",
+      "card": {
+        "id": "mazer-shared-run-status-panel",
+        "project": "Mazer",
+        "sourceForumChannelId": "1524889569475170478",
+        "threadId": "1526644909241667644",
+        "title": "mazer: shared menu and play run status panel",
+        "type": "feature",
+        "state": "review",
+        "previousState": "review",
+        "priority": "High",
+        "owner": "Mazer",
+        "progress": "36%",
+        "summary": "Use one responsive menu and play status component for time, Rank or AI Rank, Score out of 100, and Maze level from the correct context.",
+        "objective": "Give menu and active play the same compact status language while keeping score authority traceable to the canonical scorer.",
+        "acceptanceCriteria": [
+          "Menu and play consume the same status-panel formatting and layout contract.",
+          "Panel text remains centered, contained, and readable at phone and desktop widths.",
+          "Panel width, gap, and play Pause placement satisfy shared viewport diagnostics.",
+          "Displayed score is traceable to canonical run-quality data rather than a presentation-only calculation."
+        ],
+        "discoveries": [
+          "The physically contained status copy was still undersized relative to its available chrome.",
+          "Active-play Pause needs to consume the exact shared status-panel height rather than its former control-size-derived height."
+        ],
+        "nextActions": [
+          "Review the enlarged shared status text and equal-height Pause control on a physical iPhone after explicit production promotion.",
+          "Consume the finalized canonical 0-to-100 scorer field before completion."
+        ],
+        "blockers": [
+          "Physical-phone presentation proof for exact head 8ca79d9a is pending.",
+          "Canonical score authority remains a separate non-terminal dependency."
+        ],
+        "evidence": [
+          "Shared compact status font increased to 14px and the wide font to 15px with measured fit padding.",
+          "The deterministic phone capture and visual diagnostic prove exact 62px status/Pause height parity.",
+          "Focused verification passed 85 of 85 and full verification passed 364 of 364."
+        ]
+      },
+      "entry": {
+        "kind": "review",
+        "headline": "Shared status text and Pause now use the available phone lane",
+        "completed": [
+          "Increased shared run-status typography while preserving rail clearance.",
+          "Made active-play Pause exactly match the shared status height.",
+          "Added minimum status-font and height-parity visual gates."
+        ],
+        "discovered": [
+          "Presentation proof advanced, but canonical score authority is intentionally unchanged."
+        ],
+        "next": [
+          "Collect physical-iPhone presentation proof and continue the scorer-owned dependency separately."
+        ],
+        "blockers": [
+          "Production and physical-device review remain pending."
+        ],
+        "evidence": [
+          "https://github.com/fawxzzy/mazer/pull/76",
+          "Mazer head 8ca79d9a",
+          "Capture report C:/ATLAS/tmp/captures/mazer-ui-surfaces/2026-07-15T23-14-52-388Z/report.md"
+        ]
+      },
+      "correlation": {
+        "taskId": "019f61a0-6b80-7913-b479-f75f2a8a5b77",
+        "branch": "codex/physical-ui-controls-rework-20260715",
+        "commit": "8ca79d9a",
+        "receipt": "mazer-pr76-mobile-fit-steering-review-20260715"
+      }
+    }
+  ]
+}
