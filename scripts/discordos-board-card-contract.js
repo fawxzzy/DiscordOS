@@ -8,6 +8,7 @@ const {
 const DISCORD_API_BASE = updatePostInternals.DISCORD_API_BASE;
 const DISCORD_THREAD_TITLE_MAX_LENGTH = 100;
 const DEFAULT_AUTO_ARCHIVE_DURATION = 10080;
+const CANONICAL_TITLE_POLICY = "plain-work-outcome-v1";
 const CANONICAL_CARD_START = "<!-- ATLAS-CARD:START -->";
 const CANONICAL_CARD_END = "<!-- ATLAS-CARD:END -->";
 const STATUS_REACTIONS = {
@@ -152,20 +153,12 @@ function getBoardLabel(board) {
 
 function getTitleContract(board) {
   const boardConfig = board?.board || board || {};
-  if (boardConfig.titleContract && typeof boardConfig.titleContract === "object") {
-    return boardConfig.titleContract;
-  }
-  if (getBoardId(board).toLowerCase() === "mazer") {
-    return {
-      style: "prefix",
-      prefix: "mazer",
-      separator: ": ",
-      maxLength: DISCORD_THREAD_TITLE_MAX_LENGTH,
-    };
-  }
   return {
-    style: "plain",
-    maxLength: DISCORD_THREAD_TITLE_MAX_LENGTH,
+    policy: CANONICAL_TITLE_POLICY,
+    style: "plain_work_outcome",
+    maxLength: Number.isInteger(boardConfig?.titleContract?.maxLength)
+      ? boardConfig.titleContract.maxLength
+      : DISCORD_THREAD_TITLE_MAX_LENGTH,
   };
 }
 
@@ -190,9 +183,44 @@ function truncateTitle(value, maxLength = DISCORD_THREAD_TITLE_MAX_LENGTH) {
   ).replace(/[,:;\-\s]+$/, "") + suffix;
 }
 
+function canonicalTitlePrefixes(board) {
+  const boardConfig = board?.board || board || {};
+  const prefixes = [
+    boardConfig.project,
+    boardConfig.label,
+    boardConfig.forumChannelName,
+    boardConfig.stableCardNamespace,
+    getBoardLabel(board),
+    getBoardId(board).replace(/-(?:active|active-admission|completed)$/i, ""),
+  ];
+  return [...new Set(prefixes.map(normalizeWhitespace).filter(Boolean))]
+    .sort((left, right) => right.length - left.length);
+}
+
+function stripDelimitedPrefix(value, prefix) {
+  const escaped = escapeRegExp(normalizeWhitespace(prefix));
+  if (!escaped) return normalizeWhitespace(value);
+  return normalizeWhitespace(value).replace(
+    new RegExp(`^${escaped}\\s*(?::|[\\u2013\\u2014]|\\s-\\s)\\s*`, "i"),
+    ""
+  );
+}
+
+function normalizePlainOutcomeTitle({ board, value }) {
+  let result = normalizeWhitespace(value);
+  let changed = true;
+  while (result && changed) {
+    const before = result;
+    for (const prefix of canonicalTitlePrefixes(board)) result = stripDelimitedPrefix(result, prefix);
+    for (const prefix of ["Bug", "Feature"]) result = stripDelimitedPrefix(result, prefix);
+    changed = result !== before;
+  }
+  return result;
+}
+
 function formatCanonicalCardTitle({ board, card, title = null }) {
   const contract = getTitleContract(board);
-  const proposedTitle = normalizeWhitespace(title || card?.title || card?.markerName || card?.id || "");
+  const proposedTitle = normalizeWhitespace(title || card?.plainTitle || card?.title || card?.markerName || card?.id || "");
   if (!proposedTitle) {
     throw new Error("card_title_missing");
   }
@@ -200,14 +228,9 @@ function formatCanonicalCardTitle({ board, card, title = null }) {
     ? contract.maxLength
     : DISCORD_THREAD_TITLE_MAX_LENGTH;
 
-  if (contract.style === "prefix") {
-    const prefix = normalizeWhitespace(contract.prefix || getBoardLabel(board)).toLowerCase();
-    const separator = typeof contract.separator === "string" ? contract.separator : ": ";
-    const body = stripRepeatedPrefix({ value: proposedTitle, prefix, separator });
-    return truncateTitle(`${prefix}${separator}${body}`, maxLength);
-  }
-
-  return truncateTitle(proposedTitle, maxLength);
+  const normalized = normalizePlainOutcomeTitle({ board, value: proposedTitle });
+  if (!normalized) throw new Error("card_title_empty_after_prefix_normalization");
+  return truncateTitle(normalized, maxLength);
 }
 
 function getRequiredReactionForCard(card, board = null) {
@@ -827,6 +850,7 @@ module.exports = {
     DISCORD_API_BASE,
     DISCORD_THREAD_TITLE_MAX_LENGTH,
     DEFAULT_AUTO_ARCHIVE_DURATION,
+    CANONICAL_TITLE_POLICY,
     CANONICAL_CARD_START,
     CANONICAL_CARD_END,
     STATUS_REACTIONS,
@@ -837,6 +861,10 @@ module.exports = {
     inspectCanonicalCardBody,
     evaluateStarterMessageUpdate,
     getTitleContract,
+    stripRepeatedPrefix,
+    canonicalTitlePrefixes,
+    stripDelimitedPrefix,
+    normalizePlainOutcomeTitle,
     formatCanonicalCardTitle,
     getRequiredReactionForCard,
     buildCanonicalCardSpec,

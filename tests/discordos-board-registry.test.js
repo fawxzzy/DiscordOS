@@ -16,9 +16,9 @@ test("canonical registry covers the full discovered and required denominator", (
   const result = _internals.validateBoardRegistry(registry);
 
   assert.equal(result.ok, true);
-  assert.equal(result.boardCount, 12);
-  assert.equal(result.requiredBoardCount, 12);
-  assert.equal(result.enabledBoardCount, 12);
+  assert.equal(result.boardCount, 13);
+  assert.equal(result.requiredBoardCount, 13);
+  assert.equal(result.enabledBoardCount, 13);
   assert.equal(result.blockedBoardCount, 0);
   assert.equal(registry.forumProfileRegistry, "config/discordos-forum-profile-registry.json");
   assert.ok(result.boards.every((board) => board.forumProfile && board.permissionProfile));
@@ -28,6 +28,7 @@ test("canonical registry covers the full discovered and required denominator", (
       "legacy-general-feedback", "fitness-active", "mazer-active", "music-sesh-active", "shared-completed",
       "atlas-active-admission", "discordos-active-admission", "foundation-active-admission",
       "lifeline-active-admission", "cortex-active-admission", "stack-active-admission", "playbook-active-admission",
+      "socials-os-active-admission",
     ],
   );
   assert.deepEqual(

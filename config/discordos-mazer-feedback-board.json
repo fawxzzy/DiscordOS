@@ -5,9 +5,8 @@
     "label": "mazer",
     "source": "discordos-feedback-board",
     "titleContract": {
-      "style": "prefix",
-      "prefix": "mazer",
-      "separator": ": ",
+      "policy": "plain-work-outcome-v1",
+      "style": "plain_work_outcome",
       "maxLength": 100
     },
     "requiredReaction": {

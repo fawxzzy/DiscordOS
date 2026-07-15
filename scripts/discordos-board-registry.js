@@ -39,6 +39,7 @@ function boardSummary(board) {
     required: board?.required === true,
     forumChannelId: text(board?.forumChannelId) || null,
     forumChannelName: text(board?.forumChannelName) || null,
+    channelIdentityResolution: text(board?.channelIdentityResolution) || "exact_id",
     role: text(board?.role).toLowerCase(),
     forumProfile: text(board?.forumProfile),
     permissionProfile: text(board?.permissionProfile),
@@ -54,6 +55,36 @@ function boardSummary(board) {
       ? board.blockers.map((blocker) => text(blocker?.code)).filter(Boolean)
       : [],
   };
+}
+
+function resolveBoardChannelIdentities({ registry, channels }) {
+  const resolvedRegistry = structuredClone(registry);
+  const categoryId = text(registry?.discovery?.forumCategoryChannelId);
+  const rows = [];
+  const reasonCodes = [];
+  for (const board of resolvedRegistry.boards || []) {
+    const mode = text(board?.channelIdentityResolution) || "exact_id";
+    if (text(board?.forumChannelId)) {
+      rows.push({ boardId: text(board.id), mode: "exact_id", forumChannelId: text(board.forumChannelId), resolved: true });
+      continue;
+    }
+    if (mode !== "exact_name_under_category") {
+      reasonCodes.push(`board_channel_identity_resolution_invalid:${text(board?.id) || "missing"}`);
+      continue;
+    }
+    const name = text(board?.forumChannelName).toLowerCase();
+    const matches = (channels || []).filter((channel) => channel?.type === 15
+      && text(channel?.parent_id) === categoryId
+      && text(channel?.name).toLowerCase() === name);
+    if (matches.length !== 1) {
+      reasonCodes.push(`${matches.length === 0 ? "board_channel_unresolved" : "board_channel_ambiguous"}:${text(board.id)}`);
+      rows.push({ boardId: text(board.id), mode, forumChannelId: null, resolved: false, matchCount: matches.length });
+      continue;
+    }
+    board.forumChannelId = text(matches[0].id);
+    rows.push({ boardId: text(board.id), mode, forumChannelId: text(matches[0].id), resolved: true, matchCount: 1 });
+  }
+  return { ok: reasonCodes.length === 0, registry: resolvedRegistry, rows, reasonCodes };
 }
 
 function validateBoardRegistry(registry, { repoRoot = path.resolve(__dirname, ".."), fileExists = fs.existsSync } = {}) {
@@ -147,7 +178,9 @@ function validateBoardRegistry(registry, { repoRoot = path.resolve(__dirname, ".
     if (!Object.hasOwn(encodingPolicies, text(board?.encodingPolicy))) reasonCodes.push(`board_encoding_policy_missing:${id}`);
 
     if (status === "enabled") {
-      if (!text(board?.forumChannelId)) reasonCodes.push(`enabled_board_channel_missing:${id}`);
+      if (!text(board?.forumChannelId) && text(board?.channelIdentityResolution) !== "exact_name_under_category") {
+        reasonCodes.push(`enabled_board_channel_missing:${id}`);
+      }
       if (!text(board?.forumChannelName)) reasonCodes.push(`enabled_board_channel_name_missing:${id}`);
       if (text(board?.sourceAdapter) === "unadmitted-v1") reasonCodes.push(`enabled_board_adapter_unadmitted:${id}`);
       if (Array.isArray(board?.blockers) && board.blockers.length > 0) reasonCodes.push(`enabled_board_has_blockers:${id}`);
@@ -215,6 +248,7 @@ module.exports = {
     text,
     duplicateValues,
     boardSummary,
+    resolveBoardChannelIdentities,
     validateBoardRegistry,
   },
 };

@@ -52,26 +52,27 @@ function registryFs(value = preAdmissionRegistry) {
   return { async readFile() { return JSON.stringify(value); } };
 }
 
-function admittedChannels() {
+function admittedChannels({ includeSocials = true } = {}) {
   return registry.boards
     .filter((board) => board.id.endsWith("-active-admission"))
-    .map((board) => ({ id: board.forumChannelId, name: board.forumChannelName, type: 15, parent_id: category.id }));
+    .filter((board) => includeSocials || board.id !== "socials-os-active-admission")
+    .map((board) => ({ id: board.forumChannelId || "socials-forum", name: board.forumChannelName, type: 15, parent_id: category.id }));
 }
 
-test("canonical registry selects exactly the seven missing project forums", () => {
+test("canonical registry selects the eight admitted project forums including Socials OS", () => {
   const targets = _internals.selectProvisionTargets(registry);
-  assert.equal(targets.length, 7);
+  assert.equal(targets.length, 8);
   assert.deepEqual(targets.map((target) => target.forumName).sort(), [
-    "atlas", "cortex", "discordos", "foundation", "lifeline", "playbook", "stack",
+    "atlas", "cortex", "discordos", "foundation", "lifeline", "playbook", "socials-os", "stack",
   ]);
 });
 
-test("dry run reuses seven admitted forums without posting", async () => {
-  const mock = makeFetch([category, ...admittedChannels()]);
+test("dry run reuses seven admitted forums and plans Socials OS without posting", async () => {
+  const mock = makeFetch([category, ...admittedChannels({ includeSocials: false })]);
   const result = await _internals.buildProjectBoardForumProvision({ env, fetchImpl: mock.fetchImpl });
   assert.equal(result.ok, true);
   assert.equal(result.status, "dry_run_ready");
-  assert.equal(result.plannedCreateCount, 0);
+  assert.equal(result.plannedCreateCount, 1);
   assert.equal(result.reusedCount, 7);
   assert.equal(result.createdCount, 0);
   assert.equal(result.readback, null);
@@ -89,11 +90,11 @@ test("apply creates every missing forum and proves exact readback", async () => 
   });
   assert.equal(result.ok, true);
   assert.equal(result.status, "provisioned");
-  assert.equal(result.createdCount, 7);
+  assert.equal(result.createdCount, 8);
   assert.equal(result.reusedCount, 0);
   assert.equal(result.readback.ok, true);
-  assert.equal(result.readback.rows.length, 7);
-  assert.equal(mock.calls.filter((call) => call.method === "POST").length, 7);
+  assert.equal(result.readback.rows.length, 8);
+  assert.equal(mock.calls.filter((call) => call.method === "POST").length, 8);
   assert.ok(mock.calls.filter((call) => call.method === "POST").every((call) => call.body.type === 15 && call.body.parent_id === category.id));
 });
 
@@ -107,7 +108,7 @@ test("apply retry reuses all exact admitted forums and performs no writes", asyn
   });
   assert.equal(result.ok, true);
   assert.equal(result.createdCount, 0);
-  assert.equal(result.reusedCount, 7);
+  assert.equal(result.reusedCount, 8);
   assert.equal(result.readback.ok, true);
   assert.equal(mock.calls.filter((call) => call.method === "POST").length, 0);
 });

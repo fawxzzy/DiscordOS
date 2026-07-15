@@ -95,7 +95,7 @@ Discord system history is classified separately from mutable board content. Disc
 
 Registry validation rejects duplicate board IDs, forum channel IDs, and stable-card namespaces; invalid roles, statuses, and lifecycle states; unknown adapters and policy references; missing or invalid completion targets; and overlapping enabled ownership scopes. A required blocked entry is valid registry structure but blocks consistency success until its admission evidence changes.
 
-The 2026-07-15 denominator is `12` required, enabled live surfaces. Atlas, DiscordOS, Foundation, Lifeline, Cortex, `_stack`, and Playbook are provisioned and admitted alongside legacy general feedback, Fitness, Mazer, Music Sesh, and shared Completed. The guarded owner-export seed is proven at 78/78 exact starter and journal readback. A post-seed consistency scan reports 367 current cards, 215 healthy cards, and exactly 152 unchanged legacy Shared Intake and Music Sesh drifts. The `feedback-testing` forum remains excluded because its live topic identifies it as private internal QA with no public or community cards. Socials OS is not in this 12-board denominator and requires a separate owner-admission lane.
+The governed denominator is `13` required boards, including Socials OS. Socials has an admitted owner adapter and resolves its exact forum ID inside the first serialized provision cluster. The prior 12-board live receipt remains historical baseline evidence; it is not proof that board 13 is visible.
 
 Forum-level configuration authority is `config/discordos-forum-profile-registry.json` and `docs/contracts/discordos-forum-profile-normalization-v1.md`. Forum tags, permissions, defaults, structure, orphan applied tags, and archive/lock expectations are scanned denominator-wide. Forum normalization remains separate from legacy card migration and active-source completion semantics.
 
@@ -214,7 +214,7 @@ Active board-specific publishers must use the shared board-card contract helper 
 Every live Discord forum card upsert must derive a canonical card spec before touching Discord:
 
 - stable identity: `card.id`
-- canonical thread title from `board.titleContract` when present
+- canonical plain work-outcome title with project and Bug/Feature prefixes removed
 - starter message payload from the board-specific content renderer
 - required starter-message reaction from card-level status, board-level `requiredReaction`, or the default success/failure reaction map
 
@@ -228,22 +228,7 @@ Board writers must plan every admitted card before executing any write. If one r
 
 ## Title Contract
 
-The default title contract preserves plain board titles. Boards that need an owner prefix must declare it in board config:
-
-```json
-{
-  "titleContract": {
-    "style": "prefix",
-    "prefix": "mazer",
-    "separator": ": ",
-    "maxLength": 100
-  }
-}
-```
-
-Prefix normalization must be idempotent. For Mazer, `Skin deformation around nose wrinkles...` and `mazer: Skin deformation around nose wrinkles...` both normalize to one `mazer: ...` title, never `mazer: mazer: ...`.
-
-Fitness titles remain owner-owned and plain. The observed Fitness title pattern is `Type: Area - Summary` with Discord's 100-character forum-thread limit applied by the owner repo.
+All boards use `plain-work-outcome-v1`. Forum identity supplies the project, so project and canonical Bug/Feature prefixes are forbidden in active managed titles. Removal is limited to exact delimited prefixes, is idempotent, and does not damage ordinary words such as `Feature flag` or `Bug bounty`. Retained Music Sesh history and the retained Shared Intake record keep their original titles.
 
 ## Reaction Contract
 
