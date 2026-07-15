@@ -19,10 +19,14 @@ Owner work and project-board export:
 - `npm run ops:discordos:project-board-owner-export:check` fails when the checked-in export is stale.
 - completed owner work remains in the registry for evidence but is excluded from active card records.
 - unknown priority stays explicit as `null`; export generation never authorizes Discord mutation.
-- `npm run ops:discordos:project-board-forum-provision:json` performs a no-write inventory by default for the seven required project forums.
-- live forum creation requires `DISCORDOS_PROJECT_BOARD_FORUM_PROVISION=enabled` plus `--allow-provision --apply`; it is idempotent, creates only type-15 forums under the exact Project Feedback Boards category, and requires exact channel readback. Use `--output <path>` to persist the same non-secret receipt emitted to stdout.
+- the seven project forums are provisioned and admitted; the current registry denominator is 12/12 enabled with zero uncovered forums.
+- `npm run ops:discordos:project-board-forum-provision:json` retains the guarded, idempotent provision/readback path for those seven forums. Live creation requires `DISCORDOS_PROJECT_BOARD_FORUM_PROVISION=enabled` plus `--allow-provision --apply`.
 - `npm run ops:discordos:project-board-owner-seed:json -- --owner-export <path> ... --output <batch.json>` converts admitted owner exports into a deterministic, no-write journal batch. Terminal owner history is reported and excluded from active-board seeding.
 - `npm run ops:discordos:board-card-journal -- --input <batch.json> --output <receipt.json> --json` performs the guarded journal dry run and persists the full non-secret result. Live apply still requires the existing environment and command double guard.
+- owner-export seed adoption is proven 78/78 with exact starter and journal readback; the post-seed board state is 367 current, 215 healthy, and 152 unchanged legacy drifts. Do not replay the seed.
+- `npm run ops:discordos:project-board-owner-seed-proof:json -- --live-receipt <live.json> --scan-receipt <scan.json> --output <proof.json>` verifies those durable receipts offline.
+- `npm run ops:discordos:forum-profile-scan:json -- --output <receipt.json>` performs the denominator-wide read-only profile/card scan with role IDs redacted.
+- `npm run ops:discordos:forum-profile-normalize:json -- --output <plan.json>` is dry-run by default. Apply requires `DISCORDOS_FORUM_PROFILE_NORMALIZATION=enabled` plus `--allow-normalization --apply`, fails closed on ambiguous state, and never migrates legacy cards.
 
 Current governed contract surface:
 
@@ -51,6 +55,8 @@ Current governed contract surface:
 - `docs/contracts/discordos-board-card-workflow-v0.md`
   - contract-only board/card workflow v0 boundary
   - defines card identity, state transitions, publication boundary, and forbidden live behaviors
+- `docs/contracts/discordos-forum-profile-normalization-v1.md`
+  - defines the 12-board profile, 17-tag taxonomy, semantic permissions, scanner, guarded forum-only normalizer, 78-card proof, and deferred packets
 - `docs/contracts/discordos-board-card-persistence-v0.md`
   - contract-only board/card persistence boundary
   - defines storage admission posture, idempotency key, retention class, and forbidden live writes

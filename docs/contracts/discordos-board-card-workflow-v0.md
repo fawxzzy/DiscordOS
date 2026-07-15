@@ -89,13 +89,15 @@ Discord system history is classified separately from mutable board content. Disc
 - stable board identity and project ownership scope
 - forum channel identity and active, completed, or legacy role
 - source adapter and stable-card namespace
-- lifecycle normalization, reaction, journal, and encoding policies
+- forum and permission profiles plus lifecycle normalization, reaction, journal, and encoding policies
 - completion destination
 - required, enabled, or explicitly blocked admission state with reason and evidence
 
 Registry validation rejects duplicate board IDs, forum channel IDs, and stable-card namespaces; invalid roles, statuses, and lifecycle states; unknown adapters and policy references; missing or invalid completion targets; and overlapping enabled ownership scopes. A required blocked entry is valid registry structure but blocks consistency success until its admission evidence changes.
 
-The 2026-07-14 read-only Discord discovery denominator is `12` required entries: `5` enabled live surfaces and `7` required-but-blocked project admissions. Enabled surfaces are legacy general feedback, Fitness active, Mazer active, Music Sesh, and shared Completed. Atlas, DiscordOS, Foundation, Lifeline, Cortex, `_stack`, and Playbook remain explicit blocked admissions because no corresponding project forum was present in the live `Project Feedback Boards` category. The `feedback-testing` forum is excluded because its live topic identifies it as private internal QA with no public or community cards.
+The 2026-07-15 denominator is `12` required, enabled live surfaces. Atlas, DiscordOS, Foundation, Lifeline, Cortex, `_stack`, and Playbook are provisioned and admitted alongside legacy general feedback, Fitness, Mazer, Music Sesh, and shared Completed. The guarded owner-export seed is proven at 78/78 exact starter and journal readback. A post-seed consistency scan reports 367 current cards, 215 healthy cards, and exactly 152 unchanged legacy Shared Intake and Music Sesh drifts. The `feedback-testing` forum remains excluded because its live topic identifies it as private internal QA with no public or community cards. Socials OS is not in this 12-board denominator and requires a separate owner-admission lane.
+
+Forum-level configuration authority is `config/discordos-forum-profile-registry.json` and `docs/contracts/discordos-forum-profile-normalization-v1.md`. Forum tags, permissions, defaults, structure, orphan applied tags, and archive/lock expectations are scanned denominator-wide. Forum normalization remains separate from legacy card migration and active-source completion semantics.
 
 The registry-driven cross-board consistency scanner reports:
 

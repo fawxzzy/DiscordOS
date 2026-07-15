@@ -20,6 +20,8 @@ test("canonical registry covers the full discovered and required denominator", (
   assert.equal(result.requiredBoardCount, 12);
   assert.equal(result.enabledBoardCount, 12);
   assert.equal(result.blockedBoardCount, 0);
+  assert.equal(registry.forumProfileRegistry, "config/discordos-forum-profile-registry.json");
+  assert.ok(result.boards.every((board) => board.forumProfile && board.permissionProfile));
   assert.deepEqual(
     result.boards.filter((board) => board.status === "enabled").map((board) => board.id),
     [

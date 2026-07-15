@@ -30,6 +30,8 @@ Current governed docs surface:
 - `contracts/discordos-board-card-workflow-v0.md`
   - contract-only board/card workflow boundary
   - keeps card transitions tied to existing no-send-first publication guardrails
+- `contracts/discordos-forum-profile-normalization-v1.md`
+  - defines denominator-wide forum configuration, exact read-only proof, guarded forum-only normalization, and explicit legacy/lifecycle/admission deferrals
 - `contracts/discordos-board-card-persistence-v0.md`
   - contract-only board/card persistence boundary
   - keeps storage writes and schema migrations blocked until an explicit schema lane opens
