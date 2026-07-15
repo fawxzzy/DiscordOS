@@ -125,7 +125,7 @@ test("completed transfer creates, verifies, links, archives, and locks", async (
         return response({ status: 204 });
       }
       if (url.endsWith("/channels/completed-thread")) {
-        return response({ payload: { id: "completed-thread", parent_id: "completed-forum" } });
+        return response({ payload: { id: "completed-thread", name: "Card title", parent_id: "completed-forum" } });
       }
       throw new Error(`unexpected request ${init.method} ${url}`);
     },

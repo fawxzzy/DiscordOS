@@ -69,16 +69,23 @@ test("encoding corruption is reported across titles, starters, and history", () 
     board: { id: "fitness", role: "active" },
     thread: { id: "thread", name: `Feature ${mojibake} title`, thread_metadata: { archived: false } },
     starter: {
+      id: "thread",
       content: `${journal.CARD_START}\nATLAS-CARD-ID: \`FIT-1\`\n- state: \`review\`\n- updated: \`2026-07-13\`\nSummary ${mojibake}\n${journal.CARD_END}`,
     },
     messages: [
-      { content: "ATLAS-JOURNAL-EVENT-ID: `evt-1`" },
-      { content: `Historical rename ${mojibake}` },
+      { id: "journal-clean", content: "ATLAS-JOURNAL-EVENT-ID: `evt-1`" },
+      { id: "journal-corrupt", content: `Historical rename ${mojibake}` },
     ],
   });
   assert(row.reasonCodes.includes("card_title_encoding_corrupt"));
   assert(row.reasonCodes.includes("card_starter_encoding_corrupt"));
   assert(row.reasonCodes.includes("card_history_encoding_corrupt"));
+  assert.deepEqual(row.textIntegrity.surfaceCounts, { title: 1, starter: 1, journal: 1 });
+  assert.deepEqual(row.textIntegrity.findings.map((finding) => [finding.surface, finding.threadId, finding.messageId]), [
+    ["title", "thread", null],
+    ["starter", "thread", "thread"],
+    ["journal", "thread", "journal-corrupt"],
+  ]);
 });
 
 test("reciprocal archived source and completed clone are an allowed identity pair", () => {
@@ -104,17 +111,74 @@ test("reciprocal archived source and completed clone are an allowed identity pai
   assert.equal(result.linkedPairs[0].cardId, "fit-1");
 });
 
-test("explicitly superseded archived thread is retained as history without card drift", () => {
+test("superseded rows still inspect title, starter, and journal text", () => {
+  const mojibake = "\u00e2\u20ac\u201d";
   const row = _internals.inspectThread({
     board: { id: "fitness", role: "active" },
-    thread: { id: "old", name: "Archived encoding record", thread_metadata: { archived: true } },
-    starter: { content: "ATLAS-SUPERSEDED-CARD: `456`\nReplacement: https://discord.com/channels/guild/456" },
-    messages: [{ content: "Historical message \u00e2\u20ac\u201d retained" }],
+    thread: { id: "old", name: `Archived ${mojibake} record`, thread_metadata: { archived: true } },
+    starter: { id: "old", content: `ATLAS-SUPERSEDED-CARD: \`456\`\nReplacement ${mojibake}: https://discord.com/channels/guild/456` },
+    messages: [{ id: "old-journal", content: `Historical message ${mojibake} retained` }],
   });
-  assert.equal(row.ok, true);
+  assert.equal(row.ok, false);
   assert.equal(row.superseded, true);
   assert.equal(row.supersededThreadId, "456");
-  assert.deepEqual(row.reasonCodes, []);
+  assert.deepEqual(row.reasonCodes, [
+    "card_title_encoding_corrupt",
+    "card_starter_encoding_corrupt",
+    "card_history_encoding_corrupt",
+  ]);
+  assert.deepEqual(row.textIntegrity.surfaceCounts, { title: 1, starter: 1, journal: 1 });
+});
+
+test("superseded text findings are included in aggregate counts with exact IDs", async () => {
+  const mojibake = "\u00e2\u20ac\u201d";
+  const result = await _internals.buildBoardCardConsistency({
+    payload: { boards: [{ id: "fitness", forumChannelId: "forum", role: "active" }] },
+    env: { DISCORDOS_BOT_TOKEN: "token" },
+    fetchImpl: async (url) => {
+      if (url.endsWith("/channels/forum")) return response({ payload: { guild_id: "guild" } });
+      if (url.endsWith("/guilds/guild/threads/active")) {
+        return response({ payload: { threads: [{
+          id: "old",
+          name: `Old ${mojibake} title`,
+          parent_id: "forum",
+          thread_metadata: { archived: true },
+        }] } });
+      }
+      if (url.endsWith("/channels/forum/threads/archived/public?limit=100")) {
+        return response({ payload: { threads: [], has_more: false } });
+      }
+      if (url.endsWith("/channels/old")) {
+        return response({ payload: { id: "old", name: `Old ${mojibake} title`, thread_metadata: { archived: true } } });
+      }
+      if (url.endsWith("/channels/old/messages/old")) {
+        return response({ payload: { id: "old", content: `ATLAS-SUPERSEDED-CARD: \`456\`\nStarter ${mojibake}` } });
+      }
+      if (url.endsWith("/channels/old/messages?limit=100")) {
+        return response({ payload: [{ id: "old-history", content: `History ${mojibake}` }] });
+      }
+      throw new Error(`unexpected GET ${url}`);
+    },
+  });
+
+  assert.equal(result.status, "drift_detected");
+  assert.equal(result.cardCount, 0);
+  assert.equal(result.supersededRecordCount, 1);
+  assert.deepEqual(result.textIntegrityCounts, {
+    byBoard: { fitness: 3 },
+    bySurface: { title: 1, starter: 1, journal: 1 },
+    byPattern: { windows_1252_utf8: 3 },
+  });
+  assert.deepEqual(result.textIntegrityFindings.map((finding) => [
+    finding.threadId,
+    finding.messageId,
+    finding.surface,
+    finding.superseded,
+  ]), [
+    ["old", null, "title", true],
+    ["old", "old", "starter", true],
+    ["old", "old-history", "journal", true],
+  ]);
 });
 
 test("archived active-board source with a Completed link is a valid retained pair", () => {
@@ -231,15 +295,27 @@ test("consistency scan reads journal history beyond the first 100 messages", asy
       if (url.endsWith("/channels/thread/messages/thread")) return response({ payload: { id: "thread", content: canonicalStarter() } });
       if (url.endsWith("/channels/thread/messages?limit=100")) return response({ payload: firstPage });
       if (url.endsWith("/channels/thread/messages?limit=100&before=message-1")) {
-        return response({ payload: [{ id: "journal", content: "ATLAS-JOURNAL-EVENT-ID: `evt-1`" }] });
+        return response({ payload: [{
+          id: "journal-beyond-100",
+          content: "ATLAS-JOURNAL-EVENT-ID: `evt-1`\nHistorical \u00e2\u20ac\u201d text",
+        }] });
       }
       throw new Error(`unexpected GET ${url}`);
     },
   });
 
-  assert.equal(result.ok, true);
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "drift_detected");
   assert.equal(result.rows[0].journalPresent, true);
   assert.equal(result.rows[0].journalPageCount, 2);
+  assert.equal(result.textIntegrityFindingCount, 1);
+  assert.deepEqual(result.textIntegrityCounts, {
+    byBoard: { fitness: 1 },
+    bySurface: { journal: 1 },
+    byPattern: { windows_1252_utf8: 1 },
+  });
+  assert.equal(result.textIntegrityFindings[0].threadId, "thread");
+  assert.equal(result.textIntegrityFindings[0].messageId, "journal-beyond-100");
 });
 
 test("consistency scan fails closed when journal history exceeds its page bound", async () => {

@@ -1,6 +1,9 @@
 const {
   _internals: updatePostInternals,
 } = require("./discord-update-post");
+const {
+  _internals: textIntegrity,
+} = require("./discordos-board-text-integrity");
 
 const DISCORD_API_BASE = updatePostInternals.DISCORD_API_BASE;
 const DISCORD_THREAD_TITLE_MAX_LENGTH = 100;
@@ -23,7 +26,7 @@ function hasText(value) {
 }
 
 function normalizeWhitespace(value) {
-  return String(value || "").trim().replace(/\s+/g, " ");
+  return textIntegrity.classifyText(String(value || "")).normalizedText.trim().replace(/\s+/g, " ");
 }
 
 function normalizeIdentity(value) {
@@ -182,7 +185,9 @@ function truncateTitle(value, maxLength = DISCORD_THREAD_TITLE_MAX_LENGTH) {
     return normalized;
   }
   const suffix = "...";
-  return normalizeWhitespace(normalized.slice(0, Math.max(1, maxLength - suffix.length))).replace(/[,:;\-\s]+$/, "") + suffix;
+  return normalizeWhitespace(
+    textIntegrity.sliceUtf16Safe(normalized, Math.max(1, maxLength - suffix.length))
+  ).replace(/[,:;\-\s]+$/, "") + suffix;
 }
 
 function formatCanonicalCardTitle({ board, card, title = null }) {
@@ -477,6 +482,69 @@ async function updateThreadMessage({
   });
 }
 
+function prepareProposedCardWrite({ spec, payload }) {
+  const findings = [
+    ...textIntegrity.inspectObjectText(spec?.canonicalTitle || "", "$.canonicalTitle"),
+    ...textIntegrity.inspectObjectText(payload, "$.payload"),
+  ];
+  if (findings.length > 0) {
+    return {
+      ok: false,
+      payload,
+      findings,
+      reasonCodes: [
+        "card_proposed_text_integrity_failed",
+        ...findings.map((finding) => `card_proposed_text_integrity_failed:${finding.path}`),
+      ],
+    };
+  }
+  return {
+    ok: true,
+    payload: textIntegrity.normalizeObjectNfc(payload),
+    findings: [],
+    reasonCodes: [],
+  };
+}
+
+async function readBackExactCardText({
+  threadId,
+  messageId,
+  expectedTitle,
+  expectedContent,
+  token,
+  fetchImpl = fetch,
+}) {
+  const [thread, starter] = await Promise.all([
+    discordRequest({ path: `/channels/${threadId}`, token, fetchImpl }),
+    fetchMessage({ channelId: threadId, messageId, token, fetchImpl }),
+  ]);
+  const actualTitle = String(thread.payload?.name || "");
+  const actualContent = String(starter.payload?.content || "");
+  const titleExact = thread.ok && actualTitle === expectedTitle;
+  const starterExact = starter.ok && actualContent === expectedContent;
+  const returnedTextFindings = [
+    ...textIntegrity.inspectObjectText(actualTitle, "$.readback.title"),
+    ...textIntegrity.inspectObjectText(actualContent, "$.readback.starter"),
+  ];
+  const reasonCodes = [];
+  if (!titleExact) reasonCodes.push("card_thread_title_exact_readback_failed");
+  if (!starterExact) reasonCodes.push("card_starter_text_exact_readback_failed");
+  if (returnedTextFindings.length > 0) reasonCodes.push("card_text_readback_integrity_failed");
+  return {
+    ok: reasonCodes.length === 0,
+    titleExact,
+    starterExact,
+    expectedTitle,
+    actualTitle,
+    expectedTitleCodePoints: textIntegrity.codePointEvidence(expectedTitle),
+    actualTitleCodePoints: textIntegrity.codePointEvidence(actualTitle),
+    expectedStarterCodePoints: textIntegrity.codePointEvidence(expectedContent),
+    actualStarterCodePoints: textIntegrity.codePointEvidence(actualContent),
+    findings: returnedTextFindings,
+    reasonCodes,
+  };
+}
+
 async function buildDiscordForumCardUpsertPreflight({
   spec,
   existingThread = null,
@@ -484,7 +552,23 @@ async function buildDiscordForumCardUpsertPreflight({
   buildPayload,
   fetchImpl = fetch,
 }) {
-  const payload = buildPayload(spec);
+  const proposedWrite = prepareProposedCardWrite({ spec, payload: buildPayload(spec) });
+  const payload = proposedWrite.payload;
+  if (!proposedWrite.ok) {
+    return {
+      ok: false,
+      action: "blocked",
+      cardId: spec.cardId,
+      threadId: existingThread?.id || null,
+      messageId: existingThread?.messageId || existingThread?.message?.id || existingThread?.id || null,
+      titleChanged: false,
+      messageChanged: false,
+      reactionChanged: false,
+      payload,
+      textIntegrity: proposedWrite,
+      reasonCodes: proposedWrite.reasonCodes,
+    };
+  }
   if (!existingThread) {
     return {
       ok: true,
@@ -496,6 +580,7 @@ async function buildDiscordForumCardUpsertPreflight({
       messageChanged: true,
       reactionChanged: true,
       payload,
+      textIntegrity: proposedWrite,
       reasonCodes: [],
     };
   }
@@ -538,6 +623,7 @@ async function buildDiscordForumCardUpsertPreflight({
     existingMessage: starter.payload,
     messageDecision,
     payload,
+    textIntegrity: proposedWrite,
     reasonCodes: messageDecision.reasonCodes,
   };
 }
@@ -561,8 +647,25 @@ async function upsertDiscordForumCard({
       fetchImpl,
     });
   }
-  const payload = preflight?.payload || buildPayload(spec);
+  const proposedWrite = prepareProposedCardWrite({
+    spec,
+    payload: preflight?.payload || buildPayload(spec),
+  });
+  const payload = proposedWrite.payload;
   const reasonCodes = [];
+  if (!proposedWrite.ok) {
+    return {
+      ok: false,
+      action: "blocked",
+      threadId: existingThread?.id || spec.existingThreadId || null,
+      messageId: existingThread?.messageId || spec.existingMessageId || null,
+      canonicalTitle: spec.canonicalTitle,
+      reactionResult: null,
+      textReadback: null,
+      httpStatus: null,
+      reasonCodes: proposedWrite.reasonCodes,
+    };
+  }
   if (!apply) {
     return {
       ok: true,
@@ -571,6 +674,7 @@ async function upsertDiscordForumCard({
       messageId: existingThread?.messageId || spec.existingMessageId || null,
       canonicalTitle: spec.canonicalTitle,
       reactionResult: null,
+      textReadback: null,
       httpStatus: null,
       reasonCodes,
     };
@@ -593,6 +697,7 @@ async function upsertDiscordForumCard({
       messageId,
       canonicalTitle: spec.canonicalTitle,
       reactionResult: null,
+      textReadback: null,
       httpStatus,
       reasonCodes: ["card_upsert_preflight_identity_mismatch"],
     };
@@ -605,6 +710,7 @@ async function upsertDiscordForumCard({
       messageId,
       canonicalTitle: spec.canonicalTitle,
       reactionResult: null,
+      textReadback: null,
       httpStatus,
       reasonCodes: preflight.reasonCodes,
     };
@@ -686,6 +792,23 @@ async function upsertDiscordForumCard({
     };
   reasonCodes.push(...reactionResult.reasonCodes);
 
+  const textReadback = threadId && messageId
+    ? await readBackExactCardText({
+      threadId,
+      messageId,
+      expectedTitle: String(payload.name || spec.canonicalTitle || ""),
+      expectedContent: String(payload.message?.content || ""),
+      token,
+      fetchImpl,
+    })
+    : {
+      ok: false,
+      titleExact: false,
+      starterExact: false,
+      reasonCodes: ["card_text_exact_readback_not_attempted"],
+    };
+  reasonCodes.push(...textReadback.reasonCodes);
+
   return {
     ok: reasonCodes.length === 0,
     action,
@@ -693,6 +816,7 @@ async function upsertDiscordForumCard({
     messageId,
     canonicalTitle: spec.canonicalTitle,
     reactionResult,
+    textReadback,
     httpStatus,
     reasonCodes: [...new Set(reasonCodes)],
   };
@@ -729,6 +853,8 @@ module.exports = {
     createForumThread,
     updateThreadName,
     updateThreadMessage,
+    prepareProposedCardWrite,
+    readBackExactCardText,
     buildDiscordForumCardUpsertPreflight,
     upsertDiscordForumCard,
   },

@@ -54,7 +54,7 @@ DiscordOS applies one event by:
 3. Preserving pre-contract legacy content as original context.
 4. Appending exactly one thread message identified by `ATLAS-JOURNAL-EVENT-ID`.
 5. Reopening an archived active card before mutation.
-6. Reading back both the starter body and journal message before returning success.
+6. Reading back the exact starter body and journal message, including every Unicode code point, before returning success.
 
 Live mutation requires both `--allow-apply` and `DISCORDOS_BOARD_CARD_JOURNAL=enabled`; dry-run remains the default. Duplicate stable identities and ambiguous legacy titles block instead of guessing.
 
@@ -69,6 +69,16 @@ Required publication checkpoints are:
 - terminal completion or cancellation
 
 Routine tool chatter does not require a card message. A checkpoint is material when a human reviewer would otherwise lose useful planning or execution context by reading only the starter body.
+
+## Unicode and text integrity
+
+Board titles, starter bodies, journal messages, owner exports, JSON inputs, and readback evidence use UTF-8 and NFC-normalized Unicode. Valid em dashes (`U+2014`), en dashes (`U+2013`), curly quotes, accented names, and non-English names remain Unicode; they are not transliterated to ASCII.
+
+`scripts/discordos-board-text-integrity.js` owns deterministic classification and bounded diagnostic recovery. Every finding carries its exact UTF-16 span and code points. File-byte boundaries use fatal UTF-8 decoding. Invalid UTF-8, `U+FFFD`, unpaired surrogates, non-round-trippable text, and ambiguous recovery fail closed.
+
+A Windows-1252-to-UTF-8 recovery candidate is valid only when reconstructing its Windows-1252 bytes produces strict UTF-8, encoding the decoded value round-trips to the exact source span, and the deterministic corruption score strictly decreases. Recovery permits at most two passes. Recovery is diagnostic and migration-supporting behavior, not permission for an outbound writer to silently repair proposed text: journal events, card upserts, and owner exports containing classified corruption block before mutation.
+
+Every rendered journal event field is checked before a starter or journal body is produced. Generic forum-card upserts validate the complete proposed title and payload, then require exact post-write title and starter readback with expected and actual code-point evidence. Marker-only or ASCII-substituted readback is not success.
 
 ## Authoritative board registry
 
@@ -97,8 +107,10 @@ The registry-driven cross-board consistency scanner reports:
 - registered, enabled, blocked, excluded, and uncovered boards
 - required blocked admissions and live forums absent from the registry
 - incomplete archived-thread or journal-message pagination
+- Unicode/text-integrity counts by board, surface, and corruption pattern
+- exact thread IDs and message IDs for title, starter, and journal findings on both current and superseded rows
 
-The scanner reads archived forum inventory and card history through shared bounded pagination. A failed page, missing pagination cursor, or exhausted page bound fails closed; the scanner must never infer journal absence or completion from only the first 100 messages.
+The scanner reads archived forum inventory and card history through shared bounded pagination. A failed page, missing pagination cursor, or exhausted page bound fails closed; the scanner must never infer journal absence, completion, or text cleanliness from only the first 100 messages. Superseded rows are inspected across title, starter, and complete journal history before their lifecycle-specific result is returned.
 
 ```powershell
 npm run ops:production-env:run -- npm run ops:discordos:board-card-consistency:json
@@ -108,7 +120,7 @@ npm run ops:production-env:run -- npm run ops:discordos:board-card-consistency:j
 
 `--input <boards.json>` remains compatible for bounded legacy callers. It reports `inventorySource=legacy_input` and `coverageStatus=not_evaluated` because caller-supplied boards cannot prove the complete live denominator.
 
-Legacy normalization is planned before it is applied. The migration planner joins live threads to owner records by explicit thread ID, stable card ID, or one unique normalized title. Unmatched threads receive a deterministic `legacy-<board>-<thread>` identity; ambiguous source matches block.
+Legacy normalization is planned before it is applied. The migration planner joins live threads to owner records by explicit thread ID, stable card ID, or one unique normalized title. Unmatched threads receive a deterministic `legacy-<board>-<thread>` identity; ambiguous source matches block. Corrupt or ambiguous owner exports, live titles, starters, journals, and proposed events block with exact field or live-message evidence; valid Unicode remains unchanged.
 
 The planner reads the complete paginated journal history before emitting an event. For normalization-only events, an existing valid journal state outranks the owner/export baseline, including terminal `completed` and `archived` states. Identity, body, title, and timestamp normalization must not advance, regress, reopen, or complete lifecycle state. Missing journal history keeps the mapped baseline; unreadable, truncated, malformed, identity-conflicting, or ambiguous journal history blocks the affected event.
 
@@ -204,6 +216,8 @@ Every live Discord forum card upsert must derive a canonical card spec before to
 Thread matching must prefer the stable identity embedded in the starter message, then canonical title, then the proposed title. A title-only match is not sufficient to claim the card is healthy.
 
 Existing canonical starter bodies are protected by a read-before-write preflight. A replacement body must carry the same stable card ID plus project, state, owner, priority, summary, objective, acceptance criteria, next actions, and a valid `updated` timestamp. Changed canonical content is admitted only when that timestamp is strictly newer than the live body. Missing fields, older content, equal-timestamp conflicts, or identity conflicts block before mutation with stable reason codes including `canonical_card_body_downgrade_prevented`, `canonical_card_body_older_than_live`, `canonical_card_body_timestamp_conflict`, and `canonical_card_identity_conflict`.
+
+The same preflight blocks classified corruption in a proposed title or payload. After an admitted create or update, the shared helper reads back the thread and starter message and compares their complete Unicode strings exactly. Reaction success cannot mask a title or starter code-point mismatch.
 
 Board writers must plan every admitted card before executing any write. If one row fails preflight, the batch performs no thread, starter-message, or reaction mutation. Unchanged title/body/reaction triples return `unchanged` and perform no mutation. Execution must reject any row outside the admitted card set with `card_mutation_out_of_scope_prevented`.
 

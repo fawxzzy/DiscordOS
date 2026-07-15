@@ -202,6 +202,10 @@ function incidentDiscordHarness({ cards, starterBodies }) {
     if (url.endsWith("/channels/forum-incident/threads/archived/public?limit=100")) {
       return response({ payload: { threads: [] } });
     }
+    const threadMatch = url.match(/\/channels\/(incident-thread-\d+)$/);
+    if (threadMatch && init.method === "GET") {
+      return response({ payload: threads.find((thread) => thread.id === threadMatch[1]) });
+    }
     const messageMatch = url.match(/\/channels\/(incident-thread-\d+)\/messages\/\1$/);
     if (messageMatch && init.method === "GET") {
       const card = cardByThread.get(messageMatch[1]);
@@ -270,6 +274,8 @@ test("mazer feedback board live sync blocks partial guard", async () => {
 test("mazer feedback board live sync uses project feedback category and creates mazer forum card thread", async () => {
   const boardPath = await writeBoard();
   const calls = [];
+  let createdTitle = "";
+  let createdContent = "";
   const result = await _internals.buildMazerFeedbackBoardLiveSync({
     boardPath,
     cardId: "mazer-card-1",
@@ -309,6 +315,8 @@ test("mazer feedback board live sync uses project feedback category and creates 
       }
       if (url.endsWith("/channels/mazer-forum-1/threads")) {
         const body = JSON.parse(init.body);
+        createdTitle = body.name;
+        createdContent = body.message.content;
         assert.equal(body.name, "mazer: card one");
         assert(body.message.content.includes("# mazer"));
         assert(body.message.content.includes("card id: `mazer-card-1`"));
@@ -331,11 +339,15 @@ test("mazer feedback board live sync uses project feedback category and creates 
         return response({
           payload: {
             id: "message-1",
+            content: createdContent,
             reactions: reactionApplied
               ? [{ emoji: { name: "failure", id: "1507384094424694785" }, count: 1, me: true }]
               : [],
           },
         });
+      }
+      if (url.endsWith("/channels/thread-1") && init.method === "GET") {
+        return response({ payload: { id: "thread-1", name: createdTitle } });
       }
       if (url.endsWith("/channels/thread-1/messages/message-1/reactions/failure%3A1507384094424694785/@me")) {
         assert.equal(init.method, "PUT");
@@ -359,6 +371,7 @@ test("mazer feedback board live sync uses project feedback category and creates 
 test("mazer feedback board live sync reuses existing card thread", async () => {
   const boardPath = await writeBoard();
   const calls = [];
+  let starterContent = "";
   const result = await _internals.buildMazerFeedbackBoardLiveSync({
     boardPath,
     cardId: "mazer-card-1",
@@ -398,6 +411,7 @@ test("mazer feedback board live sync reuses existing card thread", async () => {
       if (url.endsWith("/channels/thread-1/messages/thread-1")) {
         if (init.method === "PATCH") {
           const body = JSON.parse(init.body);
+          starterContent = body.content;
           assert(body.content.includes("# mazer"));
           assert(body.content.includes("**Work Breakdown**"));
           assert(body.content.includes("**Next Actions**"));
@@ -407,11 +421,15 @@ test("mazer feedback board live sync reuses existing card thread", async () => {
         return response({
           payload: {
             id: "thread-1",
+            content: starterContent,
             reactions: reactionApplied
               ? [{ emoji: { name: "failure", id: "1507384094424694785" }, count: 1, me: true }]
               : [],
           },
         });
+      }
+      if (url.endsWith("/channels/thread-1") && init.method === "GET") {
+        return response({ payload: { id: "thread-1", name: "mazer: card one" } });
       }
       if (url.endsWith("/channels/thread-1/messages/thread-1/reactions/failure%3A1507384094424694785/@me")) {
         assert.equal(init.method, "PUT");

@@ -1,8 +1,10 @@
-const fs = require("node:fs/promises");
 const path = require("node:path");
 const {
   _internals: cardContract,
 } = require("./discordos-board-card-contract");
+const {
+  _internals: textIntegrity,
+} = require("./discordos-board-text-integrity");
 
 const JOURNAL_ENV = "DISCORDOS_BOARD_CARD_JOURNAL";
 const JOURNAL_ENV_VALUE = "enabled";
@@ -70,7 +72,7 @@ function resolveAdmission({ allowApply, env }) {
 }
 
 function text(value) {
-  return typeof value === "string" ? repairMojibakeText(value).trim() : "";
+  return typeof value === "string" ? textIntegrity.classifyText(value).normalizedText.trim() : "";
 }
 
 function list(value) {
@@ -78,15 +80,12 @@ function list(value) {
 }
 
 function repairMojibakeText(value) {
-  return String(value || "")
-    .replace(/\u00c3\u00a2\u00e2\u201a\u00ac\u00e2\u20ac[\u009d\ufffd]?/g, " - ")
-    .replace(/\u00e2\u20ac[\u201c\u201d]/g, " - ")
-    .replace(/[\u2013\u2014]/g, " - ")
-    .replace(/\s+-\s+/g, " - ");
+  const result = textIntegrity.recoverText(String(value || ""));
+  return result.ok ? result.text : String(value || "");
 }
 
 function findMojibakeRuns(value) {
-  return String(value || "").match(/(?:\u00c3|\u00c2|\u00e2|\ufffd|[\u0080-\u009f])[^\x00-\x7f]*/g) || [];
+  return textIntegrity.classifyText(String(value || "")).findings.map((finding) => finding.text);
 }
 
 function normalizeCardTitle(value) {
@@ -200,6 +199,11 @@ function validateEvent(event) {
   reasonCodes.push(...validateLifecycleTransition(event.card.previousState, event.card.state).reasonCodes);
   if (event.card.state === AUTONOMOUS_EXECUTION_STATE) {
     reasonCodes.push(...evaluateAutonomyAdmission(event.card).reasonCodes);
+  }
+  const textFindings = textIntegrity.inspectObjectText(event);
+  if (textFindings.length > 0) {
+    reasonCodes.push("event_text_integrity_failed");
+    reasonCodes.push(...textFindings.map((finding) => `event_text_integrity_failed:${finding.path}`));
   }
   return [...new Set(reasonCodes)];
 }
@@ -321,7 +325,7 @@ async function runLiveIdentityRegistryScan({
 }) {
   const scanStartedAt = now().toISOString();
   try {
-    const source = registry || JSON.parse(await fs.readFile(registryPath, "utf8"));
+    const source = registry || await textIntegrity.readUtf8Json(registryPath);
     const result = await registryScanImpl({ registry: source, env, fetchImpl });
     return {
       ...result,
@@ -363,10 +367,17 @@ function buildLegacySnapshotMessages(cardId, content) {
   if (!value) return [];
   const chunkSize = 1650;
   const chunks = [];
-  for (let offset = 0; offset < value.length; offset += chunkSize) chunks.push(value.slice(offset, offset + chunkSize));
+  for (let offset = 0; offset < value.length;) {
+    const chunk = textIntegrity.sliceUtf16Safe(value.slice(offset), chunkSize);
+    chunks.push(chunk);
+    offset += chunk.length;
+  }
   return chunks.map((chunk, index) => {
     const marker = legacySnapshotMarker(cardId, index + 1, chunks.length);
-    return `${marker}\n## Preserved pre-contract starter body\n\n${chunk}`.slice(0, MAX_MESSAGE_LENGTH);
+    return textIntegrity.assertCleanText(
+      textIntegrity.sliceUtf16Safe(`${marker}\n## Preserved pre-contract starter body\n\n${chunk}`, MAX_MESSAGE_LENGTH),
+      { field: `legacy_snapshot[${index}]` }
+    );
   });
 }
 
@@ -401,12 +412,12 @@ function fitMessage(lines, suffix = "") {
     const candidate = [...accepted, line].join("\n");
     if (`${candidate}${suffix}`.length > MAX_MESSAGE_LENGTH) {
       const remaining = MAX_MESSAGE_LENGTH - accepted.join("\n").length - suffix.length - 6;
-      if (remaining > 24) accepted.push(`${line.slice(0, remaining).trimEnd()}...`);
+      if (remaining > 24) accepted.push(`${textIntegrity.sliceUtf16Safe(line, remaining).trimEnd()}...`);
       break;
     }
     accepted.push(line);
   }
-  return `${accepted.join("\n")}${suffix}`.slice(0, MAX_MESSAGE_LENGTH);
+  return textIntegrity.sliceUtf16Safe(`${accepted.join("\n")}${suffix}`, MAX_MESSAGE_LENGTH);
 }
 
 function truncateWithReference(value, maxLength) {
@@ -414,7 +425,7 @@ function truncateWithReference(value, maxLength) {
   if (normalized.length <= maxLength) return normalized;
   const suffix = "... [see journal/source]";
   const available = Math.max(1, maxLength - suffix.length);
-  return `${normalized.slice(0, available).trimEnd()}${suffix}`;
+  return `${textIntegrity.sliceUtf16Safe(normalized, available).trimEnd()}${suffix}`;
 }
 
 function compactSectionValues(values, {
@@ -517,6 +528,11 @@ function buildCanonicalSections({ card, existingContent, maxLength = null }) {
 }
 
 function buildCanonicalBody(event, existingContent = "") {
+  const eventFindings = textIntegrity.inspectObjectText(event);
+  if (eventFindings.length > 0) {
+    throw new textIntegrity.TextIntegrityError("event_text_integrity_failed", { findings: eventFindings });
+  }
+  textIntegrity.assertCleanText(existingContent, { field: "existing_starter_content" });
   const { card } = event;
   const autonomy = evaluateAutonomyAdmission(card);
   const metadataLines = [
@@ -535,14 +551,18 @@ function buildCanonicalBody(event, existingContent = "") {
     metadataLines,
     sections: buildCanonicalSections({ card, existingContent }),
   });
-  if (fullBody.length <= MAX_MESSAGE_LENGTH) return fullBody;
+  if (fullBody.length <= MAX_MESSAGE_LENGTH) {
+    return textIntegrity.assertCleanText(fullBody, { field: "canonical_starter" });
+  }
 
   for (let maxLength = 140; maxLength >= 48; maxLength -= 4) {
     const compactBody = renderCanonicalBody({
       metadataLines,
       sections: buildCanonicalSections({ card, existingContent, maxLength }),
     });
-    if (compactBody.length <= MAX_MESSAGE_LENGTH) return compactBody;
+    if (compactBody.length <= MAX_MESSAGE_LENGTH) {
+      return textIntegrity.assertCleanText(compactBody, { field: "canonical_starter" });
+    }
   }
   throw new Error("canonical_card_body_section_preserving_compaction_failed");
 }
@@ -561,6 +581,10 @@ function appendCorrelation(lines, correlation) {
 }
 
 function buildJournalMessage(event) {
+  const eventFindings = textIntegrity.inspectObjectText(event);
+  if (eventFindings.length > 0) {
+    throw new textIntegrity.TextIntegrityError("event_text_integrity_failed", { findings: eventFindings });
+  }
   const { entry } = event;
   const lines = [
     eventMarker(event.eventId),
@@ -578,7 +602,7 @@ function buildJournalMessage(event) {
   appendSection(lines, "Blockers", entry.blockers.length ? entry.blockers : ["None"]);
   appendSection(lines, "Evidence", entry.evidence);
   appendCorrelation(lines, event.correlation);
-  return fitMessage(lines);
+  return textIntegrity.assertCleanText(fitMessage(lines), { field: "journal_message" });
 }
 
 function summarizeThread(thread) {
@@ -777,11 +801,13 @@ async function applyCardEvent({ event: rawEvent, apply, admission, token, fetchI
     if (!starter.ok) reasonCodes.push("card_starter_message_read_failed");
     existingContent = starter.payload?.content || "";
   }
-  const canonicalBody = buildCanonicalBody(event, existingContent);
-  const journalBody = buildJournalMessage(event);
+  const existingText = textIntegrity.classifyText(existingContent);
+  if (!existingText.ok) reasonCodes.push("card_starter_text_integrity_failed");
   if (reasonCodes.length > 0) {
     return { ok: false, status: "blocked", apply, eventId: event.eventId, cardId: event.card.id, reasonCodes: [...new Set(reasonCodes)] };
   }
+  const canonicalBody = buildCanonicalBody(event, existingContent);
+  const journalBody = buildJournalMessage(event);
   const preview = {
     matchedBy: located.matchedBy,
     action: located.match ? "update_card_and_append_journal" : "create_card_and_append_journal",
@@ -928,10 +954,14 @@ async function applyCardEvent({ event: rawEvent, apply, admission, token, fetchI
   const journalReadback = threadId && journalMessageId
     ? await cardContract.fetchMessage({ channelId: threadId, messageId: journalMessageId, token, fetchImpl })
     : { ok: false, status: null, payload: null };
-  if (!starterReadback.ok || !String(starterReadback.payload?.content || "").includes(cardMarker(event.card.id))) {
+  const starterReadbackExact = starterReadback.ok
+    && String(starterReadback.payload?.content || "") === canonicalBody;
+  const journalReadbackExact = journalReadback.ok
+    && String(journalReadback.payload?.content || "") === journalBody;
+  if (!starterReadbackExact) {
     reasonCodes.push("card_starter_readback_failed");
   }
-  if (!journalReadback.ok || !String(journalReadback.payload?.content || "").includes(eventMarker(event.eventId))) {
+  if (!journalReadbackExact) {
     reasonCodes.push("card_journal_readback_failed");
   }
   let archiveRestore = "not_required";
@@ -961,8 +991,10 @@ async function applyCardEvent({ event: rawEvent, apply, admission, token, fetchI
     archiveRestore,
     matchedBy: located.matchedBy,
     readback: {
-      starter: starterReadback.ok && String(starterReadback.payload?.content || "").includes(cardMarker(event.card.id)),
-      journal: journalReadback.ok && String(journalReadback.payload?.content || "").includes(eventMarker(event.eventId)),
+      starter: starterReadbackExact,
+      journal: journalReadbackExact,
+      starterCodePointsExact: starterReadbackExact,
+      journalCodePointsExact: journalReadbackExact,
     },
     reasonCodes: [...new Set(reasonCodes)],
   };
@@ -1091,7 +1123,7 @@ function renderMarkdown(result) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
-  const payload = JSON.parse(await fs.readFile(options.inputPath, "utf8"));
+  const payload = await textIntegrity.readUtf8Json(options.inputPath);
   const result = await buildBoardCardJournal({
     payload,
     allowApply: options.allowApply,

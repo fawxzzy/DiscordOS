@@ -9,6 +9,9 @@ const {
 const {
   _internals: consistency,
 } = require("./discordos-board-card-consistency");
+const {
+  _internals: textIntegrity,
+} = require("./discordos-board-text-integrity");
 
 function readValue(args, index, code) {
   const value = args[index + 1];
@@ -46,7 +49,7 @@ function parseArgs(args) {
 }
 
 function text(value) {
-  return typeof value === "string" ? value.trim() : "";
+  return typeof value === "string" ? textIntegrity.classifyText(value).normalizedText.trim() : "";
 }
 
 function values(value) {
@@ -56,8 +59,7 @@ function values(value) {
 function normalizeTitle(value) {
   return text(value)
     .toLowerCase()
-    .replace(/[—–]/g, "-")
-    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim()
     .replace(/\s+/g, " ");
 }
@@ -548,12 +550,41 @@ async function buildMigrationPlan({ boards, fitnessCards = [], mazerCards = [], 
   const token = text(env?.DISCORDOS_BOT_TOKEN);
   const reasonCodes = [];
   if (!token) reasonCodes.push("discord_bot_token_missing");
+  const ownerTextFindings = textIntegrity.inspectObjectText({
+    boards: boards || [],
+    fitnessCards,
+    mazerCards,
+    lifecycleTransitions,
+  }, "$.migrationInput");
+  if (ownerTextFindings.length > 0) {
+    return {
+      ok: false,
+      status: "blocked",
+      schemaVersion: "atlas.board-card-migration-plan.v1",
+      generatedAt: new Date().toISOString(),
+      boardCount: (boards || []).length,
+      sourceCount: 0,
+      eventCount: 0,
+      authorizedTransitionCount: 0,
+      journalPreservedCount: 0,
+      legacyJournalIdentityAdmissionCount: 0,
+      fallbackIdentityCount: 0,
+      rows: [],
+      events: [],
+      textIntegrityFindings: ownerTextFindings,
+      reasonCodes: [
+        "migration_owner_export_text_integrity_failed",
+        ...ownerTextFindings.map((finding) => `migration_owner_export_text_integrity_failed:${finding.path}`),
+      ],
+    };
+  }
   const sources = [
     ...fitnessCards.map(normalizeFitnessSource),
     ...mazerCards.map(normalizeMazerSource),
   ].filter((source) => source.cardId);
   const events = [];
   const rows = [];
+  const liveTextFindings = [];
   for (const board of boards || []) {
     const channel = await cardContract.discordRequest({ path: `/channels/${board.forumChannelId}`, token, fetchImpl });
     if (!channel.ok || !channel.payload?.guild_id) {
@@ -568,9 +599,50 @@ async function buildMigrationPlan({ boards, fitnessCards = [], mazerCards = [], 
     });
     reasonCodes.push(...inventory.reasonCodes.map((code) => `${code}:${board.id}`));
     for (const thread of inventory.threads) {
+      const titleFindings = textIntegrity.inspectObjectText(thread?.name || "", `$.live.${board.id}.${thread.id}.title`);
+      if (titleFindings.length > 0) {
+        liveTextFindings.push(...titleFindings.map((finding) => ({
+          boardId: board.id,
+          threadId: thread.id,
+          messageId: null,
+          surface: "title",
+          ...finding,
+        })));
+        rows.push({
+          boardId: board.id,
+          threadId: thread.id,
+          title: thread.name,
+          eventCreated: false,
+          reasonCodes: ["migration_live_title_text_integrity_failed"],
+        });
+        reasonCodes.push(`migration_live_title_text_integrity_failed:${thread.id}`);
+        continue;
+      }
       const starter = await cardContract.fetchMessage({ channelId: thread.id, messageId: thread.id, token, fetchImpl });
       if (!starter.ok) {
         reasonCodes.push(`card_starter_read_failed:${thread.id}`);
+        continue;
+      }
+      const starterFindings = textIntegrity.inspectObjectText(
+        starter.payload?.content || "",
+        `$.live.${board.id}.${thread.id}.starter`
+      );
+      if (starterFindings.length > 0) {
+        liveTextFindings.push(...starterFindings.map((finding) => ({
+          boardId: board.id,
+          threadId: thread.id,
+          messageId: starter.payload?.id || thread.id,
+          surface: "starter",
+          ...finding,
+        })));
+        rows.push({
+          boardId: board.id,
+          threadId: thread.id,
+          title: thread.name,
+          eventCreated: false,
+          reasonCodes: ["migration_live_starter_text_integrity_failed"],
+        });
+        reasonCodes.push(`migration_live_starter_text_integrity_failed:${thread.id}`);
         continue;
       }
       const existingCardId = consistency.parseCardId(starter.payload?.content);
@@ -586,6 +658,33 @@ async function buildMigrationPlan({ boards, fitnessCards = [], mazerCards = [], 
         const code = messages.truncated ? "journal_lifecycle_history_truncated" : "journal_lifecycle_history_read_failed";
         rows.push({ boardId: board.id, threadId: thread.id, title: thread.name, cardId: source.cardId, eventCreated: false, reasonCodes: [code] });
         reasonCodes.push(`${code}:${thread.id}`);
+        continue;
+      }
+      const messageFindings = [];
+      for (const message of messages.payload) {
+        const findings = textIntegrity.inspectObjectText(
+          message?.content || "",
+          `$.live.${board.id}.${thread.id}.messages.${message?.id || "unknown"}`
+        );
+        messageFindings.push(...findings.map((finding) => ({
+          boardId: board.id,
+          threadId: thread.id,
+          messageId: message?.id || null,
+          surface: "journal",
+          ...finding,
+        })));
+      }
+      if (messageFindings.length > 0) {
+        liveTextFindings.push(...messageFindings);
+        rows.push({
+          boardId: board.id,
+          threadId: thread.id,
+          title: thread.name,
+          cardId: source.cardId,
+          eventCreated: false,
+          reasonCodes: ["migration_live_journal_text_integrity_failed"],
+        });
+        reasonCodes.push(`migration_live_journal_text_integrity_failed:${thread.id}`);
         continue;
       }
       const journalLifecycle = resolveJournalLifecycle({
@@ -625,6 +724,26 @@ async function buildMigrationPlan({ boards, fitnessCards = [], mazerCards = [], 
         existingContent: starter.payload?.content,
         lifecycle,
       });
+      const eventTextFindings = textIntegrity.inspectObjectText(event, `$.events.${events.length}`);
+      if (eventTextFindings.length > 0) {
+        liveTextFindings.push(...eventTextFindings.map((finding) => ({
+          boardId: board.id,
+          threadId: thread.id,
+          messageId: null,
+          surface: "proposed_event",
+          ...finding,
+        })));
+        rows.push({
+          boardId: board.id,
+          threadId: thread.id,
+          title: thread.name,
+          cardId: source.cardId,
+          eventCreated: false,
+          reasonCodes: ["migration_proposed_event_text_integrity_failed"],
+        });
+        reasonCodes.push(`migration_proposed_event_text_integrity_failed:${thread.id}`);
+        continue;
+      }
       events.push(event);
       rows.push({
         boardId: board.id,
@@ -662,18 +781,19 @@ async function buildMigrationPlan({ boards, fitnessCards = [], mazerCards = [], 
     fallbackIdentityCount: rows.filter((row) => row.sourceType === "thread_fallback").length,
     rows,
     events,
+    textIntegrityFindings: liveTextFindings,
     reasonCodes: [...new Set(reasonCodes)],
   };
 }
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
-  const boardPayload = JSON.parse(await fs.readFile(options.boardsPath, "utf8"));
+  const boardPayload = await textIntegrity.readUtf8Json(options.boardsPath);
   const fitnessCards = options.fitnessExportPath
-    ? JSON.parse(await fs.readFile(options.fitnessExportPath, "utf8"))
+    ? await textIntegrity.readUtf8Json(options.fitnessExportPath)
     : [];
   const mazerPayload = options.mazerBoardPath
-    ? JSON.parse(await fs.readFile(options.mazerBoardPath, "utf8"))
+    ? await textIntegrity.readUtf8Json(options.mazerBoardPath)
     : { cards: [] };
   const result = await buildMigrationPlan({
     boards: boardPayload.boards || [],
@@ -683,7 +803,10 @@ async function main() {
   });
   if (options.outputPath) {
     await fs.mkdir(path.dirname(options.outputPath), { recursive: true });
-    await fs.writeFile(options.outputPath, `${JSON.stringify({ events: result.events }, null, 2)}\n`, "utf8");
+    const output = textIntegrity.assertCleanText(`${JSON.stringify({ events: result.events }, null, 2)}\n`, {
+      field: "migration_plan_output",
+    });
+    await fs.writeFile(options.outputPath, Buffer.from(output, "utf8"));
   }
   process.stdout.write(options.json ? `${JSON.stringify(result, null, 2)}\n` : `${result.status}: ${result.eventCount} events\n`);
   process.exitCode = result.ok ? 0 : 1;

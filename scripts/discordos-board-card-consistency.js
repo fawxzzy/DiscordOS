@@ -1,4 +1,3 @@
-const fs = require("node:fs/promises");
 const path = require("node:path");
 const {
   _internals: cardContract,
@@ -9,6 +8,9 @@ const {
 const {
   _internals: boardRegistry,
 } = require("./discordos-board-registry");
+const {
+  _internals: textIntegrity,
+} = require("./discordos-board-text-integrity");
 
 const DEFAULT_REGISTRY_PATH = path.resolve(__dirname, "..", "config", "discordos-board-registry.json");
 const FORUM_CHANNEL_TYPE = 15;
@@ -55,13 +57,79 @@ function hasJournal(messages) {
   );
 }
 
+function inspectTextSurface({ boardId, threadId, messageId = null, surface, value }) {
+  const classification = textIntegrity.classifyText(String(value || ""));
+  return classification.findings.map((finding) => ({
+    boardId,
+    threadId,
+    messageId,
+    surface,
+    pattern: finding.pattern,
+    start: finding.start,
+    end: finding.end,
+    text: finding.text,
+    codePoints: finding.codePoints,
+    ...(finding.decodedText ? {
+      decodedText: finding.decodedText,
+      decodedCodePoints: finding.decodedCodePoints,
+    } : {}),
+  }));
+}
+
+function inspectThreadTextIntegrity({ board, thread, starter, messages }) {
+  const findings = [
+    ...inspectTextSurface({
+      boardId: board.id,
+      threadId: thread.id,
+      surface: "title",
+      value: thread?.name,
+    }),
+    ...inspectTextSurface({
+      boardId: board.id,
+      threadId: thread.id,
+      messageId: starter?.id || thread.id,
+      surface: "starter",
+      value: starter?.content,
+    }),
+  ];
+  for (const message of Array.isArray(messages) ? messages : []) {
+    findings.push(...inspectTextSurface({
+      boardId: board.id,
+      threadId: thread.id,
+      messageId: message?.id || null,
+      surface: "journal",
+      value: message?.content,
+    }));
+  }
+  const patternCounts = {};
+  const surfaceCounts = {};
+  for (const finding of findings) {
+    patternCounts[finding.pattern] = (patternCounts[finding.pattern] || 0) + 1;
+    surfaceCounts[finding.surface] = (surfaceCounts[finding.surface] || 0) + 1;
+  }
+  return {
+    ok: findings.length === 0,
+    findingCount: findings.length,
+    patternCounts,
+    surfaceCounts,
+    findings,
+  };
+}
+
 function inspectThread({ board, thread, starter, messages }) {
   const content = String(starter?.content || "");
+  const textIntegrityResult = inspectThreadTextIntegrity({ board, thread, starter, messages });
+  const textReasonCodes = [];
+  if (textIntegrityResult.surfaceCounts.title) textReasonCodes.push("card_title_encoding_corrupt");
+  if (textIntegrityResult.surfaceCounts.starter) textReasonCodes.push("card_starter_encoding_corrupt");
+  if (textIntegrityResult.surfaceCounts.journal) textReasonCodes.push("card_history_encoding_corrupt");
   const supersededThreadId = content.match(/ATLAS-SUPERSEDED-CARD:\s*`([0-9]+)`/i)?.[1] || null;
   if (supersededThreadId) {
     const archived = thread?.thread_metadata?.archived === true;
+    const reasonCodes = [...textReasonCodes];
+    if (!archived) reasonCodes.push("superseded_card_not_archived");
     return {
-      ok: archived,
+      ok: reasonCodes.length === 0,
       boardId: board.id,
       boardRole: board.role,
       threadId: thread.id,
@@ -74,7 +142,8 @@ function inspectThread({ board, thread, starter, messages }) {
       completedThreadIdLink: null,
       sourceThreadIdLink: null,
       journalPresent: hasJournal(messages),
-      reasonCodes: archived ? [] : ["superseded_card_not_archived"],
+      textIntegrity: textIntegrityResult,
+      reasonCodes,
     };
   }
   const cardId = parseCardId(content);
@@ -98,11 +167,7 @@ function inspectThread({ board, thread, starter, messages }) {
   if (state === journal.AUTONOMOUS_EXECUTION_STATE && !autonomy.admitted) {
     reasonCodes.push("ready_card_autonomy_contract_incomplete");
   }
-  if (journal.findMojibakeRuns(thread?.name).length > 0) reasonCodes.push("card_title_encoding_corrupt");
-  if (journal.findMojibakeRuns(content).length > 0) reasonCodes.push("card_starter_encoding_corrupt");
-  if ((Array.isArray(messages) ? messages : []).some((message) =>
-    journal.findMojibakeRuns(message?.content).length > 0
-  )) reasonCodes.push("card_history_encoding_corrupt");
+  reasonCodes.push(...textReasonCodes);
   if (board.role === "active") {
     if (state && journal.ACTIVE_STATES.has(state) && archived && !completedThreadIdLink) {
       reasonCodes.push("active_card_archived");
@@ -129,6 +194,7 @@ function inspectThread({ board, thread, starter, messages }) {
     journalPresent: hasJournal(messages),
     autonomy,
     superseded: false,
+    textIntegrity: textIntegrityResult,
     reasonCodes,
   };
 }
@@ -258,6 +324,9 @@ function emptyConsistencyResult({ coverage, status = "blocked", reasonCodes = []
     healthyCardCount: 0,
     driftedCardCount: 0,
     driftCounts: {},
+    textIntegrityFindingCount: 0,
+    textIntegrityCounts: { byBoard: {}, bySurface: {}, byPattern: {} },
+    textIntegrityFindings: [],
     duplicates: [],
     linkedPairs: [],
     autonomyAdmittedCardCount: 0,
@@ -375,6 +444,15 @@ async function buildBoardCardConsistency({ payload, registry, env = process.env,
   for (const row of rows) {
     for (const code of row.reasonCodes) driftCounts[code] = (driftCounts[code] || 0) + 1;
   }
+  const textIntegrityFindings = rows.flatMap((row) =>
+    (row.textIntegrity?.findings || []).map((finding) => ({ ...finding, superseded: row.superseded }))
+  );
+  const textIntegrityCounts = { byBoard: {}, bySurface: {}, byPattern: {} };
+  for (const finding of textIntegrityFindings) {
+    textIntegrityCounts.byBoard[finding.boardId] = (textIntegrityCounts.byBoard[finding.boardId] || 0) + 1;
+    textIntegrityCounts.bySurface[finding.surface] = (textIntegrityCounts.bySurface[finding.surface] || 0) + 1;
+    textIntegrityCounts.byPattern[finding.pattern] = (textIntegrityCounts.byPattern[finding.pattern] || 0) + 1;
+  }
   const uniqueReasonCodes = [...new Set(reasonCodes)];
   const blocked = uniqueReasonCodes.some(isBlockingReason);
   const drifted = !rows.every((row) => row.ok) || duplicates.length > 0;
@@ -389,6 +467,9 @@ async function buildBoardCardConsistency({ payload, registry, env = process.env,
     healthyCardCount: currentRows.filter((row) => row.ok).length,
     driftedCardCount: currentRows.filter((row) => !row.ok).length + supersededRows.filter((row) => !row.ok).length,
     driftCounts,
+    textIntegrityFindingCount: textIntegrityFindings.length,
+    textIntegrityCounts,
+    textIntegrityFindings,
     duplicates,
     linkedPairs,
     autonomyAdmittedCardCount: currentRows.filter((row) => row.autonomy?.admitted).length,
@@ -428,13 +509,22 @@ function renderMarkdown(result) {
   for (const board of result.blockedBoards || []) lines.push(`- blocked board: \`${board.id}\``);
   for (const board of result.uncoveredBoards || []) lines.push(`- uncovered board: \`${board.channelName || board.channelId}\``);
   for (const [code, count] of Object.entries(result.driftCounts || {})) lines.push(`- ${code}: \`${count}\``);
+  for (const [boardId, count] of Object.entries(result.textIntegrityCounts?.byBoard || {})) {
+    lines.push(`- text integrity board ${boardId}: \`${count}\``);
+  }
+  for (const [surface, count] of Object.entries(result.textIntegrityCounts?.bySurface || {})) {
+    lines.push(`- text integrity surface ${surface}: \`${count}\``);
+  }
+  for (const [pattern, count] of Object.entries(result.textIntegrityCounts?.byPattern || {})) {
+    lines.push(`- text integrity pattern ${pattern}: \`${count}\``);
+  }
   return `${lines.join("\n")}\n`;
 }
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   const sourcePath = options.registryPath || options.inputPath;
-  const source = JSON.parse(await fs.readFile(sourcePath, "utf8"));
+  const source = await textIntegrity.readUtf8Json(sourcePath);
   const result = await buildBoardCardConsistency(options.registryPath ? { registry: source } : { payload: source });
   process.stdout.write(options.json ? `${JSON.stringify(result, null, 2)}\n` : renderMarkdown(result));
   process.exitCode = result.ok ? 0 : 1;
@@ -454,6 +544,8 @@ module.exports = {
     parseCardId,
     parseCardState,
     hasJournal,
+    inspectTextSurface,
+    inspectThreadTextIntegrity,
     inspectThread,
     classifyIdentities,
     findDuplicates,

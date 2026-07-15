@@ -151,37 +151,75 @@ test("lifecycle transitions admit the planning path and reject skipped gates", (
   );
 });
 
-test("card titles repair mojibake and normalize dash separators", () => {
+test("card titles preserve valid Unicode typography and names", () => {
   assert.equal(
-    _internals.normalizeCardTitle("Feature: History \u00c3\u00a2\u00e2\u201a\u00ac\u00e2\u20ac\u009d Progress"),
-    "Feature: History - Progress"
-  );
-  assert.equal(
-    _internals.normalizeCardTitle("Feature: History â€” Progress"),
-    "Feature: History - Progress"
-  );
-  assert.equal(
-    _internals.normalizeCardTitle("Feature: History — Progress"),
-    "Feature: History - Progress"
+    _internals.normalizeCardTitle("Feature: \u201cJos\u00e9 \u674e\u201d \u2014 History \u2013 Progress"),
+    "Feature: \u201cJos\u00e9 \u674e\u201d \u2014 History \u2013 Progress"
   );
 });
 
-test("known encoding corruption is repaired in every event text field", () => {
-  const mojibake = "\u00e2\u20ac\u201d";
-  const normalized = _internals.normalizeEvent(event({
+test("every event text field rejects corruption before starter or journal rendering", () => {
+  const raw = structuredClone(event());
+  raw.card.threadId = "thread-42";
+  raw.card.previousState = "planning";
+  raw.card.blockers = ["No blocker"];
+  raw.entry.blockers = ["No blocker"];
+  raw.correlation.jobId = "job-42";
+  raw.correlation.commit = "abcdef0";
+  raw.correlation.receipt = "runtime/receipt.json";
+  const paths = [
+    "schemaVersion", "eventId", "occurredAt", "actor",
+    "card.id", "card.project", "card.sourceForumChannelId", "card.threadId", "card.title",
+    "card.type", "card.state", "card.previousState", "card.priority", "card.owner", "card.progress",
+    "card.summary", "card.objective", "card.acceptanceCriteria[0]", "card.discoveries[0]",
+    "card.nextActions[0]", "card.blockers[0]", "card.evidence[0]",
+    "entry.kind", "entry.headline", "entry.completed[0]", "entry.discovered[0]", "entry.next[0]",
+    "entry.blockers[0]", "entry.evidence[0]", "correlation.taskId", "correlation.jobId",
+    "correlation.branch", "correlation.commit", "correlation.receipt",
+  ];
+  const setPath = (target, path, value) => {
+    const parts = [...path.matchAll(/([^.\[\]]+)|\[(\d+)\]/g)].map((match) => match[1] ?? Number(match[2]));
+    let cursor = target;
+    for (const part of parts.slice(0, -1)) cursor = cursor[part];
+    cursor[parts.at(-1)] = value;
+  };
+
+  for (const path of paths) {
+    const candidate = structuredClone(raw);
+    setPath(candidate, path, "corrupt \u00e2\u20ac\u201d text");
+    const normalized = _internals.normalizeEvent(candidate);
+    const reasons = _internals.validateEvent(normalized);
+    assert(reasons.includes("event_text_integrity_failed"), path);
+    assert(reasons.includes(`event_text_integrity_failed:$.${path}`), path);
+  }
+
+  const corrupt = _internals.normalizeEvent({ ...raw, card: { ...raw.card, summary: "bad \u00e2\u20ac\u201d" } });
+  assert.throws(() => _internals.buildCanonicalBody(corrupt), /event_text_integrity_failed/);
+  assert.throws(() => _internals.buildJournalMessage(corrupt), /event_text_integrity_failed/);
+});
+
+test("valid Unicode remains exact in rendered starter and journal fields", () => {
+  const raw = event({
+    actor: "Jos\u00e9 \u674e",
     card: {
       ...event().card,
-      summary: `Summary ${mojibake} detail`,
-      discoveries: [`Discovery ${mojibake} detail`],
+      title: "Feature: \u201cUnicode\u201d \u2014 proof",
+      owner: "Jos\u00e9 \u674e",
+      summary: "Preserve an em dash \u2014 and en dash \u2013 exactly.",
     },
     entry: {
       ...event().entry,
-      headline: `Checkpoint ${mojibake} verified`,
+      headline: "\u201cExact\u201d checkpoint",
+      completed: ["Kept Fran\u00e7ois and \u041c\u0430\u0440\u0438\u044f unchanged"],
     },
-  }));
-  assert.equal(normalized.card.summary, "Summary - detail");
-  assert.deepEqual(normalized.card.discoveries, ["Discovery - detail"]);
-  assert.equal(normalized.entry.headline, "Checkpoint - verified");
+  });
+  const normalized = _internals.normalizeEvent(raw);
+  const starter = _internals.buildCanonicalBody(normalized);
+  const journalMessage = _internals.buildJournalMessage(normalized);
+  assert(starter.includes("Preserve an em dash \u2014 and en dash \u2013 exactly."));
+  assert(starter.includes("- owner: `Jos\u00e9 \u674e`"));
+  assert(journalMessage.includes("## \u201cExact\u201d checkpoint"));
+  assert(journalMessage.includes("Kept Fran\u00e7ois and \u041c\u0430\u0440\u0438\u044f unchanged"));
 });
 
 test("managed card refresh replaces stale managed content without duplicating it", () => {
@@ -213,7 +251,7 @@ test("board provenance links survive canonical body compaction", () => {
 });
 
 test("long canonical bodies preserve every required section instead of truncating the tail", () => {
-  const long = "section detail ".repeat(40).trim();
+  const long = "\u201csection detail\u201d \u2014 Jos\u00e9 \u2013 ".repeat(30).trim();
   const normalized = _internals.normalizeEvent(event({
     card: {
       ...event().card,
@@ -458,7 +496,12 @@ test("apply creates card, appends journal, and reads back both surfaces", async 
   assert.equal(result.liveIdentityPreflight.currentIdentityCount, 0);
   assert.equal(result.results[0].cardAction, "created");
   assert.equal(result.results[0].journalAction, "created");
-  assert.deepEqual(result.results[0].readback, { starter: true, journal: true });
+  assert.deepEqual(result.results[0].readback, {
+    starter: true,
+    journal: true,
+    starterCodePointsExact: true,
+    journalCodePointsExact: true,
+  });
 });
 
 test("retry reuses one journal event instead of posting a duplicate", async () => {
