@@ -37,6 +37,7 @@ No production deployment occurred.
 - Retried dry run passed after a `212.711s` inventory: `137` current identities, exactly one target match on thread `1524889580338151594`, zero collision locations, zero blocking scan reason codes, and an admitted one-card `in_progress -> review / 100%` preview.
 - First guarded apply failed closed before mutation after the registry scan returned `live_identity_registry_scan_failed` and `live_identity_preflight_stale`.
 - Final guarded apply attempt failed closed before mutation with the same reason codes.
+- A subsequent independent exact-thread GET failed before HTTP response with `UND_ERR_CONNECT_TIMEOUT` while connecting to Discord API addresses. This identifies the repeated registry failure as Discord transport reachability, not an identity collision or event validation error.
 - Because both apply attempts failed before `applyCardEvent`, no starter, journal, thread, reaction, or lifecycle state changed.
 
 ## Mutation boundary
