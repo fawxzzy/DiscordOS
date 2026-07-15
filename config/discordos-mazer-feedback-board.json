@@ -24,8 +24,8 @@
     },
     "planning": {
       "version": 1,
-      "activeCardId": null,
-      "activeSelectionReason": "Mazer PR #66 completed the admitted turn-synchronous world host packet and the exact live card transferred to Completed. No Mazer card is currently Ready, so the active selector is intentionally empty until the governed planner admits the next non-conflicting packet.",
+      "activeCardId": "mazer-crisp-cyber-arcade-graphics",
+      "activeSelectionReason": "The Core Gameplay epic has no dependency-free unfinished primary card. Crisp cyber-arcade graphics is the first dependency-free high-priority primary card in the next critical-path Feel and polish epic, so it is admitted for one completion-oriented material-system and cross-viewport proof packet.",
       "executionPolicy": "Finish the earliest execution-ready critical-path epic before taking later product work. Advanced AI research stays parallel and cannot block the critical path.",
       "epics": [
         {
@@ -811,14 +811,14 @@
     {
       "id": "mazer-crisp-cyber-arcade-graphics",
       "title": "mazer: crisp cyber-arcade graphics and art consistency",
-      "state": "open",
+      "state": "ready",
       "priority": "high",
       "category": "mazer",
       "markerName": "High-tech crisp graphics/art pass",
       "completionPercent": 46,
       "summary": "Raise the full game visual system toward a crisp 2026 cyber-arcade target: sharper tiles, cleaner borders, less blur, stronger material consistency.",
       "whyItMatters": "The game feel depends heavily on the maze being readable and premium on mobile. Blurry tiles or inconsistent materials make the app feel older than the current design target.",
-      "currentStatus": "HiDPI backing and several green/cyan material passes have landed. Merged Mazer PR #52 adds the fixed green player/trail plus one white fading shine, explicit material diagnostics, and passing route-aware 405x958 DPR-2 plus 1440x900 menu/play proof. The 46% marker is unchanged because the broader title, border, button, grid, icon-target, and cross-surface material consistency work remains open.",
+      "currentStatus": "HiDPI backing, integer-snapped maze tiles, and the PR #52 green player/trail plus white shine are already merged. This admitted completion packet centralizes the approved icon's navy/cyan/mint/green material language across title, maze, border, buttons, compass, backdrop, auth, play, and pause surfaces; audits shared chrome for fractional geometry; and adds actual 390-430px plus desktop proof and an icon comparison sheet.",
       "workBreakdown": [
         "Remove accidental blur/fuzz from canvas scaling, tile seams, title pieces, and UI text.",
         "Unify path, trail, pulse, player, title, border, buttons, compass, and background under one material palette.",
@@ -826,9 +826,9 @@
         "Track the approved icon image as the current visual quality target."
       ],
       "nextActions": [
-        "Audit every draw layer for fractional pixels and scaling mismatches.",
-        "Create a visual comparison sheet for icon target versus current menu/play screen.",
-        "Add screenshot proof gates for 390-430px mobile widths."
+        "Implement one canonical cyber-arcade material token contract and consume it from the shared scene, button, and backdrop owners.",
+        "Normalize shared panel and chrome geometry to integer logical pixels while preserving the existing DPR-aware backing contract.",
+        "Run route-aware menu/auth/options/play/pause proof at 390px, 405px, 430px, and desktop sizes and publish the icon comparison sheet."
       ],
       "acceptanceCriteria": [
         "Canvas backing scale and camera scale stay crisp at mobile and desktop sizes.",
