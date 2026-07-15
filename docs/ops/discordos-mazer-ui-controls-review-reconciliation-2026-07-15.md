@@ -31,6 +31,13 @@ The double-guarded exact-card journal writer was used with stable card and threa
   - idempotent replay: reused Review journal `1526964450760855672`
   - readback: starter exact, journal exact, both code-point exact, title exact, no reason codes
 
+Production release checkpoints were then appended as same-state Review journals through the same exact-card writer:
+
+- `mazer-cross-viewport-ui-reliability`: journal `1526974194447945738`
+- `mazer-shared-run-status-panel`: journal `1526974202823839845`
+- live identity scan: consistent, 237 current identities, two exact proposed identities, zero collisions or reason codes
+- idempotent replay: reused both journal IDs; starter, journal, code-point, and title readback remained exact
+
 No full-board sync occurred. No unrelated starter body was mutated.
 
 ## Deferred completed-card reopen intents
@@ -51,10 +58,11 @@ During controls proof, an unlinked isolated worktree caused Vercel CLI to create
 
 ## Disposition
 
-- Both active cards remain non-terminal in Review.
-- PR #72 remains draft pending fresh physical iPhone Safari and installed-PWA proof plus shared-panel score traceability.
-- PR #74 remains draft pending operator review.
-- Canonical Mazer production remains unchanged.
+- Both active cards remain non-terminal in Review pending physical-device evidence.
+- PR #72 merged at `31d583ad5727fc5199a502530319cb1230188ef2` and PR #74 merged at `1395edb0cabeabd93fbf19cdcf3f0ed748bf642f`.
+- Canonical production deployment `dpl_9uzkHg9G9tRQUdcDSqa1NfEYiVUz` is READY and aliased at `https://fawxzzy-mazer.vercel.app`.
+- The exact merged tree passed 49 files / 363 tests, type-check, build, and diff checks.
+- Production 390x844 smoke loaded `main-NJWVKtNV.js` with no console errors, dark fallback backgrounds, and the reduced-motion trail cadence at `8000ms` per leg / `16000ms` round trip.
 
 ## Verification
 

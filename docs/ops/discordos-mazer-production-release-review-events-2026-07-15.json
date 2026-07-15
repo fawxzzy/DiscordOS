@@ -1,0 +1,150 @@
+{
+  "events": [
+    {
+      "schemaVersion": "atlas.board-card-journal.v1",
+      "eventId": "mazer-cross-viewport-production-review-20260715",
+      "occurredAt": "2026-07-15T15:23:24.612Z",
+      "actor": "Mazer",
+      "card": {
+        "id": "mazer-cross-viewport-ui-reliability",
+        "project": "Mazer",
+        "sourceForumChannelId": "1524889569475170478",
+        "threadId": "1525337748830031875",
+        "title": "cross-viewport UI reliability and layout hardening",
+        "type": "feature",
+        "state": "review",
+        "previousState": "review",
+        "priority": "High",
+        "owner": "Mazer",
+        "progress": "94%",
+        "summary": "Unify phone, browser, and installed-app geometry so menu, play, Options, and Pause share measured safe content, status, overlay, motion, and fallback-background rules.",
+        "objective": "Remove physical-device clipping, overlap, inconsistent sibling layouts, uncomfortable trail motion, fake scroll affordances, and purple safe-area bleed without introducing screenshot-specific offsets.",
+        "acceptanceCriteria": [
+          "Menu and play use one contained two-row status layout beside Pause at phone widths.",
+          "Options and Pause share guide, control-row, scroll, and pinned-action geometry.",
+          "Page, app, Phaser, theme, and installed-app fallback backgrounds do not expose purple safe-area bands.",
+          "Trail shine moves at the reduced-motion 8000ms per-leg cadence.",
+          "Fresh physical iPhone Safari and installed-PWA proof confirms canonical production."
+        ],
+        "discoveries": [
+          "The operator reported the prior 2600ms one-way trail shine was visually uncomfortable.",
+          "The production candidate now uses an 8000ms one-way / 16000ms round-trip cadence and versioned diagnostics."
+        ],
+        "nextActions": [
+          "Collect fresh physical iPhone Safari and installed-PWA screenshots from canonical production.",
+          "Complete only if the phone review confirms no clipping, overlap, purple bleed, sibling drift, or uncomfortable motion."
+        ],
+        "blockers": [
+          "Fresh operator physical-iPhone Safari and installed-PWA proof is still required."
+        ],
+        "evidence": [
+          "Mazer PR #72 merged at 31d583ad5727fc5199a502530319cb1230188ef2 and PR #74 merged at 1395edb0cabeabd93fbf19cdcf3f0ed748bf642f.",
+          "The exact merged tree passed 49 files / 363 tests, type-check, build, and diff checks.",
+          "Production deployment dpl_9uzkHg9G9tRQUdcDSqa1NfEYiVUz is READY and aliased at https://fawxzzy-mazer.vercel.app.",
+          "Production 390x844 smoke loaded main-NJWVKtNV.js with no console errors, rgb(2, 8, 15) fallback backgrounds, trailPulsePeriodMs 8000, and trailShineCyclePeriodMs 16000."
+        ]
+      },
+      "entry": {
+        "kind": "deployment",
+        "headline": "Canonical production is ready for physical iPhone review",
+        "completed": [
+          "Merged the UI and one-tile controls packets into current main.",
+          "Slowed the trail shine a little over three times and versioned the cadence contract.",
+          "Deployed and smoke-tested the exact merged tree on canonical production."
+        ],
+        "discovered": [
+          "The former trail cadence was uncomfortable on the operator's physical display."
+        ],
+        "next": [
+          "Collect fresh Safari and installed-PWA screenshots from the operator's iPhone.",
+          "Keep the card in Review until that evidence is clean."
+        ],
+        "blockers": [
+          "Physical-device acceptance remains external evidence."
+        ],
+        "evidence": [
+          "https://github.com/fawxzzy/mazer/pull/72",
+          "https://github.com/fawxzzy/mazer/pull/74",
+          "https://fawxzzy-mazer.vercel.app",
+          "dpl_9uzkHg9G9tRQUdcDSqa1NfEYiVUz"
+        ]
+      },
+      "correlation": {
+        "taskId": "019f61a0-6b80-7913-b479-f75f2a8a5b77",
+        "branch": "main",
+        "commit": "1395edb0cabeabd93fbf19cdcf3f0ed748bf642f",
+        "receipt": "docs/ops/MAZER-CROSS-VIEWPORT-UI-RELIABILITY-PACKET-2026-07-15.md"
+      }
+    },
+    {
+      "schemaVersion": "atlas.board-card-journal.v1",
+      "eventId": "mazer-shared-status-production-review-20260715",
+      "occurredAt": "2026-07-15T15:23:24.612Z",
+      "actor": "Mazer",
+      "card": {
+        "id": "mazer-shared-run-status-panel",
+        "project": "Mazer",
+        "sourceForumChannelId": "1524889569475170478",
+        "threadId": "1526644909241667644",
+        "title": "shared menu and play run status panel",
+        "type": "feature",
+        "state": "review",
+        "previousState": "review",
+        "priority": "High",
+        "owner": "Mazer",
+        "progress": "80%",
+        "summary": "Use one two-row status component in menu AI and active play for time, contextual rank, score out of 100, and maze level.",
+        "objective": "Make menu and play progression information visually identical, readable, and contained while preserving the canonical score-data boundary.",
+        "acceptanceCriteria": [
+          "Menu and play consume the same status-panel layout and formatting contract.",
+          "Time and contextual Rank, Score out of 100, and Maze Lvl remain readable at phone and desktop widths.",
+          "The play panel fits its measured lane beside Pause without overlap.",
+          "Displayed score remains traceable to the canonical run-quality contract."
+        ],
+        "discoveries": [
+          "The shared panel is now merged and deployed on canonical production."
+        ],
+        "nextActions": [
+          "Review the production panel on physical iPhone Safari and installed PWA.",
+          "Confirm final score-field authority before terminal completion."
+        ],
+        "blockers": [
+          "Fresh physical iPhone proof and final canonical score-field traceability remain required."
+        ],
+        "evidence": [
+          "Mazer PR #72 merged at 31d583ad5727fc5199a502530319cb1230188ef2.",
+          "Canonical production deployment dpl_9uzkHg9G9tRQUdcDSqa1NfEYiVUz is READY at https://fawxzzy-mazer.vercel.app.",
+          "The exact merged tree passed 49 files / 363 tests, type-check, build, and diff checks.",
+          "Production 390x844 smoke loaded the expected asset with no console errors."
+        ]
+      },
+      "entry": {
+        "kind": "deployment",
+        "headline": "Shared run status panel is live for physical-device review",
+        "completed": [
+          "Merged the shared menu/play implementation.",
+          "Deployed and smoke-tested the exact main tree on canonical production."
+        ],
+        "discovered": [],
+        "next": [
+          "Collect fresh physical iPhone screenshots.",
+          "Confirm canonical score traceability before completion."
+        ],
+        "blockers": [
+          "Physical-device acceptance and score authority remain open."
+        ],
+        "evidence": [
+          "https://github.com/fawxzzy/mazer/pull/72",
+          "https://fawxzzy-mazer.vercel.app",
+          "dpl_9uzkHg9G9tRQUdcDSqa1NfEYiVUz"
+        ]
+      },
+      "correlation": {
+        "taskId": "019f61a0-6b80-7913-b479-f75f2a8a5b77",
+        "branch": "main",
+        "commit": "1395edb0cabeabd93fbf19cdcf3f0ed748bf642f",
+        "receipt": "docs/ops/MAZER-CROSS-VIEWPORT-UI-RELIABILITY-PACKET-2026-07-15.md"
+      }
+    }
+  ]
+}

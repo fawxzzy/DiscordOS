@@ -2250,7 +2250,7 @@
       "completionPercent": 94,
       "summary": "Coordinate the mobile safe-area/portrait and browser layout-persistence lanes through one viewport contract and proof matrix without turning either delivery into an offset patch.",
       "whyItMatters": "The same UI can be valid in a desktop canvas, narrow browser, mobile browser, installed PWA, or restored window only if viewport state, safe areas, and restoration behavior share deliberate rules.",
-      "currentStatus": "Mazer draft PR #72 at 593e871c64e6d18c551efee7d2e248662e1a1436 now normalizes menu/play status geometry, Options/Pause composition, guide and toggle containment, Move Speed lanes, truthful no-overflow scroll diagnostics, and the page/app/Phaser fallback background. Focused UI proof passed 57/57 and correlated repository proof passed 362/362; READY preview dpl_7zx3HAry5zipJXBwyL6KpSP6RXCS passed route-aware 390x844 browser diagnostics. Exact live Review journal 1526963206537609227 records the packet. Fresh physical iPhone Safari and installed-PWA proof remains the terminal acceptance gate.",
+      "currentStatus": "Mazer PR #72 merged at 31d583ad5727fc5199a502530319cb1230188ef2 and PR #74 merged at 1395edb0cabeabd93fbf19cdcf3f0ed748bf642f. Canonical production deployment dpl_9uzkHg9G9tRQUdcDSqa1NfEYiVUz is READY and aliased at https://fawxzzy-mazer.vercel.app. The exact merged tree passed 49 files / 363 tests, type-check, build, and diff checks. Production 390x844 smoke loaded asset main-NJWVKtNV.js with no console errors, dark fallback backgrounds, and the reduced-motion trail cadence at 8000ms per leg / 16000ms round trip. Fresh physical iPhone Safari and installed-PWA screenshots remain the terminal acceptance gate.",
       "workBreakdown": [
         "Define canonical viewport, safe-area, visible-height, and no-overlap invariants for menu, Options, play, Pause, dialogs, HUD, controls, and scroll rails.",
         "Maintain the child boundary between mobile shell/device behavior and browser layout-state persistence.",
@@ -2258,10 +2258,10 @@
         "Require route, mode, viewport, safe-area state, scroll position, and layout diagnostics beside visual proof."
       ],
       "nextActions": [
-        "Review the READY PR #72 preview on physical iPhone Safari and the installed PWA.",
+        "Review canonical production on physical iPhone Safari and the installed PWA.",
         "Confirm menu/play status, Options/Pause content, scroll endpoints, and safe-area fallback colors remain contained on the physical device.",
-        "Merge PR #72 only after the phone review reports no clipping, overlap, purple bleed, or sibling-surface drift.",
-        "Keep canonical Mazer production unchanged until an explicit project-specific release approval."
+        "Return fresh screenshots for any clipping, overlap, purple bleed, sibling-surface drift, or uncomfortable motion.",
+        "Complete the card only after physical-device review is clean."
       ],
       "acceptanceCriteria": [
         "Every primary Mazer surface has an owner, supported viewport category, and no-overlap contract.",
@@ -3393,7 +3393,7 @@
       "completionPercent": 80,
       "summary": "Replace the completed rank-only badge presentation with one shared two-row menu/play status component showing time plus Rank, Score out of 100, and Maze Lvl from the correct context.",
       "whyItMatters": "The operator wants the menu AI result and active player run to use one legible status language while preserving hidden progression and canonical run-quality data.",
-      "currentStatus": "Mazer draft PR #72 at 593e871c64e6d18c551efee7d2e248662e1a1436 implements one measured 236 by 58 two-row status panel for menu AI and active play, with the play instance fitted beside Pause. Focused UI proof passed 57/57 and the READY 390x844 preview reported matching menu/play geometry with textFits true. Exact live journals 1526963214833684551 and 1526964450760855672 advance the existing card through implementation to Review. Physical iPhone proof and final canonical score-field traceability remain open before completion.",
+      "currentStatus": "Mazer PR #72 merged at 31d583ad5727fc5199a502530319cb1230188ef2 and canonical production deployment dpl_9uzkHg9G9tRQUdcDSqa1NfEYiVUz is READY at https://fawxzzy-mazer.vercel.app. The exact merged tree passed 49 files / 363 tests, type-check, build, and diff checks. Production 390x844 smoke loaded the shared panel build with no console errors and contained dark fallback geometry. Physical iPhone screenshots and final canonical score-field traceability remain open before completion.",
       "workBreakdown": [
         "Define one status-panel view model for menu AI completion and active player play.",
         "Render time on row one and Rank, Score N/100, Maze Lvl N on row two with compact responsive fitting.",
@@ -3401,7 +3401,7 @@
         "Preserve hidden progression fields and accessibility labels while explicitly superseding rank-only presentation history."
       ],
       "nextActions": [
-        "Review the PR #72 panel on physical iPhone Safari and the installed PWA.",
+        "Review the production panel on physical iPhone Safari and the installed PWA.",
         "Confirm the displayed Score field traces to the finalized canonical run-quality value and remains --/100 before finalization.",
         "Merge and complete only after both device containment and score authority are proven."
       ],
