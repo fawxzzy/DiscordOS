@@ -497,6 +497,142 @@ async function patchSeededSocialTags({ ownerExport, seedReceipt, registry, tagId
   return { ok: reasonCodes.length === 0 && rows.length === (ownerExport.cards || []).length, rows, reasonCodes };
 }
 
+function comparableManagedSocialCard(card) {
+  return {
+    id: text(card?.id).toLowerCase(),
+    project: text(card?.project),
+    type: text(card?.type).toLowerCase(),
+    state: text(card?.state).toLowerCase(),
+    priority: text(card?.priority),
+    owner: text(card?.owner),
+    progress: text(card?.progress),
+    summary: text(card?.summary),
+    objective: text(card?.objective),
+    acceptanceCriteria: Array.isArray(card?.acceptanceCriteria) ? card.acceptanceCriteria : [],
+    discoveries: Array.isArray(card?.discoveries) ? card.discoveries : [],
+    nextActions: Array.isArray(card?.nextActions) ? card.nextActions : [],
+    blockers: Array.isArray(card?.blockers) ? card.blockers : [],
+  };
+}
+
+function replaceManagedCardBlock(existingContent, canonicalManagedBody) {
+  const value = String(existingContent || "");
+  const start = value.indexOf(journal.CARD_START);
+  const end = value.indexOf(journal.CARD_END, start + journal.CARD_START.length);
+  const nextStart = value.indexOf(journal.CARD_START, start + journal.CARD_START.length);
+  const nextEnd = value.indexOf(journal.CARD_END, end + journal.CARD_END.length);
+  if (start < 0 || end <= start || nextStart >= 0 || nextEnd >= 0) return null;
+  return `${value.slice(0, start)}${canonicalManagedBody}${value.slice(end + journal.CARD_END.length)}`;
+}
+
+function sameSemanticSet(left, right) {
+  const leftSet = new Set(left);
+  const rightSet = new Set(right);
+  return left.length === leftSet.size
+    && right.length === rightSet.size
+    && leftSet.size === rightSet.size
+    && [...leftSet].every((value) => rightSet.has(value));
+}
+
+function planExistingSocialReconciliation({ socialsForum, seedBatch, socialsOwnerExport, reasonCodes }) {
+  const rowsByCardId = new Map();
+  for (const row of socialsForum?.threads || []) {
+    const cardId = text(cardContract.parseCanonicalCardBody(row.starter?.content)?.id).toLowerCase();
+    if (!cardId) continue;
+    const rows = rowsByCardId.get(cardId) || [];
+    rows.push(row);
+    rowsByCardId.set(cardId, rows);
+  }
+
+  const tagIds = canonicalTagIds(socialsForum?.forum);
+  reasonCodes.push(...tagIds.reasonCodes.map((code) => `${code}:socials-os-active-admission`));
+  const availableTagById = new Map((socialsForum?.forum?.available_tags || [])
+    .filter((tag) => text(tag?.id))
+    .map((tag) => [text(tag.id), text(tag.name)]));
+  const canonicalTagNames = new Set(forumProfile.CANONICAL_TAGS.map(([, , name]) => name));
+  const cardsById = new Map((socialsOwnerExport?.cards || [])
+    .map((card) => [text(card?.record?.card_id).toLowerCase(), card]));
+  const bodyActions = [];
+  const tagActions = [];
+  const journalActions = [];
+  const existingCardIds = [];
+
+  for (const event of seedBatch.ok ? seedBatch.events : []) {
+    const cardId = text(event.card?.id);
+    const normalizedCardId = cardId.toLowerCase();
+    const matches = rowsByCardId.get(normalizedCardId) || [];
+    if (matches.length === 0) continue;
+    existingCardIds.push(cardId);
+    if (matches.length !== 1) {
+      reasonCodes.push(`residual_socials_identity_duplicate:${normalizedCardId}`);
+      continue;
+    }
+    const row = matches[0];
+    const threadId = text(row.thread?.id);
+    const starterMessageId = text(row.starter?.id) || threadId;
+    if (!threadId || !starterMessageId) {
+      reasonCodes.push(`residual_socials_thread_identity_missing:${normalizedCardId}`);
+      continue;
+    }
+    const existingContent = String(row.starter?.content || "");
+    const existingManaged = cardContract.parseCanonicalCardBody(existingContent);
+    const canonicalManagedBody = journal.buildCanonicalBody(event, "");
+    const canonicalManaged = cardContract.parseCanonicalCardBody(canonicalManagedBody);
+    const canonicalBody = replaceManagedCardBlock(existingContent, canonicalManagedBody);
+    if (!existingManaged || !canonicalManaged || canonicalBody === null) {
+      reasonCodes.push(`residual_socials_managed_body_malformed:${normalizedCardId}`);
+      continue;
+    }
+    if (JSON.stringify(comparableManagedSocialCard(existingManaged)) !== JSON.stringify(comparableManagedSocialCard(canonicalManaged))) {
+      bodyActions.push({ cardId, threadId, starterMessageId, canonicalBody });
+    }
+
+    const currentAppliedTagIds = Array.isArray(row.thread?.applied_tags) ? [...row.thread.applied_tags].map(text).filter(Boolean) : [];
+    if (currentAppliedTagIds.length > 5) reasonCodes.push(`residual_socials_applied_tag_limit_exceeded:${normalizedCardId}`);
+    if (new Set(currentAppliedTagIds).size !== currentAppliedTagIds.length) reasonCodes.push(`residual_socials_applied_tag_duplicate:${normalizedCardId}`);
+    const currentTagNames = currentAppliedTagIds.map((id) => availableTagById.get(id));
+    if (currentTagNames.some((name) => !name || !canonicalTagNames.has(name))) {
+      reasonCodes.push(`residual_socials_applied_tag_unknown_or_orphan:${normalizedCardId}`);
+    }
+    const ownerCard = cardsById.get(normalizedCardId);
+    const desiredTagNames = unique([
+      typeTagName(event.card?.type),
+      stateTagName(event.card?.state),
+      priorityTagName(event.card?.priority),
+      ownerCard?.relationships?.duplicate_of ? "Duplicate" : null,
+      ownerCard?.relationships?.superseded_by ? "Superseded" : null,
+    ]);
+    const desiredAppliedTagIds = desiredTagNames.map((name) => tagIds.byName.get(name)).filter(Boolean);
+    if (desiredAppliedTagIds.length !== desiredTagNames.length) {
+      reasonCodes.push(`residual_socials_desired_tag_resolution_failed:${normalizedCardId}`);
+    } else if (!sameSemanticSet(currentAppliedTagIds, desiredAppliedTagIds)) {
+      tagActions.push({
+        cardId,
+        threadId,
+        originalArchived: row.thread?.thread_metadata?.archived === true,
+        originalLocked: row.thread?.thread_metadata?.locked === true,
+        currentAppliedTagIds,
+        desiredTagNames,
+        desiredAppliedTagIds,
+      });
+    }
+
+    if (row.messageHistoryTruncated === true) {
+      reasonCodes.push(`residual_socials_journal_history_truncated:${normalizedCardId}`);
+      continue;
+    }
+    const marker = journal.eventMarker(event.eventId);
+    const matchingEvents = (row.messages || []).filter((message) => String(message?.content || "").includes(marker));
+    if (matchingEvents.length > 1) {
+      reasonCodes.push(`residual_socials_journal_event_duplicate:${normalizedCardId}:${event.eventId}`);
+    } else if (matchingEvents.length === 0) {
+      journalActions.push({ cardId, threadId, eventId: event.eventId, journalBody: journal.buildJournalMessage(event) });
+    }
+  }
+
+  return { existingCardIds, bodyActions, tagActions, journalActions };
+}
+
 function buildResidualRecoveryPlan({ snapshot, socialsOwnerExport }) {
   const reasonCodes = [...(snapshot.reasonCodes || [])];
   const seedBatch = ownerSeed.buildOwnerSeedBatch({ registry: snapshot.registry, ownerExports: [socialsOwnerExport] });
@@ -551,6 +687,12 @@ function buildResidualRecoveryPlan({ snapshot, socialsOwnerExport }) {
     const cardId = text(cardContract.parseCanonicalCardBody(row.starter?.content)?.id).toLowerCase();
     if (cardId) socialIdentities.add(cardId);
   }
+  const existingSocials = planExistingSocialReconciliation({
+    socialsForum,
+    seedBatch,
+    socialsOwnerExport,
+    reasonCodes,
+  });
 
   const missingSocialEvents = seedBatch.ok
     ? seedBatch.events.filter((event) => !socialIdentities.has(text(event.card?.id).toLowerCase()))
@@ -591,11 +733,42 @@ function buildResidualRecoveryPlan({ snapshot, socialsOwnerExport }) {
     retainedMusicHistoryCount,
     socials: {
       expectedEventCount: seedBatch.eventCount,
-      existingIdentityCount: seedBatch.events.filter((event) => socialIdentities.has(text(event.card?.id).toLowerCase())).length,
+      existingIdentityCount: existingSocials.existingCardIds.length,
+      existingCardIds: existingSocials.existingCardIds,
+      existingBodyUpdateCount: existingSocials.bodyActions.length,
+      existingBodyUpdateCardIds: existingSocials.bodyActions.map((action) => action.cardId),
+      existingBodyActions: existingSocials.bodyActions,
+      existingTagUpdateCount: existingSocials.tagActions.length,
+      existingTagUpdateCardIds: existingSocials.tagActions.map((action) => action.cardId),
+      existingTagActions: existingSocials.tagActions,
+      missingJournalEventCount: existingSocials.journalActions.length,
+      missingJournalCardIds: existingSocials.journalActions.map((action) => action.cardId),
+      missingJournalEventIds: existingSocials.journalActions.map((action) => action.eventId),
+      missingJournalActions: existingSocials.journalActions,
       missingIdentityCount: missingSocialEvents.length,
       missingCardIds: missingSocialEvents.map((event) => event.card.id),
       missingEvents: missingSocialEvents,
       missingCards: missingSocialCards,
+    },
+    expectedMutations: {
+      writes: {
+        phase8State: phase8StateAction?.action === "unarchive_unlock" ? 1 : 0,
+        managedTitles: titleActions.length,
+        existingSocialStarterBodies: existingSocials.bodyActions.length,
+        existingSocialTags: existingSocials.tagActions.length,
+        missingSocialIdentities: missingSocialEvents.length,
+        missingSocialIdentityTags: missingSocialEvents.length,
+        total: (phase8StateAction?.action === "unarchive_unlock" ? 1 : 0)
+          + titleActions.length
+          + existingSocials.bodyActions.length
+          + existingSocials.tagActions.length
+          + (missingSocialEvents.length * 2),
+      },
+      messages: {
+        existingSocialOwnerEvents: existingSocials.journalActions.length,
+        missingSocialOwnerEvents: missingSocialEvents.length,
+        total: existingSocials.journalActions.length + missingSocialEvents.length,
+      },
     },
     forbiddenReplay: {
       forumProvision: false,
@@ -625,6 +798,95 @@ async function applyResidualTitleRewrites({ actions, token, fetchImpl }) {
     rows.push({ ...action, status: write.ok && exact ? "renamed" : "failed", ok: write.ok && exact, writeStatus: write.status, readbackStatus: readback.status });
     if (!write.ok) reasonCodes.push(`residual_managed_title_write_failed:${action.threadId}`);
     else if (!exact) reasonCodes.push(`residual_managed_title_readback_failed:${action.threadId}`);
+    if (!write.ok || !exact) break;
+  }
+  return { ok: reasonCodes.length === 0 && rows.length === actions.length, rows, reasonCodes };
+}
+
+async function applyExistingSocialBodyUpdates({ actions, token, fetchImpl }) {
+  const rows = [];
+  const reasonCodes = [];
+  for (const action of actions) {
+    const write = await cardContract.updateThreadMessage({
+      threadId: action.threadId,
+      messageId: action.starterMessageId,
+      token,
+      message: { content: action.canonicalBody, allowed_mentions: { parse: [] } },
+      fetchImpl,
+    });
+    const readback = write.ok
+      ? await cardContract.fetchMessage({ channelId: action.threadId, messageId: action.starterMessageId, token, fetchImpl })
+      : { ok: false, status: null, payload: null };
+    const exact = readback.ok && String(readback.payload?.content || "") === action.canonicalBody;
+    rows.push({ cardId: action.cardId, threadId: action.threadId, status: write.ok && exact ? "patched" : "failed", ok: write.ok && exact });
+    if (!write.ok) reasonCodes.push(`residual_socials_body_write_failed:${action.cardId}`);
+    else if (!exact) reasonCodes.push(`residual_socials_body_readback_failed:${action.cardId}`);
+    if (!write.ok || !exact) break;
+  }
+  return { ok: reasonCodes.length === 0 && rows.length === actions.length, rows, reasonCodes };
+}
+
+async function applyExistingSocialTagUpdates({ actions, token, fetchImpl }) {
+  const rows = [];
+  const reasonCodes = [];
+  for (const action of actions) {
+    const write = await patchThreadPreservingState({ action, body: { applied_tags: action.desiredAppliedTagIds }, token, fetchImpl });
+    const readback = write.ok
+      ? await cardContract.discordRequest({ path: `/channels/${action.threadId}`, token, fetchImpl })
+      : { ok: false, status: null, payload: null };
+    const appliedTagIds = Array.isArray(readback.payload?.applied_tags) ? readback.payload.applied_tags.map(text).filter(Boolean) : [];
+    const exact = readback.ok && sameSemanticSet(appliedTagIds, action.desiredAppliedTagIds);
+    rows.push({
+      cardId: action.cardId,
+      threadId: action.threadId,
+      desiredTagNames: action.desiredTagNames,
+      desiredAppliedTagIds: action.desiredAppliedTagIds,
+      status: write.ok && exact ? "patched" : "failed",
+      ok: write.ok && exact,
+    });
+    if (!write.ok) reasonCodes.push(`residual_socials_tag_write_failed:${action.cardId}`);
+    else if (!exact) reasonCodes.push(`residual_socials_tag_readback_failed:${action.cardId}`);
+    if (!write.ok || !exact) break;
+  }
+  return { ok: reasonCodes.length === 0 && rows.length === actions.length, rows, reasonCodes };
+}
+
+async function applyExistingSocialJournalEvents({ actions, token, fetchImpl }) {
+  const rows = [];
+  const reasonCodes = [];
+  for (const action of actions) {
+    const history = await journal.readThreadMessages({ threadId: action.threadId, token, fetchImpl });
+    if (!history.ok || history.truncated === true) {
+      reasonCodes.push(`residual_socials_journal_history_read_failed:${action.cardId}`);
+      rows.push({ cardId: action.cardId, threadId: action.threadId, eventId: action.eventId, status: "failed", ok: false });
+      break;
+    }
+    const marker = journal.eventMarker(action.eventId);
+    const existing = history.payload.filter((message) => String(message?.content || "").includes(marker));
+    if (existing.length > 1) {
+      reasonCodes.push(`residual_socials_journal_event_duplicate:${action.cardId.toLowerCase()}:${action.eventId}`);
+      rows.push({ cardId: action.cardId, threadId: action.threadId, eventId: action.eventId, status: "failed", ok: false });
+      break;
+    }
+    if (existing.length === 1) {
+      rows.push({ cardId: action.cardId, threadId: action.threadId, eventId: action.eventId, status: "reused", ok: true, messageId: existing[0].id });
+      continue;
+    }
+    const write = await cardContract.discordRequest({
+      path: `/channels/${action.threadId}/messages`,
+      token,
+      method: "POST",
+      body: { content: action.journalBody, allowed_mentions: { parse: [] } },
+      fetchImpl,
+    });
+    const messageId = text(write.payload?.id);
+    const readback = write.ok && messageId
+      ? await cardContract.fetchMessage({ channelId: action.threadId, messageId, token, fetchImpl })
+      : { ok: false, status: null, payload: null };
+    const exact = readback.ok && String(readback.payload?.content || "") === action.journalBody;
+    rows.push({ cardId: action.cardId, threadId: action.threadId, eventId: action.eventId, status: write.ok && exact ? "created" : "failed", ok: write.ok && exact, messageId: messageId || null });
+    if (!write.ok) reasonCodes.push(`residual_socials_journal_write_failed:${action.cardId}`);
+    else if (!exact) reasonCodes.push(`residual_socials_journal_readback_failed:${action.cardId}`);
     if (!write.ok || !exact) break;
   }
   return { ok: reasonCodes.length === 0 && rows.length === actions.length, rows, reasonCodes };
@@ -663,6 +925,14 @@ function publicResidualPlan(plan) {
     socials: {
       expectedEventCount: plan.socials.expectedEventCount,
       existingIdentityCount: plan.socials.existingIdentityCount,
+      existingCardIds: plan.socials.existingCardIds,
+      existingBodyUpdateCount: plan.socials.existingBodyUpdateCount,
+      existingBodyUpdateCardIds: plan.socials.existingBodyUpdateCardIds,
+      existingTagUpdateCount: plan.socials.existingTagUpdateCount,
+      existingTagUpdateCardIds: plan.socials.existingTagUpdateCardIds,
+      missingJournalEventCount: plan.socials.missingJournalEventCount,
+      missingJournalCardIds: plan.socials.missingJournalCardIds,
+      missingJournalEventIds: plan.socials.missingJournalEventIds,
       missingIdentityCount: plan.socials.missingIdentityCount,
       missingCardIds: plan.socials.missingCardIds,
     },
@@ -697,6 +967,9 @@ async function runResidualBoardRecovery({
   const reasonCodes = [...plan.reasonCodes];
   let titleReceipt = null;
   let phase8Receipt = null;
+  let socialsBodyReceipt = null;
+  let socialsExistingTagReceipt = null;
+  let socialsJournalReceipt = null;
   let socialsSeedReceipt = null;
   let socialsTagReceipt = null;
 
@@ -709,6 +982,21 @@ async function runResidualBoardRecovery({
     titleReceipt = await applyResidualTitleRewrites({ actions: plan.titleActions, token: text(env.DISCORDOS_BOT_TOKEN), fetchImpl });
     phases.push({ phase: "managed_title_rewrite", ok: titleReceipt.ok, receipt: titleReceipt });
     reasonCodes.push(...titleReceipt.reasonCodes);
+  }
+  if (apply && reasonCodes.length === 0) {
+    socialsBodyReceipt = await applyExistingSocialBodyUpdates({ actions: plan.socials.existingBodyActions, token: text(env.DISCORDOS_BOT_TOKEN), fetchImpl });
+    phases.push({ phase: "socials_existing_body_reconcile", ok: socialsBodyReceipt.ok, receipt: socialsBodyReceipt });
+    reasonCodes.push(...socialsBodyReceipt.reasonCodes);
+  }
+  if (apply && reasonCodes.length === 0) {
+    socialsExistingTagReceipt = await applyExistingSocialTagUpdates({ actions: plan.socials.existingTagActions, token: text(env.DISCORDOS_BOT_TOKEN), fetchImpl });
+    phases.push({ phase: "socials_existing_tag_reconcile", ok: socialsExistingTagReceipt.ok, receipt: socialsExistingTagReceipt });
+    reasonCodes.push(...socialsExistingTagReceipt.reasonCodes);
+  }
+  if (apply && reasonCodes.length === 0) {
+    socialsJournalReceipt = await applyExistingSocialJournalEvents({ actions: plan.socials.missingJournalActions, token: text(env.DISCORDOS_BOT_TOKEN), fetchImpl });
+    phases.push({ phase: "socials_existing_journal_reconcile", ok: socialsJournalReceipt.ok, receipt: socialsJournalReceipt });
+    reasonCodes.push(...socialsJournalReceipt.reasonCodes);
   }
   if (apply && reasonCodes.length === 0 && plan.socials.missingEvents.length > 0) {
     const payload = { contractVersion: ownerSeed.BATCH_CONTRACT, events: plan.socials.missingEvents };
@@ -754,8 +1042,12 @@ async function runResidualBoardRecovery({
   const uniqueReasonCodes = unique(reasonCodes).sort();
   const writeCount = (titleReceipt?.rows || []).filter((row) => row.status === "renamed").length
     + (phase8Receipt?.rows || []).filter((row) => row.status === "reopened").length
+    + (socialsBodyReceipt?.rows || []).filter((row) => row.status === "patched").length
+    + (socialsExistingTagReceipt?.rows || []).filter((row) => row.status === "patched").length
     + (socialsSeedReceipt?.results || []).filter((row) => row.cardAction === "created").length
     + (socialsTagReceipt?.rows || []).filter((row) => row.ok).length;
+  const messageCount = (socialsJournalReceipt?.rows || []).filter((row) => row.status === "created").length
+    + (socialsSeedReceipt?.results || []).filter((row) => row.journalAction === "created").length;
   return {
     schemaVersion: RECEIPT_SCHEMA_VERSION,
     mode: "residual_recovery",
@@ -766,13 +1058,18 @@ async function runResidualBoardRecovery({
       : apply ? "recovery_required" : "blocked",
     apply,
     admission,
-    mutatesDiscord: apply && writeCount > 0,
-    sendsMessages: apply && plan.socials.missingIdentityCount > 0,
+    mutatesDiscord: apply && (writeCount > 0 || messageCount > 0),
+    sendsMessages: apply && messageCount > 0,
     mutationTruth: {
       writeCount,
+      messageCount,
       managedTitleWrites: (titleReceipt?.rows || []).filter((row) => row.status === "renamed").length,
       phase8StateWrites: (phase8Receipt?.rows || []).filter((row) => row.status === "reopened").length,
+      socialsExistingBodyWrites: (socialsBodyReceipt?.rows || []).filter((row) => row.status === "patched").length,
+      socialsExistingTagWrites: (socialsExistingTagReceipt?.rows || []).filter((row) => row.status === "patched").length,
+      socialsExistingJournalMessages: (socialsJournalReceipt?.rows || []).filter((row) => row.status === "created").length,
       socialsCreated: (socialsSeedReceipt?.results || []).filter((row) => row.cardAction === "created").length,
+      socialsMissingIdentityJournalMessages: (socialsSeedReceipt?.results || []).filter((row) => row.journalAction === "created").length,
       socialsTagWrites: (socialsTagReceipt?.rows || []).filter((row) => row.ok).length,
       forumProvisionWrites: 0,
       forumProfileWrites: 0,
@@ -1054,8 +1351,15 @@ module.exports = {
     applyThreadPhase,
     applyForumProfiles,
     patchSeededSocialTags,
+    comparableManagedSocialCard,
+    replaceManagedCardBlock,
+    sameSemanticSet,
+    planExistingSocialReconciliation,
     buildResidualRecoveryPlan,
     applyResidualTitleRewrites,
+    applyExistingSocialBodyUpdates,
+    applyExistingSocialTagUpdates,
+    applyExistingSocialJournalEvents,
     applyPhase8StateRecovery,
     runResidualBoardRecovery,
     buildRecoveryReceipt,
