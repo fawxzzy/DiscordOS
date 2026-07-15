@@ -182,8 +182,9 @@ async function replaceSource({ board, guildId, source, existingReplacement, toke
   let replacementMessageId = replacementThreadId;
   let created = false;
   if (!replacementThreadId) {
+    const canonicalTitle = cardContract.formatCanonicalCardTitle({ board, card: { title: source.thread.name } });
     const payload = {
-      name: source.thread.name,
+      name: canonicalTitle,
       auto_archive_duration: 10080,
       applied_tags: source.thread.appliedTags,
       message: {

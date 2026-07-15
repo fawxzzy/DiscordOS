@@ -96,6 +96,39 @@ function normalizeCardTitle(value) {
   return text(value);
 }
 
+function resolveJournalBoard({ event, registry, forum, scan }) {
+  const channelId = text(event?.card?.sourceForumChannelId);
+  const resolvedBoardIds = new Set((scan?.registeredBoards || [])
+    .filter((board) => text(board?.forumChannelId) === channelId)
+    .map((board) => text(board?.id))
+    .filter(Boolean));
+  const matches = (registry?.boards || []).filter((board) => {
+    if (text(board?.status).toLowerCase() !== "enabled") return false;
+    if (text(board?.forumChannelId) === channelId) return true;
+    if (resolvedBoardIds.has(text(board?.id))) return true;
+    return !text(board?.forumChannelId)
+      && text(board?.channelIdentityResolution) === "exact_name_under_category"
+      && text(forum?.id) === channelId
+      && Number(forum?.type) === 15
+      && text(forum?.parent_id) === text(registry?.discovery?.forumCategoryChannelId)
+      && text(forum?.name).toLowerCase() === text(board?.forumChannelName).toLowerCase();
+  });
+  if (matches.length !== 1) {
+    return {
+      ok: false,
+      board: null,
+      canonicalTitle: null,
+      reasonCodes: [matches.length === 0 ? "journal_board_resolution_failed" : "journal_board_resolution_ambiguous"],
+    };
+  }
+  return {
+    ok: true,
+    board: matches[0],
+    canonicalTitle: cardContract.formatCanonicalCardTitle({ board: matches[0], card: { title: event.card.title } }),
+    reasonCodes: [],
+  };
+}
+
 function normalizeEvent(raw) {
   const card = raw?.card || {};
   const entry = raw?.entry || {};
@@ -761,8 +794,8 @@ async function setThreadState({ threadId, archived, locked, token, fetchImpl = f
   });
 }
 
-async function applyCardEvent({ event: rawEvent, apply, admission, token, fetchImpl = fetch }) {
-  const event = normalizeEvent(rawEvent);
+async function applyCardEvent({ event: rawEvent, apply, admission, token, registry, scan, fetchImpl = fetch }) {
+  let event = normalizeEvent(rawEvent);
   const reasonCodes = validateEvent(event);
   if (apply && !admission.admitted) {
     if (!admission.reasonCodes.includes("board_card_journal_double_guard_missing")) {
@@ -781,6 +814,13 @@ async function applyCardEvent({ event: rawEvent, apply, admission, token, fetchI
     fetchImpl,
   });
   if (!forum.ok || !forum.payload?.guild_id) reasonCodes.push("source_forum_read_failed");
+  const titleResolution = reasonCodes.length === 0
+    ? resolveJournalBoard({ event, registry, forum: forum.payload, scan })
+    : { ok: false, reasonCodes: [] };
+  reasonCodes.push(...titleResolution.reasonCodes);
+  if (titleResolution.ok) {
+    event = { ...event, card: { ...event.card, title: titleResolution.canonicalTitle } };
+  }
   const inventory = reasonCodes.length === 0
     ? await listForumThreads({
       forumChannelId: event.card.sourceForumChannelId,
@@ -816,6 +856,7 @@ async function applyCardEvent({ event: rawEvent, apply, admission, token, fetchI
     matchedBy: located.matchedBy,
     action: located.match ? "update_card_and_append_journal" : "create_card_and_append_journal",
     threadId: located.match?.id || null,
+    canonicalTitle: event.card.title,
     canonicalBody,
     journalBody,
   };
@@ -958,16 +999,22 @@ async function applyCardEvent({ event: rawEvent, apply, admission, token, fetchI
   const journalReadback = threadId && journalMessageId
     ? await cardContract.fetchMessage({ channelId: threadId, messageId: journalMessageId, token, fetchImpl })
     : { ok: false, status: null, payload: null };
+  const threadReadback = threadId
+    ? await cardContract.discordRequest({ path: `/channels/${threadId}`, token, fetchImpl })
+    : { ok: false, status: null, payload: null };
   const starterReadbackExact = starterReadback.ok
     && String(starterReadback.payload?.content || "") === canonicalBody;
   const journalReadbackExact = journalReadback.ok
     && String(journalReadback.payload?.content || "") === journalBody;
+  const titleReadbackExact = threadReadback.ok
+    && String(threadReadback.payload?.name || "") === event.card.title;
   if (!starterReadbackExact) {
     reasonCodes.push("card_starter_readback_failed");
   }
   if (!journalReadbackExact) {
     reasonCodes.push("card_journal_readback_failed");
   }
+  if (!titleReadbackExact) reasonCodes.push("card_title_readback_failed");
   let archiveRestore = "not_required";
   if (historicalThreadReopened) {
     const restored = await setThreadState({
@@ -999,6 +1046,8 @@ async function applyCardEvent({ event: rawEvent, apply, admission, token, fetchI
       journal: journalReadbackExact,
       starterCodePointsExact: starterReadbackExact,
       journalCodePointsExact: journalReadbackExact,
+      title: titleReadbackExact,
+      canonicalTitle: event.card.title,
     },
     reasonCodes: [...new Set(reasonCodes)],
   };
@@ -1062,8 +1111,27 @@ async function buildBoardCardJournal({
     };
   }
 
+  let effectiveRegistry = registry;
+  if (!effectiveRegistry) {
+    try {
+      effectiveRegistry = await textIntegrity.readUtf8Json(registryPath);
+    } catch {
+      const results = events.map((event) => blockedJournalEvent(event, apply, ["board_registry_load_failed"]));
+      return {
+        ok: false,
+        status: "blocked",
+        apply,
+        admission,
+        eventCount: events.length,
+        liveIdentityPreflight: { status: "not_run", reasonCodes: ["board_registry_load_failed"] },
+        results,
+        reasonCodes: ["board_registry_load_failed"],
+      };
+    }
+  }
+
   const scan = await runLiveIdentityRegistryScan({
-    registry,
+    registry: effectiveRegistry,
     registryPath,
     env,
     fetchImpl,
@@ -1095,7 +1163,7 @@ async function buildBoardCardJournal({
 
   const results = [];
   for (const event of events) {
-    results.push(await applyCardEvent({ event, apply, admission, token, fetchImpl }));
+    results.push(await applyCardEvent({ event, apply, admission, token, registry: effectiveRegistry, scan, fetchImpl }));
   }
   const reasonCodes = [...new Set(results.flatMap((result) => result.reasonCodes || []))];
   return {
@@ -1164,6 +1232,7 @@ module.exports = {
     resolveAdmission,
     normalizeEvent,
     normalizeCardTitle,
+    resolveJournalBoard,
     repairMojibakeText,
     findMojibakeRuns,
     validateLifecycleTransition,

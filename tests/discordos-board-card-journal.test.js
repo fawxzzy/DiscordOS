@@ -175,6 +175,29 @@ test("card titles preserve valid Unicode typography and names", () => {
   );
 });
 
+test("journal matching, create, and rename titles use canonical plain outcomes across owner prefixes", () => {
+  const boards = [
+    { id: "fitness-active", project: "Fitness", forumChannelId: "fitness-forum", forumChannelName: "fawxzzy-fitness", stableCardNamespace: "fitness", status: "enabled" },
+    { id: "mazer-active", project: "Mazer", forumChannelId: "mazer-forum", forumChannelName: "mazer", stableCardNamespace: "mazer", status: "enabled" },
+    { id: "socials-os-active-admission", project: "Socials OS", forumChannelId: "socials-forum", forumChannelName: "socials-os", stableCardNamespace: "socials-os", status: "enabled" },
+  ];
+  const cases = [
+    [boards[0], "Fitness: Feature: Recovery dashboard", "Recovery dashboard"],
+    [boards[1], "mazer: Bug: Persistent login parity", "Persistent login parity"],
+    [boards[2], "Socials OS: Feature: Admit governed analytics", "Admit governed analytics"],
+  ];
+  for (const [board, title, expected] of cases) {
+    const resolved = _internals.resolveJournalBoard({
+      event: event({ card: { ...event().card, sourceForumChannelId: board.forumChannelId, title } }),
+      registry: { boards, discovery: {} },
+      forum: { id: board.forumChannelId },
+      scan: registryScan([], { registeredBoards: boards }),
+    });
+    assert.equal(resolved.ok, true);
+    assert.equal(resolved.canonicalTitle, expected);
+  }
+});
+
 test("every event text field rejects corruption before starter or journal rendering", () => {
   const raw = structuredClone(event());
   raw.card.threadId = "thread-42";
@@ -506,6 +529,7 @@ test("apply creates card, appends journal, and reads back both surfaces", async 
       }
       if (url.endsWith("/channels/new-thread/messages/new-thread")) return response({ payload: { id: "new-thread", content: starter } });
       if (url.endsWith("/channels/new-thread/messages/journal-message")) return response({ payload: { id: "journal-message", content: journal } });
+      if (url.endsWith("/channels/new-thread") && init.method === "GET") return response({ payload: { id: "new-thread", name: "Journal every card checkpoint" } });
       throw new Error(`unexpected ${init.method} ${url}`);
     },
   });
@@ -518,6 +542,8 @@ test("apply creates card, appends journal, and reads back both surfaces", async 
     journal: true,
     starterCodePointsExact: true,
     journalCodePointsExact: true,
+    title: true,
+    canonicalTitle: "Journal every card checkpoint",
   });
 });
 
@@ -547,6 +573,8 @@ test("retry reuses one journal event instead of posting a duplicate", async () =
       if (url.endsWith("/channels/fitness-forum/threads/archived/public?limit=100")) return response({ payload: { threads: [] } });
       if (url.endsWith("/channels/existing-thread/messages/existing-thread") && init.method === "GET") return response({ payload: { id: "existing-thread", content: starter } });
       if (url.endsWith("/channels/existing-thread/messages/existing-thread") && init.method === "PATCH") return response({ payload: { id: "existing-thread", content: starter } });
+      if (url.endsWith("/channels/existing-thread") && init.method === "PATCH") return response({ payload: { id: "existing-thread", name: JSON.parse(init.body).name } });
+      if (url.endsWith("/channels/existing-thread") && init.method === "GET") return response({ payload: { id: "existing-thread", name: "Journal every card checkpoint" } });
       if (url.endsWith("/channels/existing-thread/messages?limit=100")) return response({ payload: [{ id: "existing-journal", content: journal }] });
       if (url.endsWith("/channels/existing-thread/messages/existing-journal")) return response({ payload: { id: "existing-journal", content: journal } });
       if (url.endsWith("/channels/existing-thread/messages") && init.method === "POST") {
@@ -586,6 +614,8 @@ test("retry finds an existing journal event beyond the first message page", asyn
       if (url.endsWith("/channels/fitness-forum/threads/archived/public?limit=100")) return response({ payload: { threads: [] } });
       if (url.endsWith("/channels/existing-thread/messages/existing-thread") && init.method === "GET") return response({ payload: { id: "existing-thread", content: starter } });
       if (url.endsWith("/channels/existing-thread/messages/existing-thread") && init.method === "PATCH") return response({ payload: { id: "existing-thread", content: starter } });
+      if (url.endsWith("/channels/existing-thread") && init.method === "PATCH") return response({ payload: { id: "existing-thread", name: JSON.parse(init.body).name } });
+      if (url.endsWith("/channels/existing-thread") && init.method === "GET") return response({ payload: { id: "existing-thread", name: "Journal every card checkpoint" } });
       if (url.endsWith("/channels/existing-thread/messages?limit=100")) return response({ payload: firstPage });
       if (url.endsWith("/channels/existing-thread/messages?limit=100&before=new-1")) return response({ payload: [{ id: "existing-journal", content: journal }] });
       if (url.endsWith("/channels/existing-thread/messages/existing-journal")) return response({ payload: { id: "existing-journal", content: journal } });
@@ -626,6 +656,8 @@ test("legacy starter is preserved in thread messages before normalization", asyn
         starter = JSON.parse(init.body).content;
         return response({ payload: { id: "legacy-thread", content: starter } });
       }
+      if (url.endsWith("/channels/legacy-thread") && init.method === "PATCH") return response({ payload: { id: "legacy-thread", name: JSON.parse(init.body).name } });
+      if (url.endsWith("/channels/legacy-thread") && init.method === "GET") return response({ payload: { id: "legacy-thread", name: "Journal every card checkpoint" } });
       if (url.endsWith("/channels/legacy-thread/messages?limit=100")) return response({ payload: [] });
       if (url.endsWith("/channels/legacy-thread/messages") && init.method === "POST") {
         const content = JSON.parse(init.body).content;
@@ -681,6 +713,7 @@ test("archived historical card is reopened for journaling and restored afterward
         if (Object.hasOwn(body, "archived")) stateChanges.push(body);
         return response({ payload: { id: "archived-thread", ...body } });
       }
+      if (url.endsWith("/channels/archived-thread") && init.method === "GET") return response({ payload: { id: "archived-thread", name: "Completed history" } });
       if (url.endsWith("/channels/archived-thread/messages/archived-thread") && init.method === "GET") return response({ payload: { id: "archived-thread", content: starter } });
       if (url.endsWith("/channels/archived-thread/messages/archived-thread") && init.method === "PATCH") {
         starter = JSON.parse(init.body).content;

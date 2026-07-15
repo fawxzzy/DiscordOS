@@ -165,6 +165,46 @@ test("scanner reports ordered tag drift and orphan applied-tag ambiguity", async
   assert.deepEqual(receipt.cards.boardProfiles[0].appliedTagSafety.orphanAppliedTagIds, ["orphan-tag"]);
 });
 
+test("applied-tag comparison is semantic-set based and fails every unsafe shape", () => {
+  const tags = new Map([
+    ["feature", { name: "Feature" }],
+    ["feature-copy", { name: "Feature" }],
+    ["blocked", { name: "Blocked" }],
+    ["high", { name: "High" }],
+    ["ready", { name: "Ready" }],
+    ["low", { name: "Low" }],
+    ["bug", { name: "Bug" }],
+    ["custom", { name: "Custom" }],
+  ]);
+  const row = { threadId: "managed", cardId: "DOS-1", type: "feature", state: "blocked", priority: "high" };
+  const inspect = (appliedTagIds, maxAppliedTags = 5) => forumProfile.inspectAppliedTagSemantics({ row: { ...row, appliedTagIds }, availableTagById: tags, maxAppliedTags });
+  assert.equal(inspect(["high", "feature", "blocked"]).exact, true);
+
+  const duplicate = inspect(["feature", "feature-copy", "blocked", "high"]);
+  assert.equal(duplicate.exact, false);
+  assert.deepEqual(duplicate.duplicateNames, ["Feature"]);
+
+  const missing = inspect(["feature", "blocked"]);
+  assert.equal(missing.exact, false);
+  assert.deepEqual(missing.missingNames, ["High"]);
+
+  const extra = inspect(["feature", "blocked", "ready", "high"]);
+  assert.equal(extra.exact, false);
+  assert.deepEqual(extra.extraNames, ["Ready"]);
+
+  const unknown = inspect(["feature", "blocked", "high", "custom"]);
+  assert.equal(unknown.exact, false);
+  assert.deepEqual(unknown.unknownNames, ["Custom"]);
+
+  const orphan = inspect(["feature", "blocked", "high", "missing-id"]);
+  assert.equal(orphan.exact, false);
+  assert.deepEqual(orphan.orphanAppliedTagIds, ["missing-id"]);
+
+  const overLimit = inspect(["feature", "blocked", "high", "ready", "low", "bug"]);
+  assert.equal(overLimit.exact, false);
+  assert.equal(overLimit.overLimit, true);
+});
+
 test("scanner CLI requires a durable output receipt", () => {
   assert.throws(() => scanCli.parseArgs([]), /output_path_missing/);
   const options = scanCli.parseArgs(["--output", "tmp/profile-scan.json", "--json"]);

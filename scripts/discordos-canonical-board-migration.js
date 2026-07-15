@@ -16,6 +16,8 @@ const DEFAULT_SOCIALS_EXPORT_PATH = path.resolve(__dirname, "..", "..", "socials
 const DEFAULT_RUNTIME_ROOT = path.resolve(__dirname, "..", "..", "..", "runtime");
 const MIGRATION_ENV = "DISCORDOS_CANONICAL_BOARD_MIGRATION";
 const MIGRATION_ENV_VALUE = "enabled";
+const RECOVERY_ENV = "DISCORDOS_CANONICAL_BOARD_RECOVERY";
+const RECOVERY_ENV_VALUE = "enabled";
 const RECEIPT_SCHEMA_VERSION = "discordos.canonical-board-migration.v1";
 const SNAPSHOT_SCHEMA_VERSION = "discordos.canonical-board-migration-snapshot.v1";
 
@@ -41,6 +43,8 @@ function parseArgs(args) {
     snapshotPath: null,
     outputPath: null,
     allowMigration: false,
+    recoverResidual: false,
+    allowRecovery: false,
     apply: false,
     json: false,
   };
@@ -52,6 +56,8 @@ function parseArgs(args) {
     else if (arg === "--snapshot-output") options.snapshotPath = path.resolve(readValue(args, index++, "missing_snapshot_path"));
     else if (arg === "--output") options.outputPath = path.resolve(readValue(args, index++, "missing_output_path"));
     else if (arg === "--allow-migration") options.allowMigration = true;
+    else if (arg === "--recover-residual") options.recoverResidual = true;
+    else if (arg === "--allow-recovery") options.allowRecovery = true;
     else if (arg === "--apply") options.apply = true;
     else if (arg === "--dry-run") options.apply = false;
     else if (arg === "--json") options.json = true;
@@ -77,6 +83,14 @@ function resolveAdmission({ apply, allowMigration, env }) {
     return { requested: true, admitted: true, status: "canonical_migration_admitted", reasonCodes: [] };
   }
   return { requested: true, admitted: false, status: "blocked", reasonCodes: ["canonical_board_migration_double_guard_missing"] };
+}
+
+function resolveRecoveryAdmission({ apply, allowRecovery, env }) {
+  if (!apply) return { requested: false, admitted: false, status: "dry_run", reasonCodes: [] };
+  if (allowRecovery && env?.[RECOVERY_ENV] === RECOVERY_ENV_VALUE) {
+    return { requested: true, admitted: true, status: "residual_recovery_admitted", reasonCodes: [] };
+  }
+  return { requested: true, admitted: false, status: "blocked", reasonCodes: ["canonical_board_recovery_double_guard_missing"] };
 }
 
 function sha256(value) {
@@ -303,6 +317,7 @@ function buildMigrationPlan({ snapshot, profileRegistry, ownerExports = [], enfo
         originalAppliedTagIds: Array.isArray(row.thread.applied_tags) ? [...row.thread.applied_tags] : [],
         originalArchived: row.thread.thread_metadata?.archived === true,
         originalLocked: row.thread.thread_metadata?.locked === true,
+        ...(row.thread.id === consistency.MUSIC_SESH_PHASE_8_THREAD_ID ? { desiredArchived: false, desiredLocked: false } : {}),
         ...semantics,
         safeAppliedTagIds,
       });
@@ -394,6 +409,8 @@ function phase8JournalEvent(plan, snapshot) {
 
 async function patchThreadPreservingState({ action, body, token, fetchImpl }) {
   const writes = [];
+  const desiredArchived = typeof action.desiredArchived === "boolean" ? action.desiredArchived : action.originalArchived;
+  const desiredLocked = typeof action.desiredLocked === "boolean" ? action.desiredLocked : action.originalLocked;
   if (action.originalArchived || action.originalLocked) {
     const opened = await cardContract.discordRequest({ path: `/channels/${action.threadId}`, token, method: "PATCH", body: { archived: false, locked: false }, fetchImpl });
     writes.push({ phase: "temporary_open", ok: opened.ok, status: opened.status });
@@ -402,15 +419,15 @@ async function patchThreadPreservingState({ action, body, token, fetchImpl }) {
   const patched = await cardContract.discordRequest({ path: `/channels/${action.threadId}`, token, method: "PATCH", body, fetchImpl });
   writes.push({ phase: "patch", ok: patched.ok, status: patched.status });
   let restore = { ok: true };
-  if (action.originalArchived || action.originalLocked) {
+  if (desiredArchived || desiredLocked) {
     restore = await cardContract.discordRequest({
       path: `/channels/${action.threadId}`,
       token,
       method: "PATCH",
-      body: { archived: action.originalArchived, locked: action.originalLocked },
+      body: { archived: desiredArchived, locked: desiredLocked },
       fetchImpl,
     });
-    writes.push({ phase: "restore_archive_lock", ok: restore.ok, status: restore.status });
+    writes.push({ phase: "set_archive_lock", ok: restore.ok, status: restore.status });
   }
   const reasonCodes = [];
   if (!patched.ok) reasonCodes.push("thread_patch_failed");
@@ -478,6 +495,297 @@ async function patchSeededSocialTags({ ownerExport, seedReceipt, registry, tagId
     reasonCodes.push(...write.reasonCodes.map((code) => `${code}:${result.threadId}`));
   }
   return { ok: reasonCodes.length === 0 && rows.length === (ownerExport.cards || []).length, rows, reasonCodes };
+}
+
+function buildResidualRecoveryPlan({ snapshot, socialsOwnerExport }) {
+  const reasonCodes = [...(snapshot.reasonCodes || [])];
+  const seedBatch = ownerSeed.buildOwnerSeedBatch({ registry: snapshot.registry, ownerExports: [socialsOwnerExport] });
+  reasonCodes.push(...seedBatch.reasonCodes);
+  const managedIdentities = new Map();
+  const titleActions = [];
+  const phase8Rows = [];
+  let retainedMusicHistoryCount = 0;
+
+  for (const forumSnapshot of snapshot.forums || []) {
+    const board = snapshot.registry.boards.find((candidate) => candidate.id === forumSnapshot.boardId);
+    if (!board) {
+      reasonCodes.push(`residual_board_missing:${forumSnapshot.boardId}`);
+      continue;
+    }
+    for (const row of forumSnapshot.threads || []) {
+      const managed = cardContract.parseCanonicalCardBody(row.starter?.content);
+      const threadId = text(row.thread?.id);
+      if (forumSnapshot.boardId === "music-sesh-active" && !managed && threadId !== consistency.MUSIC_SESH_PHASE_8_THREAD_ID) {
+        retainedMusicHistoryCount += 1;
+      }
+      if (threadId === consistency.MUSIC_SESH_PHASE_8_THREAD_ID) phase8Rows.push({ board, row, managed });
+      if (!managed?.id) continue;
+      const stableIdentity = text(managed.id).toLowerCase();
+      const locations = managedIdentities.get(stableIdentity) || [];
+      locations.push({ boardId: board.id, threadId });
+      managedIdentities.set(stableIdentity, locations);
+      const canonicalTitle = cardContract.formatCanonicalCardTitle({ board, card: { title: row.thread.name } });
+      if (text(row.thread.name) !== canonicalTitle) {
+        titleActions.push({
+          boardId: board.id,
+          threadId,
+          cardId: text(managed.id),
+          originalTitle: text(row.thread.name),
+          canonicalTitle,
+        });
+      }
+    }
+  }
+
+  for (const [identity, locations] of managedIdentities) {
+    if (locations.length > 1) reasonCodes.push(`residual_managed_identity_duplicate:${identity}`);
+  }
+
+  const socialsBoard = snapshot.registry.boards.find((board) => board.id === "socials-os-active-admission");
+  const socialsForum = (snapshot.forums || []).find((row) => row.boardId === "socials-os-active-admission");
+  if (!socialsBoard?.forumChannelId || !socialsForum) reasonCodes.push("residual_socials_forum_missing");
+  const socialLocations = new Map();
+  for (const row of socialsForum?.threads || []) {
+    const cardId = text(cardContract.parseCanonicalCardBody(row.starter?.content)?.id).toLowerCase();
+    if (!cardId) continue;
+    const locations = socialLocations.get(cardId) || [];
+    locations.push(text(row.thread?.id));
+    socialLocations.set(cardId, locations);
+  }
+  for (const [identity, locations] of socialLocations) {
+    if (locations.length > 1) reasonCodes.push(`residual_socials_identity_duplicate:${identity}`);
+  }
+
+  const missingSocialEvents = seedBatch.ok
+    ? seedBatch.events.filter((event) => !socialLocations.has(text(event.card?.id).toLowerCase()))
+    : [];
+  const missingSocialIds = new Set(missingSocialEvents.map((event) => text(event.card?.id).toLowerCase()));
+  const missingSocialCards = (socialsOwnerExport?.cards || []).filter((card) => missingSocialIds.has(text(card.record?.card_id).toLowerCase()));
+  if (missingSocialCards.length !== missingSocialEvents.length) reasonCodes.push("residual_socials_missing_identity_mapping_failed");
+  if (phase8Rows.length !== 1 || text(phase8Rows[0]?.managed?.id).toLowerCase() !== consistency.MUSIC_SESH_PHASE_8_CARD_ID.toLowerCase()) {
+    reasonCodes.push("residual_music_sesh_phase_8_identity_mismatch");
+  }
+  if ((snapshot.forums || []).some((row) => row.boardId === "music-sesh-active") && retainedMusicHistoryCount !== 150) {
+    reasonCodes.push("music_sesh_retained_legacy_count_mismatch");
+  }
+  const phase8 = phase8Rows[0];
+  const phase8StateAction = phase8 ? {
+    boardId: phase8.board.id,
+    threadId: consistency.MUSIC_SESH_PHASE_8_THREAD_ID,
+    archived: phase8.row.thread?.thread_metadata?.archived === true,
+    locked: phase8.row.thread?.thread_metadata?.locked === true,
+    action: phase8.row.thread?.thread_metadata?.archived === true || phase8.row.thread?.thread_metadata?.locked === true
+      ? "unarchive_unlock"
+      : "unchanged",
+  } : null;
+  const uniqueReasonCodes = unique(reasonCodes).sort();
+  return {
+    ok: uniqueReasonCodes.length === 0,
+    status: uniqueReasonCodes.length === 0 ? "residual_plan_ready" : "blocked",
+    boardDenominator: snapshot.registry.boards.filter((board) => board.required && board.status === "enabled").length,
+    scannedForumCount: (snapshot.forums || []).length,
+    scannedThreadCount: (snapshot.forums || []).reduce((count, forum) => count + (forum.threads || []).length, 0),
+    managedIdentityCount: managedIdentities.size,
+    managedTitleRewriteCount: titleActions.length,
+    titleActions,
+    phase8StateAction,
+    retainedMusicHistoryCount,
+    socials: {
+      expectedEventCount: seedBatch.eventCount,
+      existingIdentityCount: seedBatch.events.filter((event) => socialLocations.has(text(event.card?.id).toLowerCase())).length,
+      missingIdentityCount: missingSocialEvents.length,
+      missingCardIds: missingSocialEvents.map((event) => event.card.id),
+      missingEvents: missingSocialEvents,
+      missingCards: missingSocialCards,
+    },
+    forbiddenReplay: {
+      forumProvision: false,
+      forumProfileReplacement: false,
+      appliedTagPreclear: false,
+      fullThreadMigration: false,
+    },
+    reasonCodes: uniqueReasonCodes,
+  };
+}
+
+async function applyResidualTitleRewrites({ actions, token, fetchImpl }) {
+  const rows = [];
+  const reasonCodes = [];
+  for (const action of actions) {
+    const write = await cardContract.discordRequest({
+      path: `/channels/${action.threadId}`,
+      token,
+      method: "PATCH",
+      body: { name: action.canonicalTitle },
+      fetchImpl,
+    });
+    const readback = write.ok
+      ? await cardContract.discordRequest({ path: `/channels/${action.threadId}`, token, fetchImpl })
+      : { ok: false, status: null, payload: null };
+    const exact = readback.ok && text(readback.payload?.name) === action.canonicalTitle;
+    rows.push({ ...action, status: write.ok && exact ? "renamed" : "failed", ok: write.ok && exact, writeStatus: write.status, readbackStatus: readback.status });
+    if (!write.ok) reasonCodes.push(`residual_managed_title_write_failed:${action.threadId}`);
+    else if (!exact) reasonCodes.push(`residual_managed_title_readback_failed:${action.threadId}`);
+    if (!write.ok || !exact) break;
+  }
+  return { ok: reasonCodes.length === 0 && rows.length === actions.length, rows, reasonCodes };
+}
+
+async function applyPhase8StateRecovery({ action, token, fetchImpl }) {
+  if (!action) return { ok: false, status: "blocked", rows: [], reasonCodes: ["residual_music_sesh_phase_8_identity_mismatch"] };
+  if (action.action === "unchanged") return { ok: true, status: "unchanged", rows: [{ ...action, status: "unchanged", ok: true }], reasonCodes: [] };
+  const write = await cardContract.discordRequest({
+    path: `/channels/${consistency.MUSIC_SESH_PHASE_8_THREAD_ID}`,
+    token,
+    method: "PATCH",
+    body: { archived: false, locked: false },
+    fetchImpl,
+  });
+  const readback = write.ok
+    ? await cardContract.discordRequest({ path: `/channels/${consistency.MUSIC_SESH_PHASE_8_THREAD_ID}`, token, fetchImpl })
+    : { ok: false, status: null, payload: null };
+  const exact = readback.ok
+    && readback.payload?.thread_metadata?.archived === false
+    && readback.payload?.thread_metadata?.locked === false;
+  const reasonCodes = [];
+  if (!write.ok) reasonCodes.push("residual_music_sesh_phase_8_write_failed");
+  else if (!exact) reasonCodes.push("residual_music_sesh_phase_8_readback_failed");
+  return {
+    ok: reasonCodes.length === 0,
+    status: reasonCodes.length === 0 ? "reopened" : "failed",
+    rows: [{ ...action, status: reasonCodes.length === 0 ? "reopened" : "failed", ok: reasonCodes.length === 0, writeStatus: write.status, readbackStatus: readback.status }],
+    reasonCodes,
+  };
+}
+
+function publicResidualPlan(plan) {
+  return {
+    ...plan,
+    socials: {
+      expectedEventCount: plan.socials.expectedEventCount,
+      existingIdentityCount: plan.socials.existingIdentityCount,
+      missingIdentityCount: plan.socials.missingIdentityCount,
+      missingCardIds: plan.socials.missingCardIds,
+    },
+  };
+}
+
+async function runResidualBoardRecovery({
+  registry,
+  profileRegistry,
+  socialsOwnerExport,
+  snapshotPath,
+  allowRecovery = false,
+  apply = false,
+  env = process.env,
+  fetchImpl = fetch,
+  fsImpl = fs,
+  now = () => new Date(),
+  captureSnapshotImpl = captureSnapshot,
+  journalImpl = journal.buildBoardCardJournal,
+  scanImpl = forumProfile.buildLiveForumProfileScan,
+} = {}) {
+  assertRuntimePath(snapshotPath);
+  const admission = resolveRecoveryAdmission({ apply, allowRecovery, env });
+  if (apply && !admission.admitted) {
+    return { schemaVersion: RECEIPT_SCHEMA_VERSION, mode: "residual_recovery", generatedAt: now().toISOString(), ok: false, status: "blocked", apply, admission, mutatesDiscord: false, sendsMessages: false, reasonCodes: admission.reasonCodes };
+  }
+  const snapshot = await captureSnapshotImpl({ registry, env, fetchImpl, now });
+  await fsImpl.mkdir(path.dirname(snapshotPath), { recursive: true });
+  await fsImpl.writeFile(snapshotPath, `${JSON.stringify({ residualPreimage: snapshot }, null, 2)}\n`, "utf8");
+  const plan = buildResidualRecoveryPlan({ snapshot, socialsOwnerExport });
+  const phases = [];
+  const reasonCodes = [...plan.reasonCodes];
+  let titleReceipt = null;
+  let phase8Receipt = null;
+  let socialsSeedReceipt = null;
+  let socialsTagReceipt = null;
+
+  if (apply && reasonCodes.length === 0) {
+    phase8Receipt = await applyPhase8StateRecovery({ action: plan.phase8StateAction, token: text(env.DISCORDOS_BOT_TOKEN), fetchImpl });
+    phases.push({ phase: "phase_8_exact_reopen", ok: phase8Receipt.ok, receipt: phase8Receipt });
+    reasonCodes.push(...phase8Receipt.reasonCodes);
+  }
+  if (apply && reasonCodes.length === 0) {
+    titleReceipt = await applyResidualTitleRewrites({ actions: plan.titleActions, token: text(env.DISCORDOS_BOT_TOKEN), fetchImpl });
+    phases.push({ phase: "managed_title_rewrite", ok: titleReceipt.ok, receipt: titleReceipt });
+    reasonCodes.push(...titleReceipt.reasonCodes);
+  }
+  if (apply && reasonCodes.length === 0 && plan.socials.missingEvents.length > 0) {
+    const payload = { contractVersion: ownerSeed.BATCH_CONTRACT, events: plan.socials.missingEvents };
+    socialsSeedReceipt = await journalImpl({
+      payload,
+      allowApply: true,
+      apply: true,
+      env: { ...env, [journal.JOURNAL_ENV]: journal.JOURNAL_ENV_VALUE },
+      fetchImpl,
+      registry: snapshot.registry,
+      now,
+    });
+    phases.push({ phase: "socials_missing_identity_reconcile", ok: socialsSeedReceipt.ok, receipt: socialsSeedReceipt });
+    reasonCodes.push(...(socialsSeedReceipt.reasonCodes || []));
+  }
+  if (apply && reasonCodes.length === 0 && plan.socials.missingEvents.length > 0) {
+    const socialsBoard = snapshot.registry.boards.find((board) => board.id === "socials-os-active-admission");
+    const socialsForum = snapshot.forums.find((forum) => forum.boardId === "socials-os-active-admission");
+    const tagIds = canonicalTagIds(socialsForum.forum);
+    if (!tagIds.ok) reasonCodes.push(...tagIds.reasonCodes.map((code) => `${code}:socials-os-active-admission`));
+    else {
+      socialsTagReceipt = await patchSeededSocialTags({
+        ownerExport: { ...socialsOwnerExport, cards: plan.socials.missingCards },
+        seedReceipt: socialsSeedReceipt,
+        registry: snapshot.registry,
+        tagIdsByForum: new Map([[socialsBoard.forumChannelId, tagIds.byName]]),
+        token: text(env.DISCORDOS_BOT_TOKEN),
+        fetchImpl,
+      });
+      phases.push({ phase: "socials_missing_identity_tags", ok: socialsTagReceipt.ok, receipt: socialsTagReceipt });
+      reasonCodes.push(...socialsTagReceipt.reasonCodes);
+    }
+  }
+
+  const scanResult = reasonCodes.length === 0
+    ? await scanImpl({ boardRegistry: snapshot.registry, profileRegistry, env, fetchImpl, now })
+    : null;
+  const exactReadback = scanResult?.receipt || scanResult || null;
+  if (apply && exactReadback && (!exactReadback.ok || exactReadback.denominator?.requiredBoardCount !== 13 || exactReadback.denominator?.inspectedBoardCount !== 13)) {
+    reasonCodes.push("canonical_13_board_exact_readback_failed");
+  }
+  if (exactReadback) phases.push({ phase: "exact_13_board_scanner", ok: exactReadback.ok === true, receipt: exactReadback });
+  const uniqueReasonCodes = unique(reasonCodes).sort();
+  const writeCount = (titleReceipt?.rows || []).filter((row) => row.status === "renamed").length
+    + (phase8Receipt?.rows || []).filter((row) => row.status === "reopened").length
+    + (socialsSeedReceipt?.results || []).filter((row) => row.cardAction === "created").length
+    + (socialsTagReceipt?.rows || []).filter((row) => row.ok).length;
+  return {
+    schemaVersion: RECEIPT_SCHEMA_VERSION,
+    mode: "residual_recovery",
+    generatedAt: now().toISOString(),
+    ok: uniqueReasonCodes.length === 0,
+    status: uniqueReasonCodes.length === 0
+      ? apply ? "residual_recovery_applied_and_read_back" : "residual_recovery_dry_run_ready"
+      : apply ? "recovery_required" : "blocked",
+    apply,
+    admission,
+    mutatesDiscord: apply && writeCount > 0,
+    sendsMessages: apply && plan.socials.missingIdentityCount > 0,
+    mutationTruth: {
+      writeCount,
+      managedTitleWrites: (titleReceipt?.rows || []).filter((row) => row.status === "renamed").length,
+      phase8StateWrites: (phase8Receipt?.rows || []).filter((row) => row.status === "reopened").length,
+      socialsCreated: (socialsSeedReceipt?.results || []).filter((row) => row.cardAction === "created").length,
+      socialsTagWrites: (socialsTagReceipt?.rows || []).filter((row) => row.ok).length,
+      forumProvisionWrites: 0,
+      forumProfileWrites: 0,
+      preclearWrites: 0,
+      retainedMusicHistoryWrites: 0,
+    },
+    snapshot: { path: snapshotPath, sha256: snapshot.sha256, exactPreimage: true },
+    plan: publicResidualPlan(plan),
+    phases,
+    exactReadback,
+    reasonCodes: uniqueReasonCodes,
+  };
 }
 
 function publicPlan(plan) {
@@ -660,7 +968,9 @@ async function runCanonicalBoardMigration({
 
 function renderMarkdown(receipt) {
   return [
-    "# DiscordOS Canonical 13-Board Migration",
+    receipt.mode === "residual_recovery"
+      ? "# DiscordOS Canonical 13-Board Residual Recovery"
+      : "# DiscordOS Canonical 13-Board Migration",
     "",
     `- status: \`${receipt.status}\``,
     `- apply: \`${receipt.apply}\``,
@@ -682,15 +992,24 @@ async function main() {
     textIntegrity.readUtf8Json(options.profilePath),
     textIntegrity.readUtf8Json(options.socialsExportPath),
   ]);
-  const receipt = await runCanonicalBoardMigration({
-    registry,
-    profileRegistry,
-    socialsOwnerExport,
-    registryPath: options.registryPath,
-    snapshotPath: options.snapshotPath,
-    allowMigration: options.allowMigration,
-    apply: options.apply,
-  });
+  const receipt = options.recoverResidual
+    ? await runResidualBoardRecovery({
+      registry,
+      profileRegistry,
+      socialsOwnerExport,
+      snapshotPath: options.snapshotPath,
+      allowRecovery: options.allowRecovery,
+      apply: options.apply,
+    })
+    : await runCanonicalBoardMigration({
+      registry,
+      profileRegistry,
+      socialsOwnerExport,
+      registryPath: options.registryPath,
+      snapshotPath: options.snapshotPath,
+      allowMigration: options.allowMigration,
+      apply: options.apply,
+    });
   await fs.mkdir(path.dirname(options.outputPath), { recursive: true });
   const output = `${JSON.stringify(receipt, null, 2)}\n`;
   await fs.writeFile(options.outputPath, output, "utf8");
@@ -706,9 +1025,13 @@ if (require.main === module) main().catch((error) => {
 module.exports = {
   MIGRATION_ENV,
   MIGRATION_ENV_VALUE,
+  RECOVERY_ENV,
+  RECOVERY_ENV_VALUE,
   RECEIPT_SCHEMA_VERSION,
   SNAPSHOT_SCHEMA_VERSION,
   _internals: {
+    RECOVERY_ENV,
+    RECOVERY_ENV_VALUE,
     DEFAULT_REGISTRY_PATH,
     DEFAULT_PROFILE_PATH,
     DEFAULT_SOCIALS_EXPORT_PATH,
@@ -716,6 +1039,7 @@ module.exports = {
     parseArgs,
     assertRuntimePath,
     resolveAdmission,
+    resolveRecoveryAdmission,
     stateTagName,
     priorityTagName,
     typeTagName,
@@ -731,6 +1055,10 @@ module.exports = {
     applyThreadPhase,
     applyForumProfiles,
     patchSeededSocialTags,
+    buildResidualRecoveryPlan,
+    applyResidualTitleRewrites,
+    applyPhase8StateRecovery,
+    runResidualBoardRecovery,
     buildRecoveryReceipt,
     runCanonicalBoardMigration,
     renderMarkdown,

@@ -104,9 +104,9 @@ function validateExport({ ownerExport, registry, seenCardIds }) {
     }
   }
   if (ownerExport?.adapter_id === "socials-os-roadmap-v1") {
-    if ((ownerExport.cards || []).length !== 12) reasonCodes.push("socials_owner_export_event_count_mismatch");
-    if (ownerExport?.extensions?.selection?.roadmap_record_count !== 21) reasonCodes.push("socials_owner_export_stable_record_count_mismatch");
-    if (ownerExport?.extensions?.selection?.exported_nonterminal_count !== 12) reasonCodes.push("socials_owner_export_nonterminal_count_mismatch");
+    if ((ownerExport.cards || []).length !== 13) reasonCodes.push("socials_owner_export_event_count_mismatch");
+    if (ownerExport?.extensions?.selection?.roadmap_record_count !== 22) reasonCodes.push("socials_owner_export_stable_record_count_mismatch");
+    if (ownerExport?.extensions?.selection?.exported_nonterminal_count !== 13) reasonCodes.push("socials_owner_export_nonterminal_count_mismatch");
   }
   return { board, reasonCodes: [...new Set(reasonCodes)].sort() };
 }
