@@ -108,8 +108,12 @@ function validateProfileRegistry(profileRegistry, boardRegistry) {
   if (new Set(tags.map((tag) => text(tag?.semanticKey))).size !== tags.length) {
     reasonCodes.push("forum_profile_tag_semantic_key_duplicate");
   }
-  if (profileRegistry?.tagTaxonomy?.moderationRule?.type !== "moderated_except_community_intake") {
+  if (profileRegistry?.tagTaxonomy?.moderationRule?.type !== "moderated") {
     reasonCodes.push("forum_profile_type_moderation_rule_invalid");
+  }
+  if (profileRegistry?.titlePolicy?.id !== cardContract.CANONICAL_TITLE_POLICY
+    || profileRegistry?.titlePolicy?.style !== "plain_work_outcome") {
+    reasonCodes.push("forum_profile_title_policy_invalid");
   }
   for (const group of ["state", "priority", "outcome", "record"]) {
     if (profileRegistry?.tagTaxonomy?.moderationRule?.[group] !== "moderated") {
@@ -396,6 +400,7 @@ function inspectForumChannel({ expected, channel, roleResolution }) {
 }
 
 function lifecycleInspection(profileId, row) {
+  if (row?.retainedLegacyHistory) return { status: "retained_legacy_preserved", ok: true, reasonCodes: [] };
   if (new Set(["community-intake-v1", "legacy-active-v1"]).has(profileId)) {
     return { status: "not_applicable_deferred", ok: true, reasonCodes: [] };
   }
@@ -426,12 +431,32 @@ function lifecycleInspection(profileId, row) {
   };
 }
 
+function canonicalAppliedTagNames(row) {
+  if (row?.retainedLegacyHistory) return [];
+  if (row?.superseded) return ["Superseded"];
+  const names = [];
+  if (row?.type) names.push(text(row.type).toLowerCase() === "bug" ? "Bug" : "Feature");
+  const states = new Map([
+    ["intake", "Intake"], ["planning", "Planning"], ["ready", "Ready"],
+    ["opened", "Opened"], ["in_progress", "In Progress"], ["review", "Review"],
+    ["blocked", "Blocked"], ["completed", "Completed"],
+  ]);
+  const state = text(row?.state).toLowerCase();
+  if (states.has(state)) names.push(states.get(state));
+  const priorities = new Map([["low", "Low"], ["medium", "Medium"], ["high", "High"], ["blocker", "Blocker"]]);
+  const priority = text(row?.priority).toLowerCase();
+  if (priorities.has(priority)) names.push(priorities.get(priority));
+  return names;
+}
+
 function buildCardProfileSummary({ consistency, forums, maxAppliedTags = 5 }) {
   const reasonCodes = [];
   const forumByBoard = new Map(forums.map((forum) => [forum.boardId, forum]));
   const boardProfiles = [];
   for (const forum of forums) {
     const rows = (consistency?.rows || []).filter((row) => row.boardId === forum.boardId);
+    const managedRows = rows.filter((row) => !row.retainedLegacyHistory);
+    const retainedRows = rows.filter((row) => row.retainedLegacyHistory);
     const availableTagById = new Map(forum.tags.actual.filter((tag) => tag.id).map((tag) => [tag.id, tag]));
     const expectedTagNames = new Set(forum.tags.rows.map((row) => row.expected?.name).filter(Boolean));
     const appliedTagIds = unique(rows.flatMap((row) => row.appliedTagIds || [])).sort();
@@ -448,6 +473,14 @@ function buildCardProfileSummary({ consistency, forums, maxAppliedTags = 5 }) {
       appliedTagCount: row.appliedTagIds.length,
     }));
     if (overAppliedTagRows.length > 0) reasonCodes.push(`applied_tag_limit_exceeded:${forum.boardId}`);
+    const semanticRows = rows.map((row) => {
+      const expectedNames = canonicalAppliedTagNames(row);
+      const actualNames = (row.appliedTagIds || []).map((id) => availableTagById.get(id)?.name || null);
+      const exact = expectedNames.length === actualNames.length
+        && expectedNames.every((name, index) => name === actualNames[index]);
+      return { threadId: row.threadId, cardId: row.cardId, retainedLegacyHistory: row.retainedLegacyHistory === true, expectedNames, actualNames, exact };
+    });
+    if (semanticRows.some((row) => !row.exact)) reasonCodes.push(`card_tag_semantic_mismatch:${forum.boardId}`);
     const lifecycleRows = rows.map((row) => ({
       threadId: row.threadId,
       cardId: row.cardId,
@@ -456,19 +489,21 @@ function buildCardProfileSummary({ consistency, forums, maxAppliedTags = 5 }) {
     if (lifecycleRows.some((row) => !row.ok)) reasonCodes.push(`lifecycle_archive_lock_drift:${forum.boardId}`);
     boardProfiles.push({
       boardId: forum.boardId,
-      cardCount: rows.filter((row) => !row.superseded).length,
+      cardCount: managedRows.filter((row) => !row.superseded).length,
+      retainedLegacyHistoryCount: retainedRows.length,
       supersededCount: rows.filter((row) => row.superseded).length,
-      healthyCount: rows.filter((row) => !row.superseded && row.ok).length,
-      driftedCount: rows.filter((row) => !row.ok).length,
-      managedStarterCount: rows.filter((row) => row.starterContentSha256 && !row.reasonCodes?.includes("canonical_card_body_missing")).length,
-      journaledCount: rows.filter((row) => row.journalPresent).length,
+      healthyCount: managedRows.filter((row) => !row.superseded && row.ok).length,
+      driftedCount: managedRows.filter((row) => !row.ok).length,
+      managedStarterCount: managedRows.filter((row) => row.starterContentSha256 && !row.reasonCodes?.includes("canonical_card_body_missing")).length,
+      journaledCount: managedRows.filter((row) => row.journalPresent).length,
       appliedTagSafety: {
-        ok: orphanAppliedTagIds.length === 0 && ambiguousAppliedTags.length === 0,
+        ok: orphanAppliedTagIds.length === 0 && ambiguousAppliedTags.length === 0 && semanticRows.every((row) => row.exact),
         appliedTagIds,
         orphanAppliedTagIds,
         ambiguousAppliedTags,
         maxAppliedTags,
         overAppliedTagRows,
+        semanticRows,
       },
       lifecycle: {
         status: lifecycleRows.some((row) => !row.ok) ? "drifted" : "matches_or_not_applicable",
@@ -481,7 +516,12 @@ function buildCardProfileSummary({ consistency, forums, maxAppliedTags = 5 }) {
     threadId: row.threadId,
     cardId: row.cardId,
     superseded: row.superseded === true,
+    retainedLegacyHistory: row.retainedLegacyHistory === true,
+    legacyClassification: row.legacyClassification || null,
+    semanticStatus: row.semanticStatus || null,
+    type: row.type || null,
     state: row.state || null,
+    priority: row.priority || null,
     archived: row.archived === true,
     locked: row.locked === true,
     starterContentSha256: row.starterContentSha256 || null,
@@ -495,6 +535,8 @@ function buildCardProfileSummary({ consistency, forums, maxAppliedTags = 5 }) {
     enabledBoardCount: consistency?.enabledBoardCount || 0,
     uncoveredBoardCount: consistency?.uncoveredBoardCount || 0,
     currentCardCount: consistency?.cardCount || 0,
+    totalThreadCount: consistency?.totalThreadCount || 0,
+    retainedLegacyHistoryCount: consistency?.retainedLegacyHistoryCount || 0,
     healthyCardCount: consistency?.healthyCardCount || 0,
     driftedCardCount: consistency?.driftedCardCount || 0,
     supersededRecordCount: consistency?.supersededRecordCount || 0,
@@ -509,7 +551,7 @@ function buildCardProfileSummary({ consistency, forums, maxAppliedTags = 5 }) {
 }
 
 function isBlockingReason(code) {
-  return /^(board_registry_|forum_profile_|permission_role_|guild_channels_read_failed$|guild_roles_read_failed$|discord_bot_token_missing$|forum_channel_missing$|stale_forum_identity:|uncovered_live_board:|live_card_readback_incomplete$)/.test(code);
+  return /^(board_registry_|board_channel_(?:unresolved|ambiguous):|forum_profile_|permission_role_|guild_channels_read_failed$|guild_roles_read_failed$|discord_bot_token_missing$|forum_channel_missing$|stale_forum_identity:|uncovered_live_board:|live_card_readback_incomplete$)/.test(code);
 }
 
 async function buildLiveForumProfileScan({
@@ -607,7 +649,10 @@ async function buildLiveForumProfileScan({
   consistency ||= { status: "blocked", coverageStatus: "not_evaluated", rows: [], reasonCodes: ["live_card_readback_incomplete"] };
   if (consistency.status === "blocked" || consistency.coverageStatus !== "complete") reasonCodes.push("live_card_readback_incomplete");
 
-  const enabledBoards = (boardRegistry?.boards || []).filter((board) => board.required === true && board.status === "enabled");
+  const identityResolution = boardRegistryContract.resolveBoardChannelIdentities({ boardRegistry, registry: boardRegistry, channels });
+  reasonCodes.push(...identityResolution.reasonCodes);
+  const resolvedBoardRegistry = identityResolution.registry;
+  const enabledBoards = (resolvedBoardRegistry?.boards || []).filter((board) => board.required === true && board.status === "enabled");
   const roleResolutionByProfile = new Map();
   for (const permissionProfileId of unique(enabledBoards.map((board) => board.permissionProfile))) {
     const resolution = resolvePermissionRoles({
@@ -689,7 +734,7 @@ async function buildLiveForumProfileScan({
   };
   return {
     receipt,
-    context: { channels, guildRoles, consistency, roleResolutionByProfile, expectedOrder },
+      context: { channels, guildRoles, consistency, roleResolutionByProfile, expectedOrder, resolvedBoardRegistry, identityResolution: identityResolution.rows },
   };
 }
 
@@ -704,6 +749,7 @@ module.exports = {
   PERMISSION_BITS,
   CANONICAL_TAGS,
   _internals: {
+    CANONICAL_TAGS,
     text,
     unique,
     normalizedDecimal,
@@ -719,6 +765,7 @@ module.exports = {
     inspectDefaults,
     inspectForumChannel,
     lifecycleInspection,
+    canonicalAppliedTagNames,
     buildCardProfileSummary,
     isBlockingReason,
     buildLiveForumProfileScan,

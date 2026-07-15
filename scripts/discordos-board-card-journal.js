@@ -201,7 +201,7 @@ function validateEvent(event) {
   if (!event.card.summary) reasonCodes.push("card_summary_missing");
   if (!event.entry.headline) reasonCodes.push("journal_headline_missing");
   reasonCodes.push(...validateLifecycleTransition(event.card.previousState, event.card.state).reasonCodes);
-  if (event.card.state === AUTONOMOUS_EXECUTION_STATE) {
+  if (event.card.state === AUTONOMOUS_EXECUTION_STATE && event.entry.kind !== "owner_export_seed") {
     reasonCodes.push(...evaluateAutonomyAdmission(event.card).reasonCodes);
   }
   const textFindings = textIntegrity.inspectObjectText(event);

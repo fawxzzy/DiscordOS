@@ -66,6 +66,12 @@
       "ownerProject": "Playbook",
       "inputContract": "atlas.project-board.owner-export.v1"
     },
+    "socials-os-roadmap-v1": {
+      "kind": "owner_export",
+      "ownerProject": "Socials OS",
+      "inputContract": "atlas.project-board.owner-export.v1",
+      "defaultExportPath": "../socials-os/exports/atlas.project-board.owner-export.v1.json"
+    },
     "unadmitted-v1": {
       "kind": "blocked_admission",
       "readMode": "none"
@@ -231,7 +237,7 @@
       "forumChannelId": "1508139160853286942",
       "forumChannelName": "music-sesh",
       "role": "active",
-      "forumProfile": "legacy-active-v1",
+      "forumProfile": "project-active-v1",
       "permissionProfile": "restricted-single-writer-v1",
       "ownershipScope": "music-sesh:active",
       "sourceAdapter": "music-sesh-config-v1",
@@ -476,6 +482,35 @@
       "evidence": [
         "Live Discord readback on 2026-07-15 proved forum 1526814476857376858 as type 15 under the Project Feedback Boards category.",
         "Playbook owner export is exports/playbook.project-board.owner-export.v1.json on Playbook main."
+      ]
+    },
+    {
+      "id": "socials-os-active-admission",
+      "project": "Socials OS",
+      "required": true,
+      "forumChannelId": null,
+      "forumChannelName": "socials-os",
+      "channelIdentityResolution": "exact_name_under_category",
+      "role": "active",
+      "forumProfile": "project-active-v1",
+      "permissionProfile": "restricted-single-writer-v1",
+      "ownershipScope": "socials-os:active",
+      "sourceAdapter": "socials-os-roadmap-v1",
+      "stableCardNamespace": "socials-os",
+      "lifecycleNormalizationPolicy": "active-canonical-v1",
+      "reactionPolicy": "starter-status-reaction-v1",
+      "journalPolicy": "required-paginated-v1",
+      "completionDestination": "shared-completed",
+      "encodingPolicy": "utf8-no-mojibake-v1",
+      "status": "enabled",
+      "relationships": {
+        "replaces": [],
+        "replacedBy": []
+      },
+      "blockers": [],
+      "evidence": [
+        "The Socials OS owner adapter is admitted from the atlas.project-board.owner-export.v1 contract.",
+        "The initial channel identity is resolved exactly by name under the governed category during the serialized provision cluster and is then exact-ID scoped in the runtime receipt."
       ]
     }
   ]

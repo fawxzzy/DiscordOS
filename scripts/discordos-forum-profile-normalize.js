@@ -126,8 +126,9 @@ function buildNormalizationPlan({ boardRegistry, profileRegistry, scanReceipt, c
   const reasonCodes = normalizationBlockers(scanReceipt);
   const actions = [];
   const internalActions = [];
+  const resolvedRegistry = context.resolvedBoardRegistry || boardRegistry;
   for (const forum of scanReceipt.forums || []) {
-    const board = boardRegistry.boards.find((candidate) => candidate.id === forum.boardId);
+    const board = resolvedRegistry.boards.find((candidate) => candidate.id === forum.boardId);
     const expected = forumProfile.expectedBoardProfile(board, profileRegistry);
     const tags = tagPayload(forum);
     const roleResolution = context.roleResolutionByProfile.get(forum.permissionProfile) || { resolved: [], reasonCodes: ["permission_profile_resolution_missing"] };

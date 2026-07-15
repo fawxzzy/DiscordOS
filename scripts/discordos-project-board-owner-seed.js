@@ -54,9 +54,13 @@ function list(value) {
 }
 
 function activeBoardByProject(registry) {
-  return new Map((registry?.boards || [])
-    .filter((board) => board?.required === true && board?.role === "active" && board?.status === "enabled")
-    .map((board) => [text(board.project).toLowerCase(), board]));
+  const result = new Map();
+  for (const board of (registry?.boards || []).filter((candidate) => candidate?.required === true && candidate?.role === "active" && candidate?.status === "enabled")) {
+    for (const key of [board.project, board.stableCardNamespace]) {
+      if (text(key)) result.set(text(key).toLowerCase(), board);
+    }
+  }
+  return result;
 }
 
 function validateExport({ ownerExport, registry, seenCardIds }) {
@@ -70,24 +74,39 @@ function validateExport({ ownerExport, registry, seenCardIds }) {
   if (!board) reasonCodes.push("owner_export_enabled_board_missing");
   if (board && board.sourceAdapter !== ownerExport.adapter_id) reasonCodes.push("owner_export_adapter_mismatch");
   if (board && !text(board.forumChannelId)) reasonCodes.push("owner_export_forum_channel_missing");
+  const expectedBoardId = board ? `discordos:project-feedback:${text(board.stableCardNamespace)}` : null;
+  if (expectedBoardId && text(ownerExport?.board_id) !== expectedBoardId) reasonCodes.push("owner_export_board_id_mismatch");
 
   const textFindings = textIntegrity.inspectObjectText(ownerExport);
   if (textFindings.length > 0) reasonCodes.push("owner_export_text_integrity_failed");
 
+  const idempotencyKeys = new Set();
   for (const card of ownerExport?.cards || []) {
     const cardId = text(card?.record?.card_id).toLowerCase();
     if (!cardId) reasonCodes.push("owner_export_card_id_missing");
     else if (seenCardIds.has(cardId)) reasonCodes.push(`owner_export_card_id_duplicate:${cardId}`);
     else seenCardIds.add(cardId);
+    const idempotencyKey = text(card?.idempotency_key);
+    if (!idempotencyKey) reasonCodes.push(`owner_export_idempotency_key_missing:${cardId || "unknown"}`);
+    else if (idempotencyKeys.has(idempotencyKey)) reasonCodes.push(`owner_export_idempotency_key_duplicate:${idempotencyKey}`);
+    else idempotencyKeys.add(idempotencyKey);
     if (text(card?.record?.project_id).toLowerCase() !== text(ownerExport?.project_id).toLowerCase()) {
       reasonCodes.push(`owner_export_card_project_mismatch:${cardId || "unknown"}`);
     }
     if (!text(card?.record?.title)) reasonCodes.push(`owner_export_card_title_missing:${cardId || "unknown"}`);
+    if (expectedBoardId && text(card?.record?.board_id) !== expectedBoardId) {
+      reasonCodes.push(`owner_export_card_board_mismatch:${cardId || "unknown"}`);
+    }
     if (!text(card?.content?.summary)) reasonCodes.push(`owner_export_card_summary_missing:${cardId || "unknown"}`);
     const lifecycle = text(card?.record?.lifecycle).toLowerCase();
     if (!TERMINAL_LIFECYCLES.has(lifecycle) && !LIFECYCLE_MAP.has(lifecycle)) {
       reasonCodes.push(`owner_export_card_lifecycle_unsupported:${cardId || "unknown"}`);
     }
+  }
+  if (ownerExport?.adapter_id === "socials-os-roadmap-v1") {
+    if ((ownerExport.cards || []).length !== 12) reasonCodes.push("socials_owner_export_event_count_mismatch");
+    if (ownerExport?.extensions?.selection?.roadmap_record_count !== 21) reasonCodes.push("socials_owner_export_stable_record_count_mismatch");
+    if (ownerExport?.extensions?.selection?.exported_nonterminal_count !== 12) reasonCodes.push("socials_owner_export_nonterminal_count_mismatch");
   }
   return { board, reasonCodes: [...new Set(reasonCodes)].sort() };
 }

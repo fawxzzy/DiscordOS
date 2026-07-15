@@ -33,9 +33,10 @@ function permissionOverwrites() {
 
 function exactChannels() {
   return boardRegistry.boards.map((board) => {
-    const expected = forumProfile.expectedBoardProfile(board, profileRegistry);
+    const resolvedBoard = board.id === "socials-os-active-admission" ? { ...board, forumChannelId: "socials-forum" } : board;
+    const expected = forumProfile.expectedBoardProfile(resolvedBoard, profileRegistry);
     return {
-      id: board.forumChannelId,
+      id: resolvedBoard.forumChannelId,
       guild_id: boardRegistry.guildId,
       name: expected.structure.name,
       topic: expected.structure.topic,
@@ -66,8 +67,8 @@ function consistency(rows = []) {
     status: "consistent",
     inventorySource: "registry",
     coverageStatus: "complete",
-    registeredBoardCount: 12,
-    enabledBoardCount: 12,
+    registeredBoardCount: 13,
+    enabledBoardCount: 13,
     uncoveredBoardCount: 0,
     cardCount: rows.filter((row) => !row.superseded).length,
     healthyCardCount: rows.filter((row) => !row.superseded && row.ok).length,
@@ -86,10 +87,10 @@ function scanOptions(channels = exactChannels(), roles = guildRoles, cardConsist
   return { channels, guildRoles: roles, consistency: cardConsistency };
 }
 
-test("canonical forum profile validates the 12-board and 17-tag denominator", () => {
+test("canonical forum profile validates the 13-board and 17-tag denominator", () => {
   const result = forumProfile.validateProfileRegistry(profileRegistry, boardRegistry);
   assert.equal(result.ok, true);
-  assert.equal(result.boardCount, 12);
+  assert.equal(result.boardCount, 13);
   assert.equal(result.tagCount, 17);
   assert.equal(profileRegistry.tagTaxonomy.maxAppliedTags, 5);
 });
@@ -127,7 +128,7 @@ test("read-only scanner proves an exact profile and redacts live role ids", asyn
   assert.equal(receipt.ok, true);
   assert.equal(receipt.status, "consistent");
   assert.equal(receipt.denominator.coverageStatus, "complete");
-  assert.equal(receipt.forums.length, 12);
+  assert.equal(receipt.forums.length, 13);
   assert.equal(receipt.forums.every((forum) => forum.tags.expectedCount === 17), true);
   const rendered = JSON.stringify(receipt);
   assert.equal(rendered.includes(roleIds.verified), false);
@@ -201,7 +202,7 @@ test("an exact profile produces an idempotent zero-action plan", async () => {
   assert.equal(receipt.ok, true);
   assert.equal(receipt.status, "dry_run_ready");
   assert.equal(receipt.plan.actionCount, 0);
-  assert.equal(receipt.plan.unchangedCount, 12);
+  assert.equal(receipt.plan.unchangedCount, 13);
 });
 
 test("apply requires both guards before scanning or writing", async () => {
@@ -220,7 +221,7 @@ test("apply requires both guards before scanning or writing", async () => {
   assert.equal(scanned, false);
 });
 
-test("guarded apply patches once and performs exact 12-board readback", async () => {
+test("guarded apply patches once and performs exact 13-board readback", async () => {
   const channels = exactChannels();
   channels[0].topic = "drifted topic";
   const channelById = new Map(channels.map((channel) => [channel.id, channel]));
@@ -253,7 +254,7 @@ test("guarded apply patches once and performs exact 12-board readback", async ()
   assert.equal(receipt.writes.length, 1);
   assert.equal(receipt.readback.ok, true);
   assert.equal(calls.filter((call) => call.method === "PATCH").length, 1);
-  assert.equal(calls.filter((call) => call.method === "GET").length, 12);
+  assert.equal(calls.filter((call) => call.method === "GET").length, 13);
 });
 
 test("unknown required roles fail closed", async () => {
