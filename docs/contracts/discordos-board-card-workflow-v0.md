@@ -80,6 +80,8 @@ A Windows-1252-to-UTF-8 recovery candidate is valid only when reconstructing its
 
 Every rendered journal event field is checked before a starter or journal body is produced. Generic forum-card upserts validate the complete proposed title and payload, then require exact post-write title and starter readback with expected and actual code-point evidence. Marker-only or ASCII-substituted readback is not success.
 
+Discord system history is classified separately from mutable board content. Discord documents `CHANNEL_NAME_CHANGE` (`type 4`) and other system-message types as non-deletable, and rejects attempted mutation with API error `50021` (`Cannot execute action on a system message`): <https://docs.discord.com/developers/resources/message> and <https://docs.discord.com/developers/topics/opcodes-and-status-codes>. Corrupt system history on an already-superseded, archived thread remains reported with exact IDs and code points, but is retained as immutable evidence rather than counted as actionable board drift. The same finding on a current thread remains actionable and requires a clean replacement/retirement flow. Cleanup commands must never retry deletion of a documented non-deletable system-message type.
+
 ## Authoritative board registry
 
 `config/discordos-board-registry.json` is the single machine-readable denominator for governed Discord project boards. Every entry declares:
@@ -109,6 +111,7 @@ The registry-driven cross-board consistency scanner reports:
 - incomplete archived-thread or journal-message pagination
 - Unicode/text-integrity counts by board, surface, and corruption pattern
 - exact thread IDs and message IDs for title, starter, and journal findings on both current and superseded rows
+- separate actionable and immutable-system-history finding totals
 
 The scanner reads archived forum inventory and card history through shared bounded pagination. A failed page, missing pagination cursor, or exhausted page bound fails closed; the scanner must never infer journal absence, completion, or text cleanliness from only the first 100 messages. Superseded rows are inspected across title, starter, and complete journal history before their lifecycle-specific result is returned.
 

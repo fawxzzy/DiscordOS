@@ -14,6 +14,7 @@ const {
 
 const DEFAULT_REGISTRY_PATH = path.resolve(__dirname, "..", "config", "discordos-board-registry.json");
 const FORUM_CHANNEL_TYPE = 15;
+const NON_DELETABLE_SYSTEM_MESSAGE_TYPES = new Set([1, 2, 3, 4, 5, 21]);
 
 function readValue(args, index, code) {
   const value = args[index + 1];
@@ -57,13 +58,27 @@ function hasJournal(messages) {
   );
 }
 
-function inspectTextSurface({ boardId, threadId, messageId = null, surface, value }) {
+function inspectTextSurface({
+  boardId,
+  threadId,
+  messageId = null,
+  messageType = null,
+  messageAuthorId = null,
+  messageAuthorBot = null,
+  surface,
+  value,
+}) {
   const classification = textIntegrity.classifyText(String(value || ""));
   return classification.findings.map((finding) => ({
     boardId,
     threadId,
     messageId,
     surface,
+    messageType,
+    messageAuthorId,
+    messageAuthorBot,
+    nonDeletableSystemMessage: Number.isInteger(messageType)
+      && NON_DELETABLE_SYSTEM_MESSAGE_TYPES.has(messageType),
     pattern: finding.pattern,
     start: finding.start,
     end: finding.end,
@@ -97,6 +112,9 @@ function inspectThreadTextIntegrity({ board, thread, starter, messages }) {
       boardId: board.id,
       threadId: thread.id,
       messageId: message?.id || null,
+      messageType: Number.isInteger(message?.type) ? message.type : null,
+      messageAuthorId: message?.author?.id || null,
+      messageAuthorBot: message?.author?.bot === true,
       surface: "journal",
       value: message?.content,
     }));
@@ -118,12 +136,26 @@ function inspectThreadTextIntegrity({ board, thread, starter, messages }) {
 
 function inspectThread({ board, thread, starter, messages }) {
   const content = String(starter?.content || "");
-  const textIntegrityResult = inspectThreadTextIntegrity({ board, thread, starter, messages });
-  const textReasonCodes = [];
-  if (textIntegrityResult.surfaceCounts.title) textReasonCodes.push("card_title_encoding_corrupt");
-  if (textIntegrityResult.surfaceCounts.starter) textReasonCodes.push("card_starter_encoding_corrupt");
-  if (textIntegrityResult.surfaceCounts.journal) textReasonCodes.push("card_history_encoding_corrupt");
   const supersededThreadId = content.match(/ATLAS-SUPERSEDED-CARD:\s*`([0-9]+)`/i)?.[1] || null;
+  const inspectedTextIntegrity = inspectThreadTextIntegrity({ board, thread, starter, messages });
+  const immutableSystemHistoryFindings = supersededThreadId
+    ? inspectedTextIntegrity.findings.filter((finding) => finding.nonDeletableSystemMessage)
+    : [];
+  const actionableFindings = inspectedTextIntegrity.findings.filter((finding) =>
+    !supersededThreadId || !finding.nonDeletableSystemMessage
+  );
+  const textIntegrityResult = {
+    ...inspectedTextIntegrity,
+    ok: actionableFindings.length === 0,
+    actionableFindingCount: actionableFindings.length,
+    actionableFindings,
+    immutableSystemHistoryFindingCount: immutableSystemHistoryFindings.length,
+    immutableSystemHistoryFindings,
+  };
+  const textReasonCodes = [];
+  if (actionableFindings.some((finding) => finding.surface === "title")) textReasonCodes.push("card_title_encoding_corrupt");
+  if (actionableFindings.some((finding) => finding.surface === "starter")) textReasonCodes.push("card_starter_encoding_corrupt");
+  if (actionableFindings.some((finding) => finding.surface === "journal")) textReasonCodes.push("card_history_encoding_corrupt");
   if (supersededThreadId) {
     const archived = thread?.thread_metadata?.archived === true;
     const reasonCodes = [...textReasonCodes];
@@ -325,7 +357,11 @@ function emptyConsistencyResult({ coverage, status = "blocked", reasonCodes = []
     driftedCardCount: 0,
     driftCounts: {},
     textIntegrityFindingCount: 0,
+    actionableTextIntegrityFindingCount: 0,
+    immutableSystemHistoryFindingCount: 0,
     textIntegrityCounts: { byBoard: {}, bySurface: {}, byPattern: {} },
+    actionableTextIntegrityFindings: [],
+    immutableSystemHistoryFindings: [],
     textIntegrityFindings: [],
     duplicates: [],
     linkedPairs: [],
@@ -445,8 +481,14 @@ async function buildBoardCardConsistency({ payload, registry, env = process.env,
     for (const code of row.reasonCodes) driftCounts[code] = (driftCounts[code] || 0) + 1;
   }
   const textIntegrityFindings = rows.flatMap((row) =>
-    (row.textIntegrity?.findings || []).map((finding) => ({ ...finding, superseded: row.superseded }))
+    (row.textIntegrity?.findings || []).map((finding) => ({
+      ...finding,
+      superseded: row.superseded,
+      immutableSystemHistory: row.superseded === true && finding.nonDeletableSystemMessage === true,
+    }))
   );
+  const actionableTextIntegrityFindings = textIntegrityFindings.filter((finding) => !finding.immutableSystemHistory);
+  const immutableSystemHistoryFindings = textIntegrityFindings.filter((finding) => finding.immutableSystemHistory);
   const textIntegrityCounts = { byBoard: {}, bySurface: {}, byPattern: {} };
   for (const finding of textIntegrityFindings) {
     textIntegrityCounts.byBoard[finding.boardId] = (textIntegrityCounts.byBoard[finding.boardId] || 0) + 1;
@@ -468,8 +510,12 @@ async function buildBoardCardConsistency({ payload, registry, env = process.env,
     driftedCardCount: currentRows.filter((row) => !row.ok).length + supersededRows.filter((row) => !row.ok).length,
     driftCounts,
     textIntegrityFindingCount: textIntegrityFindings.length,
+    actionableTextIntegrityFindingCount: actionableTextIntegrityFindings.length,
+    immutableSystemHistoryFindingCount: immutableSystemHistoryFindings.length,
     textIntegrityCounts,
     textIntegrityFindings,
+    actionableTextIntegrityFindings,
+    immutableSystemHistoryFindings,
     duplicates,
     linkedPairs,
     autonomyAdmittedCardCount: currentRows.filter((row) => row.autonomy?.admitted).length,
@@ -505,6 +551,8 @@ function renderMarkdown(result) {
     `- drifted: \`${result.driftedCardCount || 0}\``,
     `- autonomous-ready: \`${result.autonomyAdmittedCardCount || 0}\``,
     `- invalid-ready: \`${result.autonomyBlockedReadyCardCount || 0}\``,
+    `- actionable text findings: \`${result.actionableTextIntegrityFindingCount || 0}\``,
+    `- immutable system-history findings: \`${result.immutableSystemHistoryFindingCount || 0}\``,
   ];
   for (const board of result.blockedBoards || []) lines.push(`- blocked board: \`${board.id}\``);
   for (const board of result.uncoveredBoards || []) lines.push(`- uncovered board: \`${board.channelName || board.channelId}\``);
@@ -546,6 +594,7 @@ module.exports = {
     hasJournal,
     inspectTextSurface,
     inspectThreadTextIntegrity,
+    NON_DELETABLE_SYSTEM_MESSAGE_TYPES,
     inspectThread,
     classifyIdentities,
     findDuplicates,

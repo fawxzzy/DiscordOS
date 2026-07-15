@@ -10,6 +10,7 @@ const {
 const CLEANUP_ENV = "DISCORDOS_BOARD_ENCODING_CLEANUP";
 const CLEANUP_ENV_VALUE = "enabled";
 const THREAD_NAME_CHANGE_MESSAGE_TYPE = 4;
+const NON_DELETABLE_SYSTEM_MESSAGE_TYPES = new Set([1, 2, 3, 4, 5, 21]);
 
 function readValue(args, index, code) {
   const value = args[index + 1];
@@ -43,7 +44,21 @@ function resolveAdmission({ allowApply, env }) {
 
 function classifyMessage({ message, thread, botUserId }) {
   const runs = journal.findMojibakeRuns(message?.content);
-  if (runs.length === 0) return { suspicious: false, eligible: false, reasonCodes: [] };
+  if (runs.length === 0) {
+    return { suspicious: false, eligible: false, immutable: false, reasonCodes: [], retentionReasonCodes: [] };
+  }
+  const immutable = Number.isInteger(message?.type) && NON_DELETABLE_SYSTEM_MESSAGE_TYPES.has(message.type);
+  if (immutable) {
+    return {
+      suspicious: true,
+      eligible: false,
+      immutable: true,
+      repairedText: null,
+      runs,
+      reasonCodes: [],
+      retentionReasonCodes: ["encoding_cleanup_discord_system_message_immutable"],
+    };
+  }
   const reasonCodes = [];
   if (message?.id === thread?.id) reasonCodes.push("encoding_cleanup_starter_message_protected");
   if (message?.type !== THREAD_NAME_CHANGE_MESSAGE_TYPE) reasonCodes.push("encoding_cleanup_non_rename_message_protected");
@@ -54,9 +69,11 @@ function classifyMessage({ message, thread, botUserId }) {
   return {
     suspicious: true,
     eligible: reasonCodes.length === 0,
+    immutable: false,
     repairedText: journal.repairMojibakeText(message?.content),
     runs,
     reasonCodes,
+    retentionReasonCodes: [],
   };
 }
 
@@ -73,7 +90,17 @@ async function buildBoardEncodingCleanup({
   if (!token) reasonCodes.push("discord_bot_token_missing");
   if (apply && !admission.admitted) reasonCodes.push("board_encoding_cleanup_not_admitted");
   if (reasonCodes.length > 0) {
-    return { ok: false, status: "blocked", apply, admission, candidateCount: 0, deletedCount: 0, rows: [], reasonCodes };
+    return {
+      ok: false,
+      status: "blocked",
+      apply,
+      admission,
+      candidateCount: 0,
+      immutableCount: 0,
+      deletedCount: 0,
+      rows: [],
+      reasonCodes,
+    };
   }
 
   const bot = await cardContract.discordRequest({ path: "/users/@me", token, fetchImpl });
@@ -84,6 +111,7 @@ async function buildBoardEncodingCleanup({
       apply,
       admission,
       candidateCount: 0,
+      immutableCount: 0,
       deletedCount: 0,
       rows: [],
       reasonCodes: ["discord_bot_identity_read_failed"],
@@ -123,11 +151,17 @@ async function buildBoardEncodingCleanup({
           threadId: thread.id,
           messageId: message.id,
           eligible: classification.eligible,
-          action: classification.eligible ? (apply ? "delete" : "would_delete") : "protected",
+          immutable: classification.immutable,
+          action: classification.immutable
+            ? "retain_immutable_system_history"
+            : classification.eligible
+              ? (apply ? "delete" : "would_delete")
+              : "protected",
           deleted: false,
           readbackDeleted: false,
           runs: classification.runs,
           reasonCodes: [...classification.reasonCodes],
+          retentionReasonCodes: [...classification.retentionReasonCodes],
         };
         if (apply && classification.eligible) {
           const deleted = await cardContract.discordRequest({
@@ -157,14 +191,24 @@ async function buildBoardEncodingCleanup({
 
   for (const row of rows) reasonCodes.push(...row.reasonCodes.map((code) => `${code}:${row.messageId}`));
   const candidateCount = rows.filter((row) => row.eligible).length;
+  const immutableCount = rows.filter((row) => row.immutable).length;
   const deletedCount = rows.filter((row) => row.deleted && row.readbackDeleted).length;
   const ok = reasonCodes.length === 0 && rows.every((row) => row.ok);
   return {
     ok,
-    status: ok ? (rows.length === 0 ? "clean" : apply ? "cleaned" : "dry_run") : "blocked",
+    status: ok
+      ? rows.length === 0
+        ? "clean"
+        : candidateCount === 0 && immutableCount > 0
+          ? "immutable_system_history_retained"
+          : apply
+            ? "cleaned"
+            : "dry_run"
+      : "blocked",
     apply,
     admission,
     candidateCount,
+    immutableCount,
     deletedCount,
     rows,
     reasonCodes: [...new Set(reasonCodes)],
@@ -178,6 +222,7 @@ function renderMarkdown(result) {
     `- status: \`${result.status}\``,
     `- apply: \`${result.apply}\``,
     `- candidates: \`${result.candidateCount || 0}\``,
+    `- immutable system history: \`${result.immutableCount || 0}\``,
     `- deleted: \`${result.deletedCount || 0}\``,
     `- reason codes: \`${result.reasonCodes.join(", ") || "none"}\``,
     "",
@@ -208,6 +253,7 @@ module.exports = {
     CLEANUP_ENV,
     CLEANUP_ENV_VALUE,
     THREAD_NAME_CHANGE_MESSAGE_TYPE,
+    NON_DELETABLE_SYSTEM_MESSAGE_TYPES,
     parseArgs,
     resolveAdmission,
     classifyMessage,
