@@ -47,7 +47,7 @@ These are preserved as exact reopen intents pending a governed changed-evidence 
 
 The canonical `fawxzzy-mazer` production deployment and alias were not changed. The UI packet used the named READY preview above.
 
-During controls proof, an unlinked isolated worktree caused Vercel CLI to create a separate project named `mazer-fluid-zigzag-intent-resolver` and deployment `dpl_DBjfTqLeeZ96FDkSKQre3ma3mZhs`. Vercel labeled that isolated project's first deployment as production, but it did not promote, alias, or mutate canonical Mazer production. Further Vercel mutation stopped, generated local linkage files were removed, and remote-project deletion is deferred for explicit operator direction.
+During controls proof, an unlinked isolated worktree caused Vercel CLI to create a separate project named `mazer-fluid-zigzag-intent-resolver` and deployment `dpl_DBjfTqLeeZ96FDkSKQre3ma3mZhs`. Vercel labeled that isolated project's first deployment as production, but it did not promote, alias, or mutate canonical Mazer production. Further deployment mutation stopped and generated local linkage files were removed. After explicit operator direction, the isolated project and its deployments were deleted at `2026-07-15T15:02:50.688Z`; exact readback now reports no project for that name. Canonical project `fawxzzy-mazer` remains present as `prj_t3zothbtj9DExrh3FjMsH98hwwSZ`.
 
 ## Disposition
 
