@@ -1,0 +1,225 @@
+{
+  "events": [
+    {
+      "schemaVersion": "atlas.board-card-journal.v1",
+      "eventId": "mazer-cross-viewport-iphone-text-containment-review-20260715",
+      "occurredAt": "2026-07-15T17:01:54.360Z",
+      "actor": "Mazer",
+      "card": {
+        "id": "mazer-cross-viewport-ui-reliability",
+        "project": "Mazer",
+        "sourceForumChannelId": "1524889569475170478",
+        "threadId": "1525337748830031875",
+        "title": "cross-viewport UI reliability and layout hardening",
+        "type": "feature",
+        "state": "review",
+        "previousState": "review",
+        "priority": "High",
+        "owner": "Mazer",
+        "progress": "96%",
+        "summary": "Unify phone, browser, and installed-app geometry so menu, play, Options, and Pause share measured safe content, status, overlay, motion, and fallback-background rules.",
+        "objective": "Remove physical-device clipping, overlap, inconsistent sibling layouts, uncomfortable trail motion, fake scroll affordances, and purple safe-area bleed without introducing screenshot-specific offsets.",
+        "acceptanceCriteria": [
+          "Menu and play use one contained two-row status layout beside Pause at phone widths.",
+          "Options and Pause share guide, control-row, scroll, and pinned-action geometry.",
+          "Physical iPhone text remains inside status, guide, row, and button borders.",
+          "Page, app, Phaser, theme, and installed-app fallback backgrounds do not expose purple safe-area bands.",
+          "Fresh physical iPhone Safari and installed-PWA proof confirms the corrected release."
+        ],
+        "discoveries": [
+          "Fresh physical-iPhone production screenshots showed native glyph widths and line boxes exceeding the ideal canvas reserve.",
+          "Status rows, guide copy, toggle descriptions, and clipped-edge scroll fragments shared the same optimistic fitting failure."
+        ],
+        "nextActions": [
+          "Review the PR #75 build on physical iPhone Safari or the next explicitly approved production release.",
+          "Complete only if the phone review confirms no clipping, overlap, border collision, purple bleed, sibling drift, or uncomfortable motion."
+        ],
+        "blockers": [
+          "Fresh operator physical-iPhone proof of the corrected build is still required."
+        ],
+        "evidence": [
+          "Mazer draft PR #75 is at ee20811b2d65dbdc6f36ba8f0b1684224db06972.",
+          "The exact branch passed 49 files / 363 tests, lint, build, and diff checks.",
+          "Local 390x844 DPR3 proof reported zero text-fit, overlap, offscreen, guide-containment, button-containment, console, or page errors.",
+          "Preview deployment dpl_DszBuTLSr4TaU1QxFMqFJ2t8y1Nm is READY at https://fawxzzy-mazer-bsygbvwk7-fawxzzy.vercel.app."
+        ]
+      },
+      "entry": {
+        "kind": "verification",
+        "headline": "Physical-iPhone text containment correction is ready for device review",
+        "completed": [
+          "Added shared physical-width reserves and compact padding for native phone text.",
+          "Separated toggle descriptions from borders and removed fake clipped-edge card fragments.",
+          "Verified the exact PR branch locally and on its hosted preview."
+        ],
+        "discovered": [
+          "The prior proof measured ideal canvas text but did not reserve enough width and height for physical iPhone rendering."
+        ],
+        "next": [
+          "Collect fresh physical-iPhone screenshots from the corrected build.",
+          "Keep the card in Review until that evidence is clean."
+        ],
+        "blockers": [
+          "Physical-device acceptance remains external evidence."
+        ],
+        "evidence": [
+          "https://github.com/fawxzzy/mazer/pull/75",
+          "https://fawxzzy-mazer-bsygbvwk7-fawxzzy.vercel.app",
+          "dpl_DszBuTLSr4TaU1QxFMqFJ2t8y1Nm"
+        ]
+      },
+      "correlation": {
+        "taskId": "019f61a0-6b80-7913-b479-f75f2a8a5b77",
+        "branch": "codex/physical-iphone-text-containment",
+        "commit": "ee20811b2d65dbdc6f36ba8f0b1684224db06972",
+        "receipt": "docs/ops/discordos-mazer-physical-iphone-text-containment-reconciliation-2026-07-15.md"
+      }
+    },
+    {
+      "schemaVersion": "atlas.board-card-journal.v1",
+      "eventId": "mazer-browser-layout-iphone-text-containment-open-20260715",
+      "occurredAt": "2026-07-15T17:01:54.360Z",
+      "actor": "Mazer",
+      "card": {
+        "id": "mazer-browser-layout-persistence",
+        "project": "Mazer",
+        "sourceForumChannelId": "1524889569475170478",
+        "threadId": "1525337752290197514",
+        "title": "normalize browser UI layout across viewports",
+        "type": "feature",
+        "state": "opened",
+        "previousState": "opened",
+        "priority": "High",
+        "owner": "Mazer",
+        "progress": "88%",
+        "summary": "Normalize responsive browser geometry so narrow layouts cannot overlap, escape, or replay stale dimensions after viewport changes.",
+        "objective": "Recompute layout from the active content rectangle while reserving for physical-device text metrics and preserving only semantic user intent.",
+        "acceptanceCriteria": [
+          "No viewport-derived geometry is persisted across incompatible browser states.",
+          "Menu, Options, play, Pause, and dialogs remain contained through supported viewport transitions.",
+          "Physical-phone glyph width and line height are represented by the shared fitting contract.",
+          "Native maximize, restore, browser-chrome, and phone evidence have deterministic expected outcomes."
+        ],
+        "discoveries": [
+          "Physical-iPhone screenshots exposed a text-metric reserve gap even though ideal 390x844 diagnostics passed.",
+          "The correction remains fully layout-derived and adds no persisted geometry."
+        ],
+        "nextActions": [
+          "Collect fresh physical-iPhone proof for PR #75.",
+          "Extend the deterministic fixture to native maximize, restore, and browser-chrome changes."
+        ],
+        "blockers": [
+          "Fresh physical-iPhone acceptance and native maximize/restore automation remain open."
+        ],
+        "evidence": [
+          "Mazer draft PR #75 is at ee20811b2d65dbdc6f36ba8f0b1684224db06972.",
+          "The exact branch passed 49 files / 363 tests, lint, build, and diff checks.",
+          "Hosted 390x844 preview diagnostics report zero text-fit, overlap, offscreen, console, or page errors.",
+          "Preview deployment dpl_DszBuTLSr4TaU1QxFMqFJ2t8y1Nm is READY."
+        ]
+      },
+      "entry": {
+        "kind": "verification",
+        "headline": "Browser layout fitting now reserves for physical iPhone text metrics",
+        "completed": [
+          "Added physical-width safety ratios without persisting viewport geometry.",
+          "Verified responsive status, guide, controls, scrolling, and buttons on the hosted phone preview."
+        ],
+        "discovered": [
+          "Ideal canvas text measurements were insufficient to guarantee physical-device containment."
+        ],
+        "next": [
+          "Run the corrected build on the physical iPhone.",
+          "Retain native browser transition automation as the remaining persistence lane."
+        ],
+        "blockers": [
+          "Physical-device acceptance and native transition proof remain open."
+        ],
+        "evidence": [
+          "https://github.com/fawxzzy/mazer/pull/75",
+          "https://fawxzzy-mazer-bsygbvwk7-fawxzzy.vercel.app",
+          "dpl_DszBuTLSr4TaU1QxFMqFJ2t8y1Nm"
+        ]
+      },
+      "correlation": {
+        "taskId": "019f61a0-6b80-7913-b479-f75f2a8a5b77",
+        "branch": "codex/physical-iphone-text-containment",
+        "commit": "ee20811b2d65dbdc6f36ba8f0b1684224db06972",
+        "receipt": "docs/ops/discordos-mazer-physical-iphone-text-containment-reconciliation-2026-07-15.md"
+      }
+    },
+    {
+      "schemaVersion": "atlas.board-card-journal.v1",
+      "eventId": "mazer-shared-status-iphone-text-containment-review-20260715",
+      "occurredAt": "2026-07-15T17:01:54.360Z",
+      "actor": "Mazer",
+      "card": {
+        "id": "mazer-shared-run-status-panel",
+        "project": "Mazer",
+        "sourceForumChannelId": "1524889569475170478",
+        "threadId": "1526644909241667644",
+        "title": "shared menu and play run status panel",
+        "type": "feature",
+        "state": "review",
+        "previousState": "review",
+        "priority": "High",
+        "owner": "Mazer",
+        "progress": "90%",
+        "summary": "Use one two-row status component in menu AI and active play for time, contextual rank, score out of 100, and maze level.",
+        "objective": "Make menu and play progression information visually identical, readable, and contained while preserving the canonical score-data boundary.",
+        "acceptanceCriteria": [
+          "Menu and play consume the same status-panel layout and formatting contract.",
+          "Time, contextual Rank, Score out of 100, and Maze Lvl remain inside their phone and desktop borders.",
+          "The play panel fits its measured lane beside Pause without overlap.",
+          "Displayed score remains traceable to the canonical run-quality contract."
+        ],
+        "discoveries": [
+          "Physical-iPhone production screenshots showed the second status row crossing the right border in menu and play.",
+          "The shared fix now reserves physical width in both contexts."
+        ],
+        "nextActions": [
+          "Review the corrected panel on a physical iPhone.",
+          "Confirm final score-field authority before terminal completion."
+        ],
+        "blockers": [
+          "Fresh physical-iPhone proof and final canonical score-field traceability remain required."
+        ],
+        "evidence": [
+          "Mazer draft PR #75 is at ee20811b2d65dbdc6f36ba8f0b1684224db06972.",
+          "Local 390x844 DPR3 and hosted preview proof report contained 252x60 menu and 248x60 play panels with textFits true.",
+          "The exact branch passed 49 files / 363 tests, lint, build, and diff checks.",
+          "Preview deployment dpl_DszBuTLSr4TaU1QxFMqFJ2t8y1Nm is READY."
+        ]
+      },
+      "entry": {
+        "kind": "verification",
+        "headline": "Shared status panel text containment is ready for device review",
+        "completed": [
+          "Increased the compact panel reserve and reduced compact type pressure through one shared menu/play contract.",
+          "Verified both status contexts locally and on the hosted phone preview."
+        ],
+        "discovered": [
+          "The physical iPhone rendered the second status row wider than the prior proof model."
+        ],
+        "next": [
+          "Collect fresh physical-iPhone status screenshots.",
+          "Confirm score-field authority before completion."
+        ],
+        "blockers": [
+          "Physical-device acceptance and score authority remain open."
+        ],
+        "evidence": [
+          "https://github.com/fawxzzy/mazer/pull/75",
+          "https://fawxzzy-mazer-bsygbvwk7-fawxzzy.vercel.app",
+          "dpl_DszBuTLSr4TaU1QxFMqFJ2t8y1Nm"
+        ]
+      },
+      "correlation": {
+        "taskId": "019f61a0-6b80-7913-b479-f75f2a8a5b77",
+        "branch": "codex/physical-iphone-text-containment",
+        "commit": "ee20811b2d65dbdc6f36ba8f0b1684224db06972",
+        "receipt": "docs/ops/discordos-mazer-physical-iphone-text-containment-reconciliation-2026-07-15.md"
+      }
+    }
+  ]
+}
