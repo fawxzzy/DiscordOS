@@ -11,6 +11,7 @@ function ownerExport(overrides = {}) {
     contract_version: _internals.OWNER_EXPORT_CONTRACT,
     export_id: "pbe_discordos_test",
     project_id: "discordos",
+    board_id: "discordos:project-feedback:discordos",
     owner: "discordos",
     adapter_id: "discordos-owner-registry-v1",
     source_revision: "sha256:test",
@@ -18,7 +19,7 @@ function ownerExport(overrides = {}) {
     cards: [{
       idempotency_key: "pbk_discordos_dos-999_v1",
       record: {
-        card_id: "DOS-999", project_id: "discordos", title: "Seed adapter test", card_type: "automation",
+        card_id: "DOS-999", project_id: "discordos", board_id: "discordos:project-feedback:discordos", title: "Seed adapter test", card_type: "automation",
         lifecycle: "planning", priority: null, owner: "discordos", updated_at: "2026-07-15T00:00:00.000Z",
         source_ref: "repos/DiscordOS/config/test.json#DOS-999",
       },

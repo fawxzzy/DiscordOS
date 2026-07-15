@@ -8,7 +8,7 @@ const DEFAULT_REGISTRY_PATH = path.resolve(__dirname, "..", "config", "discordos
 const DEFAULT_CATEGORY_ID = "1508057063874629684";
 const PROVISION_ENV = "DISCORDOS_PROJECT_BOARD_FORUM_PROVISION";
 const PROVISION_ENV_VALUE = "enabled";
-const EXPECTED_TARGET_COUNT = 7;
+const EXPECTED_TARGET_COUNT = 8;
 
 function readValue(args, index, code) {
   const value = args[index + 1];

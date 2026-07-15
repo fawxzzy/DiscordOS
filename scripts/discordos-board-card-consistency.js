@@ -13,6 +13,19 @@ const {
   _internals: textIntegrity,
 } = require("./discordos-board-text-integrity");
 
+const MUSIC_SESH_PHASE_8_THREAD_ID = "1508141153835421798";
+const MUSIC_SESH_PHASE_8_CARD_ID = "music-sesh-phase-8-cross-service-room-sync-simple-controls";
+
+function legacyDisposition(boardId, threadId, managed) {
+  if (managed) return null;
+  if (boardId === "music-sesh-active" && threadId === MUSIC_SESH_PHASE_8_THREAD_ID) {
+    return { classification: "active_managed_candidate", cardId: MUSIC_SESH_PHASE_8_CARD_ID };
+  }
+  if (boardId === "music-sesh-active") return { classification: "retained_legacy_history", cardId: null };
+  if (boardId === "legacy-general-feedback") return { classification: "retained_unresolved_legacy", cardId: null };
+  return null;
+}
+
 const DEFAULT_REGISTRY_PATH = path.resolve(__dirname, "..", "config", "discordos-board-registry.json");
 const FORUM_CHANNEL_TYPE = 15;
 const NON_DELETABLE_SYSTEM_MESSAGE_TYPES = new Set([1, 2, 3, 4, 5, 21]);
@@ -183,7 +196,7 @@ function inspectThread({ board, thread, starter, messages }) {
       state: "superseded",
       archived,
       locked,
-      appliedTagIds: Array.isArray(thread?.applied_tags) ? [...thread.applied_tags].sort() : [],
+      appliedTagIds: Array.isArray(thread?.applied_tags) ? [...thread.applied_tags] : [],
       superseded: true,
       supersededThreadId,
       completedThreadIdLink: null,
@@ -198,6 +211,7 @@ function inspectThread({ board, thread, starter, messages }) {
   const cardId = parseCardId(content);
   const state = parseCardState(content);
   const parsedCard = journal.parseManagedCardBody(content);
+  const disposition = legacyDisposition(board.id, thread.id, Boolean(parsedCard));
   const autonomy = journal.evaluateAutonomyAdmission({
     ...(parsedCard || {}),
     title: thread?.name || "",
@@ -205,6 +219,35 @@ function inspectThread({ board, thread, starter, messages }) {
   const archived = thread?.thread_metadata?.archived === true;
   const locked = thread?.thread_metadata?.locked === true;
   const completedThreadIdLink = content.match(/ATLAS-COMPLETED-CARD:\s*https:\/\/discord\.com\/channels\/[^/]+\/([0-9]+)/i)?.[1] || null;
+  if (disposition?.classification?.startsWith("retained_")) {
+    return {
+      ok: true,
+      boardId: board.id,
+      boardRole: board.role,
+      threadId: thread.id,
+      title: thread.name || null,
+      cardId: null,
+      state: null,
+      priority: null,
+      owner: null,
+      archived,
+      locked,
+      appliedTagIds: Array.isArray(thread?.applied_tags) ? [...thread.applied_tags] : [],
+      completedThreadIdLink: null,
+      sourceThreadIdLink: null,
+      journalPresent: hasJournal(messages),
+      starterContentSha256: starter ? sha256(content) : null,
+      journalIntegrityEntries: journalIntegrityEntries(messages),
+      autonomy,
+      superseded: false,
+      retainedLegacyHistory: true,
+      legacyClassification: disposition.classification,
+      semanticStatus: "semantic_unknown_preserved",
+      textIntegrity: textIntegrityResult,
+      retainedReasonCodes: textReasonCodes,
+      reasonCodes: [],
+    };
+  }
   const reasonCodes = [];
   if (!starter) reasonCodes.push("card_starter_message_missing");
   if (!cardId) reasonCodes.push("stable_card_id_missing");
@@ -214,6 +257,10 @@ function inspectThread({ board, thread, starter, messages }) {
   if (!state) reasonCodes.push("canonical_card_state_missing");
   if (!/^- updated:\s*`[^`]+`/im.test(content)) reasonCodes.push("canonical_updated_timestamp_missing");
   if (!hasJournal(messages)) reasonCodes.push("card_journal_history_missing");
+  const canonicalTitle = cardContract.formatCanonicalCardTitle({ board, card: { title: thread?.name || "" } });
+  if (cardContract.normalizeThreadTitle(canonicalTitle) !== cardContract.normalizeThreadTitle(thread?.name || "")) {
+    reasonCodes.push("canonical_card_title_mismatch");
+  }
   if (state === journal.AUTONOMOUS_EXECUTION_STATE && !autonomy.admitted) {
     reasonCodes.push("ready_card_autonomy_contract_incomplete");
   }
@@ -234,13 +281,14 @@ function inspectThread({ board, thread, starter, messages }) {
     boardRole: board.role,
     threadId: thread.id,
     title: thread.name || null,
-    cardId,
+    cardId: cardId || disposition?.cardId || null,
     state,
+    type: parsedCard?.type || null,
     priority: parsedCard?.priority || null,
     owner: parsedCard?.owner || null,
     archived,
     locked,
-    appliedTagIds: Array.isArray(thread?.applied_tags) ? [...thread.applied_tags].sort() : [],
+    appliedTagIds: Array.isArray(thread?.applied_tags) ? [...thread.applied_tags] : [],
     completedThreadIdLink,
     sourceThreadIdLink: content.match(/original card:\s*https:\/\/discord\.com\/channels\/[^/]+\/([0-9]+)/i)?.[1] || null,
     journalPresent: hasJournal(messages),
@@ -248,6 +296,8 @@ function inspectThread({ board, thread, starter, messages }) {
     journalIntegrityEntries: journalIntegrityEntries(messages),
     autonomy,
     superseded: false,
+    retainedLegacyHistory: false,
+    legacyClassification: disposition?.classification || null,
     textIntegrity: textIntegrityResult,
     reasonCodes,
   };
@@ -346,8 +396,9 @@ async function discoverRegistryForums({ registry, token, fetchImpl = fetch }) {
     return { ok: false, uncoveredBoards: [], excludedBoards: [], reasonCodes: ["board_registry_live_forum_discovery_failed"] };
   }
   const categoryId = text(registry?.discovery?.forumCategoryChannelId);
+  const resolution = boardRegistry.resolveBoardChannelIdentities({ registry, channels: response.payload });
   const exclusions = new Map((registry?.discovery?.excludedForumChannelIds || []).map((entry) => [text(entry?.channelId), entry]));
-  const registeredChannelIds = new Set((registry?.boards || []).map((board) => text(board?.forumChannelId)).filter(Boolean));
+  const registeredChannelIds = new Set((resolution.registry?.boards || []).map((board) => text(board?.forumChannelId)).filter(Boolean));
   const forums = response.payload.filter((channel) => channel?.type === FORUM_CHANNEL_TYPE && channel?.parent_id === categoryId);
   const excludedBoards = response.payload.filter((channel) => exclusions.has(channel.id)).map((channel) => ({
     channelId: channel.id,
@@ -360,10 +411,15 @@ async function discoverRegistryForums({ registry, token, fetchImpl = fetch }) {
     parentId: channel.parent_id || null,
   }));
   return {
-    ok: uncoveredBoards.length === 0,
+    ok: uncoveredBoards.length === 0 && resolution.ok,
+    resolvedRegistry: resolution.registry,
+    identityResolution: resolution.rows,
     uncoveredBoards,
     excludedBoards,
-    reasonCodes: uncoveredBoards.map((board) => `uncovered_live_board:${board.channelId}`),
+    reasonCodes: [
+      ...resolution.reasonCodes,
+      ...uncoveredBoards.map((board) => `uncovered_live_board:${board.channelId}`),
+    ],
   };
 }
 
@@ -407,7 +463,7 @@ function validateLegacyBoards(boards) {
 }
 
 function isBlockingReason(code) {
-  return /^(board_registry_|required_board_blocked:|uncovered_live_board:|discord_bot_token_missing$|board_inventory_missing$|board_id_missing$|board_forum_channel_id_missing$|board_role_invalid$|board_forum_read_failed:|board_forum_guild_mismatch:|board_forum_name_mismatch:|active_threads_read_failed:|archived_threads_|card_thread_readback_failed:|card_starter_read_failed:|card_journal_read_failed:|card_journal_history_truncated:)/.test(code);
+  return /^(board_registry_|board_channel_(?:unresolved|ambiguous):|required_board_blocked:|uncovered_live_board:|discord_bot_token_missing$|board_inventory_missing$|board_id_missing$|board_forum_channel_id_missing$|board_role_invalid$|board_forum_read_failed:|board_forum_guild_mismatch:|board_forum_name_mismatch:|active_threads_read_failed:|archived_threads_|card_thread_readback_failed:|card_starter_read_failed:|card_journal_read_failed:|card_journal_history_truncated:)/.test(code);
 }
 
 async function buildBoardCardConsistency({ payload, registry, env = process.env, fetchImpl = fetch } = {}) {
@@ -441,6 +497,10 @@ async function buildBoardCardConsistency({ payload, registry, env = process.env,
   if (registry) {
     const discovery = await discoverRegistryForums({ registry, token, fetchImpl });
     reasonCodes.push(...discovery.reasonCodes);
+    if (discovery.resolvedRegistry) {
+      registeredBoards = registryBoards(discovery.resolvedRegistry);
+      boards = registeredBoards.filter((board) => board.status === "enabled" && board.forumChannelId);
+    }
     coverage = coverageResult({
       inventorySource,
       registeredBoards,
@@ -504,7 +564,8 @@ async function buildBoardCardConsistency({ payload, registry, env = process.env,
       });
     }
   }
-  const currentRows = rows.filter((row) => !row.superseded);
+  const retainedLegacyRows = rows.filter((row) => row.retainedLegacyHistory === true);
+  const currentRows = rows.filter((row) => !row.superseded && !row.retainedLegacyHistory);
   const supersededRows = rows.filter((row) => row.superseded);
   const { duplicates, linkedPairs } = classifyIdentities(currentRows);
   if (duplicates.length > 0) reasonCodes.push("duplicate_card_identity_across_boards");
@@ -529,14 +590,22 @@ async function buildBoardCardConsistency({ payload, registry, env = process.env,
   }
   const uniqueReasonCodes = [...new Set(reasonCodes)];
   const blocked = uniqueReasonCodes.some(isBlockingReason);
-  const drifted = !rows.every((row) => row.ok) || duplicates.length > 0;
+  const drifted = !rows.filter((row) => !row.retainedLegacyHistory).every((row) => row.ok) || duplicates.length > 0;
   const status = blocked ? "blocked" : drifted ? "drift_detected" : "consistent";
   return {
     ok: status === "consistent",
     status,
     ...coverage,
     boardCount: boards.length,
+    totalThreadCount: rows.length,
     cardCount: currentRows.length,
+    retainedLegacyHistoryCount: retainedLegacyRows.length,
+    retainedLegacyHistory: retainedLegacyRows.map((row) => ({
+      boardId: row.boardId,
+      threadId: row.threadId,
+      classification: row.legacyClassification,
+      semanticStatus: row.semanticStatus,
+    })),
     supersededRecordCount: supersededRows.length,
     healthyCardCount: currentRows.filter((row) => row.ok).length,
     driftedCardCount: currentRows.filter((row) => !row.ok).length + supersededRows.filter((row) => !row.ok).length,
@@ -620,6 +689,9 @@ if (require.main === module) {
 module.exports = {
   DEFAULT_REGISTRY_PATH,
   _internals: {
+    MUSIC_SESH_PHASE_8_THREAD_ID,
+    MUSIC_SESH_PHASE_8_CARD_ID,
+    legacyDisposition,
     parseArgs,
     parseCardId,
     parseCardState,

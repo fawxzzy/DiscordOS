@@ -42,15 +42,14 @@ function canonicalBody({
   ].join("\n");
 }
 
-test("canonical formatter normalizes Mazer titles without double prefixes", () => {
+test("canonical formatter removes repeated Mazer prefixes", () => {
   const board = {
     board: {
       id: "mazer",
       label: "mazer",
       titleContract: {
-        style: "prefix",
-        prefix: "mazer",
-        separator: ": ",
+        policy: "plain-work-outcome-v1",
+        style: "plain_work_outcome",
         maxLength: 100,
       },
     },
@@ -61,14 +60,14 @@ test("canonical formatter normalizes Mazer titles without double prefixes", () =
       board,
       card: { id: "card-1", title: "AI level, rank, and maze progression contract" },
     }),
-    "mazer: AI level, rank, and maze progression contract"
+    "AI level, rank, and maze progression contract"
   );
   assert.equal(
     _internals.formatCanonicalCardTitle({
       board,
       card: { id: "card-1", title: "mazer: mazer: AI level, rank, and maze progression contract" },
     }),
-    "mazer: AI level, rank, and maze progression contract"
+    "AI level, rank, and maze progression contract"
   );
 });
 

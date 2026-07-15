@@ -6,6 +6,14 @@
     "name": "Project Feedback Boards",
     "type": 4
   },
+  "titlePolicy": {
+    "id": "plain-work-outcome-v1",
+    "style": "plain_work_outcome",
+    "projectPrefix": "forbidden",
+    "typePrefix": "forbidden",
+    "legacyPrefixRemoval": "exact_delimited_prefix_only",
+    "retainedLegacyHistory": "preserve_title"
+  },
   "tagTaxonomy": {
     "maxAppliedTags": 5,
     "orderedTags": [
@@ -28,7 +36,7 @@
       { "semanticKey": "record.superseded", "group": "record", "name": "Superseded", "emoji": null }
     ],
     "moderationRule": {
-      "type": "moderated_except_community_intake",
+      "type": "moderated",
       "state": "moderated",
       "priority": "moderated",
       "outcome": "moderated",
@@ -68,7 +76,7 @@
   "forumProfiles": {
     "community-intake-v1": {
       "permissionProfile": "restricted-single-writer-v1",
-      "typeTagsModerated": false,
+      "typeTagsModerated": true,
       "defaults": {
         "defaultReactionEmoji": null,
         "defaultSortOrder": null,
@@ -141,9 +149,7 @@
       "order": 0,
       "positionNormalization": "not_applicable_preserve_declared_relative_order",
       "exceptions": [
-        "community_intake_type_tags_unmoderated",
-        "legacy_card_migration_deferred",
-        "legacy_title_format_preserved"
+        "one_retained_unresolved_legacy_record_preserves_title_and_body"
       ]
     },
     "fitness-active": {
@@ -153,7 +159,7 @@
       "type": 15,
       "order": 1,
       "positionNormalization": "not_applicable_preserve_declared_relative_order",
-      "exceptions": ["owner_owned_plain_titles"]
+      "exceptions": []
     },
     "mazer-active": {
       "name": "mazer",
@@ -162,7 +168,7 @@
       "type": 15,
       "order": 2,
       "positionNormalization": "not_applicable_preserve_declared_relative_order",
-      "exceptions": ["title_prefix_mazer_colon_space"]
+      "exceptions": []
     },
     "atlas-active-admission": {
       "name": "atlas",
@@ -171,7 +177,7 @@
       "type": 15,
       "order": 3,
       "positionNormalization": "not_applicable_preserve_declared_relative_order",
-      "exceptions": ["owner_export_titles"]
+      "exceptions": []
     },
     "cortex-active-admission": {
       "name": "cortex",
@@ -180,7 +186,7 @@
       "type": 15,
       "order": 4,
       "positionNormalization": "not_applicable_preserve_declared_relative_order",
-      "exceptions": ["owner_export_titles"]
+      "exceptions": []
     },
     "discordos-active-admission": {
       "name": "discordos",
@@ -189,7 +195,7 @@
       "type": 15,
       "order": 5,
       "positionNormalization": "not_applicable_preserve_declared_relative_order",
-      "exceptions": ["owner_export_titles"]
+      "exceptions": []
     },
     "foundation-active-admission": {
       "name": "foundation",
@@ -198,7 +204,7 @@
       "type": 15,
       "order": 6,
       "positionNormalization": "not_applicable_preserve_declared_relative_order",
-      "exceptions": ["owner_export_titles"]
+      "exceptions": []
     },
     "lifeline-active-admission": {
       "name": "lifeline",
@@ -207,7 +213,7 @@
       "type": 15,
       "order": 7,
       "positionNormalization": "not_applicable_preserve_declared_relative_order",
-      "exceptions": ["owner_export_titles"]
+      "exceptions": []
     },
     "playbook-active-admission": {
       "name": "playbook",
@@ -216,7 +222,7 @@
       "type": 15,
       "order": 8,
       "positionNormalization": "not_applicable_preserve_declared_relative_order",
-      "exceptions": ["owner_export_titles"]
+      "exceptions": []
     },
     "stack-active-admission": {
       "name": "stack",
@@ -235,8 +241,8 @@
       "order": 10,
       "positionNormalization": "not_applicable_preserve_declared_relative_order",
       "exceptions": [
-        "legacy_151_thread_migration_deferred",
-        "archive_lock_state_preserved_pending_disposition"
+        "one_exact_phase_8_thread_is_active_managed",
+        "one_hundred_fifty_threads_are_retained_legacy_history"
       ]
     },
     "shared-completed": {
@@ -246,8 +252,39 @@
       "type": 15,
       "order": 11,
       "positionNormalization": "not_applicable_preserve_declared_relative_order",
-      "exceptions": ["source_titles_preserved", "orphan_tag_cleanup_deferred"]
+      "exceptions": ["completed_source_links_and_archive_state_preserved"]
+    },
+    "socials-os-active-admission": {
+      "name": "socials-os",
+      "topic": "Project feedback, planning, and governed delivery journal for Socials OS.",
+      "parentChannelId": "1508057063874629684",
+      "type": 15,
+      "order": 12,
+      "positionNormalization": "not_applicable_preserve_declared_relative_order",
+      "exceptions": []
     }
+  },
+  "legacyDisposition": {
+    "musicSesh": {
+      "activeManagedThreadId": "1508141153835421798",
+      "activeManagedCardId": "music-sesh-phase-8-cross-service-room-sync-simple-controls",
+      "activeManagedType": "feature",
+      "activeManagedState": "blocked",
+      "activeManagedPriority": "high",
+      "retainedLegacyHistoryCount": 150,
+      "retainedLegacyHistoryPolicy": "preserve_identity_title_body_journal_archive_lock_clear_obsolete_tags_as_semantic_unknown_only"
+    },
+    "sharedIntake": {
+      "retainedUnresolvedCount": 1,
+      "policy": "preserve_identity_title_body_journal_archive_lock_never_generate_owner_identity_or_state"
+    }
+  },
+  "socialsOwnerSeed": {
+    "adapterId": "socials-os-roadmap-v1",
+    "expectedEventCount": 12,
+    "expectedStableRecordCount": 21,
+    "nullPriorityPolicy": "no_priority_tag",
+    "clusterStatus": "implemented_apply_pending"
   },
   "ownerSeedProof": {
     "expectedEventCount": 78,
@@ -276,9 +313,9 @@
   },
   "deferredDecisions": {
     "activeSourceCompletionSemantics": "separate_packet_required",
-    "legacySharedIntakeAndMusicSeshMigration": "separate_packet_required",
-    "orphanTagCleanup": "separate_packet_required",
-    "socialsOsBoard13Admission": "separate_owner_lane_required"
+    "legacySharedIntakeAndMusicSeshMigration": "classified_apply_pending",
+    "orphanTagCleanup": "recover_forward_migration_apply_pending",
+    "socialsOsBoard13Admission": "serialized_cluster_apply_pending"
   },
   "markerCandidate": {
     "status": "candidate_only_do_not_move",
@@ -298,14 +335,16 @@
       "lifecycle_reactions_links_archive_and_lock",
       "text_integrity_duplicate_safety_and_exact_readback"
     ],
-    "currentMeasurements": {
+    "freshLiveBaselineBeforeCanonicalMigration": {
+      "sourceReceipt": "forum-profile-scan-20260715-030105.json",
       "forumStructure": "12/12",
+      "intendedForumStructure": "13 required boards after Socials OS provision",
       "restrictedSingleWriterPermissions": "4/12",
       "legacyTagPresence": "4/12",
       "canonicalDeclaredTagProfile": "0/12",
       "ownerSeedAdoption": "78/78",
-      "healthyCurrentCards": "215/367",
-      "journaledCurrentCards": "215/367",
+      "healthyCurrentCards": "220/372",
+      "driftedCurrentCards": "152/372",
       "reciprocalCompletedTransfers": "12/12",
       "duplicateStableIdentities": 0,
       "actionableEncodingFindings": 0,

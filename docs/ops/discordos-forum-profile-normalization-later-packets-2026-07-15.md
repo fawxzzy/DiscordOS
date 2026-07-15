@@ -1,6 +1,8 @@
 # DiscordOS Forum Profile Normalization Later Packets
 
-Status: queued packets only. No live Discord mutation is authorized or performed by this document.
+Status: superseded planning receipt. The executable authority is now `docs/contracts/discordos-forum-profile-normalization-v1.md` and the guarded canonical migration command. No live Discord mutation is authorized or performed by this document.
+
+The 12-board figures below are historical pre-migration evidence. They must not be used to authorize the old forum-only normalizer or to exclude Socials OS from the governed denominator.
 
 ## 1. Explicit Live Profile Normalization
 
@@ -14,7 +16,7 @@ Preconditions:
 - orphan and ambiguous applied-tag findings are cleared by the dedicated packets below
 - the dry-run plan is reviewed and retained
 
-Execution is one guarded apply using `DISCORDOS_FORUM_PROFILE_NORMALIZATION=enabled` plus `--allow-normalization --apply`, followed by exact 12-board readback and a durable receipt. It changes forum-level configuration only. It must not migrate cards or decide lifecycle state.
+Superseded: the canonical migration must coordinate applied-tag clearing/remapping with forum profile replacement and exact 13-board readback. The old forum-only apply cannot resolve the orphan-tag dependency safely.
 
 ## 2. Legacy Shared Intake and Music Sesh Decision and Migration
 
@@ -51,16 +53,15 @@ Never infer meaning from an ID. Build an explicit thread-by-thread mapping from 
 
 ## 5. Socials OS Board 13 Admission
 
-This is a separate Socials OS owner lane. Required inputs:
+Socials OS is now admitted as governed board 13 in the canonical contract. These former planning inputs have been implemented:
 
-- operator confirmation that Socials OS belongs in the governed denominator
 - owner adapter and `atlas.project-board.owner-export.v1` artifact
 - stable namespace and lifecycle policy
 - exact forum name/topic/profile exceptions
 - guarded forum provision and exact readback
 - registry admission only after the live forum and owner source agree
 
-If admitted, the denominator changes from 12 to 13 in one serialized registry and live-readback cluster. This packet must not be folded into the 12-board normalization apply.
+The denominator changes from 12 to 13 in the one serialized canonical provision, snapshot, profile, migration, seed, and readback cluster. Live execution remains separately authorization-gated after merge.
 
 ## Candidate Marker Measurement
 

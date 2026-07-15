@@ -1,139 +1,108 @@
-# DiscordOS Forum Profile Normalization v1
+# DiscordOS Canonical Forum Profile and Migration v1
 
 ## Purpose
 
-This contract defines one deterministic forum-level configuration profile for every enabled, required board in `config/discordos-board-registry.json`. It covers the current 12-board denominator without authorizing a Discord mutation.
+This contract defines one visible profile, title, and card-tag policy for all 13 required Discord project boards. The machine authorities are `config/discordos-board-registry.json` and `config/discordos-forum-profile-registry.json`.
 
-The machine-readable authority is `config/discordos-forum-profile-registry.json`. Every board registry row references one forum profile and one permission profile. The profile registry supplies exact structure, ordered tags, permissions, defaults, lifecycle/archive-lock expectations, exceptions, deferred decisions, post-seed proof counts, and the candidate marker measurement.
+The standalone scanner and normalizer remain supported. The serialized migration command is the only command authorized to resolve the available-tag/applied-tag dependency, classify retained legacy history, provision Socials OS, seed its owner export, and require exact 13-board readback.
 
-Forum-profile normalization is separate from card migration. It must never rewrite legacy Shared Intake or Music Sesh cards, decide active-source completion state, infer orphan tag meanings, or admit Socials OS.
+## Canonical Identity and Titles
 
-## Canonical Forum Structure
+The forum identifies the project. Active managed card titles use `plain-work-outcome-v1`:
 
-Every governed board is a type-15 forum under the type-4 `Project Feedback Boards` category. Forum channel IDs remain registry authority. A channel ID whose name, type, or parent does not match the declared board is stale identity evidence and blocks apply rather than being silently repurposed.
+- no project prefix
+- no Bug or Feature prefix
+- exact delimited legacy prefixes are removed deterministically
+- normal title words such as `Feature flag` or `Bug bounty` are not stripped
+- retained Music Sesh history and the retained Shared Intake record are not renamed
 
-Names and topics are exact per-board values in the profile registry. Relative order is declared for scanning, but position mutation is explicitly not applicable in the v1 normalizer. Shared Completed remains last. Board-specific title formats are card-level exceptions and are not forum normalization fields.
+Thread identity is always the exact Discord thread ID plus stable managed card ID when one exists. Title matching is never used to join retained history or invent owner truth.
+
+Socials OS is admitted as required board 13. Before first provision its channel ID is intentionally unresolved and can resolve only by one exact `socials-os` forum name under the governed category. Provision readback supplies the exact ID used by every later operation in the same serialized cluster.
 
 ## Canonical Tags
 
-At most five tags may be applied to a card. Available tags use this exact order:
+Every forum declares the same moderated tag profile in this exact order:
 
-| Semantic key | Name | Moderation |
-|---|---|---|
-| `type.bug` | Bug | Moderated except on community intake |
-| `type.feature` | Feature | Moderated except on community intake |
-| `state.intake` | Intake | Moderated |
-| `state.planning` | Planning | Moderated |
-| `state.ready` | Ready | Moderated |
-| `state.opened` | Opened | Moderated |
-| `state.in_progress` | In Progress | Moderated |
-| `state.review` | Review | Moderated |
-| `state.blocked` | Blocked | Moderated |
-| `state.completed` | Completed | Moderated |
-| `priority.low` | Low | Moderated |
-| `priority.medium` | Medium | Moderated |
-| `priority.high` | High | Moderated |
-| `priority.blocker` | Blocker | Moderated |
-| `outcome.duplicate` | Duplicate | Moderated |
-| `outcome.withdrawn` | Withdrawn | Moderated |
-| `record.superseded` | Superseded | Moderated |
+1. Bug
+2. Feature
+3. Intake
+4. Planning
+5. Ready
+6. Opened
+7. In Progress
+8. Review
+9. Blocked
+10. Completed
+11. Low
+12. Medium
+13. High
+14. Blocker
+15. Duplicate
+16. Withdrawn
+17. Superseded
 
-Tags have no default emoji. Stable semantic keys are repository authority. Live tag IDs are Discord-assigned transport identities only. Removed, unknown, or orphan applied-tag IDs must never be guessed or reused as semantic truth.
+At most five tags may be applied. Live IDs are Discord transport identities, not semantic authority. Exact same-name IDs may be retained during profile replacement. Removed, orphan, unknown, or differently named IDs are never mapped by position or guessed.
 
-## Permission Profile
+Managed tags derive from owner-export fields first and managed starter fields second. A non-bug owner type maps to Feature because the canonical Type taxonomy is intentionally binary. Null or `Unspecified` priority produces no priority tag.
 
-The canonical `restricted-single-writer-v1` profile resolves roles by semantics at read time:
+## Retained Legacy Disposition
 
-- `@everyone`: deny View Channel and Send Messages.
-- `Verified`: allow View Channel only.
-- `Fawx Security`: allow View Channel and Send Messages.
+Music Sesh has one active managed source:
 
-The guild-wide everyone role resolves from the guild identity. Named roles require one exact guild-role-name match. Missing, duplicated, or unknown roles block. Unknown channel overwrites also block because dropping one could change access. Durable receipts include semantic role keys, names, and permission meanings but redact all live role IDs and omit the bot token.
+- thread `1508141153835421798`
+- card `music-sesh-phase-8-cross-service-room-sync-simple-controls`
+- Feature, Blocked, High
 
-## Defaults
+The other 150 Music Sesh threads are `retained_legacy_history`. They remain outside active managed-card health and receive no manufactured owner identity, body, journal, title, or state.
 
-All profiles declare:
+Shared Intake has one `retained_unresolved_legacy` record. It is not defaulted to Planning and receives no generated active identity.
 
-- default reaction: `null`
-- default sort order: `null`
-- default forum layout: `0`
-- forum slowmode: `0`
-- flags: `0`
-- NSFW: `false`
+Retained rows preserve exact thread identity, starter, journal, archive/lock state, and immutable system history. If obsolete applied-tag IDs must be removed to replace the forum profile, the migration records the exact preimage in the runtime snapshot and classifies the result as `semantic_unknown_preserved`.
 
-Status reactions remain starter-message behavior under the board/card contract; they are not forum default reactions.
+## Permissions and Defaults
 
-## Board Exceptions and Lifecycle
+Every board uses `restricted-single-writer-v1`:
 
-- Shared Intake: community-intake type tags may be unmoderated; legacy card migration and title normalization are deferred.
-- Fitness: owner-owned plain titles remain card authority.
-- Mazer: the `mazer: ` title prefix remains card authority.
-- Atlas, Cortex, DiscordOS, Foundation, Lifeline, Playbook, and `_stack`: owner-export titles remain authority; `_stack` is explicitly empty-ready.
-- Music Sesh: 151 legacy threads retain their current archive/lock state until the separate legacy disposition packet.
-- Shared Completed: source titles remain preserved; orphan-tag cleanup is separate.
+- `@everyone`: deny View Channel and Send Messages
+- `Verified`: allow View Channel
+- `Fawx Security`: allow View Channel and Send Messages
 
-For governed active cards, open work is unarchived and unlocked. Superseded records are archived and locked. A transferred completion source must be archived and locked, but whether its managed state is `review` or `completed` remains an explicit separate decision. Current Completed records are `completed` and unlocked; archive state is not applicable because Discord auto-archive is allowed. Superseded Completed records are archived and locked.
+Unknown, missing, or duplicate roles and unknown overwrites fail closed. Receipts redact live role IDs and omit the bot token.
 
-## Read-Only Scanner
+Every board uses a null default reaction, null sort order, layout `0`, slowmode `0`, flags `0`, and NSFW `false`. Topics are exact registry values.
 
-The denominator scanner requires `--output` and always writes a JSON receipt. It compares all enabled required boards across:
+## Serialized Migration
 
-- exact channel identity, name, topic, type, parent, and declared relative order
-- ordered available-tag names, moderation, emoji, and live transport IDs
-- permissions and overwrites with role IDs redacted
-- defaults, slowmode, flags, and NSFW
-- orphan and semantically ambiguous applied tags
-- card identity, managed starter format, journal presence, and content hashes exposed by the existing board contract
-- duplicate stable identities and reciprocal completion pairs
-- lifecycle, archive, and lock expectations
-- text integrity and complete pagination readback
+The command is dry-run by default. Both receipt and snapshot paths must be under `runtime/`:
 
 ```powershell
-npm run ops:production-env:run -- npm run ops:discordos:forum-profile-scan:json -- --output <receipt.json>
+npm run ops:production-env:run -- npm run ops:discordos:canonical-board-migration:json -- --snapshot-output <runtime-snapshot.json> --output <runtime-plan.json>
 ```
 
-Incomplete channel, role, thread, starter, journal, or pagination readback blocks. Mojibake in the profile or live card surfaces is rejected; new source and configuration text remains ASCII.
-
-## Guarded Normalization
-
-The normalizer is dry-run by default and requires `--output`:
+Apply requires the environment guard and explicit command guard:
 
 ```powershell
-npm run ops:production-env:run -- npm run ops:discordos:forum-profile-normalize:json -- --output <plan.json>
+$env:DISCORDOS_CANONICAL_BOARD_MIGRATION='enabled'
+npm run ops:production-env:run -- npm run ops:discordos:canonical-board-migration:json -- --allow-migration --apply --snapshot-output <runtime-snapshot.json> --output <runtime-receipt.json>
 ```
 
-Apply requires both guards:
+The apply cluster is serialized:
 
-```powershell
-$env:DISCORDOS_FORUM_PROFILE_NORMALIZATION='enabled'
-npm run ops:production-env:run -- npm run ops:discordos:forum-profile-normalize:json -- --allow-normalization --apply --output <receipt.json>
-```
+1. capture exact existing forum, thread, starter, journal, tags, permissions, and archive/lock preimages with complete pagination
+2. provision or reuse Socials OS and resolve its exact ID
+3. pre-clear only tag IDs that would become unsafe, while preserving archive/lock state
+4. patch all forum topics, tags, permissions, and defaults
+5. adopt the exact Phase 8 thread and migrate active managed titles/tags; clear retained-history obsolete tags without semantic guessing
+6. validate and seed the 12-event Socials OS owner export idempotently, then apply canonical tags with no priority tag for null priority
+7. run exact scanner readback across all 13 boards
 
-Apply fails closed on unknown roles or overwrites, stale forum IDs, uncovered boards, orphan or ambiguous applied tags, invalid profiles, or incomplete live readback. Existing canonical tag IDs are reused only by exact declared name; new IDs are Discord-assigned. Every apply performs exact field-by-field readback across all 12 boards. The receipt excludes raw write payload role IDs.
+The pre-clear makes every removed ID unreachable before forum replacement. A later failure is never accepted as terminal success. The receipt reports `recovery_required`, references the exact runtime preimage, and requires recover-forward completion. Orphan applied tags are never an accepted terminal state.
 
-This implementation lane did not run apply.
+## Scanner Proof
 
-## Post-Seed Proof
+The scanner verifies all 13 boards and all active managed cards across exact forum identity, tag order and IDs, semantic applied tags, title policy, permissions, defaults, bodies, journals, duplicate identities, pagination, archive/lock state, and text integrity.
 
-The seven admitted owner-export boards are proven at 78/78:
+Retained legacy history, superseded records, and active managed cards are separate denominators. After the live cluster, active managed health is the existing managed-card denominator plus Phase 8 plus 12 Socials OS cards. The 150 retained Music Sesh rows, one retained Shared Intake row, and superseded records remain reported separately.
 
-- 78 input events journaled
-- 78 cards created
-- 78 journal entries created
-- 78/78 exact starter readback
-- 78/78 exact journal readback
-- zero reason codes
-
-The post-seed scan proves 12/12 coverage, 367 current cards, 215 healthy cards, 152 unchanged legacy drifts, 49 superseded records, zero duplicate identities, zero actionable text findings, and 124 immutable system-history findings.
-
-The deterministic offline proof consumes the guarded live receipt plus the post-seed consistency receipt; it does not call Discord:
-
-```powershell
-npm run ops:discordos:project-board-owner-seed-proof:json -- --live-receipt <live.json> --scan-receipt <scan.json> --output <proof.json>
-```
-
-It cross-checks all 78 result thread/card identities against healthy post-seed rows, exact starter/journal readback flags, per-board counts, the complete 12-board denominator, and the exact remaining five legacy drift classes.
-
-## Marker Candidate
-
-The profile persists the scout's ten equal 10% units as a candidate measurement only. Post-seed candidate measurement is 30%: structural identity, owner-seed adoption, and text/duplicate/exact-readback safety are proof-backed, while permissions, canonical tags, legacy cards/journals, lifecycle decisions, and Socials OS admission remain open. This contract does not move any ATLAS marker.
+This implementation PR does not authorize or perform a live Discord mutation. Live apply remains a separate post-merge operator authorization.
