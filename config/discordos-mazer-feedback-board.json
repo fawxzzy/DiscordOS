@@ -1508,7 +1508,7 @@
       "completionPercent": 62,
       "summary": "Prove the phone-shell path for mobile view, safe-area handling, portrait behavior, and real-device confidence without letting browser chrome or device intrusions cover game UI.",
       "whyItMatters": "Mazer is canvas-driven and can pass desktop emulation while still clipping text, controls, HUD, or scrollable overlays behind mobile browser chrome, the Dynamic Island, and home indicators.",
-      "currentStatus": "Merged Mazer PR #39 anchors the app to visual-viewport plus safe-area origins, reserves top rank/Pause and bottom control lanes before sizing the play maze, and adds iPhone Dynamic Island plus Android cutout fixtures and matrix dimensions. Side-tab phone menu/play diagnostics reported zero overlap/offscreen violations. Draft Mazer PR #78 at b778bc6c34fc1db01539d0286b9cc3ae2ab1d35e repairs operator-reported vertical touch drift by refreshing Phaser canvas bounds on same-size visual-viewport origin changes and mapping custom gestures through the live canvas rectangle. It also replaces segmented stick input with a continuous normalized vector and passes exact 390x844 upper-stick hit proof. Real-device inset, browser-chrome, installed-PWA, auth-keyboard, and post-deploy physical feel proof remain open, so the evidence is recorded without an unsupported percentage ratchet.",
+      "currentStatus": "Merged Mazer PR #39 anchors the app to visual-viewport plus safe-area origins, reserves top rank/Pause and bottom control lanes before sizing the play maze, and adds iPhone Dynamic Island plus Android cutout fixtures and matrix dimensions. Merged Mazer PR #78 at 993b8e5c68d59882c58cb2fb560b95bb980a4900 repairs operator-reported vertical touch drift by refreshing Phaser canvas bounds on same-size visual-viewport origin changes and mapping custom gestures through the live canvas rectangle. It also replaces segmented stick input with a continuous normalized vector. Production deployment dpl_2ZHL85A9uKeJJ1LXfdksMQxgXXrc is Ready at the canonical alias; isolated 390x844 production proof reported native canvas geometry, zero overlap/offscreen violations, equal 62px run-status/Pause height, continuous stick controls, Smart Steering enabled, and zero browser warnings/errors. Real-device inset, browser-chrome, installed-PWA, auth-keyboard, and physical feel proof remain open, so the evidence is recorded without an unsupported percentage ratchet.",
       "workBreakdown": [
         "Keep phone-size UI-surface proof at 405x958 for guest, auth, play, and pause surfaces.",
         "Assert active labels fit and progression badge text stays inside its chrome.",
@@ -1518,7 +1518,7 @@
         "Define portrait policy by capability: orientation API success, installed/PWA behavior, rejected browser lock, and no-obstruction fallback."
       ],
       "nextActions": [
-        "After PR #78 merges and a separately authorized deployment occurs, collect operator physical-iPhone proof for touch alignment and continuous-stick feel.",
+        "Collect operator physical-iPhone screenshots and feel proof against production deployment dpl_2ZHL85A9uKeJJ1LXfdksMQxgXXrc for touch alignment and continuous-stick turns.",
         "Run broader authenticated mobile soak on a real or maintained device harness with safe-area insets.",
         "Choose best-effort web orientation handling versus Capacitor/Tauri/native wrapper support.",
         "Prove play controls, pause scroll, auth native inputs, and longer animation cycles under DPR-2.",
@@ -2252,7 +2252,7 @@
       "completionPercent": 84,
       "summary": "Coordinate the mobile safe-area/portrait and browser layout-persistence lanes through one viewport contract and proof matrix without turning either delivery into an offset patch.",
       "whyItMatters": "The same UI can be valid in a desktop canvas, narrow browser, mobile browser, installed PWA, or restored window only if viewport state, safe areas, and restoration behavior share deliberate rules.",
-      "currentStatus": "Merged Mazer PR #60 at afc6e8401893c2ddb4c0681db39e6b3b435985ff adds shared optical-centering and guide/toggle geometry, button-label and guide-panel diagnostics, authenticated Chromium proof at 405x958 and 1440x900, and a passing 360x720 -> 1440x900 -> 360x720 -> 405x958 restoration matrix for Menu, Options, play, and Pause. Draft Mazer PR #78 at b778bc6c34fc1db01539d0286b9cc3ae2ab1d35e removes role-specific upward label lift, makes run-status padding symmetric, refreshes same-size viewport input bounds, and passes a native 390x844 menu/Options/play/Pause proof with zero overlap or console violations. Physical iPhone safe-area, installed-PWA banding, native browser-chrome/maximize, and post-deploy screenshots remain open, so the marker stays at 84.",
+      "currentStatus": "Merged Mazer PR #60 at afc6e8401893c2ddb4c0681db39e6b3b435985ff adds shared optical-centering and guide/toggle geometry, button-label and guide-panel diagnostics, authenticated Chromium proof at 405x958 and 1440x900, and a passing 360x720 -> 1440x900 -> 360x720 -> 405x958 restoration matrix for Menu, Options, play, and Pause. Merged Mazer PR #78 at 993b8e5c68d59882c58cb2fb560b95bb980a4900 removes role-specific upward label lift, makes run-status padding symmetric, and refreshes same-size viewport input bounds. Production deployment dpl_2ZHL85A9uKeJJ1LXfdksMQxgXXrc is Ready at the canonical alias; isolated 390x844 production proof reported a native 390x844 canvas, zero overlap/offscreen violations, fitting run-status text, equal 62px run-status/Pause height, and zero browser warnings/errors. Physical iPhone safe-area, installed-PWA banding, native browser-chrome/maximize, and operator screenshots remain open, so the marker stays at 84.",
       "workBreakdown": [
         "Define canonical viewport, safe-area, visible-height, and no-overlap invariants for menu, Options, play, Pause, dialogs, HUD, controls, and scroll rails.",
         "Maintain the child boundary between mobile shell/device behavior and browser layout-state persistence.",
@@ -2260,7 +2260,7 @@
         "Require route, mode, viewport, safe-area state, scroll position, and layout diagnostics beside visual proof."
       ],
       "nextActions": [
-        "After PR #78 merges and a separately authorized deployment occurs, collect operator physical-iPhone screenshots for symmetric text padding and exact touch alignment.",
+        "Collect operator physical-iPhone screenshots against production deployment dpl_2ZHL85A9uKeJJ1LXfdksMQxgXXrc for symmetric text padding and exact touch alignment.",
         "Complete real-device safe-area and installed-PWA proof for the shared menu and play geometry.",
         "Complete native browser-chrome and maximize/restore proof without replacing the deterministic transition harness.",
         "Keep browser-layout, mobile-shell, and visual-proof cards as linked owners for persistence, device harness, and proof-policy follow-through.",
