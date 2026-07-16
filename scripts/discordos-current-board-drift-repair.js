@@ -160,6 +160,15 @@ function sameSet(left, right) {
     && [...left].sort().every((value, index) => value === [...right].sort()[index]);
 }
 
+function sameUniqueSet(left, right) {
+  return Array.isArray(left)
+    && Array.isArray(right)
+    && new Set(left).size === left.length
+    && new Set(right).size === right.length
+    && left.length === right.length
+    && left.every((value) => right.includes(value));
+}
+
 function unique(values) {
   return [...new Set(values)];
 }
@@ -814,7 +823,7 @@ async function inspectTransferRuntime(operation, { env = process.env, fetchImpl 
     completedState: destinationContent === expectedDestinationContent,
     sourceLink: destinationContent === expectedDestinationContent,
     bodyExact: destinationContent === expectedDestinationContent,
-    exactTags: sameArray(destination.applied_tags || [], operation.destination.appliedTagIds),
+    exactTags: sameUniqueSet(destination.applied_tags || [], operation.destination.appliedTagIds),
     journalEvent: journalMarkerCount === 1 && String(matchingJournalMessages[0]?.content || "") === expectedJournalContent,
     journalExact: journalMarkerCount === 1 && String(matchingJournalMessages[0]?.content || "") === expectedJournalContent,
     successReaction: successReactionPresent(destinationMessage),
@@ -851,8 +860,8 @@ async function inspectTagRuntime(operation, { env = process.env, fetchImpl = fet
   if (!token) return { ok: false, operationId: operation.operationId, status: "blocked", reasonCodes: ["discord_bot_token_missing"] };
   const read = await cardContract.discordRequest({ path: `/channels/${operation.threadId}`, token, fetchImpl });
   const actual = read.payload?.applied_tags || [];
-  const pending = read.ok && read.payload?.parent_id === operation.forumChannelId && sameArray(actual, operation.preimage.appliedTagIds);
-  const complete = read.ok && read.payload?.parent_id === operation.forumChannelId && sameArray(actual, operation.postimage.appliedTagIds);
+  const pending = read.ok && read.payload?.parent_id === operation.forumChannelId && sameUniqueSet(actual, operation.preimage.appliedTagIds);
+  const complete = read.ok && read.payload?.parent_id === operation.forumChannelId && sameUniqueSet(actual, operation.postimage.appliedTagIds);
   const reasonCodes = [];
   if (!read.ok) reasonCodes.push("tag_target_read_failed");
   if (read.ok && read.payload?.parent_id !== operation.forumChannelId) reasonCodes.push("tag_target_forum_mismatch");
@@ -1254,6 +1263,7 @@ module.exports = {
     sha256,
     canonicalJson,
     objectDigest,
+    sameUniqueSet,
     parseArgs,
     initialEvidenceReasonCodes,
     buildDeterministicPlan,

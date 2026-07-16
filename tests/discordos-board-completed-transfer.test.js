@@ -407,6 +407,87 @@ test("planned source preimage drift blocks before every mutation", async () => {
   assert(calls.every((call) => call.method === "GET"));
 });
 
+test("unreadable destination starter blocks creation with an exact zero-write receipt", async () => {
+  const calls = [];
+  const result = await _internals.buildCompletedBoardTransfer({
+    ...baseOptions,
+    requireStableIdentity: true,
+    apply: true,
+    allowApply: true,
+    fetchImpl: async (url, init) => {
+      calls.push({ url, method: init.method });
+      if (url.endsWith("/channels/source-thread/messages/source-thread")) {
+        return response({ payload: { id: "source-thread", content: "Original card" } });
+      }
+      if (url.endsWith("/channels/source-thread")) {
+        return response({ payload: { id: "source-thread", name: "Card title", parent_id: "source-forum", guild_id: "guild" } });
+      }
+      if (url.endsWith("/guilds/guild/threads/active")) {
+        return response({ payload: { threads: [{ id: "unreadable-destination", name: "Unknown", parent_id: "completed-forum" }] } });
+      }
+      if (url.endsWith("/channels/completed-forum/threads/archived/public?limit=100")) {
+        return response({ payload: { threads: [], has_more: false } });
+      }
+      if (url.endsWith("/channels/unreadable-destination/messages/unreadable-destination")) {
+        return response({ ok: false, status: 403, payload: { message: "Missing Permissions" } });
+      }
+      throw new Error(`unexpected request ${init.method} ${url}`);
+    },
+  });
+  assert.equal(result.ok, false);
+  assert(result.reasonCodes.includes("completed_card_starter_read_failed"));
+  assert.equal(result.writeCount, 0);
+  assert(calls.every((call) => call.method === "GET"));
+  assert(!calls.some((call) => call.url.endsWith("/channels/completed-forum/threads")));
+});
+
+test("destination reopen followed by body-repair failure preserves the successful write count", async () => {
+  const result = await _internals.buildCompletedBoardTransfer({
+    ...baseOptions,
+    eventId: "completed:CARD-42:reopen-failure",
+    occurredAt: "2026-07-16T10:00:00.000Z",
+    sourceContentPreimage: "Original card",
+    repairExactPostimage: true,
+    requireStableIdentity: true,
+    apply: true,
+    allowApply: true,
+    fetchImpl: async (url, init) => {
+      if (url.endsWith("/channels/source-thread/messages/source-thread")) {
+        return response({ payload: { id: "source-thread", content: "Original card" } });
+      }
+      if (url.endsWith("/channels/source-thread")) {
+        return response({ payload: {
+          id: "source-thread",
+          name: "Card title",
+          parent_id: "source-forum",
+          guild_id: "guild",
+          thread_metadata: { archived: false, locked: false },
+        } });
+      }
+      if (url.endsWith("/guilds/guild/threads/active")) return response({ payload: { threads: [] } });
+      if (url.endsWith("/channels/completed-forum/threads/archived/public?limit=100")) {
+        return response({ payload: { threads: [{
+          id: "completed-thread",
+          name: "Card title",
+          parent_id: "completed-forum",
+          thread_metadata: { archived: true, locked: true, archive_timestamp: "2026-07-16T09:00:00.000Z" },
+        }], has_more: false } });
+      }
+      if (url.endsWith("/channels/completed-thread/messages/completed-thread")) {
+        if (init.method === "PATCH") return response({ ok: false, status: 500, payload: { message: "Injected failure" } });
+        return response({ payload: { id: "completed-thread", content: "ATLAS-CARD-ID: `CARD-42`\ncorrupted" } });
+      }
+      if (url.endsWith("/channels/completed-thread") && init.method === "PATCH") {
+        return response({ payload: { id: "completed-thread", thread_metadata: { archived: false, locked: false } } });
+      }
+      throw new Error(`unexpected request ${init.method} ${url}`);
+    },
+  });
+  assert.equal(result.ok, false);
+  assert(result.reasonCodes.includes("completed_card_exact_body_repair_failed"));
+  assert.equal(result.writeCount, 1);
+});
+
 test("delayed resume reuses an exact journal event beyond page one without duplication", async () => {
   const eventId = "completed:CARD-42:delayed-resume";
   const occurredAt = "2026-07-16T12:00:00.000Z";
@@ -473,7 +554,7 @@ test("delayed resume reuses an exact journal event beyond page one without dupli
         id: "completed-thread",
         name: "Card title",
         parent_id: "completed-forum",
-        applied_tags: ["feature-tag", "completed-tag"],
+        applied_tags: ["completed-tag", "feature-tag"],
       }] } });
       if (url.endsWith("/channels/completed-forum/threads/archived/public?limit=100")) {
         return response({ payload: { threads: [], has_more: false } });
@@ -497,7 +578,7 @@ test("delayed resume reuses an exact journal event beyond page one without dupli
         return response({ status: 201, payload: { id: "duplicate-journal" } });
       }
       if (url.endsWith("/channels/completed-thread")) {
-        return response({ payload: { id: "completed-thread", name: "Card title", parent_id: "completed-forum", applied_tags: ["feature-tag", "completed-tag"] } });
+        return response({ payload: { id: "completed-thread", name: "Card title", parent_id: "completed-forum", applied_tags: ["completed-tag", "feature-tag"] } });
       }
       throw new Error(`unexpected request ${init.method} ${url}`);
     },

@@ -108,6 +108,15 @@ function cardMarker(cardId) {
   return `ATLAS-CARD-ID: \`${cardId}\``;
 }
 
+function sameUniqueSet(left, right) {
+  return Array.isArray(left)
+    && Array.isArray(right)
+    && new Set(left).size === left.length
+    && new Set(right).size === right.length
+    && left.length === right.length
+    && left.every((value) => right.includes(value));
+}
+
 function inferProject(sourceForumChannelId, explicitProject = null) {
   if (explicitProject) return explicitProject;
   if (sourceForumChannelId === "1508144612957622313") return "Fitness";
@@ -242,6 +251,7 @@ async function readAllThreadMessages({ threadId, token, fetchImpl = fetch }) {
 async function findCompletedThread({ threads, cardId, expectedTitle, token, fetchImpl = fetch }) {
   const stableMatches = [];
   const titleMatches = [];
+  const unreadableStarterThreadIds = [];
   for (const thread of threads) {
     const message = await cardContract.fetchMessage({
       channelId: thread.id,
@@ -249,13 +259,24 @@ async function findCompletedThread({ threads, cardId, expectedTitle, token, fetc
       token,
       fetchImpl,
     });
-    if (message.ok && String(message.payload?.content || "").includes(cardMarker(cardId))) {
+    if (!message.ok) {
+      unreadableStarterThreadIds.push(thread.id);
+      continue;
+    }
+    if (String(message.payload?.content || "").includes(cardMarker(cardId))) {
       stableMatches.push({ thread, message: message.payload });
       continue;
     }
     if (cardContract.normalizeThreadTitle(thread.name) === cardContract.normalizeThreadTitle(expectedTitle)) {
       titleMatches.push({ thread, message: message.payload });
     }
+  }
+  if (unreadableStarterThreadIds.length > 0) {
+    return {
+      readFailed: true,
+      matchedBy: "unreadable_starter",
+      candidateThreadIds: unreadableStarterThreadIds,
+    };
   }
   if (stableMatches.length === 1) return { ...stableMatches[0], matchedBy: "stable_card_id" };
   if (stableMatches.length > 1) {
@@ -309,6 +330,14 @@ async function buildCompletedBoardTransfer({
   env = process.env,
   fetchImpl = fetch,
 } = {}) {
+  let writeCount = 0;
+  const rawFetchImpl = fetchImpl;
+  fetchImpl = async (url, init = {}) => {
+    const response = await rawFetchImpl(url, init);
+    const method = String(init.method || "GET").toUpperCase();
+    if (response?.ok === true && !["GET", "HEAD"].includes(method)) writeCount += 1;
+    return response;
+  };
   const options = {
     sourceThreadId,
     sourceForumChannelId,
@@ -343,6 +372,7 @@ async function buildCompletedBoardTransfer({
       admission,
       cardId: cardId || null,
       reasonCodes: [...new Set(reasonCodes)],
+      writeCount,
     };
   }
 
@@ -355,7 +385,7 @@ async function buildCompletedBoardTransfer({
   const guildId = sourceThread.payload?.guild_id || null;
   if (!guildId) reasonCodes.push("source_guild_id_missing");
   if (reasonCodes.length > 0) {
-    return { ok: false, status: "blocked", apply, admission, cardId, reasonCodes: [...new Set(reasonCodes)] };
+    return { ok: false, status: "blocked", apply, admission, cardId, reasonCodes: [...new Set(reasonCodes)], writeCount };
   }
 
   const destinationThreads = await listForumThreads({
@@ -374,8 +404,9 @@ async function buildCompletedBoardTransfer({
       fetchImpl,
     })
     : null;
+  if (existing?.readFailed) reasonCodes.push("completed_card_starter_read_failed");
   if (existing?.ambiguous) reasonCodes.push("completed_card_identity_ambiguous");
-  if (requireStableIdentity && existing && existing.matchedBy !== "stable_card_id") {
+  if (requireStableIdentity && existing && !existing.readFailed && existing.matchedBy !== "stable_card_id") {
     reasonCodes.push("completed_card_stable_identity_required");
   }
   if (completedTagIds != null && (
@@ -407,10 +438,11 @@ async function buildCompletedBoardTransfer({
       cardId,
       preview,
       reasonCodes: [...new Set(reasonCodes)],
+      writeCount,
     };
   }
   if (reasonCodes.length > 0) {
-    return { ok: false, status: "blocked", apply, admission, cardId, preview, reasonCodes: [...new Set(reasonCodes)] };
+    return { ok: false, status: "blocked", apply, admission, cardId, preview, reasonCodes: [...new Set(reasonCodes)], writeCount };
   }
 
   const destinationThreadId = existing?.thread?.id || null;
@@ -431,7 +463,7 @@ async function buildCompletedBoardTransfer({
     reasonCodes.push("source_card_planned_preimage_mismatch");
   }
   if (reasonCodes.length > 0) {
-    return { ok: false, status: "blocked", apply, admission, cardId, preview, reasonCodes: [...new Set(reasonCodes)] };
+    return { ok: false, status: "blocked", apply, admission, cardId, preview, reasonCodes: [...new Set(reasonCodes)], writeCount };
   }
   const expectedDestinationContent = !exactPostimageMode && existing?.matchedBy === "stable_card_id"
     ? String(existing.message?.content || "")
@@ -476,6 +508,7 @@ async function buildCompletedBoardTransfer({
       cardId,
       preview,
       reasonCodes: [...new Set(reasonCodes)],
+      writeCount,
     };
   }
   let destinationBodyRepair = null;
@@ -498,6 +531,7 @@ async function buildCompletedBoardTransfer({
       cardId,
       preview,
       reasonCodes: [...new Set(reasonCodes)],
+      writeCount,
     };
   }
   const upsert = await cardContract.upsertDiscordForumCard({
@@ -589,8 +623,7 @@ async function buildCompletedBoardTransfer({
   let destinationTagUpdate = null;
   if (upsert.ok && finalDestinationId && completedTagIds) {
     const currentTags = existing?.thread?.applied_tags || [];
-    if (upsert.action === "created" || (currentTags.length === completedTagIds.length
-      && currentTags.every((value, index) => value === completedTagIds[index]))) {
+    if (upsert.action === "created" || sameUniqueSet(currentTags, completedTagIds)) {
       destinationTagUpdate = { ok: true, status: null, action: upsert.action === "created" ? "created_with_tags" : "already_exact" };
     } else {
       destinationTagUpdate = await cardContract.discordRequest({
@@ -633,8 +666,7 @@ async function buildCompletedBoardTransfer({
       sourceLinkPresent: content.includes(sourceUrl),
       appliedTagsExact: !completedTagIds || (
         Array.isArray(threadRead.payload?.applied_tags)
-        && threadRead.payload.applied_tags.length === completedTagIds.length
-        && threadRead.payload.applied_tags.every((value, index) => value === completedTagIds[index])
+        && sameUniqueSet(threadRead.payload.applied_tags, completedTagIds)
       ),
       journalRead: journalRead.ok,
       journalMarkerPresent: journalContent.includes(journal.eventMarker(completionEvent.eventId)),
@@ -737,15 +769,7 @@ async function buildCompletedBoardTransfer({
       readback: destinationReadback,
     },
     reasonCodes: [...new Set(reasonCodes)],
-    writeCount: [
-      upsert.action === "created" || upsert.action === "updated",
-      upsert.reactionResult?.status === "applied",
-      journalAction === "created" || journalAction === "updated",
-      destinationTagUpdate?.action === "updated",
-      destinationBodyRepair?.ok === true,
-      sourceUpdate?.ok === true,
-      sourceArchive?.ok === true,
-    ].filter(Boolean).length,
+    writeCount,
   };
 }
 
@@ -773,6 +797,7 @@ module.exports = {
     resolveAdmission,
     validateInput,
     cardMarker,
+    sameUniqueSet,
     inferProject,
     discordThreadUrl,
     buildCompletedEvent,

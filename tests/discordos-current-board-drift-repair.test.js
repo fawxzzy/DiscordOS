@@ -326,6 +326,21 @@ test("expected-current tag and forum-order preimages are exact", () => {
   expectPlanGenerationBlocked((scan) => scan.relativeOrder.observedBoardIds.reverse(), "plan_generation_blocked");
 });
 
+test("runtime tag IDs accept preimage and postimage permutations but reject duplicates", async () => {
+  const operation = planTemplate.operations.find((row) => row.kind === "tag_repair" && row.preimage.appliedTagIds.length === 2);
+  const inspect = (appliedTags) => _internals.inspectTagRuntime(operation, {
+    env: { DISCORDOS_BOT_TOKEN: "fixture" },
+    fetchImpl: async () => response({ payload: { parent_id: operation.forumChannelId, applied_tags: appliedTags } }),
+  });
+  const pending = await inspect([...operation.preimage.appliedTagIds].reverse());
+  assert.equal(pending.status, "pending");
+  const complete = await inspect([...operation.postimage.appliedTagIds].reverse());
+  assert.equal(complete.status, "complete");
+  const duplicate = await inspect([operation.preimage.appliedTagIds[0], operation.preimage.appliedTagIds[0]]);
+  assert.equal(duplicate.status, "blocked");
+  assert(duplicate.reasonCodes.includes("tag_target_live_preimage_drift"));
+});
+
 test("default preflight and dry-run fixture modes produce zero writes", async () => {
   const fixture = makeFixture();
   let writes = 0;
@@ -590,7 +605,7 @@ test("completed transfer replay rejects corrupted owner, project, evidence, or b
           id: destinationId,
           name: operation.source.title,
           parent_id: operation.destination.forumChannelId,
-          applied_tags: operation.destination.appliedTagIds,
+          applied_tags: [...operation.destination.appliedTagIds].reverse(),
         }] } });
       }
       if (url.endsWith(`/channels/${operation.destination.forumChannelId}/threads/archived/public?limit=100`)) {
