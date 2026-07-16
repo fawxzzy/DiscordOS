@@ -690,6 +690,144 @@ test("corrupted destination replay is repaired to the exact deterministic postim
   assert.equal(journalCreates, 0);
 });
 
+test("source-link partial failure resumes with archive only and then replays without mutation", async () => {
+  const eventId = "completed:CARD-42:source-link-resume";
+  const occurredAt = "2026-07-16T14:00:00.000Z";
+  const sourceUrl = "https://discord.com/channels/guild/source-thread";
+  const destinationUrl = "https://discord.com/channels/guild/completed-thread";
+  const originalSource = "Original card";
+  const expectedDestination = _internals.buildCompletedMessage({
+    cardId: "CARD-42",
+    sourceForumChannelId: "source-forum",
+    title: "Card title",
+    eventId,
+    occurredAt,
+    sourceContent: originalSource,
+    sourceUrl,
+    destinationUrl: null,
+    evidence: baseOptions.evidence,
+  });
+  const expectedSource = _internals.buildSourceMessage({ sourceContent: originalSource, destinationUrl, cardId: "CARD-42" });
+  const expectedJournal = journal.buildJournalMessage(_internals.buildCompletedEvent({
+    cardId: "CARD-42",
+    sourceForumChannelId: "source-forum",
+    title: "Card title",
+    eventId,
+    occurredAt,
+    sourceUrl,
+    destinationUrl,
+    evidence: baseOptions.evidence,
+  }));
+  let sourceContent = originalSource;
+  let sourceArchived = false;
+  let sourceLocked = false;
+  let failArchive = true;
+  let sourceLinkWrites = 0;
+  let successfulArchiveWrites = 0;
+  let destinationCreates = 0;
+  let journalCreates = 0;
+  const run = () => _internals.buildCompletedBoardTransfer({
+    ...baseOptions,
+    eventId,
+    occurredAt,
+    completedTagIds: ["feature-tag", "completed-tag"],
+    requireStableIdentity: true,
+    sourceContentPreimage: originalSource,
+    repairExactPostimage: true,
+    apply: true,
+    allowApply: true,
+    fetchImpl: async (url, init) => {
+      if (url.endsWith("/channels/source-thread/messages/source-thread")) {
+        if (init.method === "PATCH") {
+          sourceLinkWrites += 1;
+          sourceContent = JSON.parse(init.body).content;
+        }
+        return response({ payload: { id: "source-thread", content: sourceContent } });
+      }
+      if (url.endsWith("/channels/source-thread")) {
+        if (init.method === "PATCH") {
+          if (failArchive) return response({ ok: false, status: 500, payload: { message: "Injected archive failure" } });
+          const body = JSON.parse(init.body);
+          sourceArchived = body.archived;
+          sourceLocked = body.locked;
+          successfulArchiveWrites += 1;
+        }
+        return response({ payload: {
+          id: "source-thread",
+          name: "Card title",
+          parent_id: "source-forum",
+          guild_id: "guild",
+          thread_metadata: { archived: sourceArchived, locked: sourceLocked },
+        } });
+      }
+      if (url.endsWith("/guilds/guild/threads/active")) return response({ payload: { threads: [{
+        id: "completed-thread",
+        name: "Card title",
+        parent_id: "completed-forum",
+        applied_tags: ["completed-tag", "feature-tag"],
+      }] } });
+      if (url.endsWith("/channels/completed-forum/threads/archived/public?limit=100")) {
+        return response({ payload: { threads: [], has_more: false } });
+      }
+      if (url.endsWith("/channels/completed-forum/threads") && init.method === "POST") {
+        destinationCreates += 1;
+        return response({ status: 201, payload: { id: "duplicate-destination" } });
+      }
+      if (url.endsWith("/channels/completed-thread/messages/completed-thread")) {
+        return response({ payload: {
+          id: "completed-thread",
+          content: expectedDestination,
+          reactions: [{ emoji: { name: "success", id: "1507384062166302851" }, me: true, count: 1 }],
+        } });
+      }
+      if (url.endsWith("/channels/completed-thread/messages?limit=100")) {
+        return response({ payload: [{ id: "journal", content: expectedJournal }] });
+      }
+      if (url.endsWith("/channels/completed-thread/messages/journal")) {
+        return response({ payload: { id: "journal", content: expectedJournal } });
+      }
+      if (url.endsWith("/channels/completed-thread/messages") && init.method === "POST") {
+        journalCreates += 1;
+        return response({ status: 201, payload: { id: "duplicate-journal" } });
+      }
+      if (url.endsWith("/channels/completed-thread")) {
+        return response({ payload: {
+          id: "completed-thread",
+          name: "Card title",
+          parent_id: "completed-forum",
+          applied_tags: ["feature-tag", "completed-tag"],
+        } });
+      }
+      throw new Error(`unexpected request ${init.method} ${url}`);
+    },
+  });
+
+  const partial = await run();
+  assert.equal(partial.ok, false);
+  assert(partial.reasonCodes.includes("source_card_archive_failed"));
+  assert.equal(partial.writeCount, 1);
+  assert.equal(sourceContent, expectedSource);
+  assert.equal(sourceArchived, false);
+  assert.equal(sourceLocked, false);
+
+  failArchive = false;
+  const resumed = await run();
+  assert.equal(resumed.ok, true, JSON.stringify(resumed, null, 2));
+  assert.equal(resumed.writeCount, 1);
+  assert.equal(resumed.source.readback.postimageExact, true);
+  assert.equal(sourceLinkWrites, 1, "resume must not rewrite the exact reciprocal source link");
+  assert.equal(successfulArchiveWrites, 1);
+
+  const replay = await run();
+  assert.equal(replay.ok, true, JSON.stringify(replay, null, 2));
+  assert.equal(replay.writeCount, 0);
+  assert.equal(sourceLinkWrites, 1);
+  assert.equal(successfulArchiveWrites, 1);
+  assert.equal(destinationCreates, 0);
+  assert.equal(journalCreates, 0);
+  assert.equal(partial.writeCount + resumed.writeCount + replay.writeCount, 2);
+});
+
 test("standalone replay is no-write and exact-mode journal repair is counted", async () => {
   const runExisting = async ({ exactMode, corruptJournal }) => {
     const eventId = exactMode ? "completed:CARD-42:exact-journal" : "completed:CARD-42";

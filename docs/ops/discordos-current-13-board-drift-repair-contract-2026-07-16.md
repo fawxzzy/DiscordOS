@@ -22,12 +22,12 @@ Durable machine plan:
 
 Read-only transfer enrichment resolved the three exact source titles, projects, types, priorities, owners, content hashes, guild ID, destination tag IDs, and deterministic event identities. No unknown was replaced with an inferred value.
 
-The exact-head review repair adds fail-closed guarantees: recomputed modified plans remain unauthorized; archived destinations and journal history are paginated to bounded exhaustion; unreadable destination starters block creation; plan-backed destination body, journal, source reciprocal body, tags, state, reaction, archive, and lock are exact deterministic postimages; applied tag IDs use duplicate-sensitive set comparison; full guild-channel readback proves unrelated channels remain invariant during the bounded 13-board reorder; standalone stable-ID replay remains no-write when no reviewed source preimage is supplied; and every successful Discord write is counted even when a later step blocks.
+The exact-head review repair adds fail-closed guarantees: recomputed modified plans remain unauthorized; archived destinations and journal history are paginated to bounded exhaustion; unreadable destination starters block creation; plan-backed destination body, journal, source reciprocal body, tags, state, reaction, archive, and lock are exact deterministic postimages; the exact reciprocal-link-written/source-open intermediate can resume only the remaining archive+lock transition; applied tag IDs use duplicate-sensitive set comparison; full guild-channel readback proves unrelated channels remain invariant during the bounded 13-board reorder; standalone stable-ID replay remains no-write when no reviewed source preimage is supplied; and every successful Discord write is counted even when a later step blocks.
 
 ## Verification evidence
 
 - focused repair suite: `16/16 passed`
-- focused repair + completed-transfer cluster: `35/35 passed`
+- focused repair + completed-transfer cluster: `36/36 passed`
 - admitted-evidence offline dry-run: `dry_run_ready`, 18 pending operations, `discord_mutations: 0`
 - production environment readiness: `ready` (read-only check)
 - repo-local full `npm run verify`: `passed` on the final code/test surface, exit code `0`

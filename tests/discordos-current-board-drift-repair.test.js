@@ -585,11 +585,15 @@ test("completed transfer replay rejects corrupted owner, project, evidence, or b
     destinationUrl,
     evidence: operation.event.evidence,
   }));
-  const inspect = (destinationContent) => _internals.inspectTransferRuntime(operation, {
+  const inspect = (destinationContent, {
+    sourceContent = expectedSource,
+    sourceArchived = true,
+    sourceLocked = true,
+  } = {}) => _internals.inspectTransferRuntime(operation, {
     env: { DISCORDOS_BOT_TOKEN: "fixture" },
     fetchImpl: async (url) => {
       if (url.endsWith(`/channels/${operation.source.threadId}/messages/${operation.source.threadId}`)) {
-        return response({ payload: { id: operation.source.threadId, content: expectedSource } });
+        return response({ payload: { id: operation.source.threadId, content: sourceContent } });
       }
       if (url.endsWith(`/channels/${operation.source.threadId}`)) {
         return response({ payload: {
@@ -597,7 +601,7 @@ test("completed transfer replay rejects corrupted owner, project, evidence, or b
           name: operation.source.title,
           parent_id: operation.source.forumChannelId,
           guild_id: guildId,
-          thread_metadata: { archived: true, locked: true },
+          thread_metadata: { archived: sourceArchived, locked: sourceLocked },
         } });
       }
       if (url.endsWith(`/guilds/${guildId}/threads/active`)) {
@@ -628,6 +632,22 @@ test("completed transfer replay rejects corrupted owner, project, evidence, or b
   const exact = await inspect(expectedDestination);
   assert.equal(exact.status, "complete");
   assert.equal(exact.complete, true);
+  const linkedOpen = await inspect(expectedDestination, { sourceArchived: false, sourceLocked: false });
+  assert.equal(linkedOpen.ok, true);
+  assert.equal(linkedOpen.status, "pending");
+  assert.equal(linkedOpen.complete, false);
+  assert.equal(linkedOpen.source.linkWrittenOpenExact, true);
+  assert(!linkedOpen.reasonCodes.includes("transfer_source_content_preimage_drift"));
+  const corruptedLinkedOpen = await inspect(expectedDestination, {
+    sourceContent: `${expectedSource}\ncorrupt-source-body`,
+    sourceArchived: false,
+    sourceLocked: false,
+  });
+  assert.equal(corruptedLinkedOpen.ok, false);
+  assert(corruptedLinkedOpen.reasonCodes.includes("transfer_source_content_preimage_drift"));
+  const halfTransition = await inspect(expectedDestination, { sourceArchived: false, sourceLocked: true });
+  assert.equal(halfTransition.ok, false);
+  assert(halfTransition.reasonCodes.includes("transfer_source_content_preimage_drift"));
   const corruptions = [
     expectedDestination.replace(`- owner: \`${operation.source.owner}\``, "- owner: `corrupt-owner`"),
     expectedDestination.replace(`- project: \`${operation.source.project}\``, "- project: `corrupt-project`"),

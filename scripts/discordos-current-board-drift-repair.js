@@ -808,8 +808,14 @@ async function inspectTransferRuntime(operation, { env = process.env, fetchImpl 
     && sourceContent === expectedSourceContent
     && sourceThread.thread_metadata?.archived === true
     && sourceThread.thread_metadata?.locked === true;
+  const sourceLinkWrittenOpenExact = Boolean(expectedSourceContent)
+    && sourceContent === expectedSourceContent
+    && sourceThread.thread_metadata?.archived === false
+    && sourceThread.thread_metadata?.locked === false;
   const reciprocalExact = sourcePostimageExact;
-  if (!sourcePreimageExact && !sourcePostimageExact) reasonCodes.push("transfer_source_content_preimage_drift");
+  if (!sourcePreimageExact && !sourceLinkWrittenOpenExact && !sourcePostimageExact) {
+    reasonCodes.push("transfer_source_content_preimage_drift");
+  }
   const destinationContent = String(destinationMessage?.content || "");
   const eventMarker = `ATLAS-JOURNAL-EVENT-ID: \`${operation.event.eventId}\``;
   const matchingJournalMessages = journalMessages.filter((message) => String(message?.content || "").includes(eventMarker));
@@ -843,6 +849,7 @@ async function inspectTransferRuntime(operation, { env = process.env, fetchImpl 
       threadId: operation.source.threadId,
       contentSha256: sha256(sourceContent),
       preimageExact: sourcePreimageExact,
+      linkWrittenOpenExact: sourceLinkWrittenOpenExact,
       postimageExact: sourcePostimageExact,
       reciprocalExact,
       archived: sourceThread.thread_metadata?.archived === true,

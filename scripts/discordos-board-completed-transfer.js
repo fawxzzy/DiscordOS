@@ -459,7 +459,16 @@ async function buildCompletedBoardTransfer({
     && String(sourceMessage.payload?.content || "") === expectedSourcePostimage
     && sourceThreadArchived
     && sourceThreadLocked;
-  if (sourceContentPreimage != null && !plannedSourcePreimageExact && !plannedSourcePostimageExact) {
+  const plannedSourceLinkWrittenOpenExact = Boolean(expectedSourcePostimage)
+    && String(sourceMessage.payload?.content || "") === expectedSourcePostimage
+    && sourceThread.payload?.thread_metadata?.archived === false
+    && sourceThread.payload?.thread_metadata?.locked === false;
+  if (
+    sourceContentPreimage != null
+    && !plannedSourcePreimageExact
+    && !plannedSourceLinkWrittenOpenExact
+    && !plannedSourcePostimageExact
+  ) {
     reasonCodes.push("source_card_planned_preimage_mismatch");
   }
   if (reasonCodes.length > 0) {
