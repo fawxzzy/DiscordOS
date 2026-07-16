@@ -979,6 +979,38 @@ function extractTransferResumeStates(plan, resumeReceipt, {
       reasonCodes.push("resume_receipt_extra_transfer_operation");
       continue;
     }
+    const carried = row?.resumeState;
+    if (carried != null) {
+      const nestedExpected = row?.receipt?.completed?.archiveState?.expected;
+      const nestedThreadId = row?.receipt?.completed?.threadId;
+      const nestedCardId = row?.receipt?.cardId;
+      if (
+        carried?.cardId !== operation.source.cardId
+        || typeof carried?.threadId !== "string"
+        || carried.threadId.length === 0
+        || typeof carried?.archived !== "boolean"
+        || typeof carried?.locked !== "boolean"
+        || (nestedExpected != null && (
+          nestedExpected.archived !== carried.archived
+          || nestedExpected.locked !== carried.locked
+        ))
+        || (nestedThreadId != null && nestedThreadId !== carried.threadId)
+        || (nestedCardId != null && nestedCardId !== carried.cardId)
+      ) {
+        reasonCodes.push(`resume_receipt_transfer_state_invalid:${row.operationId}`);
+        continue;
+      }
+      if (states.has(row.operationId)) {
+        reasonCodes.push(`resume_receipt_transfer_duplicate:${row.operationId}`);
+        continue;
+      }
+      states.set(row.operationId, {
+        threadId: carried.threadId,
+        archived: carried.archived,
+        locked: carried.locked,
+      });
+      continue;
+    }
     if (row?.ok === true && row?.status !== "blocked") continue;
     const expected = row?.receipt?.completed?.archiveState?.expected;
     if (expected == null) continue;
@@ -1005,6 +1037,47 @@ function extractTransferResumeStates(plan, resumeReceipt, {
     });
   }
   return { ok: reasonCodes.length === 0, states, reasonCodes: unique(reasonCodes).sort() };
+}
+
+function carryTransferResumeStates(plan, states, operationReceipts = []) {
+  const operations = new Map((plan?.operations || [])
+    .filter((operation) => operation.kind === "completed_transfer")
+    .map((operation) => [operation.operationId, operation]));
+  const carriedOperationIds = new Set();
+  const rows = operationReceipts.map((row) => {
+    const operation = operations.get(row?.operationId);
+    const state = operation && states.get(row.operationId);
+    if (!operation || !state) return row;
+    carriedOperationIds.add(row.operationId);
+    return {
+      ...row,
+      resumeState: {
+        cardId: operation.source.cardId,
+        threadId: state.threadId,
+        archived: state.archived,
+        locked: state.locked,
+      },
+    };
+  });
+  for (const [operationId, state] of states) {
+    if (carriedOperationIds.has(operationId)) continue;
+    const operation = operations.get(operationId);
+    if (!operation) continue;
+    rows.push({
+      operationId,
+      kind: operation.kind,
+      ok: true,
+      status: "resume_state_preserved",
+      writeCount: 0,
+      resumeState: {
+        cardId: operation.source.cardId,
+        threadId: state.threadId,
+        archived: state.archived,
+        locked: state.locked,
+      },
+    });
+  }
+  return rows;
 }
 
 async function inspectTagRuntime(operation, { env = process.env, fetchImpl = fetch } = {}) {
@@ -1258,10 +1331,13 @@ async function runRepair({
       mode,
       admission,
       planDigestSha256: plan?.planDigestSha256 || null,
+      evidence: plan?.generatedFrom || null,
       mutatesDiscord: false,
       discordMutations: 0,
       discordMutationOutcomesUnknown: 0,
-      operationReceipts: [],
+      operationReceipts: resumeState.ok && planReasonCodes.length === 0
+        ? carryTransferResumeStates(plan, resumeState.states)
+        : [],
       reasonCodes: unique(reasonCodes).sort(),
     };
   }
@@ -1309,7 +1385,7 @@ async function runRepair({
       mutatesDiscord: false,
       discordMutations: 0,
       discordMutationOutcomesUnknown: 0,
-      operationReceipts: [],
+      operationReceipts: carryTransferResumeStates(plan, resumeState.states),
       reasonCodes: unique(reasonCodes).sort(),
     };
   }
@@ -1446,7 +1522,7 @@ async function runRepair({
     evidence: plan.generatedFrom,
     scanEvaluation,
     runtimePreflight: { status: "exact_live_preimages_read", tags: tagInspections, order: orderInspection, transfers: transferInspections },
-    operationReceipts,
+    operationReceipts: carryTransferResumeStates(plan, resumeState.states, operationReceipts),
     reconciliation,
     mutatesDiscord: discordMutations > 0 || discordMutationOutcomesUnknown > 0,
     discordMutations,

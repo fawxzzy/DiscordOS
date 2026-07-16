@@ -1042,6 +1042,229 @@ test("a plan-bound blocked receipt authorizes only its exact incomplete destinat
   }
 });
 
+test("trusted archived destination state survives a later transfer barrier and resumes without duplicate creation", async () => {
+  const fixture = makeFixture();
+  const [archivedOperation, blockedOperation] = fixture.plan.operations.filter((row) => row.kind === "completed_transfer");
+  const terminalScan = clone(fixture.scan);
+  for (const operation of fixture.plan.operations.filter((row) => row.kind === "tag_repair")) markTagComplete(terminalScan, operation);
+  markOrderComplete(terminalScan, fixture.plan.operations.find((row) => row.kind === "forum_order_repair"));
+  for (const operation of fixture.plan.operations.filter((row) => row.kind === "completed_transfer")) markTransferComplete(terminalScan, operation);
+  const archivedState = {
+    threadId: "destination-archived-resume",
+    archived: true,
+    locked: true,
+  };
+  let resumeReceipt = {
+    schemaVersion: _internals.RECEIPT_SCHEMA_VERSION,
+    eventId: _internals.EVENT_ID,
+    ok: false,
+    status: "blocked",
+    mode: "apply",
+    planDigestSha256: fixture.plan.planDigestSha256,
+    evidence: clone(fixture.plan.generatedFrom),
+    operationReceipts: [{
+      operationId: archivedOperation.operationId,
+      kind: archivedOperation.kind,
+      ok: false,
+      status: "blocked",
+      receipt: {
+        cardId: archivedOperation.source.cardId,
+        completed: {
+          threadId: archivedState.threadId,
+          archiveState: { expected: { archived: true, locked: true } },
+        },
+      },
+    }],
+  };
+  const observedStates = [];
+  let blockedDestinationExists = false;
+  let blockedTransferComplete = false;
+  let destinationCreateCount = 0;
+  let destinationReuseCount = 0;
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    const resumeReceiptBytes = Buffer.from(JSON.stringify(resumeReceipt));
+    let scanReads = 0;
+    const result = await _internals.runRepair({
+      mode: "apply",
+      plan: fixture.plan,
+      evidenceBytes: fixture.evidenceBytes,
+      admittedScan: fixture.scan,
+      admittedEvidenceSha256: fixture.admittedEvidenceSha256,
+      trustedPlanDigestSha256: fixture.plan.planDigestSha256,
+      resumeReceipt,
+      resumeReceiptBytes,
+      trustedResumeReceiptSha256: digest(resumeReceiptBytes),
+      allowApply: true,
+      env: {
+        DISCORDOS_BOT_TOKEN: "fixture",
+        DISCORDOS_CURRENT_BOARD_DRIFT_REPAIR: "enabled",
+        DISCORDOS_BOARD_COMPLETED_TRANSFER: "enabled",
+      },
+      currentScanImpl: async () => {
+        scanReads += 1;
+        return clone(attempt === 2 && scanReads === 2 ? terminalScan : fixture.scan);
+      },
+      tagInspectionImpl: async (operation) => ({ ok: true, operationId: operation.operationId, status: "complete", reasonCodes: [] }),
+      orderInspectionImpl: async (operation) => ({ ok: true, operationId: operation.operationId, status: "complete", reasonCodes: [] }),
+      transferInspectionImpl: async (operation, options) => {
+        observedStates.push([attempt, operation.operationId, options.destinationStatePreimage]);
+        if (operation.operationId === archivedOperation.operationId) {
+          return {
+            ok: true,
+            operationId: operation.operationId,
+            status: "complete",
+            complete: true,
+            destination: {
+              threadId: archivedState.threadId,
+              archiveState: { archived: true, locked: true },
+              readback: { archiveStateExact: true },
+            },
+            reasonCodes: [],
+          };
+        }
+        if (operation.operationId === blockedOperation.operationId) {
+          const complete = blockedTransferComplete;
+          return {
+            ok: true,
+            operationId: operation.operationId,
+            status: complete ? "complete" : "pending",
+            complete,
+            destination: blockedDestinationExists ? {
+              threadId: "destination-later-blocked",
+              archiveState: { archived: false, locked: false },
+              readback: { archiveStateExact: true },
+            } : null,
+            reasonCodes: [],
+          };
+        }
+        return {
+          ok: true,
+          operationId: operation.operationId,
+          status: "complete",
+          complete: true,
+          destination: {
+            threadId: `destination-${operation.source.cardId}`,
+            archiveState: { archived: false, locked: false },
+            readback: { archiveStateExact: true },
+          },
+          reasonCodes: [],
+        };
+      },
+      transferApplyImpl: async (options) => {
+        assert.equal(options.cardId, blockedOperation.source.cardId);
+        if (attempt === 1) {
+          assert.equal(options.destinationStatePreimage, null);
+          destinationCreateCount += 1;
+          blockedDestinationExists = true;
+          return {
+            ok: false,
+            status: "blocked",
+            cardId: blockedOperation.source.cardId,
+            writeCount: 1,
+            writeOutcomeUnknownCount: 0,
+            completed: {
+              threadId: "destination-later-blocked",
+              archiveState: { expected: { archived: false, locked: false } },
+            },
+            reasonCodes: ["injected_later_transfer_barrier"],
+          };
+        }
+        assert.deepEqual(options.destinationStatePreimage, {
+          threadId: "destination-later-blocked",
+          archived: false,
+          locked: false,
+        });
+        destinationReuseCount += 1;
+        blockedTransferComplete = true;
+        const receipt = successfulTransferReceipt(blockedOperation);
+        receipt.completed.threadId = "destination-later-blocked";
+        receipt.writeCount = 4;
+        return receipt;
+      },
+    });
+    const completedRow = result.operationReceipts.find((row) => row.operationId === archivedOperation.operationId);
+    assert.equal(completedRow.status, "already_complete", `attempt ${attempt}`);
+    assert.deepEqual(completedRow.resumeState, {
+      cardId: archivedOperation.source.cardId,
+      ...archivedState,
+    }, `attempt ${attempt}`);
+    if (attempt === 1) {
+      assert.equal(result.ok, false);
+      assert.equal(result.discordMutations, 1);
+      assert(result.reasonCodes.includes("injected_later_transfer_barrier"));
+      const resultBytes = Buffer.from(JSON.stringify(result));
+      const extracted = _internals.extractTransferResumeStates(fixture.plan, result, {
+        resumeReceiptBytes: resultBytes,
+        trustedResumeReceiptSha256: digest(resultBytes),
+      });
+      assert.equal(extracted.ok, true);
+      assert.deepEqual(extracted.states.get(archivedOperation.operationId), archivedState);
+      assert.deepEqual(extracted.states.get(blockedOperation.operationId), {
+        threadId: "destination-later-blocked",
+        archived: false,
+        locked: false,
+      });
+      for (const [label, mutate] of [
+        ["destination-id", (state) => { state.threadId = "tampered-destination"; }],
+        ["archive", (state) => { state.archived = false; }],
+        ["lock", (state) => { state.locked = false; }],
+      ]) {
+        const tampered = clone(result);
+        mutate(tampered.operationReceipts.find((row) => row.operationId === archivedOperation.operationId).resumeState);
+        const tamperedBytes = Buffer.from(JSON.stringify(tampered));
+        let scans = 0;
+        let writes = 0;
+        const rejected = await _internals.runRepair({
+          mode: "apply",
+          plan: fixture.plan,
+          evidenceBytes: fixture.evidenceBytes,
+          admittedScan: fixture.scan,
+          admittedEvidenceSha256: fixture.admittedEvidenceSha256,
+          trustedPlanDigestSha256: fixture.plan.planDigestSha256,
+          resumeReceipt: tampered,
+          resumeReceiptBytes: tamperedBytes,
+          trustedResumeReceiptSha256: digest(resultBytes),
+          allowApply: true,
+          env: {
+            DISCORDOS_BOT_TOKEN: "fixture",
+            DISCORDOS_CURRENT_BOARD_DRIFT_REPAIR: "enabled",
+            DISCORDOS_BOARD_COMPLETED_TRANSFER: "enabled",
+          },
+          currentScanImpl: async () => { scans += 1; throw new Error("tampered completed state reached preflight"); },
+          tagApplyImpl: async () => { writes += 1; throw new Error("tampered completed state reached writer"); },
+          orderApplyImpl: async () => { writes += 1; throw new Error("tampered completed state reached writer"); },
+          transferApplyImpl: async () => { writes += 1; throw new Error("tampered completed state reached writer"); },
+        });
+        assert.equal(rejected.ok, false, label);
+        assert.equal(rejected.discordMutations, 0, label);
+        assert.equal(scans, 0, label);
+        assert.equal(writes, 0, label);
+        assert(rejected.reasonCodes.includes("resume_receipt_trusted_digest_mismatch"), label);
+      }
+      resumeReceipt = result;
+    } else {
+      assert.equal(result.ok, true);
+      assert.equal(result.status, "applied_and_reconciled");
+      assert.equal(result.discordMutations, 4);
+    }
+  }
+  for (const attempt of [1, 2]) {
+    assert.deepEqual(
+      observedStates.find(([candidateAttempt, operationId]) =>
+        candidateAttempt === attempt && operationId === archivedOperation.operationId
+      )[2],
+      archivedState,
+      `attempt ${attempt} must retain archived authority`,
+    );
+  }
+  assert.deepEqual(
+    observedStates.find(([attempt, operationId]) => attempt === 2 && operationId === blockedOperation.operationId)[2],
+    { threadId: "destination-later-blocked", archived: false, locked: false },
+  );
+  assert.equal(destinationCreateCount, 1, "resume must not create a duplicate destination");
+  assert.equal(destinationReuseCount, 1, "resume must reuse the trusted partial destination");
+});
+
 test("partial failure resumes safely and successful replay produces no duplicate writes", async () => {
   const fixture = makeFixture();
   const state = clone(fixture.scan);
