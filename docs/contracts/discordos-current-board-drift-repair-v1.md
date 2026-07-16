@@ -68,7 +68,7 @@ Operations are idempotent:
 - a corrupted known destination body or journal can be repaired only to the plan-derived exact postimage; no new destination or journal is created during that recovery;
 - strict byte-exact body and journal enforcement is enabled only when the reviewed source preimage is supplied by this plan-backed command; the reusable standalone transfer CLI preserves a stable-ID-matched persisted destination and journal on replay;
 - an exact archived+locked destination is classified without reopening and replays with zero writes; a repair-needed archived destination is reopened only for the bounded repair and restored to its exact prior archive/lock state before source mutation;
-- journal history is classified before an archived destination reopens, and any journal read/create/update failure is a hard barrier before tag or source mutation;
+- journal history is classified before an archived destination reopens, required success-reaction reconciliation is deferred until the journal succeeds, and any journal read/create/update failure is a hard barrier before tag, reaction, or source mutation;
 - the one admitted partial source state is the exact reviewed reciprocal-link body while the source is explicitly open and not locked (`locked` may be omitted by Discord); replay may perform only the remaining archive+lock transition, while every other source-body or state drift blocks;
 - applied tag IDs are duplicate-sensitive sets: response order is irrelevant, but missing, extra, or duplicate IDs are rejected;
 - completed-transfer receipts count every successful non-GET Discord request, including writes completed before a later blocked return;

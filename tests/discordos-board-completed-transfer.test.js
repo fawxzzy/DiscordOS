@@ -715,13 +715,15 @@ test("journal create failure blocks every later destination and source mutation"
   const result = await harness.run();
   assert.equal(result.ok, false);
   assert(result.reasonCodes.includes("completed_card_journal_create_failed"));
-  assert.equal(result.writeCount, 1, "only the required reaction written before journal failure is counted");
+  assert.equal(result.writeCount, 0, "journal failure must precede and block the required reaction");
+  assert.equal(harness.state.reactionPresent, false);
   assert.deepEqual(harness.state.destinationTags, ["wrong-tag"]);
   const failureIndex = harness.calls.findLastIndex((call) =>
     call.method === "POST" && call.url.endsWith("/channels/completed-thread/messages")
   );
   assert(failureIndex >= 0);
   assert(harness.calls.slice(failureIndex + 1).every((call) => call.method === "GET"));
+  assert(!harness.calls.some((call) => call.method === "PUT" && call.url.includes("/reactions/")));
   assert(!harness.calls.some((call) => call.method === "PATCH" && call.body?.applied_tags));
   assert(!harness.calls.some((call) => call.method !== "GET" && call.url.includes("/channels/source-thread")));
 });
@@ -731,6 +733,7 @@ test("journal update failure preserves prior write count and blocks every later 
     eventId: "completed:CARD-42:journal-update-failure",
     destinationBody: "corrupt",
     destinationTags: ["wrong-tag"],
+    reactionPresent: false,
     journalMode: "corrupt",
     failJournalUpdate: true,
   });
@@ -739,14 +742,37 @@ test("journal update failure preserves prior write count and blocks every later 
   assert(result.reasonCodes.includes("completed_card_journal_update_failed"));
   assert.equal(result.writeCount, 1, "only the completed body repair before journal failure is counted");
   assert.equal(harness.state.destinationContent, harness.expectedDestination);
+  assert.equal(harness.state.reactionPresent, false);
   assert.deepEqual(harness.state.destinationTags, ["wrong-tag"]);
   const failureIndex = harness.calls.findLastIndex((call) =>
     call.method === "PATCH" && call.url.endsWith("/channels/completed-thread/messages/journal")
   );
   assert(failureIndex >= 0);
   assert(harness.calls.slice(failureIndex + 1).every((call) => call.method === "GET"));
+  assert(!harness.calls.some((call) => call.method === "PUT" && call.url.includes("/reactions/")));
   assert(!harness.calls.some((call) => call.method === "PATCH" && call.body?.applied_tags));
   assert(!harness.calls.some((call) => call.method !== "GET" && call.url.includes("/channels/source-thread")));
+});
+
+test("successful journal reconciliation precedes the deferred success reaction", async () => {
+  const harness = makeExistingTransferHarness({
+    eventId: "completed:CARD-42:journal-before-reaction",
+    reactionPresent: false,
+    journalMode: "missing",
+  });
+  const result = await harness.run();
+  assert.equal(result.ok, true, JSON.stringify(result, null, 2));
+  assert.equal(result.writeCount, 2);
+  assert.equal(harness.state.journalContent, harness.expectedJournal);
+  assert.equal(harness.state.reactionPresent, true);
+  const journalWriteIndex = harness.calls.findIndex((call) =>
+    call.method === "POST" && call.url.endsWith("/channels/completed-thread/messages")
+  );
+  const reactionWriteIndex = harness.calls.findIndex((call) =>
+    call.method === "PUT" && call.url.includes("/reactions/")
+  );
+  assert(journalWriteIndex >= 0);
+  assert(reactionWriteIndex > journalWriteIndex);
 });
 
 test("unreadable destination starter blocks creation with an exact zero-write receipt", async () => {

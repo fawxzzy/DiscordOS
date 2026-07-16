@@ -682,6 +682,7 @@ async function buildCompletedBoardTransfer({
     token,
     apply: true,
     preflight: upsertPreflight,
+    deferRequiredReaction: true,
     buildPayload: buildDestinationPayload,
     fetchImpl,
   });
@@ -755,6 +756,17 @@ async function buildCompletedBoardTransfer({
         journalMessageId = posted.payload.id;
       }
     }
+  }
+  let destinationReaction = upsert.reactionResult;
+  if (reasonCodes.length === 0 && upsert.ok && finalDestinationId && upsert.messageId) {
+    destinationReaction = await cardContract.ensureRequiredReaction({
+      channelId: finalDestinationId,
+      messageId: upsert.messageId,
+      token,
+      emoji: spec.requiredReactions[0],
+      fetchImpl,
+    });
+    reasonCodes.push(...destinationReaction.reasonCodes);
   }
   if (reasonCodes.length > 0) await restoreDestinationState();
   let destinationTagUpdate = null;
@@ -905,7 +917,7 @@ async function buildCompletedBoardTransfer({
       threadId: finalDestinationId,
       action: upsert.action,
       tags: destinationTagUpdate,
-      reaction: upsert.reactionResult,
+      reaction: destinationReaction,
       archiveState: {
         reopened: destinationReopened,
         reopenHttpStatus: destinationReopen?.status || null,
