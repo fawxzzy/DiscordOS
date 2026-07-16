@@ -29,9 +29,28 @@ function response({ ok = true, status = 200, payload = null } = {}) {
   return { ok, status, json: async () => payload };
 }
 
-function resolvedRegistry() {
+function ownerExportRaw(value) {
+  return Buffer.from(`${JSON.stringify(value, null, 2)}\n`, "utf8");
+}
+
+function ownerExportBlobOid(value) {
+  return ownerSeed.gitBlobOid(ownerExportRaw(value));
+}
+
+function buildResidualPlan({ snapshot, socialsOwnerExport }) {
+  return migration.buildResidualRecoveryPlan({
+    snapshot,
+    socialsOwnerExport,
+    socialsOwnerExportBlobOid: ownerExportBlobOid(socialsOwnerExport),
+  });
+}
+
+function resolvedRegistry(socialsOwnerExport = socialsExport()) {
   const value = structuredClone(registry);
   value.boards.find((board) => board.id === "socials-os-active-admission").forumChannelId = "socials-forum";
+  if (socialsOwnerExport) {
+    value.sourceAdapters["socials-os-roadmap-v1"].acceptedPreimage.ownerExportBlob = ownerExportBlobOid(socialsOwnerExport);
+  }
   return value;
 }
 
@@ -164,7 +183,11 @@ function residualSnapshot(socialIdentityCount = 11, {
 } = {}) {
   const snapshot = fullLegacySnapshot();
   const ownerExport = socialsExport();
-  const seed = ownerSeed.buildOwnerSeedBatch({ registry: snapshot.registry, ownerExports: [ownerExport] });
+  const seed = ownerSeed.buildOwnerSeedBatch({
+    registry: snapshot.registry,
+    ownerExports: [ownerExport],
+    observedBlobOids: [ownerExportBlobOid(ownerExport)],
+  });
   const socialsForum = snapshot.forums.find((row) => row.boardId === "socials-os-active-admission");
   const socialTagByName = new Map(socialsForum.forum.available_tags.map((tag) => [tag.name, tag.id]));
   socialsForum.threads = seed.events.slice(0, socialIdentityCount).map((event, index) => ({
@@ -313,8 +336,9 @@ test("forum replacement preserves exact same-name IDs and declares canonical ord
 test("Socials owner adapter validates 12 events idempotently and preserves null priority as no tag", () => {
   const ownerExport = socialsExport();
   const resolved = resolvedRegistry();
-  const first = ownerSeed.buildOwnerSeedBatch({ registry: resolved, ownerExports: [ownerExport] });
-  const second = ownerSeed.buildOwnerSeedBatch({ registry: resolved, ownerExports: [ownerExport] });
+  const observedBlobOids = [ownerExportBlobOid(ownerExport)];
+  const first = ownerSeed.buildOwnerSeedBatch({ registry: resolved, ownerExports: [ownerExport], observedBlobOids });
+  const second = ownerSeed.buildOwnerSeedBatch({ registry: resolved, ownerExports: [ownerExport], observedBlobOids });
   assert.equal(first.ok, true);
   assert.equal(first.eventCount, 12);
   assert.deepEqual(first.events.map((event) => event.eventId), second.events.map((event) => event.eventId));
@@ -330,7 +354,11 @@ test("Socials owner adapter validates 12 events idempotently and preserves null 
 
   const duplicate = structuredClone(ownerExport);
   duplicate.cards[1].record.card_id = duplicate.cards[0].record.card_id;
-  const blocked = ownerSeed.buildOwnerSeedBatch({ registry: resolved, ownerExports: [duplicate] });
+  const blocked = ownerSeed.buildOwnerSeedBatch({
+    registry: resolved,
+    ownerExports: [duplicate],
+    observedBlobOids: [ownerExportBlobOid(duplicate)],
+  });
   assert.equal(blocked.ok, false);
   assert.ok(blocked.reasonCodes.some((code) => code.startsWith("owner_export_card_id_duplicate:")));
 });
@@ -339,14 +367,59 @@ test("Socials owner adapter fails closed when the accepted 12-card nonterminal c
   const drifted = socialsExport();
   drifted.cards.pop();
   drifted.extensions.selection.exported_nonterminal_count = 11;
-  const blocked = ownerSeed.buildOwnerSeedBatch({ registry: resolvedRegistry(), ownerExports: [drifted] });
+  const blocked = ownerSeed.buildOwnerSeedBatch({
+    registry: resolvedRegistry(),
+    ownerExports: [drifted],
+    observedBlobOids: [ownerExportBlobOid(drifted)],
+  });
   assert.equal(blocked.ok, false);
   assert(blocked.reasonCodes.includes("owner_export_preimage_card_count_mismatch"));
   assert(blocked.reasonCodes.includes("owner_export_preimage_exported_nonterminal_count_mismatch"));
 });
 
-test("exact current Socials cards are residual no-ops", () => {
+test("canonical migration fails closed before mutation when the raw Socials blob identity is unavailable", async () => {
+  const snapshot = fullLegacySnapshot();
+  const ownerExport = socialsExport();
+  let captured = 0;
+  const result = await migration.runCanonicalBoardMigration({
+    registry: snapshot.registry,
+    profileRegistry: profiles,
+    socialsOwnerExport: ownerExport,
+    snapshotPath: runtimeFixturePath("missing-owner-export-blob.json"),
+    allowMigration: true,
+    apply: true,
+    env: {
+      DISCORDOS_BOT_TOKEN: "token",
+      [migration.MIGRATION_ENV]: migration.MIGRATION_ENV_VALUE,
+    },
+    fetchImpl: async () => { throw new Error("accepted-preimage failure must precede Discord I/O"); },
+    fsImpl: { mkdir: async () => {}, writeFile: async () => {} },
+    captureSnapshotImpl: async () => {
+      captured += 1;
+      return snapshot;
+    },
+  });
+  assert.equal(captured, 1);
+  assert.equal(result.ok, false);
+  assert(result.reasonCodes.includes("owner_export_preimage_blob_unverified"));
+  assert.equal(result.mutatesDiscord, false);
+  assert.equal(result.sendsMessages, false);
+  assert.deepEqual(result.phases, []);
+});
+
+test("residual recovery planning suppresses Socials events without the raw blob identity", () => {
   const plan = migration.buildResidualRecoveryPlan({
+    snapshot: residualSnapshot(),
+    socialsOwnerExport: socialsExport(),
+  });
+  assert.equal(plan.ok, false);
+  assert(plan.reasonCodes.includes("owner_export_preimage_blob_unverified"));
+  assert.equal(plan.socials.missingIdentityCount, 0);
+  assert.deepEqual(plan.socials.missingEvents, []);
+});
+
+test("exact current Socials cards are residual no-ops", () => {
+  const plan = buildResidualPlan({
     snapshot: residualSnapshot(12, { phase8Open: true, canonicalPhase8Title: true }),
     socialsOwnerExport: socialsExport(),
   });
@@ -365,12 +438,13 @@ test("Socials residual reconciliation plans authoritative Ready to Planning and 
   const snapshot = residualSnapshot(12, { phase8Open: true, canonicalPhase8Title: true });
   ownerExport.cards.find((card) => card.record.card_id === "SOC-010").record.lifecycle = "planning";
   ownerExport.cards.find((card) => card.record.card_id === "SOC-012").record.lifecycle = "review";
+  snapshot.registry.sourceAdapters["socials-os-roadmap-v1"].acceptedPreimage.ownerExportBlob = ownerExportBlobOid(ownerExport);
   for (const cardId of ["SOC-010", "SOC-012"]) {
     const row = snapshot.forums.find((forum) => forum.boardId === "socials-os-active-admission").threads
       .find((thread) => cardContract.parseCanonicalCardBody(thread.starter.content).id === cardId);
     row.starter.content = `operator note\n${row.starter.content}\nretained history`;
   }
-  const plan = migration.buildResidualRecoveryPlan({ snapshot, socialsOwnerExport: ownerExport });
+  const plan = buildResidualPlan({ snapshot, socialsOwnerExport: ownerExport });
   assert.equal(plan.ok, true);
   assert.deepEqual(plan.socials.existingBodyUpdateCardIds, ["SOC-010", "SOC-012"]);
   assert.deepEqual(plan.socials.existingTagUpdateCardIds, ["SOC-010", "SOC-012"]);
@@ -387,7 +461,7 @@ test("null Socials priority removes stale priority semantics without guessing a 
   const socials = snapshot.forums.find((forum) => forum.boardId === "socials-os-active-admission");
   const row = socials.threads.find((thread) => cardContract.parseCanonicalCardBody(thread.starter.content).id === "SOC-010");
   row.thread.applied_tags.push(socials.forum.available_tags.find((tag) => tag.name === "High").id);
-  const plan = migration.buildResidualRecoveryPlan({ snapshot, socialsOwnerExport: socialsExport() });
+  const plan = buildResidualPlan({ snapshot, socialsOwnerExport: socialsExport() });
   assert.equal(plan.ok, true);
   assert.deepEqual(plan.socials.existingTagUpdateCardIds, ["SOC-010"]);
   const action = plan.socials.existingTagActions[0];
@@ -400,7 +474,7 @@ test("missing Socials owner event appends once, preserves history, and replays w
   const socials = snapshot.forums.find((forum) => forum.boardId === "socials-os-active-admission");
   const row = socials.threads.find((thread) => cardContract.parseCanonicalCardBody(thread.starter.content).id === "SOC-010");
   row.messages = [{ id: "history-1", content: "Existing unrelated journal history" }];
-  const plan = migration.buildResidualRecoveryPlan({ snapshot, socialsOwnerExport: socialsExport() });
+  const plan = buildResidualPlan({ snapshot, socialsOwnerExport: socialsExport() });
   assert.equal(plan.ok, true);
   assert.equal(plan.socials.missingJournalEventCount, 1);
   const messages = [...row.messages];
@@ -444,7 +518,7 @@ test("malformed and duplicate Socials identities fail closed", async (t) => {
     const row = snapshot.forums.find((forum) => forum.boardId === "socials-os-active-admission").threads[0];
     row.starter.content += `\n${journal.CARD_START}\n${journal.CARD_END}`;
     const cardId = cardContract.parseCanonicalCardBody(row.starter.content).id.toLowerCase();
-    const plan = migration.buildResidualRecoveryPlan({ snapshot, socialsOwnerExport: socialsExport() });
+    const plan = buildResidualPlan({ snapshot, socialsOwnerExport: socialsExport() });
     assert.equal(plan.ok, false);
     assert(plan.reasonCodes.includes(`residual_socials_managed_body_malformed:${cardId}`));
   });
@@ -456,7 +530,7 @@ test("malformed and duplicate Socials identities fail closed", async (t) => {
     duplicate.starter.id = "social-duplicate";
     socials.threads.push(duplicate);
     const cardId = cardContract.parseCanonicalCardBody(duplicate.starter.content).id.toLowerCase();
-    const plan = migration.buildResidualRecoveryPlan({ snapshot, socialsOwnerExport: socialsExport() });
+    const plan = buildResidualPlan({ snapshot, socialsOwnerExport: socialsExport() });
     assert.equal(plan.ok, false);
     assert(plan.reasonCodes.includes(`residual_socials_identity_duplicate:${cardId}`));
     assert(plan.reasonCodes.includes(`residual_managed_identity_duplicate:${cardId}`));
@@ -466,8 +540,12 @@ test("malformed and duplicate Socials identities fail closed", async (t) => {
 const savedResidualSnapshotPath = path.resolve(repoRoot, "..", "..", "runtime", "board-integrity", "canonical-13-board-residual-reciprocal-snapshot-v2.json");
 const currentSocialsExportPath = path.resolve(repoRoot, "..", "socials-os", "exports", "atlas.project-board.owner-export.v1.json");
 
-function assertAcceptedSocialsPreimage(ownerExport) {
-  const result = ownerSeed.buildOwnerSeedBatch({ registry: resolvedRegistry(), ownerExports: [ownerExport] });
+function assertAcceptedSocialsPreimage(ownerExport, observedBlobOid = ownerExportBlobOid(ownerExport)) {
+  const result = ownerSeed.buildOwnerSeedBatch({
+    registry: resolvedRegistry(null),
+    ownerExports: [ownerExport],
+    observedBlobOids: [observedBlobOid],
+  });
   assert.equal(result.ok, true, result.reasonCodes.join(","));
   assert.equal(result.eventCount, 12);
 }
@@ -484,9 +562,15 @@ test("saved v2 preimage plans the exact bounded Socials reconciliation", {
   skip: !fs.existsSync(savedResidualSnapshotPath) || !fs.existsSync(currentSocialsExportPath),
 }, () => {
   const snapshot = JSON.parse(fs.readFileSync(savedResidualSnapshotPath, "utf8")).residualPreimage;
-  const ownerExport = JSON.parse(fs.readFileSync(currentSocialsExportPath, "utf8"));
-  const plan = migration.buildResidualRecoveryPlan({ snapshot, socialsOwnerExport: ownerExport });
-  assertAcceptedSocialsPreimage(ownerExport);
+  const ownerExportRawBytes = fs.readFileSync(currentSocialsExportPath);
+  const ownerExport = JSON.parse(ownerExportRawBytes.toString("utf8"));
+  const observedBlobOid = ownerSeed.gitBlobOid(ownerExportRawBytes);
+  const plan = migration.buildResidualRecoveryPlan({
+    snapshot,
+    socialsOwnerExport: ownerExport,
+    socialsOwnerExportBlobOid: observedBlobOid,
+  });
+  assertAcceptedSocialsPreimage(ownerExport, observedBlobOid);
   assert.equal(plan.ok, true);
   assert.equal(plan.boardDenominator, 13);
   assert.equal(plan.linkedLifecyclePairCount, 16);
@@ -506,7 +590,7 @@ test("saved v2 preimage plans the exact bounded Socials reconciliation", {
 });
 
 test("residual plan selects only noncanonical managed titles, exact Phase 8 state, and missing Socials identities", () => {
-  const plan = migration.buildResidualRecoveryPlan({ snapshot: residualSnapshot(), socialsOwnerExport: socialsExport() });
+  const plan = buildResidualPlan({ snapshot: residualSnapshot(), socialsOwnerExport: socialsExport() });
   assert.equal(plan.ok, true);
   assert.equal(plan.boardDenominator, 13);
   assert.equal(plan.retainedMusicHistoryCount, 150);
@@ -526,7 +610,7 @@ test("residual plan selects only noncanonical managed titles, exact Phase 8 stat
 test("residual plan admits and reports 16 authoritative reciprocal completion pairs", () => {
   const snapshot = residualSnapshot();
   for (let index = 0; index < 16; index += 1) addCompletionPair(snapshot, index);
-  const plan = migration.buildResidualRecoveryPlan({ snapshot, socialsOwnerExport: socialsExport() });
+  const plan = buildResidualPlan({ snapshot, socialsOwnerExport: socialsExport() });
   assert.equal(plan.ok, true);
   assert.equal(plan.linkedLifecyclePairCount, 16);
   assert.equal(plan.trueDuplicateIdentityCount, 0);
@@ -601,7 +685,7 @@ test("residual completion-pair classification fails closed for every malformed i
     await t.test(candidate.name, () => {
       const snapshot = residualSnapshot();
       candidate.arrange(snapshot);
-      const plan = migration.buildResidualRecoveryPlan({ snapshot, socialsOwnerExport: socialsExport() });
+      const plan = buildResidualPlan({ snapshot, socialsOwnerExport: socialsExport() });
       assert.equal(plan.ok, false);
       assert.equal(plan.trueDuplicateIdentityCount, 1);
       assert(plan.reasonCodes.includes(`residual_managed_identity_duplicate:${candidate.cardId.toLowerCase()}`));
@@ -657,6 +741,7 @@ test("guarded residual recovery creates only the missing Socials identity, reope
     registry: firstSnapshot.registry,
     profileRegistry: profiles,
     socialsOwnerExport: ownerExport,
+    socialsOwnerExportBlobOid: ownerExportBlobOid(ownerExport),
     snapshotPath: runtimeFixturePath("residual-test.json"),
     allowRecovery: true,
     apply: true,
@@ -693,6 +778,7 @@ test("guarded residual recovery creates only the missing Socials identity, reope
     registry: secondSnapshot.registry,
     profileRegistry: profiles,
     socialsOwnerExport: ownerExport,
+    socialsOwnerExportBlobOid: ownerExportBlobOid(ownerExport),
     snapshotPath: runtimeFixturePath("residual-test-2.json"),
     allowRecovery: true,
     apply: true,

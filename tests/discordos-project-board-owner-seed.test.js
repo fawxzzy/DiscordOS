@@ -3,6 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
 const { _internals } = require("../scripts/discordos-project-board-owner-seed");
+const { _internals: boardRegistry } = require("../scripts/discordos-board-registry");
 
 const registry = JSON.parse(fs.readFileSync(path.resolve(__dirname, "..", "config", "discordos-board-registry.json"), "utf8"));
 const socialsAcceptedPreimage = registry.sourceAdapters["socials-os-roadmap-v1"].acceptedPreimage;
@@ -33,10 +34,19 @@ function ownerExport(overrides = {}) {
   };
 }
 
-function resolvedSocialsRegistry() {
+function resolvedSocialsRegistry(ownerExportValue = socialsOwnerExport()) {
   const value = structuredClone(registry);
   value.boards.find((board) => board.id === "socials-os-active-admission").forumChannelId = "socials-forum";
+  value.sourceAdapters["socials-os-roadmap-v1"].acceptedPreimage.ownerExportBlob = ownerExportBlobOid(ownerExportValue);
   return value;
+}
+
+function ownerExportRaw(value) {
+  return Buffer.from(`${JSON.stringify(value, null, 2)}\n`, "utf8");
+}
+
+function ownerExportBlobOid(value) {
+  return _internals.gitBlobOid(ownerExportRaw(value));
 }
 
 function socialsOwnerExport() {
@@ -140,9 +150,11 @@ test("Socials registry records the authoritative accepted owner-export preimage"
 });
 
 test("exact accepted Socials preimage produces the ordered 12-event seed", () => {
+  const accepted = socialsOwnerExport();
   const result = _internals.buildOwnerSeedBatch({
-    registry: resolvedSocialsRegistry(),
-    ownerExports: [socialsOwnerExport()],
+    registry: resolvedSocialsRegistry(accepted),
+    ownerExports: [accepted],
+    observedBlobOids: [ownerExportBlobOid(accepted)],
   });
   assert.equal(result.ok, true);
   assert.equal(result.eventCount, 12);
@@ -204,6 +216,11 @@ test("every Socials accepted-preimage drift fails closed before all journal gene
       reason: "owner_export_preimage_exported_nonterminal_count_mismatch",
       mutate(value) { value.extensions.selection.exported_nonterminal_count += 1; },
     },
+    {
+      name: "same-envelope card content drift",
+      reason: "owner_export_preimage_blob_mismatch",
+      mutate(value) { value.cards[0].record.title = "Unreviewed replacement title"; },
+    },
   ];
 
   for (const candidate of cases) {
@@ -213,6 +230,7 @@ test("every Socials accepted-preimage drift fails closed before all journal gene
       const result = _internals.buildOwnerSeedBatch({
         registry: resolvedSocialsRegistry(),
         ownerExports: [ownerExport(), drifted],
+        observedBlobOids: [null, ownerExportBlobOid(drifted)],
       });
       assert.equal(result.ok, false);
       assert(result.reasonCodes.includes(candidate.reason));
@@ -222,9 +240,21 @@ test("every Socials accepted-preimage drift fails closed before all journal gene
   }
 });
 
+test("accepted-preimage validation fails closed when raw blob identity is unavailable", () => {
+  const accepted = socialsOwnerExport();
+  const result = _internals.buildOwnerSeedBatch({
+    registry: resolvedSocialsRegistry(accepted),
+    ownerExports: [accepted],
+  });
+  assert.equal(result.ok, false);
+  assert(result.reasonCodes.includes("owner_export_preimage_blob_unverified"));
+  assert.equal(result.eventCount, 0);
+  assert.deepEqual(result.events, []);
+});
+
 test("path-backed production validation checks the exact owner-export Git blob", async () => {
   const accepted = socialsOwnerExport();
-  const acceptedRaw = Buffer.from(`${JSON.stringify(accepted, null, 2)}\n`, "utf8");
+  const acceptedRaw = ownerExportRaw(accepted);
   const pathRegistry = resolvedSocialsRegistry();
   pathRegistry.sourceAdapters["socials-os-roadmap-v1"].acceptedPreimage.ownerExportBlob = _internals.gitBlobOid(acceptedRaw);
   const files = new Map([
@@ -256,6 +286,19 @@ test("path-backed production validation checks the exact owner-export Git blob",
   assert.equal(blocked.ok, false);
   assert(blocked.reasonCodes.includes("owner_export_preimage_blob_mismatch"));
   assert.equal(blocked.eventCount, 0);
+});
+
+test("registry requires orderedCardIds to be an actual array even for an empty accepted preimage", () => {
+  for (const malformedValue of [undefined, null, "", {}]) {
+    const malformed = structuredClone(registry);
+    const accepted = malformed.sourceAdapters["socials-os-roadmap-v1"].acceptedPreimage;
+    accepted.exportedNonterminalCount = 0;
+    if (malformedValue === undefined) delete accepted.orderedCardIds;
+    else accepted.orderedCardIds = malformedValue;
+    const result = boardRegistry.validateBoardRegistry(malformed);
+    assert.equal(result.ok, false);
+    assert(result.reasonCodes.includes("source_adapter_preimage_card_ids_invalid:socials-os-roadmap-v1"));
+  }
 });
 
 test("CLI requires exports and an output artifact", () => {

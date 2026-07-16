@@ -8,9 +8,9 @@ Status: local implementation verified; hosted PR gates remain external to this c
 
 ## Bounded outcome
 
-The production owner-seed validator now reads an optional `acceptedPreimage` from an `owner_export` registry adapter. Before journal-event construction it checks the exact export ID, source revision, roadmap count, selected nonterminal count, and ordered stable card IDs. The path-backed command additionally computes and checks the exact Git blob object ID from the export file bytes. Any accepted-preimage failure suppresses the complete event batch. Adapters without this registry field retain their prior behavior.
+The production owner-seed validator now reads an optional `acceptedPreimage` from an `owner_export` registry adapter. Before journal-event construction it checks the exact export ID, source revision, roadmap count, selected nonterminal count, ordered stable card IDs, and observed raw-file Git blob identity. Path-backed owner seed, canonical migration, and residual recovery hash the exact bytes and pass that identity through every validation call. A production caller that lacks the raw blob identity fails closed; object reconstruction is not accepted evidence. Any accepted-preimage failure suppresses the complete event batch. Adapters without this registry field retain their prior behavior.
 
-The prior Socials-only hard-coded count constants were removed. Registry validation now fails malformed accepted-preimage declarations before they can become production authority.
+The prior Socials-only hard-coded count constants were removed. Registry validation now requires `orderedCardIds` to be an actual array and fails missing or non-array declarations before they can become production authority, including malformed zero-count declarations.
 
 ## Accepted Socials authority
 
@@ -42,13 +42,15 @@ Every case below returned `ok: false`, `eventCount: 0`, and `events: []` even wh
 | roadmap count drift | `owner_export_preimage_roadmap_record_count_mismatch` |
 | selected count drift | `owner_export_preimage_exported_nonterminal_count_mismatch` |
 | exact-byte Git blob drift | `owner_export_preimage_blob_mismatch` |
+| same-envelope card content drift | `owner_export_preimage_blob_mismatch` |
+| raw blob identity unavailable | `owner_export_preimage_blob_unverified` |
 
-The exact accepted identity and selection envelope produced 12 deterministic ordered events.
+The exact accepted identity and selection envelope with its observed raw blob produced 12 deterministic ordered events. Canonical migration with the raw blob identity withheld returned no phases, `mutatesDiscord: false`, `sendsMessages: false`; residual recovery planning returned no Socials events.
 
 ## Verification
 
-- `npm run verify:discordos-project-board-owner-seed`: pass, 18 tests, 0 failed
-- `npm run verify:discordos-canonical-board-migration`: pass, 27 passed, 2 fixture-dependent skips, 0 failed
+- `npm run verify:discordos-project-board-owner-seed`: pass, 21 tests, 0 failed
+- `npm run verify:discordos-canonical-board-migration`: pass, 29 passed, 2 fixture-dependent skips, 0 failed
 - `npm run verify:discordos-board-registry`: pass, 3 tests, 0 failed
 - `npm run ops:discordos:project-board-owner-export:check`: pass, exact 5-card DiscordOS export current
 - `npm run verify`: pass, exit code 0
@@ -56,11 +58,14 @@ The exact accepted identity and selection envelope produced 12 deterministic ord
 
 The first unmodified full-verification attempt exposed the mandated nested worktree's pre-existing Atlas package-discovery assumption (`atlas_contracts_package_unavailable`). The successful full run used a temporary untracked path shim that mapped only the misderived nested-worktree package path to `C:\ATLAS\packages\atlas-contracts`. The shim was deleted immediately after verification and is not part of the diff.
 
+The first exact-head Codex review found that canonical migration/recovery did not yet pass the raw blob identity and that registry validation normalized a missing ordered-card list to `[]`. Both findings were addressed additively: the raw file bytes now flow through every canonical owner-seed validation, missing blob evidence blocks before mutation, and non-array `orderedCardIds` values are invalid even at zero count.
+
 ## Invariance and authority
 
 - Changed production behavior is registry-backed and generic; no Socials adapter ID is hard-coded in the validator.
 - Non-Socials owner exports retain the existing conversion, terminal-history, text-integrity, identity, idempotency, lifecycle, and board checks.
 - Existing journal, single-writer, lifecycle, readback, and mutation guards were not weakened.
+- Accepted-preimage blob verification is mandatory for every production caller; canonical migration and residual recovery pass the raw-file identity through preview, planning, and apply validation.
 - DiscordOS main remained clean at the exact base during implementation.
 - No ATLAS-root, Socials OS, Fitness, Mazer, or other owner-repo file was written by this packet. Separate pre-existing dirty state observed in Mazer and Socials OS was left untouched.
 - Live Discord commands were not run.

@@ -89,7 +89,9 @@ function validateAcceptedPreimage({ ownerExport, adapter, observedBlobOid }) {
   if (JSON.stringify(cardIds) !== JSON.stringify(accepted.orderedCardIds)) {
     reasonCodes.push("owner_export_preimage_ordered_card_ids_mismatch");
   }
-  if (observedBlobOid && observedBlobOid !== accepted.ownerExportBlob) {
+  if (!text(observedBlobOid)) {
+    reasonCodes.push("owner_export_preimage_blob_unverified");
+  } else if (observedBlobOid !== accepted.ownerExportBlob) {
     reasonCodes.push("owner_export_preimage_blob_mismatch");
   }
   return reasonCodes;

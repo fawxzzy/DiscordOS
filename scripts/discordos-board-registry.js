@@ -154,8 +154,9 @@ function validateBoardRegistry(registry, { repoRoot = path.resolve(__dirname, ".
       if (!Number.isInteger(accepted?.exportedNonterminalCount) || accepted.exportedNonterminalCount < 0) {
         reasonCodes.push(`source_adapter_preimage_selection_count_invalid:${adapterId}`);
       }
-      const orderedCardIds = Array.isArray(accepted?.orderedCardIds) ? accepted.orderedCardIds : [];
-      if (orderedCardIds.length !== accepted?.exportedNonterminalCount || orderedCardIds.some((cardId) => !text(cardId))) {
+      const hasOrderedCardIds = Array.isArray(accepted?.orderedCardIds);
+      const orderedCardIds = hasOrderedCardIds ? accepted.orderedCardIds : [];
+      if (!hasOrderedCardIds || orderedCardIds.length !== accepted?.exportedNonterminalCount || orderedCardIds.some((cardId) => !text(cardId))) {
         reasonCodes.push(`source_adapter_preimage_card_ids_invalid:${adapterId}`);
       }
       if (duplicateValues(orderedCardIds).length > 0) {
