@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "projectId": "discordos",
-  "updatedAt": "2026-07-14",
+  "updatedAt": "2026-07-16",
   "state": "active",
   "stateReason": "DiscordOS owns the single-writer board and publication plane. Current owner work is limited to evidence-backed admission, integrity, projection, maintainability, and security outcomes.",
   "sourceRefs": [
@@ -76,7 +76,7 @@
     {
       "id": "DOS-201",
       "title": "Admit and seed seven missing project boards",
-      "status": "in-progress",
+      "status": "complete",
       "goal": "Create the missing Atlas, DiscordOS, Foundation, Lifeline, Cortex, _stack, and Playbook forums, admit their owner adapters, and seed current owner exports through the single writer.",
       "type": "migration",
       "priority": null,
@@ -94,13 +94,16 @@
         "config/discordos-board-registry.json",
         "scripts/discordos-board-card-migration-plan.js",
         "scripts/discordos-board-card-reconciliation.js",
-        "docs/contracts/discordos-board-card-workflow-v0.md"
+        "docs/contracts/discordos-board-card-workflow-v0.md",
+        "docs/ops/discordos-canonical-13-board-migration-implementation-2026-07-15.md",
+        "scripts/discordos-canonical-board-migration.js",
+        "tests/discordos-canonical-board-migration.test.js"
       ]
     },
     {
       "id": "DOS-202",
       "title": "Close cross-project board integrity and lifecycle proof",
-      "status": "planned",
+      "status": "complete",
       "goal": "Prove the fixed ten-unit board integrity denominator across every admitted project, board, and card class with recurring fail-closed drift detection.",
       "type": "reliability",
       "priority": null,
@@ -117,7 +120,11 @@
         "config/discordos-board-registry.json",
         "scripts/discordos-board-card-consistency.js",
         "scripts/discordos-board-text-integrity.js",
-        "scripts/discordos-board-lifecycle-reaction-drift-monitor.js"
+        "scripts/discordos-board-lifecycle-reaction-drift-monitor.js",
+        "docs/ops/discordos-canonical-13-board-migration-implementation-2026-07-15.md",
+        "tests/discordos-board-card-consistency.test.js",
+        "tests/discordos-board-lifecycle-reaction-drift-monitor.test.js",
+        "tests/discordos-board-text-integrity.test.js"
       ]
     },
     {
