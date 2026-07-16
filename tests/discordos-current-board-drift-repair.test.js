@@ -341,6 +341,103 @@ test("runtime tag IDs accept preimage and postimage permutations but reject dupl
   assert(duplicate.reasonCodes.includes("tag_target_live_preimage_drift"));
 });
 
+test("tag compare-before-write blocks concurrent target drift before every mutation", async () => {
+  const fixture = makeFixture();
+  const target = fixture.plan.operations.find((row) => row.kind === "tag_repair");
+  const env = {
+    DISCORDOS_BOT_TOKEN: "fixture",
+    DISCORDOS_CURRENT_BOARD_DRIFT_REPAIR: "enabled",
+    DISCORDOS_BOARD_COMPLETED_TRANSFER: "enabled",
+  };
+  let discordWrites = 0;
+  let tagApplyCalls = 0;
+  let laterApplyCalls = 0;
+  const result = await _internals.runRepair({
+    mode: "apply",
+    plan: fixture.plan,
+    evidenceBytes: fixture.evidenceBytes,
+    admittedScan: fixture.scan,
+    admittedEvidenceSha256: fixture.admittedEvidenceSha256,
+    trustedPlanDigestSha256: fixture.plan.planDigestSha256,
+    allowApply: true,
+    env,
+    currentScanImpl: async () => clone(fixture.scan),
+    tagInspectionImpl: async (operation) => ({ ok: true, operationId: operation.operationId, status: "pending", reasonCodes: [] }),
+    orderInspectionImpl: async (operation) => ({ ok: true, operationId: operation.operationId, status: "pending", reasonCodes: [] }),
+    transferInspectionImpl: async (operation) => ({ ok: true, operationId: operation.operationId, status: "complete", complete: true, destination: { readback: {} }, reasonCodes: [] }),
+    tagApplyImpl: async (operation) => {
+      tagApplyCalls += 1;
+      return _internals.applyTagRepair(operation, {
+        env,
+        fetchImpl: async (url, init) => {
+          if ((init.method || "GET") !== "GET") discordWrites += 1;
+          assert(url.endsWith(`/channels/${target.threadId}`));
+          return response({ payload: {
+            parent_id: target.forumChannelId,
+            applied_tags: ["concurrent-third-state"],
+          } });
+        },
+      });
+    },
+    orderApplyImpl: async () => { laterApplyCalls += 1; throw new Error("order write followed tag barrier"); },
+    transferApplyImpl: async () => { laterApplyCalls += 1; throw new Error("transfer write followed tag barrier"); },
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.discordMutations, 0);
+  assert.equal(discordWrites, 0);
+  assert.equal(tagApplyCalls, 1, "the first changed target blocks the remaining tag loop");
+  assert.equal(laterApplyCalls, 0);
+  assert(result.reasonCodes.includes("tag_repair_compare_before_write_failed"));
+});
+
+test("forum order compare-before-write blocks concurrent order drift before every mutation", async () => {
+  const fixture = makeFixture();
+  const order = fixture.plan.operations.find((row) => row.kind === "forum_order_repair");
+  const env = {
+    DISCORDOS_BOT_TOKEN: "fixture",
+    DISCORDOS_CURRENT_BOARD_DRIFT_REPAIR: "enabled",
+    DISCORDOS_BOARD_COMPLETED_TRANSFER: "enabled",
+  };
+  const channels = order.guildChannelPreimage.map((row) => ({
+    id: row.id,
+    type: row.type,
+    parent_id: row.parentId,
+    position: row.position,
+    name: row.name,
+  }));
+  channels.find((row) => row.id === order.preimage[0].channelId).position += 100;
+  let discordWrites = 0;
+  let transferApplyCalls = 0;
+  const result = await _internals.runRepair({
+    mode: "apply",
+    plan: fixture.plan,
+    evidenceBytes: fixture.evidenceBytes,
+    admittedScan: fixture.scan,
+    admittedEvidenceSha256: fixture.admittedEvidenceSha256,
+    trustedPlanDigestSha256: fixture.plan.planDigestSha256,
+    allowApply: true,
+    env,
+    currentScanImpl: async () => clone(fixture.scan),
+    tagInspectionImpl: async (operation) => ({ ok: true, operationId: operation.operationId, status: "complete", reasonCodes: [] }),
+    orderInspectionImpl: async (operation) => ({ ok: true, operationId: operation.operationId, status: "pending", reasonCodes: [] }),
+    transferInspectionImpl: async (operation) => ({ ok: true, operationId: operation.operationId, status: "complete", complete: true, destination: { readback: {} }, reasonCodes: [] }),
+    orderApplyImpl: async (operation) => _internals.applyOrderRepair(operation, {
+      env,
+      fetchImpl: async (url, init) => {
+        if ((init.method || "GET") !== "GET") discordWrites += 1;
+        assert(url.endsWith(`/guilds/${order.guildId}/channels`));
+        return response({ payload: channels });
+      },
+    }),
+    transferApplyImpl: async () => { transferApplyCalls += 1; throw new Error("transfer write followed order barrier"); },
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.discordMutations, 0);
+  assert.equal(discordWrites, 0);
+  assert.equal(transferApplyCalls, 0);
+  assert(result.reasonCodes.includes("forum_order_compare_before_write_failed"));
+});
+
 test("default preflight and dry-run fixture modes produce zero writes", async () => {
   const fixture = makeFixture();
   let writes = 0;
@@ -391,13 +488,18 @@ test("apply requires a durable output and accepts a resume receipt only in apply
     () => _internals.parseArgs(["--dry-run", "--evidence", "scan.json", "--resume-receipt", "prior.json"]),
     /resume_receipt_requires_apply/,
   );
+  assert.throws(
+    () => _internals.parseArgs(["--apply", "--evidence", "scan.json", "--output", "next.json", "--resume-receipt", "prior.json"]),
+    /resume_receipt_digest_missing/,
+  );
   const parsed = _internals.parseArgs([
     "--apply", "--allow-apply", "--evidence", "scan.json", "--output", "next.json",
-    "--resume-receipt", "prior.json",
+    "--resume-receipt", "prior.json", "--resume-receipt-sha256", "a".repeat(64),
   ]);
   assert.equal(parsed.mode, "apply");
   assert.equal(parsed.allowApply, true);
   assert.equal(parsed.resumeReceiptPath, path.resolve("prior.json"));
+  assert.equal(parsed.resumeReceiptSha256, "a".repeat(64));
   assert.equal(parsed.outputPath, path.resolve("next.json"));
 });
 
@@ -514,7 +616,12 @@ test("a plan-bound blocked receipt authorizes only its exact incomplete destinat
       receipt: successfulTransferReceipt(completedOperation),
     }],
   };
-  const extracted = _internals.extractTransferResumeStates(fixture.plan, resumeReceipt);
+  const resumeReceiptBytes = Buffer.from(JSON.stringify(resumeReceipt));
+  const trustedResumeReceiptSha256 = digest(resumeReceiptBytes);
+  const extracted = _internals.extractTransferResumeStates(fixture.plan, resumeReceipt, {
+    resumeReceiptBytes,
+    trustedResumeReceiptSha256,
+  });
   assert.equal(extracted.ok, true);
   assert.deepEqual(extracted.states.get(operation.operationId), {
     threadId: "destination-resume",
@@ -532,6 +639,8 @@ test("a plan-bound blocked receipt authorizes only its exact incomplete destinat
     admittedEvidenceSha256: fixture.admittedEvidenceSha256,
     trustedPlanDigestSha256: fixture.plan.planDigestSha256,
     resumeReceipt,
+    resumeReceiptBytes,
+    trustedResumeReceiptSha256,
     allowApply: true,
     env: {
       DISCORDOS_BOT_TOKEN: "fixture",
@@ -554,18 +663,77 @@ test("a plan-bound blocked receipt authorizes only its exact incomplete destinat
     },
     transferApplyImpl: async (options) => {
       capturedApplyStates.push(options.destinationStatePreimage);
-      return { ok: false, status: "blocked", cardId: operation.source.cardId, writeCount: 0, reasonCodes: ["injected_stop"] };
+      return {
+        ok: false,
+        status: "blocked",
+        cardId: operation.source.cardId,
+        writeCount: 0,
+        writeOutcomeUnknownCount: 1,
+        reasonCodes: ["injected_stop"],
+      };
     },
   });
   assert.equal(result.ok, false);
+  assert.equal(result.discordMutations, 0);
+  assert.equal(result.discordMutationOutcomesUnknown, 1);
+  assert.equal(result.mutatesDiscord, true, "unknown write outcomes must not be reported as a definite no-mutation result");
   assert.deepEqual(capturedInspectionStates.find(([id]) => id === operation.operationId)[1], extracted.states.get(operation.operationId));
   assert.deepEqual(capturedApplyStates, [extracted.states.get(operation.operationId)]);
 
   const tampered = clone(resumeReceipt);
   tampered.operationReceipts[0].receipt.completed.threadId = "wrong-destination";
-  const tamperedState = _internals.extractTransferResumeStates(fixture.plan, tampered);
-  assert.equal(tamperedState.ok, true, "receipt parser retains the exact claimed ID for live byte-exact validation");
-  assert.equal(tamperedState.states.get(operation.operationId).threadId, "wrong-destination");
+  const tamperedBytes = Buffer.from(JSON.stringify(tampered));
+  const tamperedState = _internals.extractTransferResumeStates(fixture.plan, tampered, {
+    resumeReceiptBytes: tamperedBytes,
+    trustedResumeReceiptSha256,
+  });
+  assert.equal(tamperedState.ok, false);
+  assert(tamperedState.reasonCodes.includes("resume_receipt_trusted_digest_mismatch"));
+
+  for (const [label, originalState, changedState] of [
+    ["open-to-archived", { archived: false, locked: false }, { archived: true, locked: true }],
+    ["archived-to-open", { archived: true, locked: true }, { archived: false, locked: false }],
+  ]) {
+    const original = clone(resumeReceipt);
+    original.operationReceipts[0].receipt.completed.archiveState.expected = originalState;
+    const originalBytes = Buffer.from(JSON.stringify(original));
+    const originalExtracted = _internals.extractTransferResumeStates(fixture.plan, original, {
+      resumeReceiptBytes: originalBytes,
+      trustedResumeReceiptSha256: digest(originalBytes),
+    });
+    assert.equal(originalExtracted.ok, true, `${label}-valid`);
+    assert.deepEqual(originalExtracted.states.get(operation.operationId), {
+      threadId: "destination-resume",
+      ...originalState,
+    }, `${label}-valid`);
+    const changed = clone(original);
+    changed.operationReceipts[0].receipt.completed.archiveState.expected = changedState;
+    const changedBytes = Buffer.from(JSON.stringify(changed));
+    let scans = 0;
+    const rejected = await _internals.runRepair({
+      mode: "apply",
+      plan: fixture.plan,
+      evidenceBytes: fixture.evidenceBytes,
+      admittedScan: fixture.scan,
+      admittedEvidenceSha256: fixture.admittedEvidenceSha256,
+      trustedPlanDigestSha256: fixture.plan.planDigestSha256,
+      resumeReceipt: changed,
+      resumeReceiptBytes: changedBytes,
+      trustedResumeReceiptSha256: digest(originalBytes),
+      allowApply: true,
+      env: {
+        DISCORDOS_BOT_TOKEN: "fixture",
+        DISCORDOS_CURRENT_BOARD_DRIFT_REPAIR: "enabled",
+        DISCORDOS_BOARD_COMPLETED_TRANSFER: "enabled",
+      },
+      currentScanImpl: async () => { scans += 1; throw new Error("tampered receipt reached preflight"); },
+    });
+    assert.equal(rejected.ok, false, label);
+    assert.equal(rejected.discordMutations, 0, label);
+    assert.equal(rejected.discordMutationOutcomesUnknown, 0, label);
+    assert.equal(scans, 0, label);
+    assert(rejected.reasonCodes.includes("resume_receipt_trusted_digest_mismatch"), label);
+  }
 });
 
 test("partial failure resumes safely and successful replay produces no duplicate writes", async () => {

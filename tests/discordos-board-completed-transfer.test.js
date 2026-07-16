@@ -30,6 +30,7 @@ function makeExistingTransferHarness({
   journalMode = "exact",
   failJournalCreate = false,
   failJournalUpdate = false,
+  failJournalHistoryRead = false,
   failDestinationRestoreOnce = false,
   failDestinationRestoreAlways = false,
   sourceMode = "postimage",
@@ -140,6 +141,7 @@ function makeExistingTransferHarness({
       } });
     }
     if (url.endsWith("/channels/completed-thread/messages?limit=100")) {
+      if (failJournalHistoryRead) return response({ ok: false, status: 403, payload: { message: "Injected history barrier" } });
       return response({ payload: state.journalContent == null ? [] : [{ id: "journal", content: state.journalContent }] });
     }
     if (url.endsWith("/channels/completed-thread/messages/journal")) {
@@ -340,7 +342,7 @@ test("a newly created destination persists exact resume state after journal fail
   let destinationContent = "";
   let destinationTags = [];
   let journalContent = null;
-  let journalCreateFails = true;
+  let journalCreateRejects = true;
   let reactionPresent = false;
   let sourceContent = "Original card";
   let sourceArchived = false;
@@ -411,7 +413,7 @@ test("a newly created destination persists exact resume state after journal fail
         return response({ payload: journalContent ? [{ id: "completion-journal", content: journalContent }] : [] });
       }
       if (url.endsWith("/channels/completed-thread/messages") && init.method === "POST") {
-        if (journalCreateFails) return response({ ok: false, status: 500, payload: { message: "Injected journal failure" } });
+        if (journalCreateRejects) throw new Error("Injected journal transport rejection");
         journalCreates += 1;
         journalContent = JSON.parse(init.body).content;
         return response({ status: 201, payload: { id: "completion-journal", content: journalContent } });
@@ -439,21 +441,25 @@ test("a newly created destination persists exact resume state after journal fail
   const partial = await run();
   assert.equal(partial.ok, false);
   assert(partial.reasonCodes.includes("completed_card_journal_create_failed"));
+  assert(partial.reasonCodes.includes("discord_write_outcome_unknown"));
   assert.equal(partial.writeCount, 1, "the destination creation is retained in the blocked receipt");
+  assert.equal(partial.writeOutcomeUnknownCount, 1, "the rejected journal POST outcome remains explicitly unknown");
   assert.equal(partial.completed.threadId, "completed-thread");
   assert.deepEqual(partial.completed.archiveState.expected, { archived: false, locked: false });
 
-  journalCreateFails = false;
+  journalCreateRejects = false;
   const resumeState = { threadId: partial.completed.threadId, ...partial.completed.archiveState.expected };
   const resumed = await run(resumeState);
   assert.equal(resumed.ok, true, JSON.stringify(resumed, null, 2));
   assert.equal(resumed.writeCount, 4, "journal, reaction, source link, and source archive are the only resume writes");
+  assert.equal(resumed.writeOutcomeUnknownCount, 0);
   assert.equal(destinationCreates, 1, "resume must reuse the exact created destination");
   assert.equal(journalCreates, 1);
 
   const replay = await run(resumeState);
   assert.equal(replay.ok, true, JSON.stringify(replay, null, 2));
   assert.equal(replay.writeCount, 0);
+  assert.equal(replay.writeOutcomeUnknownCount, 0);
   assert.equal(destinationCreates, 1);
   assert.equal(journalCreates, 1);
 });
@@ -966,6 +972,32 @@ test("failed destination re-close stays blocked and an unproven open replay fail
   assert(harness.calls.slice(replayStart).every((call) => call.method === "GET"));
   assert.equal(harness.state.destinationArchived, false);
   assert.equal(harness.state.destinationLocked, false);
+});
+
+test("trusted destination resume state survives repeated prewrite barriers", async () => {
+  const harness = makeExistingTransferHarness({
+    eventId: "completed:CARD-42:repeated-resume-barrier",
+    destinationArchived: false,
+    destinationLocked: false,
+    journalMode: "missing",
+    sourceMode: "preimage",
+    failJournalHistoryRead: true,
+  });
+  const expectedResumeState = { threadId: "completed-thread", archived: false, locked: false };
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const callStart = harness.calls.length;
+    const blocked = await harness.run({ destinationStatePreimage: expectedResumeState });
+    assert.equal(blocked.ok, false);
+    assert(blocked.reasonCodes.includes("completed_card_journal_history_read_failed"));
+    assert.equal(blocked.writeCount, 0);
+    assert.equal(blocked.writeOutcomeUnknownCount, 0);
+    assert.equal(blocked.completed.threadId, expectedResumeState.threadId);
+    assert.deepEqual(blocked.completed.archiveState.expected, { archived: false, locked: false });
+    assert(harness.calls.slice(callStart).every((call) => call.method === "GET"));
+  }
+  assert(!harness.calls.some((call) =>
+    call.method === "POST" && call.url.endsWith("/channels/completed-forum/threads")
+  ));
 });
 
 test("unreadable destination starter blocks creation with an exact zero-write receipt", async () => {

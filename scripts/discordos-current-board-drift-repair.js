@@ -190,6 +190,7 @@ function parseArgs(args) {
     planPath: DEFAULT_PLAN_PATH,
     currentScanPath: null,
     resumeReceiptPath: null,
+    resumeReceiptSha256: null,
     outputPath: null,
     allowApply: false,
     json: false,
@@ -213,6 +214,9 @@ function parseArgs(args) {
     } else if (arg === "--resume-receipt") {
       options.resumeReceiptPath = path.resolve(readValue(args, index, "missing_resume_receipt_path"));
       index += 1;
+    } else if (arg === "--resume-receipt-sha256") {
+      options.resumeReceiptSha256 = readValue(args, index, "missing_resume_receipt_sha256").toLowerCase();
+      index += 1;
     } else if (arg === "--output") {
       options.outputPath = path.resolve(readValue(args, index, "missing_output_path"));
       index += 1;
@@ -223,6 +227,9 @@ function parseArgs(args) {
   if (!options.evidencePath) throw new Error("evidence_path_missing");
   if (options.mode === "apply" && options.currentScanPath) throw new Error("apply_fixture_scan_not_allowed");
   if (options.resumeReceiptPath && options.mode !== "apply") throw new Error("resume_receipt_requires_apply");
+  if (options.resumeReceiptSha256 && !options.resumeReceiptPath) throw new Error("resume_receipt_digest_requires_receipt");
+  if (options.resumeReceiptPath && !options.resumeReceiptSha256) throw new Error("resume_receipt_digest_missing");
+  if (options.resumeReceiptSha256 && !/^[a-f0-9]{64}$/.test(options.resumeReceiptSha256)) throw new Error("resume_receipt_digest_invalid");
   if (options.mode === "apply" && !options.outputPath) throw new Error("apply_output_path_missing");
   if (options.mode === "generate_plan" && !options.outputPath) options.outputPath = options.planPath;
   return options;
@@ -924,10 +931,32 @@ async function inspectTransferRuntime(operation, {
   };
 }
 
-function extractTransferResumeStates(plan, resumeReceipt) {
+function extractTransferResumeStates(plan, resumeReceipt, {
+  resumeReceiptBytes = null,
+  trustedResumeReceiptSha256 = null,
+} = {}) {
   const reasonCodes = [];
   const states = new Map();
   if (resumeReceipt == null) return { ok: true, states, reasonCodes };
+  const exactBytes = Buffer.isBuffer(resumeReceiptBytes)
+    ? resumeReceiptBytes
+    : typeof resumeReceiptBytes === "string"
+      ? Buffer.from(resumeReceiptBytes)
+      : null;
+  pushIf(reasonCodes, !exactBytes, "resume_receipt_bytes_missing");
+  pushIf(reasonCodes, !/^[a-f0-9]{64}$/.test(String(trustedResumeReceiptSha256 || "")), "resume_receipt_trusted_digest_missing");
+  if (exactBytes && /^[a-f0-9]{64}$/.test(String(trustedResumeReceiptSha256 || ""))) {
+    pushIf(reasonCodes, sha256(exactBytes) !== trustedResumeReceiptSha256, "resume_receipt_trusted_digest_mismatch");
+    try {
+      pushIf(
+        reasonCodes,
+        canonicalJson(JSON.parse(exactBytes.toString("utf8"))) !== canonicalJson(resumeReceipt),
+        "resume_receipt_bytes_mismatch",
+      );
+    } catch {
+      reasonCodes.push("resume_receipt_json_invalid");
+    }
+  }
   pushIf(reasonCodes, resumeReceipt?.schemaVersion !== RECEIPT_SCHEMA_VERSION, "resume_receipt_schema_mismatch");
   pushIf(reasonCodes, resumeReceipt?.eventId !== EVENT_ID, "resume_receipt_event_mismatch");
   pushIf(reasonCodes, resumeReceipt?.mode !== "apply", "resume_receipt_mode_mismatch");
@@ -1056,6 +1085,20 @@ async function inspectOrderRuntime(operation, { env = process.env, fetchImpl = f
 
 async function applyTagRepair(operation, { env = process.env, fetchImpl = fetch } = {}) {
   const token = String(env?.DISCORDOS_BOT_TOKEN || "").trim();
+  const compareBeforeWrite = await inspectTagRuntime(operation, { env, fetchImpl });
+  if (compareBeforeWrite.status === "complete") {
+    return { ok: true, operationId: operation.operationId, status: "already_complete", writeCount: 0, readback: compareBeforeWrite, reasonCodes: [] };
+  }
+  if (compareBeforeWrite.status !== "pending") {
+    return {
+      ok: false,
+      operationId: operation.operationId,
+      status: "blocked",
+      writeCount: 0,
+      readback: compareBeforeWrite,
+      reasonCodes: unique(["tag_repair_compare_before_write_failed", ...compareBeforeWrite.reasonCodes]),
+    };
+  }
   const write = await cardContract.discordRequest({
     path: `/channels/${operation.threadId}`,
     token,
@@ -1072,6 +1115,20 @@ async function applyTagRepair(operation, { env = process.env, fetchImpl = fetch 
 
 async function applyOrderRepair(operation, { env = process.env, fetchImpl = fetch } = {}) {
   const token = String(env?.DISCORDOS_BOT_TOKEN || "").trim();
+  const compareBeforeWrite = await inspectOrderRuntime(operation, { env, fetchImpl });
+  if (compareBeforeWrite.status === "complete") {
+    return { ok: true, operationId: operation.operationId, status: "already_complete", writeCount: 0, readback: compareBeforeWrite, reasonCodes: [] };
+  }
+  if (compareBeforeWrite.status !== "pending") {
+    return {
+      ok: false,
+      operationId: operation.operationId,
+      status: "blocked",
+      writeCount: 0,
+      readback: compareBeforeWrite,
+      reasonCodes: unique(["forum_order_compare_before_write_failed", ...compareBeforeWrite.reasonCodes]),
+    };
+  }
   const write = await cardContract.discordRequest({
     path: `/guilds/${operation.guildId}/channels`,
     token,
@@ -1139,6 +1196,8 @@ async function runRepair({
   admittedEvidenceSha256 = ADMITTED_EVIDENCE_SHA256,
   trustedPlanDigestSha256 = TRUSTED_PLAN_DIGEST_SHA256,
   resumeReceipt = null,
+  resumeReceiptBytes = null,
+  trustedResumeReceiptSha256 = null,
 } = {}) {
   const planReasonCodes = verifyPlan({
     plan,
@@ -1148,7 +1207,10 @@ async function runRepair({
     trustedPlanDigestSha256,
   });
   const admission = resolveAdmission({ mode, allowApply, env });
-  const resumeState = extractTransferResumeStates(plan, resumeReceipt);
+  const resumeState = extractTransferResumeStates(plan, resumeReceipt, {
+    resumeReceiptBytes,
+    trustedResumeReceiptSha256,
+  });
   const reasonCodes = [...planReasonCodes, ...resumeState.reasonCodes, ...(mode === "apply" ? admission.reasonCodes : [])];
   if (mode === "apply" && offlineFixture) reasonCodes.push("apply_fixture_scan_not_allowed");
   if (reasonCodes.length > 0) {
@@ -1162,6 +1224,7 @@ async function runRepair({
       planDigestSha256: plan?.planDigestSha256 || null,
       mutatesDiscord: false,
       discordMutations: 0,
+      discordMutationOutcomesUnknown: 0,
       operationReceipts: [],
       reasonCodes: unique(reasonCodes).sort(),
     };
@@ -1209,6 +1272,7 @@ async function runRepair({
       plannedOperationCount: plan.operations.length,
       mutatesDiscord: false,
       discordMutations: 0,
+      discordMutationOutcomesUnknown: 0,
       operationReceipts: [],
       reasonCodes: unique(reasonCodes).sort(),
     };
@@ -1216,6 +1280,7 @@ async function runRepair({
 
   const operationReceipts = [];
   let discordMutations = 0;
+  let discordMutationOutcomesUnknown = 0;
   const tagInspectionById = new Map(tagInspections.map((row) => [row.operationId, row]));
   for (const operation of tagOperations) {
     const inspection = tagInspectionById.get(operation.operationId);
@@ -1274,6 +1339,7 @@ async function runRepair({
       const writeCount = receipt?.writeCount ?? (receipt?.ok ? 1 : 0);
       operationReceipts.push({ operationId: operation.operationId, kind: operation.kind, ok: validation.ok, status: validation.ok ? receipt.status : "blocked", writeCount, receipt, validation });
       discordMutations += writeCount;
+      discordMutationOutcomesUnknown += receipt?.writeOutcomeUnknownCount || 0;
       if (!validation.ok) reasonCodes.push(...validation.reasonCodes, ...(receipt?.reasonCodes || []));
       if (!validation.ok) break;
     }
@@ -1300,8 +1366,9 @@ async function runRepair({
     runtimePreflight: { status: "exact_live_preimages_read", tags: tagInspections, order: orderInspection, transfers: transferInspections },
     operationReceipts,
     reconciliation,
-    mutatesDiscord: discordMutations > 0,
+    mutatesDiscord: discordMutations > 0 || discordMutationOutcomesUnknown > 0,
     discordMutations,
+    discordMutationOutcomesUnknown,
     reasonCodes: unique(reasonCodes).sort(),
   };
 }
@@ -1315,6 +1382,7 @@ function renderMarkdown(receipt) {
     `- plan digest: \`${receipt.planDigestSha256 || "none"}\``,
     `- planned operations: \`${receipt.plannedOperationCount ?? receipt.operationReceipts?.length ?? 0}\``,
     `- Discord mutations: \`${receipt.discordMutations || 0}\``,
+    `- Discord mutation outcomes unknown: \`${receipt.discordMutationOutcomesUnknown || 0}\``,
     `- reason codes: \`${receipt.reasonCodes?.join(",") || "none"}\``,
     "",
   ].join("\n");
@@ -1349,8 +1417,8 @@ async function main() {
     return;
   }
   const plan = (await readJsonWithBytes(options.planPath)).value;
-  const resumeReceipt = options.resumeReceiptPath
-    ? (await readJsonWithBytes(options.resumeReceiptPath)).value
+  const resumeReceiptFile = options.resumeReceiptPath
+    ? await readJsonWithBytes(options.resumeReceiptPath)
     : null;
   let fixtureScan = null;
   if (options.currentScanPath) fixtureScan = (await readJsonWithBytes(options.currentScanPath)).value;
@@ -1360,7 +1428,9 @@ async function main() {
     evidenceBytes: evidence.bytes,
     admittedScan: evidence.value,
     allowApply: options.allowApply,
-    resumeReceipt,
+    resumeReceipt: resumeReceiptFile?.value || null,
+    resumeReceiptBytes: resumeReceiptFile?.bytes || null,
+    trustedResumeReceiptSha256: options.resumeReceiptSha256,
     currentScanImpl: fixtureScan ? async () => structuredClone(fixtureScan) : buildLiveScan,
     offlineFixture: Boolean(fixtureScan),
   });

@@ -367,12 +367,25 @@ async function buildCompletedBoardTransfer({
   fetchImpl = fetch,
 } = {}) {
   let writeCount = 0;
+  let writeOutcomeUnknownCount = 0;
+  const reasonCodes = [];
   const rawFetchImpl = fetchImpl;
   fetchImpl = async (url, init = {}) => {
-    const response = await rawFetchImpl(url, init);
     const method = String(init.method || "GET").toUpperCase();
-    if (response?.ok === true && !["GET", "HEAD"].includes(method)) writeCount += 1;
-    return response;
+    try {
+      const response = await rawFetchImpl(url, init);
+      if (response?.ok === true && !["GET", "HEAD"].includes(method)) writeCount += 1;
+      return response;
+    } catch {
+      const readOnly = ["GET", "HEAD"].includes(method);
+      if (!readOnly) writeOutcomeUnknownCount += 1;
+      reasonCodes.push(readOnly ? "discord_read_transport_rejected" : "discord_write_outcome_unknown");
+      return {
+        ok: false,
+        status: 0,
+        json: async () => ({ code: "discord_transport_rejected" }),
+      };
+    }
   };
   const options = {
     sourceThreadId,
@@ -393,12 +406,30 @@ async function buildCompletedBoardTransfer({
     repairExactPostimage,
     evidence,
   };
+  const resumableCompletedState = () => (
+    destinationStatePreimage
+    && typeof destinationStatePreimage.threadId === "string"
+    && destinationStatePreimage.threadId.length > 0
+    && typeof destinationStatePreimage.archived === "boolean"
+    && typeof destinationStatePreimage.locked === "boolean"
+      ? {
+        forumChannelId: completedForumChannelId,
+        threadId: destinationStatePreimage.threadId,
+        archiveState: {
+          expected: {
+            archived: destinationStatePreimage.archived,
+            locked: destinationStatePreimage.locked,
+          },
+        },
+      }
+      : null
+  );
   const admission = resolveAdmission({ allowApply, env });
   const resolvedOccurredAt = occurredAt || new Date().toISOString();
-  const reasonCodes = [
+  reasonCodes.push(
     ...validateInput(options),
     ...(apply ? admission.reasonCodes : []),
-  ];
+  );
   const token = String(env?.DISCORDOS_BOT_TOKEN || "").trim();
   if (!token) reasonCodes.push("discord_bot_token_missing");
   if (apply && !admission.admitted) reasonCodes.push("board_completed_transfer_not_admitted");
@@ -409,8 +440,10 @@ async function buildCompletedBoardTransfer({
       apply,
       admission,
       cardId: cardId || null,
+      completed: resumableCompletedState(),
       reasonCodes: [...new Set(reasonCodes)],
       writeCount,
+      writeOutcomeUnknownCount,
     };
   }
 
@@ -430,7 +463,17 @@ async function buildCompletedBoardTransfer({
   const guildId = sourceThread.payload?.guild_id || null;
   if (!guildId) reasonCodes.push("source_guild_id_missing");
   if (reasonCodes.length > 0) {
-    return { ok: false, status: "blocked", apply, admission, cardId, reasonCodes: [...new Set(reasonCodes)], writeCount };
+    return {
+      ok: false,
+      status: "blocked",
+      apply,
+      admission,
+      cardId,
+      completed: resumableCompletedState(),
+      reasonCodes: [...new Set(reasonCodes)],
+      writeCount,
+      writeOutcomeUnknownCount,
+    };
   }
 
   const destinationThreads = await listForumThreads({
@@ -481,12 +524,25 @@ async function buildCompletedBoardTransfer({
       admission,
       cardId,
       preview,
+      completed: resumableCompletedState(),
       reasonCodes: [...new Set(reasonCodes)],
       writeCount,
+      writeOutcomeUnknownCount,
     };
   }
   if (reasonCodes.length > 0) {
-    return { ok: false, status: "blocked", apply, admission, cardId, preview, reasonCodes: [...new Set(reasonCodes)], writeCount };
+    return {
+      ok: false,
+      status: "blocked",
+      apply,
+      admission,
+      cardId,
+      preview,
+      completed: resumableCompletedState(),
+      reasonCodes: [...new Set(reasonCodes)],
+      writeCount,
+      writeOutcomeUnknownCount,
+    };
   }
 
   const destinationThreadId = existing?.thread?.id || null;
@@ -516,7 +572,18 @@ async function buildCompletedBoardTransfer({
     reasonCodes.push("source_card_planned_preimage_mismatch");
   }
   if (reasonCodes.length > 0) {
-    return { ok: false, status: "blocked", apply, admission, cardId, preview, reasonCodes: [...new Set(reasonCodes)], writeCount };
+    return {
+      ok: false,
+      status: "blocked",
+      apply,
+      admission,
+      cardId,
+      preview,
+      completed: resumableCompletedState(),
+      reasonCodes: [...new Set(reasonCodes)],
+      writeCount,
+      writeOutcomeUnknownCount,
+    };
   }
   const expectedDestinationContent = !exactPostimageMode && existing?.matchedBy === "stable_card_id"
     ? String(existing.message?.content || "")
@@ -654,8 +721,10 @@ async function buildCompletedBoardTransfer({
       admission,
       cardId,
       preview,
+      completed: resumableCompletedState(),
       reasonCodes: [...new Set(reasonCodes)],
       writeCount,
+      writeOutcomeUnknownCount,
     };
   }
 
@@ -684,8 +753,10 @@ async function buildCompletedBoardTransfer({
       admission,
       cardId,
       preview,
+      completed: resumableCompletedState(),
       reasonCodes: [...new Set(reasonCodes)],
       writeCount,
+      writeOutcomeUnknownCount,
     };
   }
   let destinationReopened = destinationStateRestorationPending;
@@ -726,8 +797,10 @@ async function buildCompletedBoardTransfer({
       admission,
       cardId,
       preview,
+      completed: resumableCompletedState(),
       reasonCodes: [...new Set(reasonCodes)],
       writeCount,
+      writeOutcomeUnknownCount,
     };
   }
   const upsert = await cardContract.upsertDiscordForumCard({
@@ -989,6 +1062,7 @@ async function buildCompletedBoardTransfer({
     },
     reasonCodes: [...new Set(reasonCodes)],
     writeCount,
+    writeOutcomeUnknownCount,
   };
 }
 
