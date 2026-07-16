@@ -16,6 +16,10 @@ const guildRoles = [
   { id: "role-verified", name: "Verified" },
   { id: "role-security", name: "Fawx Security" },
 ];
+const SOCIALS_OWNER_CARD_IDS = [
+  "SOC-009", "SOC-010", "SOC-011", "SOC-012", "SOC-013", "SOC-015",
+  "SOC-016", "SOC-017", "SOC-018", "SOC-020", "SOC-021", "SOC-022",
+];
 
 function response({ ok = true, status = 200, payload = null } = {}) {
   return { ok, status, json: async () => payload };
@@ -107,21 +111,21 @@ function fullLegacySnapshot() {
 }
 
 function socialsExport() {
-  const cards = Array.from({ length: 13 }, (_, index) => ({
-    idempotency_key: `pbk_socials-os_soc-${String(index + 10).padStart(3, "0")}_v1`,
+  const cards = SOCIALS_OWNER_CARD_IDS.map((cardId, index) => ({
+    idempotency_key: `pbk_socials-os_${cardId.toLowerCase()}_v1`,
     record_kind: "project-work",
     record_status: "active",
     record: {
-      card_id: `SOC-${String(index + 10).padStart(3, "0")}`,
+      card_id: cardId,
       project_id: "socials-os",
       board_id: "discordos:project-feedback:socials-os",
       title: `Outcome ${index + 1}`,
-      card_type: index === 0 ? "bug" : "reliability",
-      lifecycle: index % 2 === 0 ? "ready" : "planning",
+      card_type: cardId === "SOC-010" ? "bug" : "reliability",
+      lifecycle: Number(cardId.slice(4)) % 2 === 0 ? "ready" : "planning",
       priority: null,
       owner: "socials-os",
       updated_at: "2026-07-15T06:48:39Z",
-      source_ref: `planning/roadmap.json#SOC-${index + 10}`,
+      source_ref: `planning/roadmap.json#${cardId}`,
     },
     content: {
       summary: `Summary ${index + 1}`,
@@ -144,11 +148,11 @@ function socialsExport() {
     source_revision: "sha256:test",
     generated_at: "2026-07-15T06:48:39Z",
     cards,
-    extensions: { selection: { roadmap_record_count: 22, exported_nonterminal_count: 13 } },
+    extensions: { selection: { roadmap_record_count: 22, exported_nonterminal_count: 12 } },
   };
 }
 
-function residualSnapshot(socialIdentityCount = 12, {
+function residualSnapshot(socialIdentityCount = 11, {
   phase8Open = false,
   canonicalPhase8Title = false,
   currentSocialJournals = true,
@@ -302,20 +306,20 @@ test("forum replacement preserves exact same-name IDs and declares canonical ord
   assert.ok(patch.payload.available_tags.every((tag) => tag.moderated === true));
 });
 
-test("Socials owner adapter validates 13 events idempotently and preserves null priority as no tag", () => {
+test("Socials owner adapter validates 12 events idempotently and preserves null priority as no tag", () => {
   const ownerExport = socialsExport();
   const resolved = resolvedRegistry();
   const first = ownerSeed.buildOwnerSeedBatch({ registry: resolved, ownerExports: [ownerExport] });
   const second = ownerSeed.buildOwnerSeedBatch({ registry: resolved, ownerExports: [ownerExport] });
   assert.equal(first.ok, true);
-  assert.equal(first.eventCount, 13);
+  assert.equal(first.eventCount, 12);
   assert.deepEqual(first.events.map((event) => event.eventId), second.events.map((event) => event.eventId));
   assert.ok(first.events.every((event) => event.card.title.startsWith("Outcome ") && event.card.priority === "Unspecified"));
   const semantics = migration.deriveThreadSemantics({
     board: resolved.boards.find((board) => board.id === "socials-os-active-admission"),
     thread: { id: "new", name: "Feature: Wrong live prefix" },
     starter: { content: "" },
-    ownerRecord: ownerExport.cards[1],
+    ownerRecord: ownerExport.cards.find((card) => card.record.card_id === "SOC-011"),
   });
   assert.deepEqual(semantics.desiredTagNames, ["Feature", "Planning"]);
   assert.equal(semantics.desiredTagNames.some((name) => ["Low", "Medium", "High", "Blocker"].includes(name)), false);
@@ -327,13 +331,23 @@ test("Socials owner adapter validates 13 events idempotently and preserves null 
   assert.ok(blocked.reasonCodes.some((code) => code.startsWith("owner_export_card_id_duplicate:")));
 });
 
+test("Socials owner adapter fails closed when the accepted 12-card nonterminal count drifts", () => {
+  const drifted = socialsExport();
+  drifted.cards.pop();
+  drifted.extensions.selection.exported_nonterminal_count = 11;
+  const blocked = ownerSeed.buildOwnerSeedBatch({ registry: resolvedRegistry(), ownerExports: [drifted] });
+  assert.equal(blocked.ok, false);
+  assert(blocked.reasonCodes.includes("socials_owner_export_event_count_mismatch"));
+  assert(blocked.reasonCodes.includes("socials_owner_export_nonterminal_count_mismatch"));
+});
+
 test("exact current Socials cards are residual no-ops", () => {
   const plan = migration.buildResidualRecoveryPlan({
-    snapshot: residualSnapshot(13, { phase8Open: true, canonicalPhase8Title: true }),
+    snapshot: residualSnapshot(12, { phase8Open: true, canonicalPhase8Title: true }),
     socialsOwnerExport: socialsExport(),
   });
   assert.equal(plan.ok, true);
-  assert.equal(plan.socials.existingIdentityCount, 13);
+  assert.equal(plan.socials.existingIdentityCount, 12);
   assert.equal(plan.socials.existingBodyUpdateCount, 0);
   assert.equal(plan.socials.existingTagUpdateCount, 0);
   assert.equal(plan.socials.missingJournalEventCount, 0);
@@ -344,7 +358,7 @@ test("exact current Socials cards are residual no-ops", () => {
 
 test("Socials residual reconciliation plans authoritative Ready to Planning and Ready to Review bodies and tags", () => {
   const ownerExport = socialsExport();
-  const snapshot = residualSnapshot(13, { phase8Open: true, canonicalPhase8Title: true });
+  const snapshot = residualSnapshot(12, { phase8Open: true, canonicalPhase8Title: true });
   ownerExport.cards.find((card) => card.record.card_id === "SOC-010").record.lifecycle = "planning";
   ownerExport.cards.find((card) => card.record.card_id === "SOC-012").record.lifecycle = "review";
   for (const cardId of ["SOC-010", "SOC-012"]) {
@@ -365,7 +379,7 @@ test("Socials residual reconciliation plans authoritative Ready to Planning and 
 });
 
 test("null Socials priority removes stale priority semantics without guessing a replacement", () => {
-  const snapshot = residualSnapshot(13, { phase8Open: true, canonicalPhase8Title: true });
+  const snapshot = residualSnapshot(12, { phase8Open: true, canonicalPhase8Title: true });
   const socials = snapshot.forums.find((forum) => forum.boardId === "socials-os-active-admission");
   const row = socials.threads.find((thread) => cardContract.parseCanonicalCardBody(thread.starter.content).id === "SOC-010");
   row.thread.applied_tags.push(socials.forum.available_tags.find((tag) => tag.name === "High").id);
@@ -378,7 +392,7 @@ test("null Socials priority removes stale priority semantics without guessing a 
 });
 
 test("missing Socials owner event appends once, preserves history, and replays with zero messages", async () => {
-  const snapshot = residualSnapshot(13, { phase8Open: true, canonicalPhase8Title: true });
+  const snapshot = residualSnapshot(12, { phase8Open: true, canonicalPhase8Title: true });
   const socials = snapshot.forums.find((forum) => forum.boardId === "socials-os-active-admission");
   const row = socials.threads.find((thread) => cardContract.parseCanonicalCardBody(thread.starter.content).id === "SOC-010");
   row.messages = [{ id: "history-1", content: "Existing unrelated journal history" }];
@@ -422,7 +436,7 @@ test("missing Socials owner event appends once, preserves history, and replays w
 
 test("malformed and duplicate Socials identities fail closed", async (t) => {
   await t.test("malformed managed block blocks", () => {
-    const snapshot = residualSnapshot(13, { phase8Open: true, canonicalPhase8Title: true });
+    const snapshot = residualSnapshot(12, { phase8Open: true, canonicalPhase8Title: true });
     const row = snapshot.forums.find((forum) => forum.boardId === "socials-os-active-admission").threads[0];
     row.starter.content += `\n${journal.CARD_START}\n${journal.CARD_END}`;
     const cardId = cardContract.parseCanonicalCardBody(row.starter.content).id.toLowerCase();
@@ -431,7 +445,7 @@ test("malformed and duplicate Socials identities fail closed", async (t) => {
     assert(plan.reasonCodes.includes(`residual_socials_managed_body_malformed:${cardId}`));
   });
   await t.test("duplicate stable identity blocks", () => {
-    const snapshot = residualSnapshot(13, { phase8Open: true, canonicalPhase8Title: true });
+    const snapshot = residualSnapshot(12, { phase8Open: true, canonicalPhase8Title: true });
     const socials = snapshot.forums.find((forum) => forum.boardId === "socials-os-active-admission");
     const duplicate = structuredClone(socials.threads[0]);
     duplicate.thread.id = "social-duplicate";
@@ -447,29 +461,46 @@ test("malformed and duplicate Socials identities fail closed", async (t) => {
 
 const savedResidualSnapshotPath = path.resolve(repoRoot, "..", "..", "runtime", "board-integrity", "canonical-13-board-residual-reciprocal-snapshot-v2.json");
 const currentSocialsExportPath = path.resolve(repoRoot, "..", "socials-os", "exports", "atlas.project-board.owner-export.v1.json");
+
+function assertAcceptedSocialsPreimage(ownerExport) {
+  assert.equal(ownerExport.export_id, "pbe_socials-os_ed44a0055c40");
+  assert.equal(ownerExport.source_revision, "sha256:ed44a0055c40046748e8c932c1a94fdbef58535304218f56716853a29304ffb1");
+  assert.equal(ownerExport.extensions?.selection?.roadmap_record_count, 22);
+  assert.equal(ownerExport.extensions?.selection?.exported_nonterminal_count, 12);
+  assert.deepEqual(ownerExport.cards.map((card) => card.record.card_id), SOCIALS_OWNER_CARD_IDS);
+}
+
+test("saved Socials preimage digest guard fails closed on unreviewed owner-export drift", {
+  skip: !fs.existsSync(currentSocialsExportPath),
+}, () => {
+  const drifted = JSON.parse(fs.readFileSync(currentSocialsExportPath, "utf8"));
+  drifted.export_id = "pbe_socials-os_unreviewed";
+  assert.throws(() => assertAcceptedSocialsPreimage(drifted), { name: "AssertionError" });
+});
+
 test("saved v2 preimage plans the exact bounded Socials reconciliation", {
   skip: !fs.existsSync(savedResidualSnapshotPath) || !fs.existsSync(currentSocialsExportPath),
 }, () => {
   const snapshot = JSON.parse(fs.readFileSync(savedResidualSnapshotPath, "utf8")).residualPreimage;
   const ownerExport = JSON.parse(fs.readFileSync(currentSocialsExportPath, "utf8"));
   const plan = migration.buildResidualRecoveryPlan({ snapshot, socialsOwnerExport: ownerExport });
-  assert.equal(ownerExport.export_id, "pbe_socials-os_341ac67f0904");
+  assertAcceptedSocialsPreimage(ownerExport);
   assert.equal(plan.ok, true);
   assert.equal(plan.boardDenominator, 13);
   assert.equal(plan.linkedLifecyclePairCount, 16);
   assert.equal(plan.trueDuplicateIdentityCount, 0);
   assert.equal(plan.retainedMusicHistoryCount, 150);
-  assert.equal(plan.socials.existingIdentityCount, 12);
-  assert.deepEqual(plan.socials.existingBodyUpdateCardIds, ["SOC-010", "SOC-013", "SOC-016", "SOC-017", "SOC-019"]);
-  assert.deepEqual(plan.socials.existingTagUpdateCardIds, ["SOC-010", "SOC-013", "SOC-016", "SOC-017", "SOC-019"]);
-  assert.equal(plan.socials.missingJournalEventCount, 12);
-  assert.equal(plan.socials.missingJournalEventIds.length, 12);
+  assert.equal(plan.socials.existingIdentityCount, 11);
+  assert.deepEqual(plan.socials.existingBodyUpdateCardIds, ["SOC-010", "SOC-013", "SOC-016", "SOC-017"]);
+  assert.deepEqual(plan.socials.existingTagUpdateCardIds, ["SOC-010", "SOC-013", "SOC-016", "SOC-017"]);
+  assert.equal(plan.socials.missingJournalEventCount, 11);
+  assert.equal(plan.socials.missingJournalEventIds.length, 11);
   assert.deepEqual(plan.socials.missingCardIds, ["SOC-022"]);
   assert.deepEqual(plan.titleActions.map((action) => action.threadId), ["1525337748830031875"]);
   assert.equal(plan.phase8StateAction.threadId, "1508141153835421798");
   assert.equal(plan.phase8StateAction.action, "unarchive_unlock");
-  assert.equal(plan.expectedMutations.writes.total, 14);
-  assert.equal(plan.expectedMutations.messages.total, 13);
+  assert.equal(plan.expectedMutations.writes.total, 12);
+  assert.equal(plan.expectedMutations.messages.total, 12);
 });
 
 test("residual plan selects only noncanonical managed titles, exact Phase 8 state, and missing Socials identities", () => {
@@ -477,8 +508,8 @@ test("residual plan selects only noncanonical managed titles, exact Phase 8 stat
   assert.equal(plan.ok, true);
   assert.equal(plan.boardDenominator, 13);
   assert.equal(plan.retainedMusicHistoryCount, 150);
-  assert.equal(plan.socials.expectedEventCount, 13);
-  assert.equal(plan.socials.existingIdentityCount, 12);
+  assert.equal(plan.socials.expectedEventCount, 12);
+  assert.equal(plan.socials.existingIdentityCount, 11);
   assert.equal(plan.socials.missingIdentityCount, 1);
   assert.deepEqual(plan.titleActions.map((action) => action.threadId), ["1508141153835421798"]);
   assert.equal(plan.phase8StateAction.action, "unarchive_unlock");
@@ -654,7 +685,7 @@ test("guarded residual recovery creates only the missing Socials identity, reope
   assert.deepEqual([...new Set(patches.map((row) => row.threadId))].sort(), ["1508141153835421798", "social-new"]);
   assert.equal(patches.some((row) => row.threadId.startsWith("music-history-")), false);
 
-  const secondSnapshot = residualSnapshot(13, { phase8Open: true, canonicalPhase8Title: true });
+  const secondSnapshot = residualSnapshot(12, { phase8Open: true, canonicalPhase8Title: true });
   patches.length = 0;
   const second = await migration.runResidualBoardRecovery({
     registry: secondSnapshot.registry,
