@@ -61,6 +61,7 @@ test("completed transfer dry-run reads both boards without mutation", async () =
 test("completed transfer creates, verifies, links, archives, and locks", async () => {
   const calls = [];
   let completedContent = "";
+  let completedTags = [];
   let completionJournal = "";
   let sourceContent = "Original card details";
   let reactionPresent = false;
@@ -68,6 +69,7 @@ test("completed transfer creates, verifies, links, archives, and locks", async (
   let sourceLocked = false;
   const result = await _internals.buildCompletedBoardTransfer({
     ...baseOptions,
+    completedTagIds: ["feature-tag", "completed-tag"],
     apply: true,
     allowApply: true,
     fetchImpl: async (url, init) => {
@@ -98,7 +100,9 @@ test("completed transfer creates, verifies, links, archives, and locks", async (
         return response({ payload: { threads: [] } });
       }
       if (url.endsWith("/channels/completed-forum/threads") && init.method === "POST") {
-        completedContent = JSON.parse(init.body).message.content;
+        const payload = JSON.parse(init.body);
+        completedContent = payload.message.content;
+        completedTags = payload.applied_tags;
         return response({ status: 201, payload: { id: "completed-thread", message: { id: "completed-thread" } } });
       }
       if (url.endsWith("/channels/completed-thread/messages/completed-thread")) {
@@ -125,7 +129,7 @@ test("completed transfer creates, verifies, links, archives, and locks", async (
         return response({ status: 204 });
       }
       if (url.endsWith("/channels/completed-thread")) {
-        return response({ payload: { id: "completed-thread", name: "Card title", parent_id: "completed-forum" } });
+        return response({ payload: { id: "completed-thread", name: "Card title", parent_id: "completed-forum", applied_tags: completedTags } });
       }
       throw new Error(`unexpected request ${init.method} ${url}`);
     },
@@ -136,6 +140,8 @@ test("completed transfer creates, verifies, links, archives, and locks", async (
   assert.equal(result.completed.reaction.presentAfter, true);
   assert.equal(result.completed.journal.action, "created");
   assert.equal(result.completed.readback.canonicalBodyPresent, true);
+  assert.equal(result.completed.readback.appliedTagsExact, true);
+  assert.deepEqual(completedTags, ["feature-tag", "completed-tag"]);
   assert.equal(result.completed.readback.journalMarkerPresent, true);
   assert.equal(result.source.readback.archived, true);
   assert.equal(result.source.readback.locked, true);
@@ -252,4 +258,42 @@ test("ambiguous legacy titles block instead of guessing", async () => {
   });
   assert.equal(result.ambiguous, true);
   assert.deepEqual(result.candidateThreadIds, ["legacy-one", "legacy-two"]);
+});
+
+test("duplicate stable identities are ambiguous", async () => {
+  const result = await _internals.findCompletedThread({
+    threads: [
+      { id: "stable-one", name: "One" },
+      { id: "stable-two", name: "Two" },
+    ],
+    cardId: "CARD-42",
+    expectedTitle: "Card title",
+    token: "token",
+    fetchImpl: async () => response({ payload: { content: "ATLAS-CARD-ID: `CARD-42`" } }),
+  });
+  assert.equal(result.ambiguous, true);
+  assert.equal(result.matchedBy, "ambiguous_stable_card_id");
+  assert.deepEqual(result.candidateThreadIds, ["stable-one", "stable-two"]);
+});
+
+test("targeted transfers never reuse a title-only destination", async () => {
+  const result = await _internals.buildCompletedBoardTransfer({
+    ...baseOptions,
+    requireStableIdentity: true,
+    apply: false,
+    fetchImpl: async (url) => {
+      if (url.endsWith("/channels/source-thread/messages/source-thread")) {
+        return response({ payload: { id: "source-thread", content: "Original card" } });
+      }
+      if (url.endsWith("/channels/source-thread")) {
+        return response({ payload: { id: "source-thread", name: "Card title", parent_id: "source-forum", guild_id: "guild" } });
+      }
+      if (url.endsWith("/guilds/guild/threads/active")) return response({ payload: { threads: [{ id: "legacy", name: "Card title", parent_id: "completed-forum" }] } });
+      if (url.endsWith("/channels/completed-forum/threads/archived/public?limit=100")) return response({ payload: { threads: [] } });
+      if (url.endsWith("/channels/legacy/messages/legacy")) return response({ payload: { id: "legacy", content: "legacy body" } });
+      throw new Error(`unexpected request ${url}`);
+    },
+  });
+  assert.equal(result.ok, false);
+  assert(result.reasonCodes.includes("completed_card_stable_identity_required"));
 });

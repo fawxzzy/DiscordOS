@@ -137,11 +137,12 @@ function buildCompletedEvent({
   sourceUrl,
   destinationUrl = null,
   eventId = null,
+  occurredAt = null,
 }) {
   return journal.normalizeEvent({
     schemaVersion: "atlas.board-card-journal.v1",
     eventId: eventId || `completed:${cardId}`,
-    occurredAt: new Date().toISOString(),
+    occurredAt: occurredAt || new Date().toISOString(),
     actor: "discordos.completed-transfer",
     card: {
       id: cardId,
@@ -216,6 +217,7 @@ async function listForumThreads({ forumChannelId, guildId, token, fetchImpl = fe
 }
 
 async function findCompletedThread({ threads, cardId, expectedTitle, token, fetchImpl = fetch }) {
+  const stableMatches = [];
   const titleMatches = [];
   for (const thread of threads) {
     const message = await cardContract.fetchMessage({
@@ -225,11 +227,20 @@ async function findCompletedThread({ threads, cardId, expectedTitle, token, fetc
       fetchImpl,
     });
     if (message.ok && String(message.payload?.content || "").includes(cardMarker(cardId))) {
-      return { thread, message: message.payload, matchedBy: "stable_card_id" };
+      stableMatches.push({ thread, message: message.payload });
+      continue;
     }
     if (cardContract.normalizeThreadTitle(thread.name) === cardContract.normalizeThreadTitle(expectedTitle)) {
       titleMatches.push({ thread, message: message.payload });
     }
+  }
+  if (stableMatches.length === 1) return { ...stableMatches[0], matchedBy: "stable_card_id" };
+  if (stableMatches.length > 1) {
+    return {
+      ambiguous: true,
+      matchedBy: "ambiguous_stable_card_id",
+      candidateThreadIds: stableMatches.map(({ thread }) => thread.id),
+    };
   }
   if (titleMatches.length === 1) {
     return { ...titleMatches[0], matchedBy: "unique_legacy_title" };
@@ -264,6 +275,9 @@ async function buildCompletedBoardTransfer({
   priority = "Unspecified",
   owner = "Unassigned",
   eventId = null,
+  occurredAt = null,
+  completedTagIds = null,
+  requireStableIdentity = false,
   evidence,
   allowApply = false,
   apply = false,
@@ -280,6 +294,9 @@ async function buildCompletedBoardTransfer({
     priority,
     owner,
     eventId,
+    occurredAt,
+    completedTagIds,
+    requireStableIdentity,
     evidence,
   };
   const admission = resolveAdmission({ allowApply, env });
@@ -330,6 +347,15 @@ async function buildCompletedBoardTransfer({
     })
     : null;
   if (existing?.ambiguous) reasonCodes.push("completed_card_identity_ambiguous");
+  if (requireStableIdentity && existing && existing.matchedBy !== "stable_card_id") {
+    reasonCodes.push("completed_card_stable_identity_required");
+  }
+  if (completedTagIds != null && (
+    !Array.isArray(completedTagIds)
+    || completedTagIds.length !== 2
+    || new Set(completedTagIds).size !== completedTagIds.length
+    || completedTagIds.some((value) => typeof value !== "string" || value.length === 0)
+  )) reasonCodes.push("completed_card_tag_ids_invalid");
   const sourceUrl = discordThreadUrl(guildId, sourceThreadId);
   const preview = {
     sourceThreadId,
@@ -408,6 +434,7 @@ async function buildCompletedBoardTransfer({
           priority,
           owner,
           eventId,
+          occurredAt,
           sourceContent: sourceMessage.payload?.content,
           sourceUrl,
           destinationUrl,
@@ -415,6 +442,7 @@ async function buildCompletedBoardTransfer({
         }),
         allowed_mentions: { parse: [] },
       },
+      ...(completedTagIds ? { applied_tags: completedTagIds } : {}),
     }),
     fetchImpl,
   });
@@ -433,6 +461,7 @@ async function buildCompletedBoardTransfer({
     sourceUrl,
     destinationUrl: finalDestinationUrl,
     eventId,
+    occurredAt,
   });
   const completionJournal = journal.buildJournalMessage(completionEvent);
   let journalAction = "not_attempted";
@@ -467,6 +496,24 @@ async function buildCompletedBoardTransfer({
       }
     }
   }
+  let destinationTagUpdate = null;
+  if (upsert.ok && finalDestinationId && completedTagIds) {
+    const currentTags = existing?.thread?.applied_tags || [];
+    if (upsert.action === "created" || (currentTags.length === completedTagIds.length
+      && currentTags.every((value, index) => value === completedTagIds[index]))) {
+      destinationTagUpdate = { ok: true, status: null, action: upsert.action === "created" ? "created_with_tags" : "already_exact" };
+    } else {
+      destinationTagUpdate = await cardContract.discordRequest({
+        path: `/channels/${finalDestinationId}`,
+        token,
+        method: "PATCH",
+        body: { applied_tags: completedTagIds },
+        fetchImpl,
+      });
+      destinationTagUpdate.action = destinationTagUpdate.ok ? "updated" : "blocked";
+      if (!destinationTagUpdate.ok) reasonCodes.push("completed_card_tag_update_failed");
+    }
+  }
   let destinationReadback = null;
   if (upsert.ok && finalDestinationId && journalMessageId) {
     const [threadRead, messageRead, journalRead] = await Promise.all([
@@ -494,6 +541,11 @@ async function buildCompletedBoardTransfer({
       canonicalBodyPresent: content.includes(journal.CARD_START) && content.includes(journal.CARD_END),
       completedStatePresent: content.includes("- state: `completed`"),
       sourceLinkPresent: content.includes(sourceUrl),
+      appliedTagsExact: !completedTagIds || (
+        Array.isArray(threadRead.payload?.applied_tags)
+        && threadRead.payload.applied_tags.length === completedTagIds.length
+        && threadRead.payload.applied_tags.every((value, index) => value === completedTagIds[index])
+      ),
       journalRead: journalRead.ok,
       journalMarkerPresent: journalContent.includes(journal.eventMarker(completionEvent.eventId)),
     };
@@ -577,6 +629,7 @@ async function buildCompletedBoardTransfer({
       forumChannelId: completedForumChannelId,
       threadId: finalDestinationId,
       action: upsert.action,
+      tags: destinationTagUpdate,
       reaction: upsert.reactionResult,
       journal: {
         action: journalAction,
@@ -585,6 +638,14 @@ async function buildCompletedBoardTransfer({
       readback: destinationReadback,
     },
     reasonCodes: [...new Set(reasonCodes)],
+    writeCount: [
+      upsert.action === "created" || upsert.action === "updated",
+      upsert.reactionResult?.status === "applied",
+      journalAction === "created",
+      destinationTagUpdate?.action === "updated",
+      sourceUpdate?.ok === true,
+      sourceArchive?.ok === true,
+    ].filter(Boolean).length,
   };
 }
 
@@ -613,6 +674,7 @@ module.exports = {
     validateInput,
     cardMarker,
     inferProject,
+    discordThreadUrl,
     buildCompletedEvent,
     buildCompletedMessage,
     buildSourceMessage,
