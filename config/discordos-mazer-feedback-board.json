@@ -2247,10 +2247,10 @@
       "priority": "high",
       "category": "mazer",
       "markerName": "Cross-viewport UI reliability",
-      "completionPercent": 84,
+      "completionPercent": 97,
       "summary": "Coordinate the mobile safe-area/portrait and browser layout-persistence lanes through one viewport contract and proof matrix without turning either delivery into an offset patch.",
       "whyItMatters": "The same UI can be valid in a desktop canvas, narrow browser, mobile browser, installed PWA, or restored window only if viewport state, safe areas, and restoration behavior share deliberate rules.",
-      "currentStatus": "Merged Mazer PR #60 at afc6e8401893c2ddb4c0681db39e6b3b435985ff adds shared optical-centering and guide/toggle geometry, button-label and guide-panel diagnostics, authenticated Chromium proof at 405x958 and 1440x900, and a passing 360x720 -> 1440x900 -> 360x720 -> 405x958 restoration matrix for Menu, Options, play, and Pause. The marker rises from 78 to 84 because shared layout adoption and proof-backed coverage widened. Physical iPhone safe-area, installed-PWA banding, and native browser-chrome/maximize proof remain open; deterministic emulation does not override those device findings.",
+      "currentStatus": "Mazer draft PR #76 at exact head 8ca79d9a implements the five latest physical-iPhone findings: status/action/toggle/guide text fills its chrome with measured padding, active-play Pause exactly matches the 62px shared status panel height, the Pause scroll viewport begins directly below its title and clips guide rows cleanly, Move Speed drags own the pointer without scrolling, and Smart Steering preserves held cardinal intent through analog noise while traversing one-tile corridor jogs on either axis. Focused verification passed 85/85, full verification passed 364/364, the directional-intent architecture contract passed, TypeScript/build passed, and both local and public-production 390x844 at 3x capture matrices passed every menu, Options, play, Pause, containment, overlap, scroll, button-fill, height-parity, and console gate. Exact preview dpl_HAcz3TXAnQUca929gqnzHQ87rH7Y was promoted under current-thread approval as production deployment dpl_CeenpiXMo9m6tmB9nZXpSia4vAQG, which is Ready at https://fawxzzy-mazer.vercel.app with no production error logs. The card remains in Review pending operator physical-iPhone screenshots and Smart Steering feel notes; installed-PWA and native browser-chrome/maximize evidence remain separate open endpoints.",
       "workBreakdown": [
         "Define canonical viewport, safe-area, visible-height, and no-overlap invariants for menu, Options, play, Pause, dialogs, HUD, controls, and scroll rails.",
         "Maintain the child boundary between mobile shell/device behavior and browser layout-state persistence.",
@@ -2258,6 +2258,7 @@
         "Require route, mode, viewport, safe-area state, scroll position, and layout diagnostics beside visual proof."
       ],
       "nextActions": [
+        "Review production deployment dpl_CeenpiXMo9m6tmB9nZXpSia4vAQG on a physical iPhone and attach menu, Options, play, and Pause screenshots plus Smart Steering feel notes.",
         "Complete real-device safe-area and installed-PWA proof for the shared menu and play geometry.",
         "Complete native browser-chrome and maximize/restore proof without replacing the deterministic transition harness.",
         "Keep browser-layout, mobile-shell, and visual-proof cards as linked owners for persistence, device harness, and proof-policy follow-through.",
@@ -2298,10 +2299,10 @@
       "priority": "high",
       "category": "mazer",
       "markerName": "Browser UI layout normalization",
-      "completionPercent": 82,
+      "completionPercent": 96,
       "summary": "Normalize responsive browser UI geometry so a narrow-window layout cannot overlap, escape, or expand incorrectly after resize, maximize, restore, or reload. Persist semantic intent only if the product later introduces it.",
       "whyItMatters": "The root-cause pass proved that Mazer has no user-adjustable panel geometry to restore. Derived dimensions must be recomputed from one viewport snapshot instead of being saved and replayed across browser states.",
-      "currentStatus": "Merged Mazer PR #60 at afc6e8401893c2ddb4c0681db39e6b3b435985ff closes the shared component/layout slice with authenticated Chromium captures at 405x958 and 1440x900 plus exact 360x720 -> 1440x900 -> 360x720 restoration and 405x958 endpoint proof for Menu, Options, play, and Pause. Button labels, guide copy, scroll reachability, safe bounds, console state, and stable restored diagnostics all pass. The marker rises from 75 to 82; native maximize/restore automation and browser-chrome changes remain open.",
+      "currentStatus": "Mazer draft PR #76 at exact head 8ca79d9a enlarges responsive status and action typography, enforces exact 62px status/Pause height parity, moves the Pause scroll cutoff under the title, progressively clips guide geometry while removing only whole text rows, and gives the Move Speed slider exclusive drag ownership. Both local and public-production 390x844 at 3x menu/Options/play/Pause matrices pass text containment, overlap, scroll reachability, fade clearance, button fill, height parity, topology, console, and page-error gates. Full verification passed 364/364; exact preview dpl_HAcz3TXAnQUca929gqnzHQ87rH7Y was promoted as production deployment dpl_CeenpiXMo9m6tmB9nZXpSia4vAQG, which is Ready at the canonical public alias with no production error logs. The card remains in Review for operator physical browser-chrome review and native maximize/restore evidence.",
       "workBreakdown": [
         "Document the intentional no-persisted-geometry contract and keep semantic toggle/account preference state separate.",
         "Normalize layout-derived state on reload, resize, maximize, restore, narrow-to-wide, wide-to-narrow, mobile emulation, and orientation transitions.",
@@ -2309,6 +2310,7 @@
         "Introduce a versioned semantic layout schema only if a supported user-adjustable intent is added later."
       ],
       "nextActions": [
+        "Review production deployment dpl_CeenpiXMo9m6tmB9nZXpSia4vAQG on mobile Safari and record any browser-chrome or restored-layout drift.",
         "Extend the deterministic fixture to native maximize/restore and browser-chrome changes.",
         "Classify any future state as semantic user intent, transient overlay state, account preference, or viewport-derived geometry before persisting it.",
         "Add a migration/fallback matrix only if supported semantic layout state is introduced.",
@@ -3391,10 +3393,10 @@
       "priority": "high",
       "category": "mazer",
       "markerName": "Shared Rank Score Maze Level status panel",
-      "completionPercent": 15,
+      "completionPercent": 40,
       "summary": "Replace the completed rank-only badge presentation with one shared two-row menu/play status component showing time plus Rank, Score out of 100, and Maze Lvl from the correct context.",
       "whyItMatters": "The operator wants the menu AI result and active player run to use one legible status language while preserving hidden progression and canonical run-quality data.",
-      "currentStatus": "The display interpretation remains frozen: time alone on the first row; second row shows Rank (AI Rank in menu context), Score: N/100, and Maze Lvl: N. Merged Mazer PR #60 supplies the shared centering, containment, and responsive proof foundation. Score authority remains the admission dependency: the panel will show Score: --/100 until a canonical run-quality result exists, then display the finalized canonical 0-100 value rather than calculating a UI-only score.",
+      "currentStatus": "Mazer draft PR #76 at exact head 8ca79d9a advances the shared presentation slice with 14px compact and 15px wide status typography, tighter measured padding, and an exact 62px phone panel that is height-matched by active-play Pause. Visual gates reject undersized badge text, undersized action labels, overlap, and status/Pause height drift. Focused verification passed 85/85, full verification passed 364/364, and the public-production 390x844 at 3x menu/play capture passed after exact preview dpl_HAcz3TXAnQUca929gqnzHQ87rH7Y was promoted as production deployment dpl_CeenpiXMo9m6tmB9nZXpSia4vAQG. The card remains in Review: operator physical-phone confirmation and the canonical finalized 0-100 scorer field are still required before completion.",
       "workBreakdown": [
         "Define one status-panel view model for menu AI completion and active player play.",
         "Render time on row one and Rank, Score N/100, Maze Lvl N on row two with compact responsive fitting.",
@@ -3402,6 +3404,7 @@
         "Preserve hidden progression fields and accessibility labels while explicitly superseding rank-only presentation history."
       ],
       "nextActions": [
+        "Review production deployment dpl_CeenpiXMo9m6tmB9nZXpSia4vAQG menu and play status sizing on a physical phone.",
         "Read the scorer, telemetry, and result contracts to identify the one canonical finalized 0-100 field.",
         "Use Score: --/100 before canonical finalization and replace it only with the finalized canonical score.",
         "Admit implementation after the linked run-quality authority is ready; the shared UI standards dependency is complete."

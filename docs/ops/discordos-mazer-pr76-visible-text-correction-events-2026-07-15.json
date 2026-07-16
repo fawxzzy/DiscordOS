@@ -1,0 +1,207 @@
+{
+  "events": [
+    {
+      "schemaVersion": "atlas.board-card-journal.v1",
+      "eventId": "mazer-cross-viewport-ui-reliability-pr76-visible-text-correction-20260715",
+      "occurredAt": "2026-07-15T19:31:32.106Z",
+      "actor": "Mazer",
+      "card": {
+        "id": "mazer-cross-viewport-ui-reliability",
+        "project": "Mazer",
+        "sourceForumChannelId": "1524889569475170478",
+        "threadId": "1525337748830031875",
+        "title": "mazer: cross-viewport UI reliability and layout hardening",
+        "type": "feature",
+        "state": "review",
+        "previousState": "review",
+        "priority": "High",
+        "owner": "Mazer",
+        "progress": "90%",
+        "summary": "Coordinate mobile safe-area, shared overlay geometry, and browser layout through one no-overlap contract and proof matrix.",
+        "objective": "Make menu, Options, play, and Pause remain readable and operable across phone, browser, PWA, and restored-window surfaces without per-screenshot offsets.",
+        "acceptanceCriteria": [
+          "Every primary Mazer surface has an owner, supported viewport category, and no-overlap contract.",
+          "Mobile and browser layout work can be verified independently and together through a shared matrix.",
+          "No completion claim relies on desktop-only proof for a phone or restored-window defect.",
+          "Physical-device findings remain open until operator screenshots confirm the deployed behavior."
+        ],
+        "discoveries": [
+          "Operator production screenshots correctly rejected the earlier review evidence because status, guide, and action text still visibly touched or crossed chrome.",
+          "Logical Phaser bounds under-reported physical painted text width, so the proof contract now requires stronger insets and excludes text from active scroll-fade bands."
+        ],
+        "nextActions": [
+          "Review commit c7b1540e on a physical iPhone using the exact corrected preview and attach menu, Options, play, and Pause screenshots.",
+          "Keep native browser chrome and maximize or restore proof open until physical evidence passes."
+        ],
+        "blockers": [],
+        "evidence": [
+          "Mazer draft PR #76 at head c7b1540e.",
+          "Focused visible-text verification passed 62 tests; full verification passed 363 tests and the production build.",
+          "Preview dpl_FGKmMPHb64mGqdGykzQAmZ6YspNX passed exact deployed 393x852 containment, fade-clearance, overlap, and console checks."
+        ]
+      },
+      "entry": {
+        "kind": "review",
+        "headline": "Operator-visible text bleed corrected on the exact PR 76 preview",
+        "completed": [
+          "Added physical safety insets to shared run-status, guide, toggle, and action text.",
+          "Prevented partial guide or row text from rendering beneath active scroll fades.",
+          "Re-proved the exact deployed 393x852 menu, Options, play, and Pause surfaces."
+        ],
+        "discovered": [
+          "The previous automated pass was insufficient because it measured logical bounds more optimistically than the phone painted glyphs."
+        ],
+        "next": [
+          "Collect operator iPhone screenshots from the corrected preview before production promotion or completion."
+        ],
+        "blockers": [],
+        "evidence": [
+          "https://github.com/fawxzzy/mazer/pull/76",
+          "Mazer head c7b1540e",
+          "Vercel deployment dpl_FGKmMPHb64mGqdGykzQAmZ6YspNX"
+        ]
+      },
+      "correlation": {
+        "taskId": "019f61a0-6b80-7913-b479-f75f2a8a5b77",
+        "branch": "codex/physical-ui-controls-rework-20260715",
+        "commit": "c7b1540e",
+        "receipt": "mazer-pr76-visible-text-correction-20260715"
+      }
+    },
+    {
+      "schemaVersion": "atlas.board-card-journal.v1",
+      "eventId": "mazer-browser-layout-persistence-pr76-visible-text-correction-20260715",
+      "occurredAt": "2026-07-15T19:31:33.106Z",
+      "actor": "Mazer",
+      "card": {
+        "id": "mazer-browser-layout-persistence",
+        "project": "Mazer",
+        "sourceForumChannelId": "1524889569475170478",
+        "threadId": "1525337752290197514",
+        "title": "mazer: normalize browser UI layout across viewports",
+        "type": "feature",
+        "state": "review",
+        "previousState": "review",
+        "priority": "High",
+        "owner": "Mazer",
+        "progress": "89%",
+        "summary": "Normalize responsive browser geometry and preserve only semantic settings so viewport changes cannot replay stale layout.",
+        "objective": "Recompute all menu, Options, play, and Pause geometry from the active content rectangle while preserving explicit player preferences only.",
+        "acceptanceCriteria": [
+          "Layout-derived geometry is never persisted as player preference state.",
+          "A recalculated layout cannot overlap, escape the viewport, or hide essential controls.",
+          "Normal reload preserves supported semantic settings with safe migration defaults.",
+          "Narrow, wide, phone, and restore endpoints have deterministic evidence."
+        ],
+        "discoveries": [
+          "A logical bounds pass did not guarantee that antialiased physical glyphs stayed visually clear of the panel rails.",
+          "Scroll fades must reserve an explicit no-text render viewport rather than merely overlaying alpha on clipped content."
+        ],
+        "nextActions": [
+          "Complete physical iPhone review of the corrected c7b1540e preview.",
+          "Retain native browser chrome and maximize or restore as separate remaining evidence."
+        ],
+        "blockers": [],
+        "evidence": [
+          "Mazer draft PR #76 at c7b1540e.",
+          "Exact 393x852 deployed preview proof passed with no text under scroll fades and no console or page errors."
+        ]
+      },
+      "entry": {
+        "kind": "review",
+        "headline": "Physical text containment and scroll-fade clearance strengthened",
+        "completed": [
+          "Reserved fade-safe scroll render bands for guide and settings content.",
+          "Applied fitted typography to every overlay and menu action button.",
+          "Added deployed checks for action-label insets and scroll-fade text clearance."
+        ],
+        "discovered": [
+          "Production screenshots remained on the older release while the corrected candidate was still in preview, which made the edit appear absent."
+        ],
+        "next": [
+          "Use operator physical screenshots to decide whether the corrected candidate may advance to production."
+        ],
+        "blockers": [],
+        "evidence": [
+          "https://github.com/fawxzzy/mazer/pull/76",
+          "Mazer head c7b1540e",
+          "Vercel deployment dpl_FGKmMPHb64mGqdGykzQAmZ6YspNX"
+        ]
+      },
+      "correlation": {
+        "taskId": "019f61a0-6b80-7913-b479-f75f2a8a5b77",
+        "branch": "codex/physical-ui-controls-rework-20260715",
+        "commit": "c7b1540e",
+        "receipt": "mazer-pr76-visible-text-correction-20260715"
+      }
+    },
+    {
+      "schemaVersion": "atlas.board-card-journal.v1",
+      "eventId": "mazer-shared-run-status-panel-pr76-visible-text-correction-20260715",
+      "occurredAt": "2026-07-15T19:31:34.106Z",
+      "actor": "Mazer",
+      "card": {
+        "id": "mazer-shared-run-status-panel",
+        "project": "Mazer",
+        "sourceForumChannelId": "1524889569475170478",
+        "threadId": "1526644909241667644",
+        "title": "mazer: shared menu and play run status panel",
+        "type": "feature",
+        "state": "review",
+        "previousState": "review",
+        "priority": "High",
+        "owner": "Mazer",
+        "progress": "30%",
+        "summary": "Use one responsive menu and play status component for time, Rank or AI Rank, Score out of 100, and Maze level from the correct context.",
+        "objective": "Give menu and active play the same compact status language while keeping score authority traceable to the canonical scorer.",
+        "acceptanceCriteria": [
+          "Menu and play consume the same status-panel formatting and layout contract.",
+          "Panel text remains centered, contained, and readable at phone and desktop widths.",
+          "Panel width, gap, and play Pause placement satisfy shared viewport diagnostics.",
+          "Displayed score is traceable to canonical run-quality data rather than a presentation-only calculation."
+        ],
+        "discoveries": [
+          "The play Maze value visibly touched the right rail even though the previous logical fit calculation passed.",
+          "Physical containment needs conservative horizontal padding and a lower glyph-width safety ratio."
+        ],
+        "nextActions": [
+          "Review the corrected menu and play status rows on a physical iPhone.",
+          "Identify and consume the finalized canonical 0 to 100 scorer field before completion."
+        ],
+        "blockers": [],
+        "evidence": [
+          "Mazer draft PR #76 at head c7b1540e uses the corrected shared status geometry.",
+          "Exact deployed 393x852 menu and play status proof now has explicit rail clearance.",
+          "Canonical score authority remains explicitly non-terminal."
+        ]
+      },
+      "entry": {
+        "kind": "review",
+        "headline": "Shared status text now keeps physical rail clearance",
+        "completed": [
+          "Increased compact status-panel width and padding while reducing fitted font size.",
+          "Strengthened the diagnostic to require horizontal and vertical text insets.",
+          "Re-proved menu and play status rows on the exact preview deployment."
+        ],
+        "discovered": [
+          "The earlier shallow fit check was not a reliable proxy for painted phone glyph width."
+        ],
+        "next": [
+          "Confirm presentation with operator iPhone screenshots, then continue the scorer-owned dependency separately."
+        ],
+        "blockers": [],
+        "evidence": [
+          "https://github.com/fawxzzy/mazer/pull/76",
+          "Mazer head c7b1540e",
+          "Vercel deployment dpl_FGKmMPHb64mGqdGykzQAmZ6YspNX"
+        ]
+      },
+      "correlation": {
+        "taskId": "019f61a0-6b80-7913-b479-f75f2a8a5b77",
+        "branch": "codex/physical-ui-controls-rework-20260715",
+        "commit": "c7b1540e",
+        "receipt": "mazer-pr76-visible-text-correction-20260715"
+      }
+    }
+  ]
+}
