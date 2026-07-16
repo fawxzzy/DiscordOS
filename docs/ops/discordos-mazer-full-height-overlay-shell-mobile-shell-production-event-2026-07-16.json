@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "atlas.board-card-journal.v1",
+  "eventId": "mazer-full-height-overlay-shell-mobile-shell-production-20260716",
+  "occurredAt": "2026-07-16T19:46:03.471Z",
+  "actor": "Mazer",
+  "card": {
+    "id": "mazer-mobile-shell-device-harness",
+    "project": "Mazer",
+    "sourceForumChannelId": "1524889569475170478",
+    "threadId": "1525063357575593995",
+    "title": "mazer: mobile shell, portrait lock, and device harness",
+    "type": "feature",
+    "state": "review",
+    "previousState": "review",
+    "priority": "Medium",
+    "owner": "Mazer",
+    "progress": "62%",
+    "summary": "Prove the phone-shell path for safe-area placement, exact touch registration, continuous stick intent, portrait behavior, and real-device confidence.",
+    "objective": "Keep the canvas, overlays, and every custom input surface in one live safe-area and coordinate contract while preserving smooth steering and readable mobile UI.",
+    "acceptanceCriteria": [
+      "Options and Pause consume the available safe content rectangle with deliberate device-edge gutters and no hidden HUD reservation.",
+      "Scrollable overlay content clips at the true viewport edge and retains partially visible labels during small touch drags.",
+      "The rendered touch target and accepted game input agree across iPhone visual-viewport and safe-area origin changes.",
+      "Physical phone feel, browser-chrome, and installed-PWA evidence remain required before terminal completion."
+    ],
+    "discoveries": [
+      "The mobile Pause shell was independently capped and offset for hidden play HUD even though Options already owned the full overlay surface.",
+      "The shared production shell now uses 8px phone gutters and separates fixed title and action lanes from the flexible scroll viewport."
+    ],
+    "nextActions": [
+      "Collect operator physical-iPhone screenshots and feel proof for full-height overlays, small guide scrolls, direct turns, T-junctions, and one-tile Smart Steering.",
+      "Collect physical touch-alignment proof across browser-chrome and safe-area origin changes.",
+      "Continue installed-PWA, authenticated keyboard, and browser-chrome proof without treating emulation as physical closure."
+    ],
+    "blockers": [
+      "Physical-device post-deploy feel and safe-area proof remain operator-held."
+    ],
+    "evidence": [
+      "Mazer PR #79 merged as 9600cfb42ffce53578d357cdf610e6c8c950d080.",
+      "Vercel production deployment dpl_2LQxaMdD7Q41XGyr1Z3iQ6K2zmz8 is Ready and aliased to https://fawxzzy-mazer.vercel.app.",
+      "Production 390x844 proof measured an 8/8/374/828 shell, a 24/84/342/626 Pause viewport, a 24/88/342/672 Options viewport, preserved guide-title scroll continuity, and zero browser warnings or errors."
+    ]
+  },
+  "entry": {
+    "kind": "progress",
+    "headline": "Shared full-height mobile overlay shell is live for physical-device review",
+    "completed": [
+      "Merged PR #79 to Mazer main as 9600cfb42ffce53578d357cdf610e6c8c950d080.",
+      "Deployed the exact merge commit to Vercel production as dpl_2LQxaMdD7Q41XGyr1Z3iQ6K2zmz8.",
+      "Verified both Pause and Options at 390x844 with full-height 8px gutters, contained content and actions, stable small-drag scroll clipping, and zero browser warnings or errors."
+    ],
+    "discovered": [
+      "The overlay-height defect was a shell ownership problem, not a device-size limitation: Pause retained an invisible HUD lane and a separate cap."
+    ],
+    "next": [
+      "Use operator iPhone testing to judge overlay-height, scroll feel, safe areas, direct-turn capture, T-junction intent, one-tile lane shifts, touch alignment, and release feel."
+    ],
+    "blockers": [
+      "Physical-iPhone feel proof remains open."
+    ],
+    "evidence": [
+      "https://github.com/fawxzzy/mazer/pull/79",
+      "https://fawxzzy-mazer.vercel.app",
+      "Vercel deployment dpl_2LQxaMdD7Q41XGyr1Z3iQ6K2zmz8"
+    ]
+  },
+  "correlation": {
+    "taskId": "019f52d9-7667-72a3-a5f7-9c0613aedd8f",
+    "branch": "codex/full-height-overlay-shell-20260716",
+    "commit": "9600cfb42ffce53578d357cdf610e6c8c950d080",
+    "receipt": "docs/ops/discordos-mazer-mobile-touch-steering-v4-board-review-2026-07-16.md"
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "atlas.board-card-journal.v1",
+  "eventId": "mazer-full-height-overlay-shell-cross-viewport-production-20260716",
+  "occurredAt": "2026-07-16T19:46:02.471Z",
+  "actor": "Mazer",
+  "card": {
+    "id": "mazer-cross-viewport-ui-reliability",
+    "project": "Mazer",
+    "sourceForumChannelId": "1524889569475170478",
+    "threadId": "1525337748830031875",
+    "title": "mazer: cross-viewport UI reliability and layout hardening",
+    "type": "feature",
+    "state": "review",
+    "previousState": "review",
+    "priority": "High",
+    "owner": "Mazer",
+    "progress": "84%",
+    "summary": "Coordinate mobile safe-area and browser layout behavior through one viewport, text-alignment, and input-coordinate contract instead of screenshot-specific offsets.",
+    "objective": "Keep menu, Options, play, and Pause geometry visually balanced and make the rendered touch target agree with the user's physical touch across visual-viewport origin changes.",
+    "acceptanceCriteria": [
+      "Shared UI text uses consistent optical centering and symmetric padding without bottom-biased empty space.",
+      "Options and Pause share one full-safe-height shell with fixed header and action lanes around a flexible scroll viewport.",
+      "Phone-sized menu, Options, play, and Pause surfaces pass route-aware bounds, overlap, scroll, and console proof.",
+      "Physical iPhone and installed-PWA evidence remains required before terminal completion."
+    ],
+    "discoveries": [
+      "PR #79 removes the hidden play-HUD offset and centered height cap that made Pause shorter than the safe viewport.",
+      "Live 390x844 production proof measured 8px outer gutters and a 626px Pause scroll lane with every guide, label, and action contained."
+    ],
+    "nextActions": [
+      "Collect operator physical-iPhone screenshots for the full-height Pause and Options shell, text padding, safe areas, and scroll behavior.",
+      "Collect physical touch-alignment and controller-feel proof across mobile browser-chrome changes.",
+      "Retain installed-PWA and native browser-chrome/maximize acceptance work."
+    ],
+    "blockers": [
+      "Physical-device post-deploy screenshots and touch proof remain operator-held."
+    ],
+    "evidence": [
+      "Mazer PR #79 merged as 9600cfb42ffce53578d357cdf610e6c8c950d080.",
+      "Vercel production deployment dpl_2LQxaMdD7Q41XGyr1Z3iQ6K2zmz8 is Ready and aliased to https://fawxzzy-mazer.vercel.app.",
+      "Focused UI proof passed 63/63 tests; architecture proof passed 18/18 tests; build and diff checks passed.",
+      "Production 390x844 proof measured an 8/8/374/828 shell, a 24/84/342/626 Pause viewport, contained guide, labels, and actions, 12px guide-title scroll persistence, and zero browser warnings or errors."
+    ]
+  },
+  "entry": {
+    "kind": "progress",
+    "headline": "Full-height mobile overlay shell is merged and live for physical-iPhone review",
+    "completed": [
+      "Merged PR #79 to Mazer main as 9600cfb42ffce53578d357cdf610e6c8c950d080.",
+      "Deployed the exact merge commit to Vercel production as dpl_2LQxaMdD7Q41XGyr1Z3iQ6K2zmz8.",
+      "Verified the canonical production alias at 390x844 with 8px shell gutters, a 626px Pause scroll lane, contained content and actions, preserved partially visible guide text, and zero browser warnings or errors."
+    ],
+    "discovered": [
+      "The production surface now uses one full-safe-height layout contract for Options and Pause instead of retaining space for hidden play HUD."
+    ],
+    "next": [
+      "Use operator iPhone screenshots to complete physical safe-area, overlay-height, text-padding, scroll, and touch review without ratcheting from emulation alone."
+    ],
+    "blockers": [
+      "Physical-iPhone evidence remains open."
+    ],
+    "evidence": [
+      "https://github.com/fawxzzy/mazer/pull/79",
+      "https://fawxzzy-mazer.vercel.app",
+      "Vercel deployment dpl_2LQxaMdD7Q41XGyr1Z3iQ6K2zmz8"
+    ]
+  },
+  "correlation": {
+    "taskId": "019f52d9-7667-72a3-a5f7-9c0613aedd8f",
+    "branch": "codex/full-height-overlay-shell-20260716",
+    "commit": "9600cfb42ffce53578d357cdf610e6c8c950d080",
+    "receipt": "docs/ops/discordos-mazer-mobile-touch-steering-v4-board-review-2026-07-16.md"
+  }
+}
