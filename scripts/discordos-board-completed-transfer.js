@@ -98,6 +98,10 @@ function validateInput(options) {
   if (!options.completedForumChannelId) reasonCodes.push("completed_forum_channel_id_missing");
   if (!options.cardId) reasonCodes.push("card_id_missing");
   if (!options.evidence) reasonCodes.push("completion_evidence_missing");
+  if (
+    options.sourceContentPreimage != null
+    && (typeof options.sourceTitlePreimage !== "string" || options.sourceTitlePreimage.length === 0)
+  ) reasonCodes.push("source_title_preimage_missing");
   if (options.sourceForumChannelId === options.completedForumChannelId) {
     reasonCodes.push("source_and_completed_forum_must_differ");
   }
@@ -248,6 +252,27 @@ async function readAllThreadMessages({ threadId, token, fetchImpl = fetch }) {
   };
 }
 
+function classifyJournalHistory({ messages, eventId, expectedContent, exactPostimageMode }) {
+  const marker = journal.eventMarker(eventId);
+  const matches = (messages || []).filter((message) => String(message?.content || "").includes(marker));
+  if (matches.length > 1) {
+    return {
+      ok: false,
+      action: "blocked",
+      messageId: null,
+      reasonCodes: ["completed_card_journal_event_duplicate"],
+    };
+  }
+  if (matches.length === 0) {
+    return { ok: true, action: "create", messageId: null, reasonCodes: [] };
+  }
+  const match = matches[0];
+  if (!exactPostimageMode || String(match.content || "") === expectedContent) {
+    return { ok: true, action: "reuse", messageId: match.id, reasonCodes: [] };
+  }
+  return { ok: true, action: "update", messageId: match.id, reasonCodes: [] };
+}
+
 async function findCompletedThread({ threads, cardId, expectedTitle, token, fetchImpl = fetch }) {
   const stableMatches = [];
   const titleMatches = [];
@@ -323,6 +348,7 @@ async function buildCompletedBoardTransfer({
   completedTagIds = null,
   requireStableIdentity = false,
   sourceContentPreimage = null,
+  sourceTitlePreimage = null,
   repairExactPostimage = false,
   evidence,
   allowApply = false,
@@ -352,6 +378,7 @@ async function buildCompletedBoardTransfer({
     completedTagIds,
     requireStableIdentity,
     sourceContentPreimage,
+    sourceTitlePreimage,
     repairExactPostimage,
     evidence,
   };
@@ -382,6 +409,13 @@ async function buildCompletedBoardTransfer({
   ]);
   if (!sourceThread.ok || !sourceMessage.ok) reasonCodes.push("source_card_read_failed");
   if (sourceThread.payload?.parent_id !== sourceForumChannelId) reasonCodes.push("source_forum_mismatch");
+  const exactPostimageMode = sourceContentPreimage != null;
+  const plannedSourceTitle = exactPostimageMode
+    ? String(sourceTitlePreimage || "")
+    : String(sourceThread.payload?.name || "");
+  if (exactPostimageMode && sourceThread.payload?.name !== plannedSourceTitle) {
+    reasonCodes.push("source_card_planned_title_mismatch");
+  }
   const guildId = sourceThread.payload?.guild_id || null;
   if (!guildId) reasonCodes.push("source_guild_id_missing");
   if (reasonCodes.length > 0) {
@@ -399,7 +433,7 @@ async function buildCompletedBoardTransfer({
     ? await findCompletedThread({
       threads: destinationThreads.threads,
       cardId,
-      expectedTitle: sourceThread.payload.name,
+      expectedTitle: plannedSourceTitle,
       token,
       fetchImpl,
     })
@@ -416,7 +450,6 @@ async function buildCompletedBoardTransfer({
     || completedTagIds.some((value) => typeof value !== "string" || value.length === 0)
   )) reasonCodes.push("completed_card_tag_ids_invalid");
   const sourceUrl = discordThreadUrl(guildId, sourceThreadId);
-  const exactPostimageMode = sourceContentPreimage != null;
   const plannedSourceContent = sourceContentPreimage == null
     ? String(sourceMessage.payload?.content || "")
     : String(sourceContentPreimage);
@@ -453,8 +486,8 @@ async function buildCompletedBoardTransfer({
   const sourceThreadArchived = sourceThread.payload?.thread_metadata?.archived === true;
   const sourceThreadLocked = sourceThread.payload?.thread_metadata?.locked === true;
   const plannedSourcePreimageExact = String(sourceMessage.payload?.content || "") === plannedSourceContent
-    && !sourceThreadArchived
-    && !sourceThreadLocked;
+    && sourceThread.payload?.thread_metadata?.archived === false
+    && sourceThread.payload?.thread_metadata?.locked !== true;
   const plannedSourcePostimageExact = Boolean(expectedSourcePostimage)
     && String(sourceMessage.payload?.content || "") === expectedSourcePostimage
     && sourceThreadArchived
@@ -480,7 +513,7 @@ async function buildCompletedBoardTransfer({
       cardId,
       project,
       sourceForumChannelId,
-      title: sourceThread.payload.name,
+      title: plannedSourceTitle,
       type,
       priority,
       owner,
@@ -494,19 +527,88 @@ async function buildCompletedBoardTransfer({
   const spec = {
     cardId,
     stableIdentity: cardContract.normalizeIdentity(cardId),
-    canonicalTitle: sourceThread.payload.name,
-    proposedTitle: sourceThread.payload.name,
+    canonicalTitle: plannedSourceTitle,
+    proposedTitle: plannedSourceTitle,
     requiredReactions: [{ status: "success", ...cardContract.STATUS_REACTIONS.success }],
   };
-  if (existing?.thread?.thread_metadata?.archived === true || existing?.thread?.thread_metadata?.locked === true) {
-    const reopened = await setThreadArchiveState({
-      threadId: existing.thread.id,
-      token,
-      archived: false,
-      locked: false,
-      fetchImpl,
-    });
-    if (!reopened.ok) reasonCodes.push("completed_card_reopen_failed");
+  const existingThreadForUpsert = existing ? {
+    id: existing.thread.id,
+    name: existing.thread.name,
+    messageId: existing.thread.id,
+  } : null;
+  const buildDestinationPayload = () => ({
+    name: plannedSourceTitle,
+    auto_archive_duration: cardContract.DEFAULT_AUTO_ARCHIVE_DURATION,
+    message: {
+      content: expectedDestinationContent,
+      allowed_mentions: { parse: [] },
+    },
+    ...(completedTagIds ? { applied_tags: completedTagIds } : {}),
+  });
+  const upsertPreflight = await cardContract.buildDiscordForumCardUpsertPreflight({
+    spec,
+    existingThread: existingThreadForUpsert,
+    token,
+    buildPayload: buildDestinationPayload,
+    fetchImpl,
+  });
+  const planRepairableBodyReasons = new Set([
+    "canonical_card_body_timestamp_conflict",
+    "canonical_card_body_downgrade_prevented",
+  ]);
+  if (
+    exactPostimageMode
+    && existing
+    && upsertPreflight.existingMessage
+    && String(upsertPreflight.existingMessage.content || "") !== expectedDestinationContent
+    && upsertPreflight.textIntegrity?.ok
+    && upsertPreflight.reasonCodes.every((code) => planRepairableBodyReasons.has(code))
+  ) {
+    upsertPreflight.ok = true;
+    upsertPreflight.action = "updated";
+    upsertPreflight.messageChanged = true;
+    upsertPreflight.reasonCodes = [];
+  }
+  if (exactPostimageMode && existing && existing.thread.name !== plannedSourceTitle && upsertPreflight.ok) {
+    upsertPreflight.titleChanged = true;
+    upsertPreflight.action = "updated";
+  }
+  reasonCodes.push(...upsertPreflight.reasonCodes);
+
+  const destinationOriginalState = existing ? {
+    archived: existing.thread?.thread_metadata?.archived === true,
+    locked: existing.thread?.thread_metadata?.locked === true,
+  } : null;
+  const prewriteCompletionEvent = destinationUrl ? buildCompletedEvent({
+    cardId,
+    project,
+    sourceForumChannelId,
+    title: plannedSourceTitle,
+    type,
+    priority,
+    owner,
+    evidence,
+    sourceUrl,
+    destinationUrl,
+    eventId,
+    occurredAt: resolvedOccurredAt,
+  }) : null;
+  const prewriteCompletionJournal = prewriteCompletionEvent
+    ? journal.buildJournalMessage(prewriteCompletionEvent)
+    : null;
+  let prewriteJournalPlan = null;
+  if (existing && reasonCodes.length === 0) {
+    const history = await readAllThreadMessages({ threadId: existing.thread.id, token, fetchImpl });
+    reasonCodes.push(...history.reasonCodes);
+    if (history.ok) {
+      prewriteJournalPlan = classifyJournalHistory({
+        messages: history.messages,
+        eventId: prewriteCompletionEvent.eventId,
+        expectedContent: prewriteCompletionJournal,
+        exactPostimageMode,
+      });
+      reasonCodes.push(...prewriteJournalPlan.reasonCodes);
+    }
   }
   if (reasonCodes.length > 0) {
     return {
@@ -520,16 +622,46 @@ async function buildCompletedBoardTransfer({
       writeCount,
     };
   }
-  let destinationBodyRepair = null;
-  if (existing && repairExactPostimage && String(existing.message?.content || "") !== expectedDestinationContent) {
-    destinationBodyRepair = await cardContract.updateThreadMessage({
+
+  const destinationTagMutationNeeded = Boolean(
+    existing
+    && completedTagIds
+    && !sameUniqueSet(existing.thread?.applied_tags || [], completedTagIds)
+  );
+  const destinationMutationNeeded = !existing
+    || upsertPreflight.action === "updated"
+    || destinationTagMutationNeeded
+    || ["create", "update"].includes(prewriteJournalPlan?.action);
+  let destinationReopened = false;
+  let destinationRestored = false;
+  let destinationReopen = null;
+  let destinationRestore = null;
+  const restoreDestinationState = async () => {
+    if (!destinationReopened || destinationRestored) return;
+    destinationRestore = await setThreadArchiveState({
       threadId: existing.thread.id,
-      messageId: existing.thread.id,
       token,
-      message: { content: expectedDestinationContent, allowed_mentions: { parse: [] } },
+      archived: destinationOriginalState.archived,
+      locked: destinationOriginalState.locked,
       fetchImpl,
     });
-    if (!destinationBodyRepair.ok) reasonCodes.push("completed_card_exact_body_repair_failed");
+    destinationRestored = true;
+    if (!destinationRestore.ok) reasonCodes.push("completed_card_restore_state_failed");
+  };
+  if (
+    existing
+    && destinationMutationNeeded
+    && (destinationOriginalState.archived || destinationOriginalState.locked)
+  ) {
+    destinationReopen = await setThreadArchiveState({
+      threadId: existing.thread.id,
+      token,
+      archived: false,
+      locked: false,
+      fetchImpl,
+    });
+    destinationReopened = destinationReopen.ok;
+    if (!destinationReopen.ok) reasonCodes.push("completed_card_reopen_failed");
   }
   if (reasonCodes.length > 0) {
     return {
@@ -545,33 +677,27 @@ async function buildCompletedBoardTransfer({
   }
   const upsert = await cardContract.upsertDiscordForumCard({
     spec,
-    existingThread: existing ? {
-      id: existing.thread.id,
-      name: existing.thread.name,
-      messageId: existing.thread.id,
-    } : null,
+    existingThread: existingThreadForUpsert,
     forumChannelId: completedForumChannelId,
     token,
     apply: true,
-    buildPayload: () => ({
-      name: sourceThread.payload.name,
-      auto_archive_duration: cardContract.DEFAULT_AUTO_ARCHIVE_DURATION,
-      message: {
-        content: expectedDestinationContent,
-        allowed_mentions: { parse: [] },
-      },
-      ...(completedTagIds ? { applied_tags: completedTagIds } : {}),
-    }),
+    preflight: upsertPreflight,
+    buildPayload: buildDestinationPayload,
     fetchImpl,
   });
   reasonCodes.push(...upsert.reasonCodes);
+  if (
+    exactPostimageMode
+    && upsertPreflight.messageChanged
+    && upsert.reasonCodes.includes("card_thread_message_update_failed")
+  ) reasonCodes.push("completed_card_exact_body_repair_failed");
   const finalDestinationId = upsert.threadId;
   const finalDestinationUrl = finalDestinationId ? discordThreadUrl(guildId, finalDestinationId) : null;
   const completionEvent = buildCompletedEvent({
     cardId,
     project,
     sourceForumChannelId,
-    title: sourceThread.payload.name,
+    title: plannedSourceTitle,
     type,
     priority,
     owner,
@@ -584,53 +710,55 @@ async function buildCompletedBoardTransfer({
   const completionJournal = journal.buildJournalMessage(completionEvent);
   let journalAction = "not_attempted";
   let journalMessageId = null;
-  if (upsert.ok && finalDestinationId) {
-    const history = await readAllThreadMessages({ threadId: finalDestinationId, token, fetchImpl });
-    reasonCodes.push(...history.reasonCodes);
-    if (history.ok) {
-      const marker = journal.eventMarker(completionEvent.eventId);
-      const matchingJournals = history.messages.filter((message) => String(message?.content || "").includes(marker));
-      if (matchingJournals.length > 1) {
-        reasonCodes.push("completed_card_journal_event_duplicate");
-      } else if (matchingJournals.length === 1 && (
-        !exactPostimageMode
-        || String(matchingJournals[0]?.content || "") === completionJournal
-      )) {
-        const existingJournal = matchingJournals[0];
-        journalAction = "reused";
-        journalMessageId = existingJournal.id;
-      } else if (matchingJournals.length === 1) {
-        const existingJournal = matchingJournals[0];
-        const updated = await cardContract.discordRequest({
-          path: `/channels/${finalDestinationId}/messages/${existingJournal.id}`,
-          token,
-          method: "PATCH",
-          body: { content: completionJournal, allowed_mentions: { parse: [] } },
-          fetchImpl,
+  if (reasonCodes.length === 0 && upsert.ok && finalDestinationId) {
+    let journalPlan = prewriteJournalPlan;
+    if (!journalPlan) {
+      const history = await readAllThreadMessages({ threadId: finalDestinationId, token, fetchImpl });
+      reasonCodes.push(...history.reasonCodes);
+      if (history.ok) {
+        journalPlan = classifyJournalHistory({
+          messages: history.messages,
+          eventId: completionEvent.eventId,
+          expectedContent: completionJournal,
+          exactPostimageMode,
         });
-        if (!updated.ok) reasonCodes.push("completed_card_journal_update_failed");
-        else {
-          journalAction = "updated";
-          journalMessageId = existingJournal.id;
-        }
-      } else {
-        const posted = await cardContract.discordRequest({
-          path: `/channels/${finalDestinationId}/messages`,
-          token,
-          method: "POST",
-          body: { content: completionJournal, allowed_mentions: { parse: [] } },
-          fetchImpl,
-        });
-        if (!posted.ok || !posted.payload?.id) reasonCodes.push("completed_card_journal_create_failed");
-        else {
-          journalAction = "created";
-          journalMessageId = posted.payload.id;
-        }
+        reasonCodes.push(...journalPlan.reasonCodes);
+      }
+    }
+    if (reasonCodes.length === 0 && journalPlan?.action === "reuse") {
+      journalAction = "reused";
+      journalMessageId = journalPlan.messageId;
+    } else if (reasonCodes.length === 0 && journalPlan?.action === "update") {
+      const updated = await cardContract.discordRequest({
+        path: `/channels/${finalDestinationId}/messages/${journalPlan.messageId}`,
+        token,
+        method: "PATCH",
+        body: { content: completionJournal, allowed_mentions: { parse: [] } },
+        fetchImpl,
+      });
+      if (!updated.ok) reasonCodes.push("completed_card_journal_update_failed");
+      else {
+        journalAction = "updated";
+        journalMessageId = journalPlan.messageId;
+      }
+    } else if (reasonCodes.length === 0 && journalPlan?.action === "create") {
+      const posted = await cardContract.discordRequest({
+        path: `/channels/${finalDestinationId}/messages`,
+        token,
+        method: "POST",
+        body: { content: completionJournal, allowed_mentions: { parse: [] } },
+        fetchImpl,
+      });
+      if (!posted.ok || !posted.payload?.id) reasonCodes.push("completed_card_journal_create_failed");
+      else {
+        journalAction = "created";
+        journalMessageId = posted.payload.id;
       }
     }
   }
+  if (reasonCodes.length > 0) await restoreDestinationState();
   let destinationTagUpdate = null;
-  if (upsert.ok && finalDestinationId && completedTagIds) {
+  if (reasonCodes.length === 0 && upsert.ok && finalDestinationId && completedTagIds) {
     const currentTags = existing?.thread?.applied_tags || [];
     if (upsert.action === "created" || sameUniqueSet(currentTags, completedTagIds)) {
       destinationTagUpdate = { ok: true, status: null, action: upsert.action === "created" ? "created_with_tags" : "already_exact" };
@@ -646,6 +774,7 @@ async function buildCompletedBoardTransfer({
       if (!destinationTagUpdate.ok) reasonCodes.push("completed_card_tag_update_failed");
     }
   }
+  await restoreDestinationState();
   let destinationReadback = null;
   if (upsert.ok && finalDestinationId && journalMessageId) {
     const [threadRead, messageRead, journalRead] = await Promise.all([
@@ -665,6 +794,8 @@ async function buildCompletedBoardTransfer({
     ]);
     const content = String(messageRead.payload?.content || "");
     const journalContent = String(journalRead.payload?.content || "");
+    const destinationArchived = threadRead.payload?.thread_metadata?.archived === true;
+    const destinationLocked = threadRead.payload?.thread_metadata?.locked === true;
     destinationReadback = {
       threadRead: threadRead.ok,
       messageRead: messageRead.ok,
@@ -681,6 +812,10 @@ async function buildCompletedBoardTransfer({
       journalMarkerPresent: journalContent.includes(journal.eventMarker(completionEvent.eventId)),
       bodyExact: !exactPostimageMode || content === expectedDestinationContent,
       journalExact: !exactPostimageMode || journalContent === completionJournal,
+      archiveStateExact: !existing || (
+        destinationArchived === destinationOriginalState.archived
+        && destinationLocked === destinationOriginalState.locked
+      ),
     };
     if (!Object.values(destinationReadback).every(Boolean)) reasonCodes.push("completed_card_readback_failed");
   }
@@ -771,6 +906,13 @@ async function buildCompletedBoardTransfer({
       action: upsert.action,
       tags: destinationTagUpdate,
       reaction: upsert.reactionResult,
+      archiveState: {
+        reopened: destinationReopened,
+        reopenHttpStatus: destinationReopen?.status || null,
+        restored: destinationRestored,
+        restoreHttpStatus: destinationRestore?.status || null,
+        expected: destinationOriginalState,
+      },
       journal: {
         action: journalAction,
         messageId: journalMessageId,

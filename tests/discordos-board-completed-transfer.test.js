@@ -20,6 +20,178 @@ const baseOptions = {
   },
 };
 
+function makeExistingTransferHarness({
+  eventId,
+  destinationArchived = false,
+  destinationLocked = false,
+  destinationBody = "exact",
+  destinationTags = ["feature-tag", "completed-tag"],
+  reactionPresent = true,
+  journalMode = "exact",
+  failJournalCreate = false,
+  failJournalUpdate = false,
+  sourceMode = "postimage",
+  omitUnlockedSourceLock = false,
+} = {}) {
+  const occurredAt = "2026-07-16T15:00:00.000Z";
+  const originalSource = "Original card";
+  const sourceUrl = "https://discord.com/channels/guild/source-thread";
+  const destinationUrl = "https://discord.com/channels/guild/completed-thread";
+  const expectedDestination = _internals.buildCompletedMessage({
+    cardId: "CARD-42",
+    sourceForumChannelId: "source-forum",
+    title: "Card title",
+    eventId,
+    occurredAt,
+    sourceContent: originalSource,
+    sourceUrl,
+    destinationUrl: null,
+    evidence: baseOptions.evidence,
+  });
+  const expectedSource = _internals.buildSourceMessage({ sourceContent: originalSource, destinationUrl, cardId: "CARD-42" });
+  const expectedJournal = journal.buildJournalMessage(_internals.buildCompletedEvent({
+    cardId: "CARD-42",
+    sourceForumChannelId: "source-forum",
+    title: "Card title",
+    eventId,
+    occurredAt,
+    sourceUrl,
+    destinationUrl,
+    evidence: baseOptions.evidence,
+  }));
+  const state = {
+    sourceContent: sourceMode === "postimage" ? expectedSource : originalSource,
+    sourceArchived: sourceMode === "postimage",
+    sourceLocked: sourceMode === "postimage",
+    destinationName: "Card title",
+    destinationContent: destinationBody === "exact" ? expectedDestination : `${_internals.cardMarker("CARD-42")}\ncorrupt-body`,
+    destinationTags: [...destinationTags],
+    destinationArchived,
+    destinationLocked,
+    reactionPresent,
+    journalContent: journalMode === "exact"
+      ? expectedJournal
+      : journalMode === "corrupt"
+        ? `${journal.eventMarker(eventId)}\ncorrupt-journal`
+        : null,
+  };
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    const method = init.method || "GET";
+    const body = init.body ? JSON.parse(init.body) : null;
+    calls.push({ url, method, body });
+    if (url.endsWith("/channels/source-thread/messages/source-thread")) {
+      if (method === "PATCH") state.sourceContent = body.content;
+      return response({ payload: { id: "source-thread", content: state.sourceContent } });
+    }
+    if (url.endsWith("/channels/source-thread")) {
+      if (method === "PATCH") {
+        state.sourceArchived = body.archived;
+        state.sourceLocked = body.locked;
+      }
+      return response({ payload: {
+        id: "source-thread",
+        name: "Card title",
+        parent_id: "source-forum",
+        guild_id: "guild",
+        thread_metadata: {
+          archived: state.sourceArchived,
+          ...(!omitUnlockedSourceLock || state.sourceLocked ? { locked: state.sourceLocked } : {}),
+        },
+      } });
+    }
+    if (url.endsWith("/guilds/guild/threads/active")) {
+      return response({ payload: { threads: state.destinationArchived ? [] : [{
+        id: "completed-thread",
+        name: state.destinationName,
+        parent_id: "completed-forum",
+        applied_tags: [...state.destinationTags],
+        thread_metadata: { archived: false, locked: state.destinationLocked },
+      }] } });
+    }
+    if (url.endsWith("/channels/completed-forum/threads/archived/public?limit=100")) {
+      return response({ payload: { threads: state.destinationArchived ? [{
+        id: "completed-thread",
+        name: state.destinationName,
+        parent_id: "completed-forum",
+        applied_tags: [...state.destinationTags],
+        thread_metadata: {
+          archived: true,
+          locked: state.destinationLocked,
+          archive_timestamp: "2026-07-16T14:00:00.000Z",
+        },
+      }] : [], has_more: false } });
+    }
+    if (url.includes("/channels/completed-thread/messages/completed-thread/reactions/")) {
+      if (method === "PUT") state.reactionPresent = true;
+      return response({ status: 204, payload: null });
+    }
+    if (url.endsWith("/channels/completed-thread/messages/completed-thread")) {
+      if (method === "PATCH") state.destinationContent = body.content;
+      return response({ payload: {
+        id: "completed-thread",
+        content: state.destinationContent,
+        reactions: state.reactionPresent
+          ? [{ emoji: { name: "success", id: "1507384062166302851" }, me: true, count: 1 }]
+          : [],
+      } });
+    }
+    if (url.endsWith("/channels/completed-thread/messages?limit=100")) {
+      return response({ payload: state.journalContent == null ? [] : [{ id: "journal", content: state.journalContent }] });
+    }
+    if (url.endsWith("/channels/completed-thread/messages/journal")) {
+      if (method === "PATCH") {
+        if (failJournalUpdate) return response({ ok: false, status: 500, payload: { message: "Injected journal update failure" } });
+        state.journalContent = body.content;
+      }
+      return response({ payload: { id: "journal", content: state.journalContent } });
+    }
+    if (url.endsWith("/channels/completed-thread/messages") && method === "POST") {
+      if (failJournalCreate) return response({ ok: false, status: 500, payload: { message: "Injected journal create failure" } });
+      state.journalContent = body.content;
+      return response({ status: 201, payload: { id: "journal" } });
+    }
+    if (url.endsWith("/channels/completed-thread")) {
+      if (method === "PATCH") {
+        if (Object.hasOwn(body, "archived")) {
+          state.destinationArchived = body.archived;
+          state.destinationLocked = body.locked;
+        }
+        if (Object.hasOwn(body, "applied_tags")) state.destinationTags = [...body.applied_tags];
+        if (Object.hasOwn(body, "name")) state.destinationName = body.name;
+      }
+      return response({ payload: {
+        id: "completed-thread",
+        name: state.destinationName,
+        parent_id: "completed-forum",
+        applied_tags: [...state.destinationTags],
+        thread_metadata: { archived: state.destinationArchived, locked: state.destinationLocked },
+      } });
+    }
+    throw new Error(`unexpected request ${method} ${url}`);
+  };
+  return {
+    state,
+    calls,
+    expectedDestination,
+    expectedSource,
+    expectedJournal,
+    run: () => _internals.buildCompletedBoardTransfer({
+      ...baseOptions,
+      eventId,
+      occurredAt,
+      completedTagIds: ["feature-tag", "completed-tag"],
+      requireStableIdentity: true,
+      sourceContentPreimage: originalSource,
+      sourceTitlePreimage: "Card title",
+      repairExactPostimage: true,
+      apply: true,
+      allowApply: true,
+      fetchImpl,
+    }),
+  };
+}
+
 test("completed transfer requires both apply guards", async () => {
   const result = await _internals.buildCompletedBoardTransfer({
     ...baseOptions,
@@ -377,6 +549,7 @@ test("planned source preimage drift blocks before every mutation", async () => {
   const result = await _internals.buildCompletedBoardTransfer({
     ...baseOptions,
     sourceContentPreimage: "Planned original card",
+    sourceTitlePreimage: "Card title",
     requireStableIdentity: true,
     repairExactPostimage: true,
     apply: true,
@@ -405,6 +578,175 @@ test("planned source preimage drift blocks before every mutation", async () => {
   assert.equal(result.ok, false);
   assert(result.reasonCodes.includes("source_card_planned_preimage_mismatch"));
   assert(calls.every((call) => call.method === "GET"));
+});
+
+test("planned source title rename after preflight blocks before every mutation", async () => {
+  const calls = [];
+  const result = await _internals.buildCompletedBoardTransfer({
+    ...baseOptions,
+    sourceContentPreimage: "Original card",
+    sourceTitlePreimage: "Card title",
+    requireStableIdentity: true,
+    repairExactPostimage: true,
+    apply: true,
+    allowApply: true,
+    fetchImpl: async (url, init) => {
+      calls.push({ url, method: init.method });
+      if (url.endsWith("/channels/source-thread/messages/source-thread")) {
+        return response({ payload: { id: "source-thread", content: "Original card" } });
+      }
+      if (url.endsWith("/channels/source-thread")) {
+        return response({ payload: {
+          id: "source-thread",
+          name: "Renamed after preflight",
+          parent_id: "source-forum",
+          guild_id: "guild",
+          thread_metadata: { archived: false },
+        } });
+      }
+      throw new Error(`unexpected request ${init.method} ${url}`);
+    },
+  });
+  assert.equal(result.ok, false);
+  assert(result.reasonCodes.includes("source_card_planned_title_mismatch"));
+  assert.equal(result.writeCount, 0);
+  assert(calls.every((call) => call.method === "GET"));
+});
+
+test("pristine source requires explicit open state while omitted unlocked remains admissible", async () => {
+  const blockedCalls = [];
+  const blocked = await _internals.buildCompletedBoardTransfer({
+    ...baseOptions,
+    sourceContentPreimage: "Original card",
+    sourceTitlePreimage: "Card title",
+    requireStableIdentity: true,
+    repairExactPostimage: true,
+    apply: true,
+    allowApply: true,
+    fetchImpl: async (url, init) => {
+      blockedCalls.push({ url, method: init.method });
+      if (url.endsWith("/channels/source-thread/messages/source-thread")) {
+        return response({ payload: { id: "source-thread", content: "Original card" } });
+      }
+      if (url.endsWith("/channels/source-thread")) {
+        return response({ payload: {
+          id: "source-thread",
+          name: "Card title",
+          parent_id: "source-forum",
+          guild_id: "guild",
+          thread_metadata: {},
+        } });
+      }
+      if (url.endsWith("/guilds/guild/threads/active")) return response({ payload: { threads: [] } });
+      if (url.endsWith("/channels/completed-forum/threads/archived/public?limit=100")) {
+        return response({ payload: { threads: [], has_more: false } });
+      }
+      throw new Error(`unexpected request ${init.method} ${url}`);
+    },
+  });
+  assert.equal(blocked.ok, false);
+  assert(blocked.reasonCodes.includes("source_card_planned_preimage_mismatch"));
+  assert.equal(blocked.writeCount, 0);
+  assert(blockedCalls.every((call) => call.method === "GET"));
+
+  const admitted = makeExistingTransferHarness({
+    eventId: "completed:CARD-42:omitted-unlocked-pristine",
+    sourceMode: "preimage",
+    omitUnlockedSourceLock: true,
+  });
+  const result = await admitted.run();
+  assert.equal(result.ok, true, JSON.stringify(result, null, 2));
+  assert.equal(result.writeCount, 2);
+  assert.equal(admitted.state.sourceContent, admitted.expectedSource);
+  assert.equal(admitted.state.sourceArchived, true);
+  assert.equal(admitted.state.sourceLocked, true);
+});
+
+test("exact archived destination replay remains archived and performs zero writes", async () => {
+  const harness = makeExistingTransferHarness({
+    eventId: "completed:CARD-42:exact-archived-replay",
+    destinationArchived: true,
+    destinationLocked: true,
+  });
+  const result = await harness.run();
+  assert.equal(result.ok, true, JSON.stringify(result, null, 2));
+  assert.equal(result.writeCount, 0);
+  assert.equal(harness.state.destinationArchived, true);
+  assert.equal(harness.state.destinationLocked, true);
+  assert.equal(result.completed.archiveState.reopened, false);
+  assert.equal(result.completed.readback.archiveStateExact, true);
+  assert(harness.calls.every((call) => call.method === "GET"));
+});
+
+test("archived destination repair reopens only when needed and restores archive state", async () => {
+  const harness = makeExistingTransferHarness({
+    eventId: "completed:CARD-42:archived-repair",
+    destinationArchived: true,
+    destinationLocked: true,
+    destinationBody: "corrupt",
+  });
+  const result = await harness.run();
+  assert.equal(result.ok, true, JSON.stringify(result, null, 2));
+  assert.equal(result.writeCount, 3);
+  assert.equal(harness.state.destinationContent, harness.expectedDestination);
+  assert.equal(harness.state.destinationArchived, true);
+  assert.equal(harness.state.destinationLocked, true);
+  assert.equal(result.completed.archiveState.reopened, true);
+  assert.equal(result.completed.archiveState.restored, true);
+  assert.equal(result.completed.readback.archiveStateExact, true);
+  const destinationWrites = harness.calls.filter((call) =>
+    call.method !== "GET" && call.url.includes("/channels/completed-thread")
+  );
+  assert.deepEqual(destinationWrites.map((call) => call.body), [
+    { archived: false, locked: false },
+    { content: harness.expectedDestination, allowed_mentions: { parse: [] } },
+    { archived: true, locked: true },
+  ]);
+});
+
+test("journal create failure blocks every later destination and source mutation", async () => {
+  const harness = makeExistingTransferHarness({
+    eventId: "completed:CARD-42:journal-create-failure",
+    destinationTags: ["wrong-tag"],
+    reactionPresent: false,
+    journalMode: "missing",
+    failJournalCreate: true,
+  });
+  const result = await harness.run();
+  assert.equal(result.ok, false);
+  assert(result.reasonCodes.includes("completed_card_journal_create_failed"));
+  assert.equal(result.writeCount, 1, "only the required reaction written before journal failure is counted");
+  assert.deepEqual(harness.state.destinationTags, ["wrong-tag"]);
+  const failureIndex = harness.calls.findLastIndex((call) =>
+    call.method === "POST" && call.url.endsWith("/channels/completed-thread/messages")
+  );
+  assert(failureIndex >= 0);
+  assert(harness.calls.slice(failureIndex + 1).every((call) => call.method === "GET"));
+  assert(!harness.calls.some((call) => call.method === "PATCH" && call.body?.applied_tags));
+  assert(!harness.calls.some((call) => call.method !== "GET" && call.url.includes("/channels/source-thread")));
+});
+
+test("journal update failure preserves prior write count and blocks every later mutation", async () => {
+  const harness = makeExistingTransferHarness({
+    eventId: "completed:CARD-42:journal-update-failure",
+    destinationBody: "corrupt",
+    destinationTags: ["wrong-tag"],
+    journalMode: "corrupt",
+    failJournalUpdate: true,
+  });
+  const result = await harness.run();
+  assert.equal(result.ok, false);
+  assert(result.reasonCodes.includes("completed_card_journal_update_failed"));
+  assert.equal(result.writeCount, 1, "only the completed body repair before journal failure is counted");
+  assert.equal(harness.state.destinationContent, harness.expectedDestination);
+  assert.deepEqual(harness.state.destinationTags, ["wrong-tag"]);
+  const failureIndex = harness.calls.findLastIndex((call) =>
+    call.method === "PATCH" && call.url.endsWith("/channels/completed-thread/messages/journal")
+  );
+  assert(failureIndex >= 0);
+  assert(harness.calls.slice(failureIndex + 1).every((call) => call.method === "GET"));
+  assert(!harness.calls.some((call) => call.method === "PATCH" && call.body?.applied_tags));
+  assert(!harness.calls.some((call) => call.method !== "GET" && call.url.includes("/channels/source-thread")));
 });
 
 test("unreadable destination starter blocks creation with an exact zero-write receipt", async () => {
@@ -442,11 +784,14 @@ test("unreadable destination starter blocks creation with an exact zero-write re
 });
 
 test("destination reopen followed by body-repair failure preserves the successful write count", async () => {
+  let destinationArchived = true;
+  let destinationLocked = true;
   const result = await _internals.buildCompletedBoardTransfer({
     ...baseOptions,
     eventId: "completed:CARD-42:reopen-failure",
     occurredAt: "2026-07-16T10:00:00.000Z",
     sourceContentPreimage: "Original card",
+    sourceTitlePreimage: "Card title",
     repairExactPostimage: true,
     requireStableIdentity: true,
     apply: true,
@@ -477,15 +822,31 @@ test("destination reopen followed by body-repair failure preserves the successfu
         if (init.method === "PATCH") return response({ ok: false, status: 500, payload: { message: "Injected failure" } });
         return response({ payload: { id: "completed-thread", content: "ATLAS-CARD-ID: `CARD-42`\ncorrupted" } });
       }
-      if (url.endsWith("/channels/completed-thread") && init.method === "PATCH") {
-        return response({ payload: { id: "completed-thread", thread_metadata: { archived: false, locked: false } } });
+      if (url.endsWith("/channels/completed-thread/messages?limit=100")) {
+        return response({ payload: [] });
+      }
+      if (url.endsWith("/channels/completed-thread")) {
+        if (init.method === "PATCH") {
+          const body = JSON.parse(init.body);
+          destinationArchived = body.archived;
+          destinationLocked = body.locked;
+        }
+        return response({ payload: {
+          id: "completed-thread",
+          name: "Card title",
+          parent_id: "completed-forum",
+          applied_tags: [],
+          thread_metadata: { archived: destinationArchived, locked: destinationLocked },
+        } });
       }
       throw new Error(`unexpected request ${init.method} ${url}`);
     },
   });
   assert.equal(result.ok, false);
   assert(result.reasonCodes.includes("completed_card_exact_body_repair_failed"));
-  assert.equal(result.writeCount, 1);
+  assert.equal(result.writeCount, 2);
+  assert.equal(destinationArchived, true);
+  assert.equal(destinationLocked, true);
 });
 
 test("delayed resume reuses an exact journal event beyond page one without duplication", async () => {
@@ -528,6 +889,7 @@ test("delayed resume reuses an exact journal event beyond page one without dupli
     completedTagIds: ["feature-tag", "completed-tag"],
     requireStableIdentity: true,
     sourceContentPreimage: originalSource,
+    sourceTitlePreimage: "Card title",
     repairExactPostimage: true,
     apply: true,
     allowApply: true,
@@ -631,6 +993,7 @@ test("corrupted destination replay is repaired to the exact deterministic postim
     completedTagIds: ["feature-tag", "completed-tag"],
     requireStableIdentity: true,
     sourceContentPreimage: originalSource,
+    sourceTitlePreimage: "Card title",
     repairExactPostimage: true,
     apply: true,
     allowApply: true,
@@ -736,6 +1099,7 @@ test("source-link partial failure resumes with archive only and then replays wit
     completedTagIds: ["feature-tag", "completed-tag"],
     requireStableIdentity: true,
     sourceContentPreimage: originalSource,
+    sourceTitlePreimage: "Card title",
     repairExactPostimage: true,
     apply: true,
     allowApply: true,
@@ -870,6 +1234,7 @@ test("standalone replay is no-write and exact-mode journal repair is counted", a
         eventId,
         occurredAt,
         sourceContentPreimage: originalSource,
+        sourceTitlePreimage: "Card title",
         repairExactPostimage: true,
       } : {}),
       requireStableIdentity: true,

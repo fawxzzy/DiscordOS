@@ -802,7 +802,7 @@ async function inspectTransferRuntime(operation, { env = process.env, fetchImpl 
     })
     : null;
   const sourcePreimageExact = sourceContent === operation.source.content
-    && sourceThread.thread_metadata?.archived !== true
+    && sourceThread.thread_metadata?.archived === false
     && sourceThread.thread_metadata?.locked !== true;
   const sourcePostimageExact = Boolean(expectedSourceContent)
     && sourceContent === expectedSourceContent
@@ -981,7 +981,7 @@ function validateTransferReceipt(operation, receipt) {
   pushIf(reasonCodes, receipt?.completed?.reaction?.presentAfter !== true, "completed_transfer_success_reaction_missing");
   pushIf(reasonCodes, !["created", "reused", "updated"].includes(receipt?.completed?.journal?.action), "completed_transfer_journal_missing");
   const destinationReadback = receipt?.completed?.readback || {};
-  for (const field of ["threadRead", "messageRead", "parentMatches", "cardMarkerPresent", "canonicalBodyPresent", "completedStatePresent", "sourceLinkPresent", "appliedTagsExact", "journalRead", "journalMarkerPresent", "bodyExact", "journalExact"]) {
+  for (const field of ["threadRead", "messageRead", "parentMatches", "cardMarkerPresent", "canonicalBodyPresent", "completedStatePresent", "sourceLinkPresent", "appliedTagsExact", "journalRead", "journalMarkerPresent", "bodyExact", "journalExact", "archiveStateExact"]) {
     pushIf(reasonCodes, destinationReadback[field] !== true, `completed_transfer_destination_readback_missing:${field}`);
   }
   const sourceReadback = receipt?.source?.readback || {};
@@ -1144,6 +1144,7 @@ async function runRepair({
         evidence: operation.event.evidence,
         requireStableIdentity: true,
         sourceContentPreimage: operation.source.content,
+        sourceTitlePreimage: operation.source.title,
         repairExactPostimage: true,
         allowApply: true,
         apply: true,

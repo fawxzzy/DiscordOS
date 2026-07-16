@@ -442,7 +442,7 @@ function successfulTransferReceipt(operation) {
   const destinationReadback = Object.fromEntries([
     "threadRead", "messageRead", "parentMatches", "cardMarkerPresent", "canonicalBodyPresent",
     "completedStatePresent", "sourceLinkPresent", "appliedTagsExact", "journalRead", "journalMarkerPresent",
-    "bodyExact", "journalExact",
+    "bodyExact", "journalExact", "archiveStateExact",
   ].map((field) => [field, true]));
   return {
     ok: true,
@@ -509,6 +509,7 @@ test("partial failure resumes safely and successful replay produces no duplicate
     },
     transferApplyImpl: async (options) => {
       const operation = fixture.plan.operations.find((row) => row.kind === "completed_transfer" && row.source.threadId === options.sourceThreadId);
+      assert.equal(options.sourceTitlePreimage, operation.source.title, "apply must pass the trusted planned source title");
       applyCounts.set(operation.operationId, (applyCounts.get(operation.operationId) || 0) + 1);
       markTransferComplete(state, operation);
       return successfulTransferReceipt(operation);
@@ -654,6 +655,21 @@ test("completed transfer replay rejects corrupted owner, project, evidence, or b
   const archivedOmitted = await inspect(expectedDestination, { sourceArchived: null, sourceLocked: null });
   assert.equal(archivedOmitted.ok, false);
   assert(archivedOmitted.reasonCodes.includes("transfer_source_content_preimage_drift"));
+  const pristineMetadataMissing = await inspect(expectedDestination, {
+    sourceContent: operation.source.content,
+    sourceArchived: null,
+    sourceLocked: null,
+  });
+  assert.equal(pristineMetadataMissing.ok, false);
+  assert(pristineMetadataMissing.reasonCodes.includes("transfer_source_content_preimage_drift"));
+  const pristineUnlockedOmitted = await inspect(expectedDestination, {
+    sourceContent: operation.source.content,
+    sourceArchived: false,
+    sourceLocked: null,
+  });
+  assert.equal(pristineUnlockedOmitted.ok, true);
+  assert.equal(pristineUnlockedOmitted.status, "pending");
+  assert.equal(pristineUnlockedOmitted.source.preimageExact, true);
   const corruptions = [
     expectedDestination.replace(`- owner: \`${operation.source.owner}\``, "- owner: `corrupt-owner`"),
     expectedDestination.replace(`- project: \`${operation.source.project}\``, "- project: `corrupt-project`"),
