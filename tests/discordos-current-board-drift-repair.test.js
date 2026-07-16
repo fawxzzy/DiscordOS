@@ -678,10 +678,11 @@ test("completed transfer replay rejects corrupted owner, project, evidence, or b
   ];
   for (const corruption of corruptions) {
     const result = await inspect(corruption);
-    assert.equal(result.ok, true);
-    assert.equal(result.status, "pending");
+    assert.equal(result.ok, false);
+    assert.equal(result.status, "blocked");
     assert.equal(result.complete, false);
     assert.equal(result.destination.readback.bodyExact, false);
+    assert(result.reasonCodes.includes("completed_card_destination_archive_preimage_unknown"));
   }
 });
 

@@ -102,6 +102,11 @@ function validateInput(options) {
     options.sourceContentPreimage != null
     && (typeof options.sourceTitlePreimage !== "string" || options.sourceTitlePreimage.length === 0)
   ) reasonCodes.push("source_title_preimage_missing");
+  if (options.destinationStatePreimage != null && (
+    typeof options.destinationStatePreimage !== "object"
+    || typeof options.destinationStatePreimage.archived !== "boolean"
+    || typeof options.destinationStatePreimage.locked !== "boolean"
+  )) reasonCodes.push("destination_state_preimage_invalid");
   if (options.sourceForumChannelId === options.completedForumChannelId) {
     reasonCodes.push("source_and_completed_forum_must_differ");
   }
@@ -349,6 +354,7 @@ async function buildCompletedBoardTransfer({
   requireStableIdentity = false,
   sourceContentPreimage = null,
   sourceTitlePreimage = null,
+  destinationStatePreimage = null,
   repairExactPostimage = false,
   evidence,
   allowApply = false,
@@ -379,6 +385,7 @@ async function buildCompletedBoardTransfer({
     requireStableIdentity,
     sourceContentPreimage,
     sourceTitlePreimage,
+    destinationStatePreimage,
     repairExactPostimage,
     evidence,
   };
@@ -575,10 +582,30 @@ async function buildCompletedBoardTransfer({
   }
   reasonCodes.push(...upsertPreflight.reasonCodes);
 
-  const destinationOriginalState = existing ? {
+  if (destinationStatePreimage && !existing) reasonCodes.push("completed_card_destination_state_preimage_without_destination");
+  const destinationLiveState = existing ? {
     archived: existing.thread?.thread_metadata?.archived === true,
     locked: existing.thread?.thread_metadata?.locked === true,
   } : null;
+  const destinationOriginalState = existing
+    ? destinationStatePreimage || destinationLiveState
+    : null;
+  const destinationStateRestorationPending = Boolean(
+    existing
+    && destinationStatePreimage
+    && (
+      destinationLiveState.archived !== destinationOriginalState.archived
+      || destinationLiveState.locked !== destinationOriginalState.locked
+    )
+  );
+  if (
+    destinationStateRestorationPending
+    && !(
+      destinationLiveState.archived === false
+      && destinationLiveState.locked === false
+      && (destinationOriginalState.archived || destinationOriginalState.locked)
+    )
+  ) reasonCodes.push("completed_card_destination_state_preimage_mismatch");
   const prewriteCompletionEvent = destinationUrl ? buildCompletedEvent({
     cardId,
     project,
@@ -632,7 +659,27 @@ async function buildCompletedBoardTransfer({
     || upsertPreflight.action === "updated"
     || destinationTagMutationNeeded
     || ["create", "update"].includes(prewriteJournalPlan?.action);
-  let destinationReopened = false;
+  if (
+    exactPostimageMode
+    && existing
+    && !destinationStatePreimage
+    && destinationLiveState.archived === false
+    && destinationLiveState.locked === false
+    && destinationMutationNeeded
+  ) reasonCodes.push("completed_card_destination_archive_preimage_unknown");
+  if (reasonCodes.length > 0) {
+    return {
+      ok: false,
+      status: "blocked",
+      apply,
+      admission,
+      cardId,
+      preview,
+      reasonCodes: [...new Set(reasonCodes)],
+      writeCount,
+    };
+  }
+  let destinationReopened = destinationStateRestorationPending;
   let destinationRestored = false;
   let destinationReopen = null;
   let destinationRestore = null;
@@ -645,7 +692,7 @@ async function buildCompletedBoardTransfer({
       locked: destinationOriginalState.locked,
       fetchImpl,
     });
-    destinationRestored = true;
+    destinationRestored = destinationRestore.ok;
     if (!destinationRestore.ok) reasonCodes.push("completed_card_restore_state_failed");
   };
   if (
@@ -768,7 +815,6 @@ async function buildCompletedBoardTransfer({
     });
     reasonCodes.push(...destinationReaction.reasonCodes);
   }
-  if (reasonCodes.length > 0) await restoreDestinationState();
   let destinationTagUpdate = null;
   if (reasonCodes.length === 0 && upsert.ok && finalDestinationId && completedTagIds) {
     const currentTags = existing?.thread?.applied_tags || [];
@@ -787,6 +833,7 @@ async function buildCompletedBoardTransfer({
     }
   }
   await restoreDestinationState();
+  if (!destinationRestored) await restoreDestinationState();
   let destinationReadback = null;
   if (upsert.ok && finalDestinationId && journalMessageId) {
     const [threadRead, messageRead, journalRead] = await Promise.all([

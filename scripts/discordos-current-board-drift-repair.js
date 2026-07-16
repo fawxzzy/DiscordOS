@@ -838,6 +838,25 @@ async function inspectTransferRuntime(operation, { env = process.env, fetchImpl 
     sourceLocked: sourcePostimageExact,
     sourcePostimageExact,
   } : null;
+  const destinationRepairExact = Boolean(readback) && [
+    "stableIdentity",
+    "exactTitle",
+    "parentMatches",
+    "managedBody",
+    "completedState",
+    "sourceLink",
+    "bodyExact",
+    "exactTags",
+    "journalEvent",
+    "journalExact",
+    "successReaction",
+  ].every((field) => readback[field] === true);
+  if (
+    destination
+    && destination.thread_metadata?.archived !== true
+    && destination.thread_metadata?.locked !== true
+    && !destinationRepairExact
+  ) reasonCodes.push("completed_card_destination_archive_preimage_unknown");
   if (destination && readback.exactTitle !== true) reasonCodes.push("completed_card_title_drift");
   if (destination && readback.parentMatches !== true) reasonCodes.push("completed_card_parent_drift");
   const complete = Boolean(readback) && Object.values(readback).every(Boolean);
@@ -855,7 +874,14 @@ async function inspectTransferRuntime(operation, { env = process.env, fetchImpl 
       archived: sourceThread.thread_metadata?.archived === true,
       locked: sourceThread.thread_metadata?.locked === true,
     },
-    destination: destination ? { threadId: destination.id, readback } : null,
+    destination: destination ? {
+      threadId: destination.id,
+      archiveState: {
+        archived: destination.thread_metadata?.archived === true,
+        locked: destination.thread_metadata?.locked === true,
+      },
+      readback,
+    } : null,
     titleOnlyCandidateThreadIds: titleOnlyCandidates,
     complete,
     reasonCodes: unique(reasonCodes).sort(),

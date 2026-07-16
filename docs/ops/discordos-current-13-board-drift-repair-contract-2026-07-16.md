@@ -27,7 +27,7 @@ The exact-head review repair adds fail-closed guarantees: recomputed modified pl
 ## Verification evidence
 
 - focused repair suite: `16/16 passed`
-- focused repair + completed-transfer cluster: `43/43 passed`
+- focused repair + completed-transfer cluster: `45/45 passed`
 - admitted-evidence offline dry-run: `dry_run_ready`, 18 pending operations, `discord_mutations: 0`
 - production environment readiness: `ready` (read-only check)
 - repo-local full `npm run verify`: `passed` on the final code/test surface, exit code `0`

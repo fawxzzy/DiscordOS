@@ -30,6 +30,8 @@ function makeExistingTransferHarness({
   journalMode = "exact",
   failJournalCreate = false,
   failJournalUpdate = false,
+  failDestinationRestoreOnce = false,
+  failDestinationRestoreAlways = false,
   sourceMode = "postimage",
   omitUnlockedSourceLock = false,
 } = {}) {
@@ -69,6 +71,7 @@ function makeExistingTransferHarness({
     destinationArchived,
     destinationLocked,
     reactionPresent,
+    destinationRestoreFailuresRemaining: failDestinationRestoreAlways ? 6 : failDestinationRestoreOnce ? 3 : 0,
     journalContent: journalMode === "exact"
       ? expectedJournal
       : journalMode === "corrupt"
@@ -154,6 +157,10 @@ function makeExistingTransferHarness({
     if (url.endsWith("/channels/completed-thread")) {
       if (method === "PATCH") {
         if (Object.hasOwn(body, "archived")) {
+          if (body.archived === true && state.destinationRestoreFailuresRemaining > 0) {
+            state.destinationRestoreFailuresRemaining -= 1;
+            return response({ ok: false, status: 500, payload: { message: "Injected destination restore failure" } });
+          }
           state.destinationArchived = body.archived;
           state.destinationLocked = body.locked;
         }
@@ -176,7 +183,7 @@ function makeExistingTransferHarness({
     expectedDestination,
     expectedSource,
     expectedJournal,
-    run: () => _internals.buildCompletedBoardTransfer({
+    run: (overrides = {}) => _internals.buildCompletedBoardTransfer({
       ...baseOptions,
       eventId,
       occurredAt,
@@ -184,10 +191,12 @@ function makeExistingTransferHarness({
       requireStableIdentity: true,
       sourceContentPreimage: originalSource,
       sourceTitlePreimage: "Card title",
+      destinationStatePreimage: { archived: destinationArchived, locked: destinationLocked },
       repairExactPostimage: true,
       apply: true,
       allowApply: true,
       fetchImpl,
+      ...overrides,
     }),
   };
 }
@@ -775,6 +784,62 @@ test("successful journal reconciliation precedes the deferred success reaction",
   assert(reactionWriteIndex > journalWriteIndex);
 });
 
+test("transient destination restore failure retries the bounded re-close", async () => {
+  const harness = makeExistingTransferHarness({
+    eventId: "completed:CARD-42:restore-retry",
+    destinationArchived: true,
+    destinationLocked: true,
+    journalMode: "missing",
+    failJournalCreate: true,
+    failDestinationRestoreOnce: true,
+  });
+  const result = await harness.run();
+  assert.equal(result.ok, false);
+  assert(result.reasonCodes.includes("completed_card_journal_create_failed"));
+  assert(result.reasonCodes.includes("completed_card_restore_state_failed"));
+  assert.equal(result.writeCount, 2, "only the reopen and successful retry are counted");
+  assert.equal(harness.state.destinationArchived, true);
+  assert.equal(harness.state.destinationLocked, true);
+  assert.equal(result.completed.archiveState.restored, true);
+  assert.equal(result.completed.archiveState.restoreHttpStatus, 200);
+  const restoreAttempts = harness.calls.filter((call) =>
+    call.method === "PATCH"
+      && call.url.endsWith("/channels/completed-thread")
+      && call.body?.archived === true
+      && call.body?.locked === true
+  );
+  assert.equal(restoreAttempts.length, 4, "three transport attempts fail before the second logical re-close succeeds");
+});
+
+test("failed destination re-close stays blocked and an unproven open replay fails closed", async () => {
+  const harness = makeExistingTransferHarness({
+    eventId: "completed:CARD-42:restore-terminal-failure",
+    destinationArchived: true,
+    destinationLocked: true,
+    journalMode: "missing",
+    failJournalCreate: true,
+    failDestinationRestoreAlways: true,
+  });
+  const failed = await harness.run();
+  assert.equal(failed.ok, false);
+  assert(failed.reasonCodes.includes("completed_card_journal_create_failed"));
+  assert(failed.reasonCodes.includes("completed_card_restore_state_failed"));
+  assert.equal(failed.writeCount, 1, "only the successful reopen is counted");
+  assert.equal(failed.completed.archiveState.restored, false);
+  assert.deepEqual(failed.completed.archiveState.expected, { archived: true, locked: true });
+  assert.equal(harness.state.destinationArchived, false);
+  assert.equal(harness.state.destinationLocked, false);
+
+  const replayStart = harness.calls.length;
+  const replay = await harness.run({ destinationStatePreimage: null });
+  assert.equal(replay.ok, false);
+  assert(replay.reasonCodes.includes("completed_card_destination_archive_preimage_unknown"));
+  assert.equal(replay.writeCount, 0);
+  assert(harness.calls.slice(replayStart).every((call) => call.method === "GET"));
+  assert.equal(harness.state.destinationArchived, false);
+  assert.equal(harness.state.destinationLocked, false);
+});
+
 test("unreadable destination starter blocks creation with an exact zero-write receipt", async () => {
   const calls = [];
   const result = await _internals.buildCompletedBoardTransfer({
@@ -916,6 +981,7 @@ test("delayed resume reuses an exact journal event beyond page one without dupli
     requireStableIdentity: true,
     sourceContentPreimage: originalSource,
     sourceTitlePreimage: "Card title",
+    destinationStatePreimage: { archived: false, locked: false },
     repairExactPostimage: true,
     apply: true,
     allowApply: true,
@@ -1020,6 +1086,7 @@ test("corrupted destination replay is repaired to the exact deterministic postim
     requireStableIdentity: true,
     sourceContentPreimage: originalSource,
     sourceTitlePreimage: "Card title",
+    destinationStatePreimage: { archived: false, locked: false },
     repairExactPostimage: true,
     apply: true,
     allowApply: true,
@@ -1261,6 +1328,7 @@ test("standalone replay is no-write and exact-mode journal repair is counted", a
         occurredAt,
         sourceContentPreimage: originalSource,
         sourceTitlePreimage: "Card title",
+        destinationStatePreimage: { archived: false, locked: false },
         repairExactPostimage: true,
       } : {}),
       requireStableIdentity: true,
