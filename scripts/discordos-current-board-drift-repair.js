@@ -811,7 +811,7 @@ async function inspectTransferRuntime(operation, { env = process.env, fetchImpl 
   const sourceLinkWrittenOpenExact = Boolean(expectedSourceContent)
     && sourceContent === expectedSourceContent
     && sourceThread.thread_metadata?.archived === false
-    && sourceThread.thread_metadata?.locked === false;
+    && sourceThread.thread_metadata?.locked !== true;
   const reciprocalExact = sourcePostimageExact;
   if (!sourcePreimageExact && !sourceLinkWrittenOpenExact && !sourcePostimageExact) {
     reasonCodes.push("transfer_source_content_preimage_drift");

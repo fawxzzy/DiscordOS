@@ -462,7 +462,7 @@ async function buildCompletedBoardTransfer({
   const plannedSourceLinkWrittenOpenExact = Boolean(expectedSourcePostimage)
     && String(sourceMessage.payload?.content || "") === expectedSourcePostimage
     && sourceThread.payload?.thread_metadata?.archived === false
-    && sourceThread.payload?.thread_metadata?.locked === false;
+    && sourceThread.payload?.thread_metadata?.locked !== true;
   if (
     sourceContentPreimage != null
     && !plannedSourcePreimageExact

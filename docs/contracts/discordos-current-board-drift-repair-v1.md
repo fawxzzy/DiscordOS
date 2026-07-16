@@ -65,7 +65,7 @@ Operations are idempotent:
 - exact completed-transfer readback must byte-match the deterministic managed destination body, deterministic journal event, deterministic reciprocal source body, completed state, source link, Feature/Completed tags, success reaction, and archived+locked source;
 - a corrupted known destination body or journal can be repaired only to the plan-derived exact postimage; no new destination or journal is created during that recovery;
 - strict byte-exact body and journal enforcement is enabled only when the reviewed source preimage is supplied by this plan-backed command; the reusable standalone transfer CLI preserves a stable-ID-matched persisted destination and journal on replay;
-- the one admitted partial source state is the exact reviewed reciprocal-link body while the source remains open and unlocked; replay may perform only the remaining archive+lock transition, while every other source-body or state drift blocks;
+- the one admitted partial source state is the exact reviewed reciprocal-link body while the source is explicitly open and not locked (`locked` may be omitted by Discord); replay may perform only the remaining archive+lock transition, while every other source-body or state drift blocks;
 - applied tag IDs are duplicate-sensitive sets: response order is irrelevant, but missing, extra, or duplicate IDs are rejected;
 - completed-transfer receipts count every successful non-GET Discord request, including writes completed before a later blocked return;
 - a successful replay produces zero writes.

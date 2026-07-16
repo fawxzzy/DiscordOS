@@ -601,7 +601,10 @@ test("completed transfer replay rejects corrupted owner, project, evidence, or b
           name: operation.source.title,
           parent_id: operation.source.forumChannelId,
           guild_id: guildId,
-          thread_metadata: { archived: sourceArchived, locked: sourceLocked },
+          thread_metadata: {
+            ...(sourceArchived == null ? {} : { archived: sourceArchived }),
+            ...(sourceLocked == null ? {} : { locked: sourceLocked }),
+          },
         } });
       }
       if (url.endsWith(`/guilds/${guildId}/threads/active`)) {
@@ -632,7 +635,7 @@ test("completed transfer replay rejects corrupted owner, project, evidence, or b
   const exact = await inspect(expectedDestination);
   assert.equal(exact.status, "complete");
   assert.equal(exact.complete, true);
-  const linkedOpen = await inspect(expectedDestination, { sourceArchived: false, sourceLocked: false });
+  const linkedOpen = await inspect(expectedDestination, { sourceArchived: false, sourceLocked: null });
   assert.equal(linkedOpen.ok, true);
   assert.equal(linkedOpen.status, "pending");
   assert.equal(linkedOpen.complete, false);
@@ -648,6 +651,9 @@ test("completed transfer replay rejects corrupted owner, project, evidence, or b
   const halfTransition = await inspect(expectedDestination, { sourceArchived: false, sourceLocked: true });
   assert.equal(halfTransition.ok, false);
   assert(halfTransition.reasonCodes.includes("transfer_source_content_preimage_drift"));
+  const archivedOmitted = await inspect(expectedDestination, { sourceArchived: null, sourceLocked: null });
+  assert.equal(archivedOmitted.ok, false);
+  assert(archivedOmitted.reasonCodes.includes("transfer_source_content_preimage_drift"));
   const corruptions = [
     expectedDestination.replace(`- owner: \`${operation.source.owner}\``, "- owner: `corrupt-owner`"),
     expectedDestination.replace(`- project: \`${operation.source.project}\``, "- project: `corrupt-project`"),

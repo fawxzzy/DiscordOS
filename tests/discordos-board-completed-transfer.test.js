@@ -547,7 +547,10 @@ test("delayed resume reuses an exact journal event beyond page one without dupli
           name: "Card title",
           parent_id: "source-forum",
           guild_id: "guild",
-          thread_metadata: { archived: sourceArchived, locked: sourceLocked },
+          thread_metadata: {
+            archived: sourceArchived,
+            ...(sourceLocked ? { locked: true } : {}),
+          },
         } });
       }
       if (url.endsWith("/guilds/guild/threads/active")) return response({ payload: { threads: [{
