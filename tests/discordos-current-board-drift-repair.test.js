@@ -798,7 +798,7 @@ test("terminal reconciliation revalidates every exact transfer postimage", async
       const count = (inspectionCounts.get(operation.operationId) || 0) + 1;
       inspectionCounts.set(operation.operationId, count);
       if (operation.operationId === target.operationId && count === 2) {
-        return { ok: false, operationId: operation.operationId, status: "blocked", complete: false, reasonCodes: ["injected_terminal_transfer_postimage_drift"] };
+        return { ok: false, operationId: operation.operationId, status: "blocked", complete: false, reasonCodes: ["completed_card_destination_archive_postimage_drift"] };
       }
       return { ok: true, operationId: operation.operationId, status: "complete", complete: true, destination: { readback: {} }, reasonCodes: [] };
     },
@@ -810,9 +810,81 @@ test("terminal reconciliation revalidates every exact transfer postimage", async
   assert.equal(result.reconciliation.status, "blocked");
   assert.equal(result.reconciliation.transferPostimages.length, 3);
   assert(result.reasonCodes.includes(`terminal_transfer_postimage_incomplete:${target.operationId}`));
-  assert(result.reasonCodes.includes("injected_terminal_transfer_postimage_drift"));
+  assert(result.reasonCodes.includes("completed_card_destination_archive_postimage_drift"));
   for (const operation of fixture.plan.operations.filter((row) => row.kind === "completed_transfer")) {
     assert.equal(inspectionCounts.get(operation.operationId), 2, `${operation.operationId} must be inspected in preflight and terminal reconciliation`);
+  }
+});
+
+test("plan-created destinations require open unlocked state in preflight and terminal reconciliation", async () => {
+  const runCase = async ({ preflightState = { archived: false, locked: false }, terminalState = preflightState } = {}) => {
+    const fixture = makeFixture();
+    const terminalScan = clone(fixture.scan);
+    for (const operation of fixture.plan.operations.filter((row) => row.kind === "tag_repair")) markTagComplete(terminalScan, operation);
+    markOrderComplete(terminalScan, fixture.plan.operations.find((row) => row.kind === "forum_order_repair"));
+    for (const operation of fixture.plan.operations.filter((row) => row.kind === "completed_transfer")) markTransferComplete(terminalScan, operation);
+    const target = fixture.plan.operations.find((row) => row.kind === "completed_transfer");
+    const inspectionCounts = new Map();
+    const result = await _internals.runRepair({
+      mode: "apply",
+      plan: fixture.plan,
+      evidenceBytes: fixture.evidenceBytes,
+      admittedScan: fixture.scan,
+      admittedEvidenceSha256: fixture.admittedEvidenceSha256,
+      trustedPlanDigestSha256: fixture.plan.planDigestSha256,
+      allowApply: true,
+      env: {
+        DISCORDOS_BOT_TOKEN: "fixture",
+        DISCORDOS_CURRENT_BOARD_DRIFT_REPAIR: "enabled",
+        DISCORDOS_BOARD_COMPLETED_TRANSFER: "enabled",
+      },
+      currentScanImpl: async () => clone(terminalScan),
+      tagInspectionImpl: async (operation) => ({ ok: true, operationId: operation.operationId, status: "complete", reasonCodes: [] }),
+      orderInspectionImpl: async (operation) => ({ ok: true, operationId: operation.operationId, status: "complete", reasonCodes: [] }),
+      transferInspectionImpl: async (operation) => {
+        const count = (inspectionCounts.get(operation.operationId) || 0) + 1;
+        inspectionCounts.set(operation.operationId, count);
+        const state = operation.operationId !== target.operationId
+          ? { archived: false, locked: false }
+          : count === 1 ? preflightState : terminalState;
+        const exact = state.archived === false && state.locked === false;
+        return {
+          ok: exact,
+          operationId: operation.operationId,
+          status: exact ? "complete" : "blocked",
+          complete: exact,
+          destination: { readback: { archiveStateExact: exact } },
+          reasonCodes: exact ? [] : ["completed_card_destination_archive_postimage_drift"],
+        };
+      },
+    });
+    return { result, target, inspectionCounts };
+  };
+
+  const exact = await runCase();
+  assert.equal(exact.result.ok, true);
+  assert.equal(exact.result.status, "applied_and_reconciled");
+  assert.equal(exact.result.discordMutations, 0);
+  assert.equal(exact.inspectionCounts.get(exact.target.operationId), 2);
+
+  for (const [label, state] of [
+    ["archived", { archived: true, locked: false }],
+    ["locked", { archived: false, locked: true }],
+  ]) {
+    const preflight = await runCase({ preflightState: state });
+    assert.equal(preflight.result.ok, false, `${label} preflight`);
+    assert.equal(preflight.result.status, "blocked", `${label} preflight`);
+    assert.equal(preflight.result.discordMutations, 0, `${label} preflight`);
+    assert.equal(preflight.inspectionCounts.get(preflight.target.operationId), 1, `${label} preflight`);
+    assert(preflight.result.reasonCodes.includes("completed_card_destination_archive_postimage_drift"), `${label} preflight`);
+
+    const terminal = await runCase({ terminalState: state });
+    assert.equal(terminal.result.ok, false, `${label} terminal`);
+    assert.equal(terminal.result.status, "blocked", `${label} terminal`);
+    assert.equal(terminal.result.discordMutations, 0, `${label} terminal`);
+    assert.equal(terminal.inspectionCounts.get(terminal.target.operationId), 2, `${label} terminal`);
+    assert(terminal.result.reasonCodes.includes(`terminal_transfer_postimage_incomplete:${terminal.target.operationId}`), `${label} terminal`);
+    assert(terminal.result.reasonCodes.includes("completed_card_destination_archive_postimage_drift"), `${label} terminal`);
   }
 });
 
@@ -1101,6 +1173,8 @@ test("completed transfer replay rejects corrupted owner, project, evidence, or b
     sourceContent = expectedSource,
     sourceArchived = true,
     sourceLocked = true,
+    destinationArchived = false,
+    destinationLocked = false,
     destinationStatePreimage = null,
   } = {}) => _internals.inspectTransferRuntime(operation, {
     env: { DISCORDOS_BOT_TOKEN: "fixture" },
@@ -1122,15 +1196,26 @@ test("completed transfer replay rejects corrupted owner, project, evidence, or b
         } });
       }
       if (url.endsWith(`/guilds/${guildId}/threads/active`)) {
-        return response({ payload: { threads: [{
+        return response({ payload: { threads: destinationArchived ? [] : [{
           id: destinationId,
           name: operation.source.title,
           parent_id: operation.destination.forumChannelId,
           applied_tags: [...operation.destination.appliedTagIds].reverse(),
+          thread_metadata: { archived: false, locked: destinationLocked },
         }] } });
       }
       if (url.endsWith(`/channels/${operation.destination.forumChannelId}/threads/archived/public?limit=100`)) {
-        return response({ payload: { threads: [], has_more: false } });
+        return response({ payload: { threads: destinationArchived ? [{
+          id: destinationId,
+          name: operation.source.title,
+          parent_id: operation.destination.forumChannelId,
+          applied_tags: [...operation.destination.appliedTagIds].reverse(),
+          thread_metadata: {
+            archived: true,
+            locked: destinationLocked,
+            archive_timestamp: "2026-07-16T20:00:00.000Z",
+          },
+        }] : [], has_more: false } });
       }
       if (url.endsWith(`/channels/${destinationId}/messages/${destinationId}`)) {
         return response({ payload: {
@@ -1149,6 +1234,18 @@ test("completed transfer replay rejects corrupted owner, project, evidence, or b
   const exact = await inspect(expectedDestination);
   assert.equal(exact.status, "complete");
   assert.equal(exact.complete, true);
+  assert.equal(exact.destination.readback.archiveStateExact, true);
+  for (const [label, destinationArchived, destinationLocked] of [
+    ["archived", true, false],
+    ["locked", false, true],
+  ]) {
+    const driftedArchiveState = await inspect(expectedDestination, { destinationArchived, destinationLocked });
+    assert.equal(driftedArchiveState.ok, false, label);
+    assert.equal(driftedArchiveState.status, "blocked", label);
+    assert.equal(driftedArchiveState.complete, false, label);
+    assert.equal(driftedArchiveState.destination.readback.archiveStateExact, false, label);
+    assert(driftedArchiveState.reasonCodes.includes("completed_card_destination_archive_postimage_drift"), label);
+  }
   const linkedOpen = await inspect(expectedDestination, { sourceArchived: false, sourceLocked: null });
   assert.equal(linkedOpen.ok, true);
   assert.equal(linkedOpen.status, "pending");

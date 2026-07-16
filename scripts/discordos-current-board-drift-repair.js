@@ -844,10 +844,14 @@ async function inspectTransferRuntime(operation, {
     archived: destination.thread_metadata?.archived === true,
     locked: destination.thread_metadata?.locked === true,
   } : null;
-  const destinationArchiveStateExact = Boolean(destination && destinationStatePreimage) && (
-    destinationLiveState.archived === destinationStatePreimage.archived
-    && destinationLiveState.locked === destinationStatePreimage.locked
+  const destinationExpectedState = destinationStatePreimage || { archived: false, locked: false };
+  const destinationArchiveStateExact = Boolean(destination) && (
+    destinationLiveState.archived === destinationExpectedState.archived
+    && destinationLiveState.locked === destinationExpectedState.locked
   );
+  if (destination && !destinationStatePreimage && !destinationArchiveStateExact) {
+    reasonCodes.push("completed_card_destination_archive_postimage_drift");
+  }
   if (
     destinationStatePreimage
     && destination
@@ -878,7 +882,7 @@ async function inspectTransferRuntime(operation, {
     sourceArchived: sourcePostimageExact,
     sourceLocked: sourcePostimageExact,
     sourcePostimageExact,
-    archiveStateExact: !destinationStatePreimage || destinationArchiveStateExact,
+    archiveStateExact: destinationArchiveStateExact,
   } : null;
   const destinationRepairExact = Boolean(readback) && [
     "stableIdentity",
