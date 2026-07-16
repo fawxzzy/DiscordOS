@@ -2250,7 +2250,7 @@
       "completionPercent": 98,
       "summary": "Coordinate the mobile safe-area/portrait and browser layout-persistence lanes through one viewport contract and proof matrix without turning either delivery into an offset patch.",
       "whyItMatters": "The same UI can be valid in a desktop canvas, narrow browser, mobile browser, installed PWA, or restored window only if viewport state, safe areas, and restoration behavior share deliberate rules.",
-      "currentStatus": "Mazer PR #75 merged as 659d2907c20d8a5a6e39fffc51dd7646814ff1fa and production deployment dpl_AZ9NUecXPHhn7PiWnXWjh9YoJm7u is READY at https://fawxzzy-mazer.vercel.app. Production 390x844 diagnostics passed Menu, Options, Play, and Pause at both scroll endpoints with zero status, guide, control, button, panel, console, or page-error failures. The corrected shared text reserves, described-row spacing, clipped-edge scroll rendering, safe fallback background, and slowed trail pulse are live. Fresh operator physical-iPhone screenshots remain the terminal acceptance gate; the card stays in Review until that device evidence is clean.",
+      "currentStatus": "Fresh physical-iPhone production screenshots exposed remaining menu/overlay spacing, touch-control feel, maze-frame scaling, and end-timer defects after PR #75. Draft Mazer PR #76 now carries follow-up commit 5765c2725221d734d6eca43a2c698dd200968072: one-finger D-pad slide retargeting, a lower wide-travel stick with stronger cardinal hysteresis, an edge-tight 8px phone maze frame with size-aware inner scaling, and immediate player/AI timer freeze at the goal. Exact 390x844 DPR-3 proof passed 39/39 checks with no browser errors; arrow and stick live routes both reached the goal and retained identical timer values on resample. The card remains in Review because this newest packet is not yet merged or deployed and requires fresh physical-iPhone production acceptance.",
       "workBreakdown": [
         "Define canonical viewport, safe-area, visible-height, and no-overlap invariants for menu, Options, play, Pause, dialogs, HUD, controls, and scroll rails.",
         "Maintain the child boundary between mobile shell/device behavior and browser layout-state persistence.",
@@ -2258,10 +2258,10 @@
         "Require route, mode, viewport, safe-area state, scroll position, and layout diagnostics beside visual proof."
       ],
       "nextActions": [
-        "Review canonical production at https://fawxzzy-mazer.vercel.app on physical iPhone Safari and the installed PWA where available.",
-        "Confirm menu/play status, Options/Pause guide copy and descriptions, both scroll endpoints, and safe-area fallback colors remain contained on the physical device.",
-        "Return fresh screenshots for any remaining clipping, overlap, border collision, purple bleed, sibling-surface drift, or uncomfortable motion.",
-        "Complete the card only after physical-device review is clean."
+        "Review and merge Mazer PR #76 only after the current controls, timer, maze-frame, and 39/39 surface evidence remains green.",
+        "Deploy the exact reviewed merge under a new explicit Mazer production approval.",
+        "Collect fresh physical-iPhone Safari and installed-PWA screenshots plus arrow/stick feel feedback from canonical production.",
+        "Complete only after the new production build has no spacing, containment, maze-fit, timer, or control-feel regression."
       ],
       "acceptanceCriteria": [
         "Every primary Mazer surface has an owner, supported viewport category, and no-overlap contract.",
@@ -2300,7 +2300,7 @@
       "completionPercent": 90,
       "summary": "Normalize responsive browser UI geometry so a narrow-window layout cannot overlap, escape, or expand incorrectly after resize, maximize, restore, or reload. Persist semantic intent only if the product later introduces it.",
       "whyItMatters": "The root-cause pass proved that Mazer has no user-adjustable panel geometry to restore. Derived dimensions must be recomputed from one viewport snapshot instead of being saved and replayed across browser states.",
-      "currentStatus": "Mazer PR #75 merged as 659d2907c20d8a5a6e39fffc51dd7646814ff1fa and production deployment dpl_AZ9NUecXPHhn7PiWnXWjh9YoJm7u is READY at https://fawxzzy-mazer.vercel.app. Production 390x844 diagnostics passed responsive Menu, Options, Play, Pause, and both Pause scroll endpoints with zero containment, overlap, offscreen, console, or page errors. The implementation remains layout-derived and persists no viewport geometry. Fresh physical-iPhone acceptance plus native maximize, restore, and browser-chrome transition automation remain open.",
+      "currentStatus": "Fresh physical-iPhone production evidence showed that the previous fixed phone tile cadence left variable maze sizes visually underfilled inside their border. Draft Mazer PR #76 at 5765c2725221d734d6eca43a2c698dd200968072 replaces that cadence with one stable 8px outer phone margin and derives inner tile size from the active maze dimension. Exact 390x844 DPR-3 Menu, Options, Play, Pause, and scroll-endpoint proof passed 39/39 checks with zero console or page errors. The implementation still persists no viewport geometry; merge/deploy, new device acceptance, and native maximize/restore/browser-chrome automation remain open.",
       "workBreakdown": [
         "Document the intentional no-persisted-geometry contract and keep semantic toggle/account preference state separate.",
         "Normalize layout-derived state on reload, resize, maximize, restore, narrow-to-wide, wide-to-narrow, mobile emulation, and orientation transitions.",
@@ -2308,7 +2308,8 @@
         "Introduce a versioned semantic layout schema only if a supported user-adjustable intent is added later."
       ],
       "nextActions": [
-        "Collect fresh physical-iPhone proof from canonical production for the PR #75 text-containment build.",
+        "Review, merge, and explicitly release the exact Mazer PR #76 maze-frame revision before collecting new production screenshots.",
+        "Confirm multiple maze sizes keep the same edge-tight border while their inner tiles scale to fill it on physical iPhone.",
         "Extend the deterministic fixture to native maximize/restore and browser-chrome changes.",
         "Classify any future state as semantic user intent, transient overlay state, account preference, or viewport-derived geometry before persisting it.",
         "Add a migration/fallback matrix only if supported semantic layout state is introduced.",
@@ -3394,7 +3395,7 @@
       "completionPercent": 94,
       "summary": "Replace the completed rank-only badge presentation with one shared two-row menu/play status component showing time plus Rank, Score out of 100, and Maze Lvl from the correct context.",
       "whyItMatters": "The operator wants the menu AI result and active player run to use one legible status language while preserving hidden progression and canonical run-quality data.",
-      "currentStatus": "Mazer PR #75 merged as 659d2907c20d8a5a6e39fffc51dd7646814ff1fa and production deployment dpl_AZ9NUecXPHhn7PiWnXWjh9YoJm7u is READY at https://fawxzzy-mazer.vercel.app. Production 390x844 diagnostics report a contained 252x60 menu panel and 248x60 play panel, both with textFits true, no overlap or offscreen findings, and zero console or page errors. The shared menu/play status correction is live; fresh physical-iPhone proof and final canonical score-field traceability remain open.",
+      "currentStatus": "The shared menu/play status geometry remains contained, and draft Mazer PR #76 at 5765c2725221d734d6eca43a2c698dd200968072 now fixes the status timer lifecycle: player and AI elapsed time freeze at the exact goal-arrival timestamp, and completion telemetry consumes that same frozen duration. Exact arrow and stick live routes reached the goal with timer values unchanged after a 96ms resample; the 390x844 DPR-3 surface matrix passed 39/39 with zero browser errors. The card remains in Review pending merge, a newly approved production release, fresh physical-iPhone confirmation, and final canonical score-field traceability.",
       "workBreakdown": [
         "Define one status-panel view model for menu AI completion and active player play.",
         "Render time on row one and Rank, Score N/100, Maze Lvl N on row two with compact responsive fitting.",
@@ -3402,7 +3403,8 @@
         "Preserve hidden progression fields and accessibility labels while explicitly superseding rank-only presentation history."
       ],
       "nextActions": [
-        "Review the canonical production panel at https://fawxzzy-mazer.vercel.app on physical iPhone Safari.",
+        "Review and merge the exact PR #76 timer-freeze implementation, then deploy it only under a new explicit Mazer production approval.",
+        "Verify on physical iPhone that player and AI timers stop immediately on the end tile and remain unchanged through the goal-hold transition.",
         "Confirm the displayed Score field traces to the finalized canonical run-quality value and remains --/100 before finalization.",
         "Complete only after both device containment and score authority are proven."
       ],
