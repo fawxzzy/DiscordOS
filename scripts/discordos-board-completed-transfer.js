@@ -183,7 +183,7 @@ function buildCompletedMessage(options) {
 function buildSourceMessage({ sourceContent, destinationUrl, cardId }) {
   const marker = `ATLAS-COMPLETED-CARD: ${destinationUrl}`;
   const value = String(sourceContent || "").trim();
-  if (value.includes(marker) && value.includes(journal.CARD_END)) return value;
+  if (value.includes(marker) && (!value.includes(journal.CARD_START) || value.includes(journal.CARD_END))) return value;
   const completion = `\n\n## Archived completion\n- card id: \`${cardId}\`\n- completed card: ${destinationUrl}\n${marker}`;
   if (value.includes(journal.CARD_START)) {
     const end = value.indexOf(journal.CARD_END);
@@ -385,6 +385,7 @@ async function buildCompletedBoardTransfer({
     || completedTagIds.some((value) => typeof value !== "string" || value.length === 0)
   )) reasonCodes.push("completed_card_tag_ids_invalid");
   const sourceUrl = discordThreadUrl(guildId, sourceThreadId);
+  const exactPostimageMode = sourceContentPreimage != null;
   const plannedSourceContent = sourceContentPreimage == null
     ? String(sourceMessage.payload?.content || "")
     : String(sourceContentPreimage);
@@ -432,21 +433,23 @@ async function buildCompletedBoardTransfer({
   if (reasonCodes.length > 0) {
     return { ok: false, status: "blocked", apply, admission, cardId, preview, reasonCodes: [...new Set(reasonCodes)] };
   }
-  const expectedDestinationContent = buildCompletedMessage({
-    cardId,
-    project,
-    sourceForumChannelId,
-    title: sourceThread.payload.name,
-    type,
-    priority,
-    owner,
-    eventId,
-    occurredAt: resolvedOccurredAt,
-    sourceContent: plannedSourceContent,
-    sourceUrl,
-    destinationUrl: null,
-    evidence,
-  });
+  const expectedDestinationContent = !exactPostimageMode && existing?.matchedBy === "stable_card_id"
+    ? String(existing.message?.content || "")
+    : buildCompletedMessage({
+      cardId,
+      project,
+      sourceForumChannelId,
+      title: sourceThread.payload.name,
+      type,
+      priority,
+      owner,
+      eventId,
+      occurredAt: resolvedOccurredAt,
+      sourceContent: plannedSourceContent,
+      sourceUrl,
+      destinationUrl: null,
+      evidence,
+    });
   const spec = {
     cardId,
     stableIdentity: cardContract.normalizeIdentity(cardId),
@@ -546,7 +549,10 @@ async function buildCompletedBoardTransfer({
       const matchingJournals = history.messages.filter((message) => String(message?.content || "").includes(marker));
       if (matchingJournals.length > 1) {
         reasonCodes.push("completed_card_journal_event_duplicate");
-      } else if (matchingJournals.length === 1 && String(matchingJournals[0]?.content || "") === completionJournal) {
+      } else if (matchingJournals.length === 1 && (
+        !exactPostimageMode
+        || String(matchingJournals[0]?.content || "") === completionJournal
+      )) {
         const existingJournal = matchingJournals[0];
         journalAction = "reused";
         journalMessageId = existingJournal.id;
@@ -632,8 +638,8 @@ async function buildCompletedBoardTransfer({
       ),
       journalRead: journalRead.ok,
       journalMarkerPresent: journalContent.includes(journal.eventMarker(completionEvent.eventId)),
-      bodyExact: content === expectedDestinationContent,
-      journalExact: journalContent === completionJournal,
+      bodyExact: !exactPostimageMode || content === expectedDestinationContent,
+      journalExact: !exactPostimageMode || journalContent === completionJournal,
     };
     if (!Object.values(destinationReadback).every(Boolean)) reasonCodes.push("completed_card_readback_failed");
   }
@@ -734,7 +740,7 @@ async function buildCompletedBoardTransfer({
     writeCount: [
       upsert.action === "created" || upsert.action === "updated",
       upsert.reactionResult?.status === "applied",
-      journalAction === "created",
+      journalAction === "created" || journalAction === "updated",
       destinationTagUpdate?.action === "updated",
       destinationBodyRepair?.ok === true,
       sourceUpdate?.ok === true,

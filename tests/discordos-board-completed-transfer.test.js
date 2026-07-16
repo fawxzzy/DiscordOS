@@ -608,3 +608,107 @@ test("corrupted destination replay is repaired to the exact deterministic postim
   assert.equal(destinationCreates, 0);
   assert.equal(journalCreates, 0);
 });
+
+test("standalone replay is no-write and exact-mode journal repair is counted", async () => {
+  const runExisting = async ({ exactMode, corruptJournal }) => {
+    const eventId = exactMode ? "completed:CARD-42:exact-journal" : "completed:CARD-42";
+    const occurredAt = "2026-07-16T11:00:00.000Z";
+    const sourceUrl = "https://discord.com/channels/guild/source-thread";
+    const destinationUrl = "https://discord.com/channels/guild/completed-thread";
+    const originalSource = "Original card";
+    const destinationContent = _internals.buildCompletedMessage({
+      cardId: "CARD-42",
+      sourceForumChannelId: "source-forum",
+      title: "Card title",
+      eventId,
+      occurredAt,
+      sourceContent: originalSource,
+      sourceUrl,
+      destinationUrl: null,
+      evidence: baseOptions.evidence,
+    });
+    const sourceContent = _internals.buildSourceMessage({ sourceContent: originalSource, destinationUrl, cardId: "CARD-42" });
+    const expectedJournal = journal.buildJournalMessage(_internals.buildCompletedEvent({
+      cardId: "CARD-42",
+      sourceForumChannelId: "source-forum",
+      title: "Card title",
+      eventId,
+      occurredAt,
+      sourceUrl,
+      destinationUrl,
+      evidence: baseOptions.evidence,
+    }));
+    let journalContent = corruptJournal
+      ? `${journal.eventMarker(eventId)}\ncorrupted journal body`
+      : expectedJournal;
+    let writeCount = 0;
+    const result = await _internals.buildCompletedBoardTransfer({
+      ...baseOptions,
+      ...(exactMode ? {
+        eventId,
+        occurredAt,
+        sourceContentPreimage: originalSource,
+        repairExactPostimage: true,
+      } : {}),
+      requireStableIdentity: true,
+      apply: true,
+      allowApply: true,
+      fetchImpl: async (url, init) => {
+        if (init.method !== "GET") writeCount += 1;
+        if (url.endsWith("/channels/source-thread/messages/source-thread")) {
+          return response({ payload: { id: "source-thread", content: sourceContent } });
+        }
+        if (url.endsWith("/channels/source-thread")) {
+          return response({ payload: {
+            id: "source-thread",
+            name: "Card title",
+            parent_id: "source-forum",
+            guild_id: "guild",
+            thread_metadata: { archived: true, locked: true },
+          } });
+        }
+        if (url.endsWith("/guilds/guild/threads/active")) return response({ payload: { threads: [{
+          id: "completed-thread",
+          name: "Card title",
+          parent_id: "completed-forum",
+          applied_tags: [],
+        }] } });
+        if (url.endsWith("/channels/completed-forum/threads/archived/public?limit=100")) {
+          return response({ payload: { threads: [], has_more: false } });
+        }
+        if (url.endsWith("/channels/completed-thread/messages/completed-thread")) {
+          return response({ payload: {
+            id: "completed-thread",
+            content: destinationContent,
+            reactions: [{ emoji: { name: "success", id: "1507384062166302851" }, me: true, count: 1 }],
+          } });
+        }
+        if (url.endsWith("/channels/completed-thread/messages?limit=100")) {
+          return response({ payload: [{ id: "journal", content: journalContent }] });
+        }
+        if (url.endsWith("/channels/completed-thread/messages/journal")) {
+          if (init.method === "PATCH") journalContent = JSON.parse(init.body).content;
+          return response({ payload: { id: "journal", content: journalContent } });
+        }
+        if (url.endsWith("/channels/completed-thread")) {
+          return response({ payload: { id: "completed-thread", name: "Card title", parent_id: "completed-forum", applied_tags: [] } });
+        }
+        throw new Error(`unexpected request ${init.method} ${url}`);
+      },
+    });
+    return { result, writeCount, expectedJournal, journalContent };
+  };
+
+  const standalone = await runExisting({ exactMode: false, corruptJournal: false });
+  assert.equal(standalone.result.ok, true, JSON.stringify(standalone.result, null, 2));
+  assert.equal(standalone.result.writeCount, 0);
+  assert.equal(standalone.writeCount, 0);
+  assert.equal(standalone.result.completed.journal.action, "reused");
+
+  const exactRepair = await runExisting({ exactMode: true, corruptJournal: true });
+  assert.equal(exactRepair.result.ok, true, JSON.stringify(exactRepair.result, null, 2));
+  assert.equal(exactRepair.result.completed.journal.action, "updated");
+  assert.equal(exactRepair.result.writeCount, 1);
+  assert.equal(exactRepair.writeCount, 1);
+  assert.equal(exactRepair.journalContent, exactRepair.expectedJournal);
+});

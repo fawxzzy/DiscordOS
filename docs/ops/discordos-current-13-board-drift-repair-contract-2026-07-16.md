@@ -22,12 +22,12 @@ Durable machine plan:
 
 Read-only transfer enrichment resolved the three exact source titles, projects, types, priorities, owners, content hashes, guild ID, destination tag IDs, and deterministic event identities. No unknown was replaced with an inferred value.
 
-The exact-head review repair adds four fail-closed guarantees: recomputed modified plans remain unauthorized; archived destinations and journal history are paginated to bounded exhaustion; destination body, journal, source reciprocal body, tags, state, reaction, archive, and lock are exact deterministic postimages; and full guild-channel readback proves unrelated channels remain invariant during the bounded 13-board reorder.
+The exact-head review repair adds fail-closed guarantees: recomputed modified plans remain unauthorized; archived destinations and journal history are paginated to bounded exhaustion; plan-backed destination body, journal, source reciprocal body, tags, state, reaction, archive, and lock are exact deterministic postimages; full guild-channel readback proves unrelated channels remain invariant during the bounded 13-board reorder; standalone stable-ID replay remains no-write when no reviewed source preimage is supplied; and both created and updated journal messages are counted as Discord mutations.
 
 ## Verification evidence
 
 - focused repair suite: `15/15 passed`
-- focused repair + completed-transfer cluster: `31/31 passed`
+- focused repair + completed-transfer cluster: `32/32 passed`
 - admitted-evidence offline dry-run: `dry_run_ready`, 18 pending operations, `discord_mutations: 0`
 - production environment readiness: `ready` (read-only check)
 - repo-local full `npm run verify`: `passed` on the final code/test surface, exit code `0`

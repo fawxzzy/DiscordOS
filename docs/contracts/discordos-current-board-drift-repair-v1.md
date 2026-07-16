@@ -63,6 +63,7 @@ Operations are idempotent:
 - archived destination discovery and journal-event lookup paginate to exhaustion under explicit fail-closed page limits;
 - exact completed-transfer readback must byte-match the deterministic managed destination body, deterministic journal event, deterministic reciprocal source body, completed state, source link, Feature/Completed tags, success reaction, and archived+locked source;
 - a corrupted known destination body or journal can be repaired only to the plan-derived exact postimage; no new destination or journal is created during that recovery;
+- strict byte-exact body and journal enforcement is enabled only when the reviewed source preimage is supplied by this plan-backed command; the reusable standalone transfer CLI preserves a stable-ID-matched persisted destination and journal on replay;
 - a successful replay produces zero writes.
 
 On partial failure, the receipt stops at the first failed write/readback. A later invocation re-runs the complete preflight and skips only operations proven complete by exact postimage readback. Duplicate completed cards and title-only destination reuse are forbidden.
