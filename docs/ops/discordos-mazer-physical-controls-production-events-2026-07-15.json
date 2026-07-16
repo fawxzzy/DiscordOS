@@ -1,0 +1,227 @@
+{
+  "events": [
+    {
+      "schemaVersion": "atlas.board-card-journal.v1",
+      "eventId": "mazer-cross-viewport-controls-production-review-20260715",
+      "occurredAt": "2026-07-16T02:29:59.448Z",
+      "actor": "Mazer",
+      "card": {
+        "id": "mazer-cross-viewport-ui-reliability",
+        "project": "Mazer",
+        "sourceForumChannelId": "1524889569475170478",
+        "threadId": "1525337748830031875",
+        "title": "cross-viewport UI reliability and layout hardening",
+        "type": "feature",
+        "state": "review",
+        "previousState": "review",
+        "priority": "High",
+        "owner": "Mazer",
+        "progress": "99%",
+        "summary": "Unify phone, browser, and installed-app geometry so menu, play, overlays, touch controls, status, and maze framing share measured safe-content rules.",
+        "objective": "Ship and prove the physical-iPhone controls, timer, maze-fit, and spacing correction on canonical production, then close only after exact device acceptance.",
+        "acceptanceCriteria": [
+          "Menu, Options, play, and Pause remain contained without overlap, clipping, or wasteful dead space.",
+          "One finger slides continuously across the D-pad and the stick remains smooth, lower, wide-travel, and directionally stable.",
+          "The phone maze border remains edge-tight while every maze size scales its inner tiles to fill the stable frame.",
+          "Player and AI timers stop on goal arrival and remain frozen through lifecycle transitions.",
+          "Fresh physical-iPhone production review accepts the exact deployed build."
+        ],
+        "discoveries": [
+          "PR #76 merged cleanly and the exact merge was deployed to canonical production.",
+          "Public production passed the full phone surface matrix plus arrow and stick goal-route lifecycle proof."
+        ],
+        "nextActions": [
+          "Review canonical production on physical iPhone Safari and installed PWA where available.",
+          "Confirm controls, timer, maze framing, spacing, and motion feel; return screenshots or explicit clean-device acceptance.",
+          "Move the exact card to Completed only after that acceptance."
+        ],
+        "blockers": [
+          "Fresh operator physical-iPhone acceptance of this exact production deployment remains required."
+        ],
+        "evidence": [
+          "Mazer PR #76 merge: 55c26744b6bb59f3ccf9b5210e3475f7b09a7ca7.",
+          "Vercel production: dpl_3nC5JWfZMG86Vo9JbjKus32cyDtF, READY, https://fawxzzy-mazer.vercel.app, main-nOKYHIwr.js.",
+          "Production 390x844 DPR-3 surface matrix: 39/39 passed.",
+          "Production arrow and stick routes: 99/99 and 102/102 moves, goals reached, frozen timers, lifecycle and fresh-world gates passed."
+        ]
+      },
+      "entry": {
+        "kind": "deployment",
+        "headline": "Physical controls and phone layout correction is live and production-proven",
+        "completed": [
+          "Merged PR #76 at exact merge commit 55c26744b6bb59f3ccf9b5210e3475f7b09a7ca7.",
+          "Deployed that exact merge to canonical Mazer production as dpl_3nC5JWfZMG86Vo9JbjKus32cyDtF.",
+          "Passed the public 39/39 mobile surface matrix and both production control-mode goal routes."
+        ],
+        "discovered": [
+          "The production service-worker update reload must be isolated from Playwright proof; blocking it only in the disposable QA context produced stable exact runtime evidence without changing production."
+        ],
+        "next": [
+          "Collect the operator's fresh physical-iPhone acceptance and then complete the card through guarded transfer/readback."
+        ],
+        "blockers": [
+          "Physical-device acceptance is external and not yet supplied for this deployment."
+        ],
+        "evidence": [
+          "https://github.com/fawxzzy/mazer/pull/76",
+          "https://fawxzzy-mazer.vercel.app",
+          "dpl_3nC5JWfZMG86Vo9JbjKus32cyDtF",
+          "C:\\ATLAS\\tmp\\captures\\mazer-ui-surfaces\\2026-07-16T02-27-04-652Z\\report.md",
+          "C:\\ATLAS\\tmp\\captures\\mazer-live-play-qa\\2026-07-16T02-27-36-348Z\\prod-55c26744-sw-blocked-arrows-20260715.summary.json",
+          "C:\\ATLAS\\tmp\\captures\\mazer-live-play-qa\\2026-07-16T02-28-07-535Z\\prod-55c26744-sw-blocked-stick-20260715.summary.json"
+        ]
+      },
+      "correlation": {
+        "taskId": "019f61a0-6b80-7913-b479-f75f2a8a5b77",
+        "branch": "main",
+        "commit": "55c26744b6bb59f3ccf9b5210e3475f7b09a7ca7",
+        "receipt": "docs/ops/discordos-mazer-physical-controls-production-2026-07-15.md"
+      }
+    },
+    {
+      "schemaVersion": "atlas.board-card-journal.v1",
+      "eventId": "mazer-browser-layout-maze-frame-production-review-20260715",
+      "occurredAt": "2026-07-16T02:29:59.448Z",
+      "actor": "Mazer",
+      "card": {
+        "id": "mazer-browser-layout-persistence",
+        "project": "Mazer",
+        "sourceForumChannelId": "1524889569475170478",
+        "threadId": "1525337752290197514",
+        "title": "normalize browser UI layout across viewports",
+        "type": "feature",
+        "state": "opened",
+        "previousState": "opened",
+        "priority": "High",
+        "owner": "Mazer",
+        "progress": "94%",
+        "summary": "Normalize responsive geometry so maze, menu, overlay, and control layouts derive from the active content rectangle without persisting stale viewport dimensions.",
+        "objective": "Keep one tight phone maze frame across maze sizes while scaling its inner tiles from current viewport and maze data.",
+        "acceptanceCriteria": [
+          "No viewport-derived geometry is persisted across incompatible browser states.",
+          "The phone maze border keeps a stable edge-tight margin across supported maze dimensions.",
+          "Inner maze tiles scale to fill the stable border without clipping or escaping it.",
+          "Mobile, native maximize, restore, and browser-chrome transitions have deterministic proof."
+        ],
+        "discoveries": [
+          "The stable phone frame and derived inner tile scale are live in production.",
+          "The complete production phone surface family passed without layout or runtime failures."
+        ],
+        "nextActions": [
+          "Verify multiple production maze sizes on physical iPhone keep the same edge-tight frame.",
+          "Complete native maximize, restore, and browser-chrome transition automation.",
+          "Complete only after both proof gates pass."
+        ],
+        "blockers": [
+          "Physical-device multi-size acceptance and native window/browser-chrome automation remain open."
+        ],
+        "evidence": [
+          "Mazer merge 55c26744b6bb59f3ccf9b5210e3475f7b09a7ca7 deployed as dpl_3nC5JWfZMG86Vo9JbjKus32cyDtF.",
+          "Canonical production serves main-nOKYHIwr.js.",
+          "Production 390x844 DPR-3 surface proof passed 39/39."
+        ]
+      },
+      "entry": {
+        "kind": "deployment",
+        "headline": "Maze-size-independent phone framing is live in production",
+        "completed": [
+          "Released the stable 8px phone outer-frame and maze-size-derived inner tile scale.",
+          "Verified the full public production surface family at 390x844 DPR-3."
+        ],
+        "discovered": [
+          "Production browser proof is clean; physical multi-size and native desktop-window proof remain separate acceptance gates."
+        ],
+        "next": [
+          "Collect physical-iPhone multi-size proof and complete native maximize/restore/browser-chrome automation."
+        ],
+        "blockers": [
+          "Two explicit acceptance gates remain."
+        ],
+        "evidence": [
+          "https://fawxzzy-mazer.vercel.app",
+          "dpl_3nC5JWfZMG86Vo9JbjKus32cyDtF",
+          "C:\\ATLAS\\tmp\\captures\\mazer-ui-surfaces\\2026-07-16T02-27-04-652Z\\report.md"
+        ]
+      },
+      "correlation": {
+        "taskId": "019f61a0-6b80-7913-b479-f75f2a8a5b77",
+        "branch": "main",
+        "commit": "55c26744b6bb59f3ccf9b5210e3475f7b09a7ca7",
+        "receipt": "docs/ops/discordos-mazer-physical-controls-production-2026-07-15.md"
+      }
+    },
+    {
+      "schemaVersion": "atlas.board-card-journal.v1",
+      "eventId": "mazer-shared-status-goal-timer-production-review-20260715",
+      "occurredAt": "2026-07-16T02:29:59.448Z",
+      "actor": "Mazer",
+      "card": {
+        "id": "mazer-shared-run-status-panel",
+        "project": "Mazer",
+        "sourceForumChannelId": "1524889569475170478",
+        "threadId": "1526644909241667644",
+        "title": "shared menu and play run status panel",
+        "type": "feature",
+        "state": "review",
+        "previousState": "review",
+        "priority": "High",
+        "owner": "Mazer",
+        "progress": "98%",
+        "summary": "Use one two-row status component in menu AI and active play for time, contextual rank, score out of 100, and maze level.",
+        "objective": "Keep shared status geometry contained and freeze player and AI elapsed time at exact goal arrival through all lifecycle transitions.",
+        "acceptanceCriteria": [
+          "Menu and play consume the same contained status layout.",
+          "Player and AI timers freeze immediately on the end tile.",
+          "The frozen value remains unchanged through goal hold, deconstruction, handoff, and rebuild.",
+          "Completion telemetry consumes the same duration.",
+          "Displayed score remains traceable to the canonical run-quality contract."
+        ],
+        "discoveries": [
+          "The timer correction is live in canonical production.",
+          "Both production control modes reached the goal, preserved lifecycle locks, and retained exact frozen values on resample."
+        ],
+        "nextActions": [
+          "Verify player and AI timer freeze on physical iPhone production.",
+          "Confirm final score-field authority before terminal completion.",
+          "Move to Completed only after both gates pass."
+        ],
+        "blockers": [
+          "Physical-device timing acceptance and canonical score-field traceability remain open."
+        ],
+        "evidence": [
+          "Production arrow route: 99/99, goal reached, timer frozen at 9,585ms.",
+          "Production stick route: 102/102, goal reached, timer frozen at 26,190ms.",
+          "Both routes passed goal-hold, deconstruction, handoff, building, fresh-ready, input-lock, and world-turn gates."
+        ]
+      },
+      "entry": {
+        "kind": "deployment",
+        "headline": "Immediate player and AI goal-timer freeze is live and production-proven",
+        "completed": [
+          "Released the shared frozen elapsed-time lifecycle to canonical production.",
+          "Proved both production touch modes reach the goal with exact stable timer resamples and full lifecycle handoff."
+        ],
+        "discovered": [
+          "Automated production behavior is clean; physical-device observation and score authority remain explicit terminal gates."
+        ],
+        "next": [
+          "Collect physical-iPhone timer acceptance and close canonical score traceability."
+        ],
+        "blockers": [
+          "Two terminal acceptance gates remain."
+        ],
+        "evidence": [
+          "dpl_3nC5JWfZMG86Vo9JbjKus32cyDtF",
+          "C:\\ATLAS\\tmp\\captures\\mazer-live-play-qa\\2026-07-16T02-27-36-348Z\\prod-55c26744-sw-blocked-arrows-20260715.summary.json",
+          "C:\\ATLAS\\tmp\\captures\\mazer-live-play-qa\\2026-07-16T02-28-07-535Z\\prod-55c26744-sw-blocked-stick-20260715.summary.json"
+        ]
+      },
+      "correlation": {
+        "taskId": "019f61a0-6b80-7913-b479-f75f2a8a5b77",
+        "branch": "main",
+        "commit": "55c26744b6bb59f3ccf9b5210e3475f7b09a7ca7",
+        "receipt": "docs/ops/discordos-mazer-physical-controls-production-2026-07-15.md"
+      }
+    }
+  ]
+}

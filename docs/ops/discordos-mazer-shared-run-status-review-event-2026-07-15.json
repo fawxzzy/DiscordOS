@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "atlas.board-card-journal.v1",
+  "eventId": "mazer-shared-run-status-pr72-review-20260715",
+  "occurredAt": "2026-07-15T14:43:00.000Z",
+  "actor": "Mazer",
+  "card": {
+    "id": "mazer-shared-run-status-panel",
+    "project": "Mazer",
+    "sourceForumChannelId": "1524889569475170478",
+    "threadId": "1526644909241667644",
+    "title": "shared menu and play run status panel",
+    "type": "feature",
+    "state": "review",
+    "previousState": "in_progress",
+    "priority": "High",
+    "owner": "Mazer",
+    "progress": "80%",
+    "summary": "Use one two-row status component in menu AI and active play for time, contextual rank, score out of 100, and maze level.",
+    "objective": "Make menu and play progression information visually identical, readable, and contained while preserving the canonical score-data boundary.",
+    "acceptanceCriteria": [
+      "Menu and play consume the same status-panel layout and formatting contract.",
+      "Time and contextual Rank, Score out of 100, and Maze Lvl remain readable at phone and desktop widths.",
+      "The play panel fits its measured lane beside Pause without overlap.",
+      "Displayed score remains traceable to the canonical run-quality contract."
+    ],
+    "discoveries": [
+      "The deployed preview proves identical phone geometry and contained two-row text in both contexts."
+    ],
+    "nextActions": [
+      "Review the PR #72 panel on physical iPhone Safari and installed PWA.",
+      "Confirm final score-field authority before terminal completion.",
+      "Merge only after the linked viewport review is clean."
+    ],
+    "blockers": [
+      "Fresh physical iPhone proof and final canonical score-field traceability remain required."
+    ],
+    "evidence": [
+      "Mazer draft PR #72 at commit 593e871c64e6d18c551efee7d2e248662e1a1436.",
+      "READY preview dpl_7zx3HAry5zipJXBwyL6KpSP6RXCS reported matching 236 by 58 menu/play panels with textFits true.",
+      "Focused viewport/layout/safe-area/scene checks passed 57/57."
+    ]
+  },
+  "entry": {
+    "kind": "review",
+    "headline": "Shared run status implementation is ready for device and data-authority review",
+    "completed": [
+      "Correlated one implementation across menu and play.",
+      "Passed deployed phone-width containment and Pause-gap diagnostics."
+    ],
+    "discovered": [
+      "Physical-device acceptance and canonical score traceability remain terminal gates."
+    ],
+    "next": [
+      "Collect the fresh iPhone review.",
+      "Confirm the canonical score field before completion."
+    ],
+    "blockers": [
+      "Fresh physical iPhone review and score-field authority remain open."
+    ],
+    "evidence": [
+      "https://github.com/fawxzzy/mazer/pull/72",
+      "https://fawxzzy-mazer-6qs7k26v9-fawxzzy.vercel.app"
+    ]
+  },
+  "correlation": {
+    "taskId": "019f61a0-6b80-7913-b479-f75f2a8a5b77",
+    "branch": "codex/cross-viewport-reliability-completion",
+    "commit": "593e871c64e6d18c551efee7d2e248662e1a1436",
+    "receipt": "docs/ops/MAZER-CROSS-VIEWPORT-UI-RELIABILITY-PACKET-2026-07-15.md"
+  }
+}
