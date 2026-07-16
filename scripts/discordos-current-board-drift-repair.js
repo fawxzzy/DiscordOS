@@ -1085,18 +1085,34 @@ async function inspectOrderRuntime(operation, { env = process.env, fetchImpl = f
 
 async function applyTagRepair(operation, { env = process.env, fetchImpl = fetch } = {}) {
   const token = String(env?.DISCORDOS_BOT_TOKEN || "").trim();
-  const compareBeforeWrite = await inspectTagRuntime(operation, { env, fetchImpl });
+  const transport = { writeCount: 0, writeOutcomeUnknownCount: 0, reasonCodes: [] };
+  const rawFetchImpl = fetchImpl;
+  const guardedFetchImpl = async (url, init = {}) => {
+    const method = String(init.method || "GET").toUpperCase();
+    try {
+      const response = await rawFetchImpl(url, init);
+      if (response?.ok === true && !["GET", "HEAD"].includes(method)) transport.writeCount += 1;
+      return response;
+    } catch {
+      const readOnly = ["GET", "HEAD"].includes(method);
+      if (!readOnly) transport.writeOutcomeUnknownCount += 1;
+      transport.reasonCodes.push(readOnly ? "discord_read_transport_rejected" : "discord_write_outcome_unknown");
+      return { ok: false, status: 0, json: async () => ({ code: "discord_transport_rejected" }) };
+    }
+  };
+  const compareBeforeWrite = await inspectTagRuntime(operation, { env, fetchImpl: guardedFetchImpl });
   if (compareBeforeWrite.status === "complete") {
-    return { ok: true, operationId: operation.operationId, status: "already_complete", writeCount: 0, readback: compareBeforeWrite, reasonCodes: [] };
+    return { ok: true, operationId: operation.operationId, status: "already_complete", writeCount: 0, writeOutcomeUnknownCount: 0, readback: compareBeforeWrite, reasonCodes: [] };
   }
   if (compareBeforeWrite.status !== "pending") {
     return {
       ok: false,
       operationId: operation.operationId,
       status: "blocked",
-      writeCount: 0,
+      writeCount: transport.writeCount,
+      writeOutcomeUnknownCount: transport.writeOutcomeUnknownCount,
       readback: compareBeforeWrite,
-      reasonCodes: unique(["tag_repair_compare_before_write_failed", ...compareBeforeWrite.reasonCodes]),
+      reasonCodes: unique(["tag_repair_compare_before_write_failed", ...compareBeforeWrite.reasonCodes, ...transport.reasonCodes]),
     };
   }
   const write = await cardContract.discordRequest({
@@ -1104,29 +1120,45 @@ async function applyTagRepair(operation, { env = process.env, fetchImpl = fetch 
     token,
     method: "PATCH",
     body: { applied_tags: operation.postimage.appliedTagIds },
-    fetchImpl,
+    fetchImpl: guardedFetchImpl,
   });
-  const readback = await inspectTagRuntime(operation, { env, fetchImpl });
-  const reasonCodes = [];
+  const readback = await inspectTagRuntime(operation, { env, fetchImpl: guardedFetchImpl });
+  const reasonCodes = [...transport.reasonCodes];
   if (!write.ok) reasonCodes.push("tag_repair_write_failed");
   if (readback.status !== "complete") reasonCodes.push("tag_repair_readback_failed");
-  return { ok: reasonCodes.length === 0, operationId: operation.operationId, status: reasonCodes.length === 0 ? "applied" : "blocked", writeCount: write.ok ? 1 : 0, httpStatus: write.status, readback, reasonCodes };
+  return { ok: reasonCodes.length === 0, operationId: operation.operationId, status: reasonCodes.length === 0 ? "applied" : "blocked", writeCount: transport.writeCount, writeOutcomeUnknownCount: transport.writeOutcomeUnknownCount, httpStatus: write.status, readback, reasonCodes: unique(reasonCodes) };
 }
 
 async function applyOrderRepair(operation, { env = process.env, fetchImpl = fetch } = {}) {
   const token = String(env?.DISCORDOS_BOT_TOKEN || "").trim();
-  const compareBeforeWrite = await inspectOrderRuntime(operation, { env, fetchImpl });
+  const transport = { writeCount: 0, writeOutcomeUnknownCount: 0, reasonCodes: [] };
+  const rawFetchImpl = fetchImpl;
+  const guardedFetchImpl = async (url, init = {}) => {
+    const method = String(init.method || "GET").toUpperCase();
+    try {
+      const response = await rawFetchImpl(url, init);
+      if (response?.ok === true && !["GET", "HEAD"].includes(method)) transport.writeCount += 1;
+      return response;
+    } catch {
+      const readOnly = ["GET", "HEAD"].includes(method);
+      if (!readOnly) transport.writeOutcomeUnknownCount += 1;
+      transport.reasonCodes.push(readOnly ? "discord_read_transport_rejected" : "discord_write_outcome_unknown");
+      return { ok: false, status: 0, json: async () => ({ code: "discord_transport_rejected" }) };
+    }
+  };
+  const compareBeforeWrite = await inspectOrderRuntime(operation, { env, fetchImpl: guardedFetchImpl });
   if (compareBeforeWrite.status === "complete") {
-    return { ok: true, operationId: operation.operationId, status: "already_complete", writeCount: 0, readback: compareBeforeWrite, reasonCodes: [] };
+    return { ok: true, operationId: operation.operationId, status: "already_complete", writeCount: 0, writeOutcomeUnknownCount: 0, readback: compareBeforeWrite, reasonCodes: [] };
   }
   if (compareBeforeWrite.status !== "pending") {
     return {
       ok: false,
       operationId: operation.operationId,
       status: "blocked",
-      writeCount: 0,
+      writeCount: transport.writeCount,
+      writeOutcomeUnknownCount: transport.writeOutcomeUnknownCount,
       readback: compareBeforeWrite,
-      reasonCodes: unique(["forum_order_compare_before_write_failed", ...compareBeforeWrite.reasonCodes]),
+      reasonCodes: unique(["forum_order_compare_before_write_failed", ...compareBeforeWrite.reasonCodes, ...transport.reasonCodes]),
     };
   }
   const write = await cardContract.discordRequest({
@@ -1134,13 +1166,13 @@ async function applyOrderRepair(operation, { env = process.env, fetchImpl = fetc
     token,
     method: "PATCH",
     body: operation.postimage.map((row) => ({ id: row.channelId, position: row.position })),
-    fetchImpl,
+    fetchImpl: guardedFetchImpl,
   });
-  const readback = await inspectOrderRuntime(operation, { env, fetchImpl });
-  const reasonCodes = [];
+  const readback = await inspectOrderRuntime(operation, { env, fetchImpl: guardedFetchImpl });
+  const reasonCodes = [...transport.reasonCodes];
   if (!write.ok) reasonCodes.push("forum_order_repair_write_failed");
   if (readback.status !== "complete") reasonCodes.push("forum_order_repair_readback_failed");
-  return { ok: reasonCodes.length === 0, operationId: operation.operationId, status: reasonCodes.length === 0 ? "applied" : "blocked", writeCount: write.ok ? 1 : 0, httpStatus: write.status, readback, reasonCodes };
+  return { ok: reasonCodes.length === 0, operationId: operation.operationId, status: reasonCodes.length === 0 ? "applied" : "blocked", writeCount: transport.writeCount, writeOutcomeUnknownCount: transport.writeOutcomeUnknownCount, httpStatus: write.status, readback, reasonCodes: unique(reasonCodes) };
 }
 
 function validateTransferReceipt(operation, receipt) {
@@ -1291,6 +1323,7 @@ async function runRepair({
     const receipt = await tagApplyImpl(operation, { env, fetchImpl });
     operationReceipts.push({ ...receipt, kind: operation.kind });
     discordMutations += receipt.writeCount || 0;
+    discordMutationOutcomesUnknown += receipt.writeOutcomeUnknownCount || 0;
     if (!receipt.ok) reasonCodes.push(...receipt.reasonCodes);
     if (!receipt.ok) break;
   }
@@ -1301,6 +1334,7 @@ async function runRepair({
       const receipt = await orderApplyImpl(orderOperation, { env, fetchImpl });
       operationReceipts.push({ ...receipt, kind: orderOperation.kind });
       discordMutations += receipt.writeCount || 0;
+      discordMutationOutcomesUnknown += receipt.writeOutcomeUnknownCount || 0;
       if (!receipt.ok) reasonCodes.push(...receipt.reasonCodes);
     }
   }

@@ -33,6 +33,8 @@ function makeExistingTransferHarness({
   failJournalHistoryRead = false,
   failDestinationRestoreOnce = false,
   failDestinationRestoreAlways = false,
+  rejectDestinationReopenOnceAfterApply = false,
+  rejectDestinationRestoreOnceAfterApply = false,
   sourceMode = "postimage",
   omitUnlockedSourceLock = false,
 } = {}) {
@@ -73,6 +75,8 @@ function makeExistingTransferHarness({
     destinationLocked,
     reactionPresent,
     destinationRestoreFailuresRemaining: failDestinationRestoreAlways ? 6 : failDestinationRestoreOnce ? 3 : 0,
+    destinationReopenRejectsRemaining: rejectDestinationReopenOnceAfterApply ? 1 : 0,
+    destinationRestoreRejectsRemaining: rejectDestinationRestoreOnceAfterApply ? 1 : 0,
     journalContent: journalMode === "exact"
       ? expectedJournal
       : journalMode === "corrupt"
@@ -159,6 +163,18 @@ function makeExistingTransferHarness({
     if (url.endsWith("/channels/completed-thread")) {
       if (method === "PATCH") {
         if (Object.hasOwn(body, "archived")) {
+          if (body.archived === false && state.destinationReopenRejectsRemaining > 0) {
+            state.destinationReopenRejectsRemaining -= 1;
+            state.destinationArchived = body.archived;
+            state.destinationLocked = body.locked;
+            throw new Error("Injected destination reopen rejection after apply");
+          }
+          if (body.archived === true && state.destinationRestoreRejectsRemaining > 0) {
+            state.destinationRestoreRejectsRemaining -= 1;
+            state.destinationArchived = body.archived;
+            state.destinationLocked = body.locked;
+            throw new Error("Injected destination restore rejection after apply");
+          }
           if (body.archived === true && state.destinationRestoreFailuresRemaining > 0) {
             state.destinationRestoreFailuresRemaining -= 1;
             return response({ ok: false, status: 500, payload: { message: "Injected destination restore failure" } });
@@ -845,6 +861,40 @@ test("archived destination repair reopens only when needed and restores archive 
   ]);
 });
 
+test("ambiguous destination reopen persists the captured archive preimage for safe resume", async () => {
+  const harness = makeExistingTransferHarness({
+    eventId: "completed:CARD-42:reopen-rejected-resume",
+    destinationArchived: true,
+    destinationLocked: true,
+    destinationBody: "corrupt",
+    sourceMode: "preimage",
+    rejectDestinationReopenOnceAfterApply: true,
+  });
+  const partial = await harness.run({ destinationStatePreimage: null });
+  assert.equal(partial.ok, false);
+  assert(partial.reasonCodes.includes("completed_card_reopen_failed"));
+  assert(partial.reasonCodes.includes("discord_write_outcome_unknown"));
+  assert.equal(partial.writeCount, 0);
+  assert.equal(partial.writeOutcomeUnknownCount, 1);
+  assert.equal(partial.completed.threadId, "completed-thread");
+  assert.deepEqual(partial.completed.archiveState.expected, { archived: true, locked: true });
+  assert.equal(harness.state.destinationArchived, false, "the rejected request may have reached Discord");
+  assert.equal(harness.state.destinationLocked, false);
+
+  const resumeState = { threadId: partial.completed.threadId, ...partial.completed.archiveState.expected };
+  const resumed = await harness.run({ destinationStatePreimage: resumeState });
+  assert.equal(resumed.ok, true, JSON.stringify(resumed, null, 2));
+  assert.equal(resumed.writeCount, 4, "body, destination restore, source link, and source archive are the bounded resume writes");
+  assert.equal(resumed.writeOutcomeUnknownCount, 0);
+  assert.equal(harness.state.destinationArchived, true);
+  assert.equal(harness.state.destinationLocked, true);
+
+  const replay = await harness.run({ destinationStatePreimage: resumeState });
+  assert.equal(replay.ok, true, JSON.stringify(replay, null, 2));
+  assert.equal(replay.writeCount, 0);
+  assert.equal(replay.writeOutcomeUnknownCount, 0);
+});
+
 test("journal create failure blocks every later destination and source mutation", async () => {
   const harness = makeExistingTransferHarness({
     eventId: "completed:CARD-42:journal-create-failure",
@@ -943,6 +993,38 @@ test("transient destination restore failure retries the bounded re-close", async
       && call.body?.locked === true
   );
   assert.equal(restoreAttempts.length, 4, "three transport attempts fail before the second logical re-close succeeds");
+});
+
+test("ambiguous destination restore is not automatically replayed", async () => {
+  const harness = makeExistingTransferHarness({
+    eventId: "completed:CARD-42:restore-rejected-no-retry",
+    destinationArchived: true,
+    destinationLocked: true,
+    destinationBody: "corrupt",
+    sourceMode: "preimage",
+    rejectDestinationRestoreOnceAfterApply: true,
+  });
+  const partial = await harness.run({ destinationStatePreimage: null });
+  assert.equal(partial.ok, false);
+  assert(partial.reasonCodes.includes("completed_card_restore_state_failed"));
+  assert(partial.reasonCodes.includes("discord_write_outcome_unknown"));
+  assert.equal(partial.writeCount, 2, "only the confirmed reopen and body repair are counted");
+  assert.equal(partial.writeOutcomeUnknownCount, 1);
+  assert.equal(partial.completed.threadId, "completed-thread");
+  assert.deepEqual(partial.completed.archiveState.expected, { archived: true, locked: true });
+  const restoreAttempts = harness.calls.filter((call) =>
+    call.method === "PATCH"
+      && call.url.endsWith("/channels/completed-thread")
+      && call.body?.archived === true
+      && call.body?.locked === true
+  );
+  assert.equal(restoreAttempts.length, 1, "an unknown restore outcome must not receive an identical automatic retry");
+
+  const resumeState = { threadId: partial.completed.threadId, ...partial.completed.archiveState.expected };
+  const resumed = await harness.run({ destinationStatePreimage: resumeState });
+  assert.equal(resumed.ok, true, JSON.stringify(resumed, null, 2));
+  assert.equal(resumed.writeCount, 2, "the exact archived destination needs only source link and archive writes on resume");
+  assert.equal(resumed.writeOutcomeUnknownCount, 0);
 });
 
 test("failed destination re-close stays blocked and an unproven open replay fails closed", async () => {

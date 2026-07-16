@@ -406,19 +406,20 @@ async function buildCompletedBoardTransfer({
     repairExactPostimage,
     evidence,
   };
+  let resumableDestinationState = destinationStatePreimage;
   const resumableCompletedState = () => (
-    destinationStatePreimage
-    && typeof destinationStatePreimage.threadId === "string"
-    && destinationStatePreimage.threadId.length > 0
-    && typeof destinationStatePreimage.archived === "boolean"
-    && typeof destinationStatePreimage.locked === "boolean"
+    resumableDestinationState
+    && typeof resumableDestinationState.threadId === "string"
+    && resumableDestinationState.threadId.length > 0
+    && typeof resumableDestinationState.archived === "boolean"
+    && typeof resumableDestinationState.locked === "boolean"
       ? {
         forumChannelId: completedForumChannelId,
-        threadId: destinationStatePreimage.threadId,
+        threadId: resumableDestinationState.threadId,
         archiveState: {
           expected: {
-            archived: destinationStatePreimage.archived,
-            locked: destinationStatePreimage.locked,
+            archived: resumableDestinationState.archived,
+            locked: resumableDestinationState.locked,
           },
         },
       }
@@ -666,6 +667,13 @@ async function buildCompletedBoardTransfer({
   const destinationOriginalState = existing
     ? destinationStatePreimage || destinationLiveState
     : null;
+  if (existing && destinationOriginalState) {
+    resumableDestinationState = {
+      threadId: existing.thread.id,
+      archived: destinationOriginalState.archived,
+      locked: destinationOriginalState.locked,
+    };
+  }
   const destinationStateRestorationPending = Boolean(
     existing
     && destinationStatePreimage
@@ -763,8 +771,9 @@ async function buildCompletedBoardTransfer({
   let destinationRestored = false;
   let destinationReopen = null;
   let destinationRestore = null;
+  let destinationRestoreOutcomeUnknown = false;
   const restoreDestinationState = async () => {
-    if (!destinationReopened || destinationRestored) return;
+    if (!destinationReopened || destinationRestored || destinationRestoreOutcomeUnknown) return;
     destinationRestore = await setThreadArchiveState({
       threadId: existing.thread.id,
       token,
@@ -773,11 +782,13 @@ async function buildCompletedBoardTransfer({
       fetchImpl,
     });
     destinationRestored = destinationRestore.ok;
+    destinationRestoreOutcomeUnknown = !destinationRestore.ok && destinationRestore.status === 0;
   };
   if (
     existing
     && destinationMutationNeeded
     && (destinationOriginalState.archived || destinationOriginalState.locked)
+    && !(destinationLiveState.archived === false && destinationLiveState.locked === false)
   ) {
     destinationReopen = await setThreadArchiveState({
       threadId: existing.thread.id,
@@ -914,7 +925,7 @@ async function buildCompletedBoardTransfer({
     }
   }
   await restoreDestinationState();
-  if (!destinationRestored) await restoreDestinationState();
+  if (!destinationRestored && !destinationRestoreOutcomeUnknown) await restoreDestinationState();
   if (destinationReopened && !destinationRestored) reasonCodes.push("completed_card_restore_state_failed");
   let destinationReadback = null;
   if (upsert.ok && finalDestinationId && journalMessageId) {

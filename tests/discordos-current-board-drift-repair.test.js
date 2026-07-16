@@ -438,6 +438,114 @@ test("forum order compare-before-write blocks concurrent order drift before ever
   assert(result.reasonCodes.includes("forum_order_compare_before_write_failed"));
 });
 
+test("rejected tag write preserves earlier confirmed mutations and the ambiguous outcome", async () => {
+  const fixture = makeFixture();
+  const tagOperations = fixture.plan.operations.filter((row) => row.kind === "tag_repair");
+  const env = {
+    DISCORDOS_BOT_TOKEN: "fixture",
+    DISCORDOS_CURRENT_BOARD_DRIFT_REPAIR: "enabled",
+    DISCORDOS_BOARD_COMPLETED_TRANSFER: "enabled",
+  };
+  const liveTags = new Map(tagOperations.map((operation) => [operation.threadId, clone(operation.preimage.appliedTagIds)]));
+  let patchAttempts = 0;
+  let laterApplyCalls = 0;
+  const fetchImpl = async (url, init) => {
+    const operation = tagOperations.find((row) => url.endsWith(`/channels/${row.threadId}`));
+    assert(operation, `unexpected tag URL ${url}`);
+    if ((init.method || "GET") === "PATCH") {
+      patchAttempts += 1;
+      if (patchAttempts === 2) throw new Error("Injected tag transport rejection");
+      liveTags.set(operation.threadId, clone(operation.postimage.appliedTagIds));
+    }
+    return response({ payload: { parent_id: operation.forumChannelId, applied_tags: clone(liveTags.get(operation.threadId)) } });
+  };
+  const result = await _internals.runRepair({
+    mode: "apply",
+    plan: fixture.plan,
+    evidenceBytes: fixture.evidenceBytes,
+    admittedScan: fixture.scan,
+    admittedEvidenceSha256: fixture.admittedEvidenceSha256,
+    trustedPlanDigestSha256: fixture.plan.planDigestSha256,
+    allowApply: true,
+    env,
+    currentScanImpl: async () => clone(fixture.scan),
+    tagInspectionImpl: async (operation) => ({ ok: true, operationId: operation.operationId, status: "pending", reasonCodes: [] }),
+    orderInspectionImpl: async (operation) => ({ ok: true, operationId: operation.operationId, status: "pending", reasonCodes: [] }),
+    transferInspectionImpl: async (operation) => ({ ok: true, operationId: operation.operationId, status: "complete", complete: true, destination: { readback: {} }, reasonCodes: [] }),
+    tagApplyImpl: async (operation) => _internals.applyTagRepair(operation, { env, fetchImpl }),
+    orderApplyImpl: async () => { laterApplyCalls += 1; throw new Error("order ran after ambiguous tag write"); },
+    transferApplyImpl: async () => { laterApplyCalls += 1; throw new Error("transfer ran after ambiguous tag write"); },
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "blocked");
+  assert.equal(result.discordMutations, 1);
+  assert.equal(result.discordMutationOutcomesUnknown, 1);
+  assert.equal(result.mutatesDiscord, true);
+  assert.equal(result.operationReceipts.length, 2);
+  assert.equal(result.operationReceipts[0].writeCount, 1);
+  assert.equal(result.operationReceipts[0].writeOutcomeUnknownCount, 0);
+  assert.equal(result.operationReceipts[1].writeCount, 0);
+  assert.equal(result.operationReceipts[1].writeOutcomeUnknownCount, 1);
+  assert(result.reasonCodes.includes("discord_write_outcome_unknown"));
+  assert.equal(laterApplyCalls, 0);
+});
+
+test("rejected forum-order write reaches a durable ambiguous-outcome receipt", async () => {
+  const fixture = makeFixture();
+  const order = fixture.plan.operations.find((row) => row.kind === "forum_order_repair");
+  const env = {
+    DISCORDOS_BOT_TOKEN: "fixture",
+    DISCORDOS_CURRENT_BOARD_DRIFT_REPAIR: "enabled",
+    DISCORDOS_BOARD_COMPLETED_TRANSFER: "enabled",
+  };
+  const channels = order.guildChannelPreimage.map((row) => ({
+    id: row.id,
+    type: row.type,
+    parent_id: row.parentId,
+    position: row.position,
+    name: row.name,
+  }));
+  let transferApplyCalls = 0;
+  let patchAttempts = 0;
+  const result = await _internals.runRepair({
+    mode: "apply",
+    plan: fixture.plan,
+    evidenceBytes: fixture.evidenceBytes,
+    admittedScan: fixture.scan,
+    admittedEvidenceSha256: fixture.admittedEvidenceSha256,
+    trustedPlanDigestSha256: fixture.plan.planDigestSha256,
+    allowApply: true,
+    env,
+    currentScanImpl: async () => clone(fixture.scan),
+    tagInspectionImpl: async (operation) => ({ ok: true, operationId: operation.operationId, status: "complete", reasonCodes: [] }),
+    orderInspectionImpl: async (operation) => ({ ok: true, operationId: operation.operationId, status: "pending", reasonCodes: [] }),
+    transferInspectionImpl: async (operation) => ({ ok: true, operationId: operation.operationId, status: "complete", complete: true, destination: { readback: {} }, reasonCodes: [] }),
+    orderApplyImpl: async (operation) => _internals.applyOrderRepair(operation, {
+      env,
+      fetchImpl: async (url, init) => {
+        assert(url.endsWith(`/guilds/${order.guildId}/channels`));
+        if ((init.method || "GET") === "PATCH") {
+          patchAttempts += 1;
+          throw new Error("Injected forum-order transport rejection");
+        }
+        return response({ payload: clone(channels) });
+      },
+    }),
+    transferApplyImpl: async () => { transferApplyCalls += 1; throw new Error("transfer ran after ambiguous order write"); },
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "blocked");
+  assert.equal(patchAttempts, 1);
+  assert.equal(result.discordMutations, 0);
+  assert.equal(result.discordMutationOutcomesUnknown, 1);
+  assert.equal(result.mutatesDiscord, true);
+  const orderReceipt = result.operationReceipts.find((row) => row.kind === "forum_order_repair");
+  assert.equal(orderReceipt.writeCount, 0);
+  assert.equal(orderReceipt.writeOutcomeUnknownCount, 1);
+  assert(result.reasonCodes.includes("discord_write_outcome_unknown"));
+  assert.equal(transferApplyCalls, 0);
+});
+
 test("default preflight and dry-run fixture modes produce zero writes", async () => {
   const fixture = makeFixture();
   let writes = 0;

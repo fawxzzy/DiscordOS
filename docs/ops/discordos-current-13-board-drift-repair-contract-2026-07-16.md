@@ -8,6 +8,12 @@
 - `discord_mutations`: `0`
 - historical canonical 13-board / 10-unit closeout: `byte invariant; not rerun; not ratcheted`
 
+## Exact-head receipt supersession
+
+A prior conversational terminal receipt identified historical commit `49899d1cc98b734b36b9126f214ab2558b79ccae` and a review associated with that commit. Subsequent additive recovery commits made that receipt stale as exact-head merge evidence. It remains provenance only and is not authority to merge or live-apply.
+
+This reconciliation does not amend, rebase, delete, or otherwise rewrite that history. Exact merge authority is the current PR head recorded by Git and GitHub together with hosted checks and a fresh Codex review explicitly bound to that same head; a commit cannot self-record its own SHA inside this receipt.
+
 ## Delivered contract
 
 The packet adds one plan-first command with `generate-plan`, default/preflight, dry-run, and guarded apply semantics. The executor verifies both admitted-evidence digests, recomputes the plan digest, and binds it to the independently published digest before accepting the plan. It validates all live preimages before the first write, stops on the first failed exact readback, and resumes only from exact postimages.
@@ -22,12 +28,12 @@ Durable machine plan:
 
 Read-only transfer enrichment resolved the three exact source titles, projects, types, priorities, owners, content hashes, guild ID, destination tag IDs, and deterministic event identities. No unknown was replaced with an inferred value.
 
-The exact-head review repair adds fail-closed guarantees: recomputed modified plans remain unauthorized; archived destinations and journal history are paginated to bounded exhaustion; unreadable destination starters block creation; strict transfer execution binds the reread source title and all destination/body/journal derivation to the reviewed plan title; pristine source admission requires explicit `archived:false` while allowing Discord to omit unlocked `locked`; plan-backed destination body, journal, source reciprocal body, tags, state, reaction, archive, and lock are exact deterministic postimages; exact archived destinations replay without reopening, repair-needed archived destinations restore their original archive/lock state, and journal failure blocks later tag/reaction/source mutation because required success-reaction reconciliation is deferred until the journal succeeds; the exact reciprocal-link-written/source-open intermediate can resume only the remaining archive+lock transition; every blocked transfer receipt with an actual destination durably records the exact destination thread and required archive/lock state, including open/unlocked for a newly created destination, while failed creation records no invented state; apply-only resume requires an independently trusted exact-byte receipt digest before binding the plan/evidence/card/operation/destination/state fields, rejects archive/lock tampering at zero writes, and retains that authority across repeated later barriers; rejected Discord request promises become blocked receipts with explicit read-rejected or write-outcome-unknown reasons rather than escaping before receipt persistence; every tag and order write gets an immediate exact compare-before-write guard; applied tag IDs use duplicate-sensitive set comparison; full guild-channel readback proves unrelated channels remain invariant during the bounded 13-board reorder; standalone stable-ID replay remains no-write when no reviewed source preimage is supplied; and every successful Discord write is counted even when a later step blocks.
+The exact-head review repair adds fail-closed guarantees: recomputed modified plans remain unauthorized; archived destinations and journal history are paginated to bounded exhaustion; unreadable destination starters block creation; strict transfer execution binds the reread source title and all destination/body/journal derivation to the reviewed plan title; pristine source admission requires explicit `archived:false` while allowing Discord to omit unlocked `locked`; plan-backed destination body, journal, source reciprocal body, tags, state, reaction, archive, and lock are exact deterministic postimages; exact archived destinations replay without reopening, repair-needed archived destinations restore their original archive/lock state, and journal failure blocks later tag/reaction/source mutation because required success-reaction reconciliation is deferred until the journal succeeds; the exact reciprocal-link-written/source-open intermediate can resume only the remaining archive+lock transition; every blocked transfer receipt with an actual destination durably records the exact destination thread and required archive/lock state, including open/unlocked for a newly created destination and the captured archived/locked preimage when a reopen outcome is unknown, while failed creation records no invented state; apply-only resume requires an independently trusted exact-byte receipt digest before binding the plan/evidence/card/operation/destination/state fields, rejects archive/lock tampering at zero writes, and retains that authority across repeated later barriers; rejected Discord request promises—including tag, order, destination reopen, and restore writes—become blocked receipts with explicit read-rejected or write-outcome-unknown reasons rather than escaping before receipt persistence; an ambiguously rejected restore is never automatically replayed, while a definitive HTTP failure retains the bounded retry; every tag and order write gets an immediate exact compare-before-write guard; applied tag IDs use duplicate-sensitive set comparison; full guild-channel readback proves unrelated channels remain invariant during the bounded 13-board reorder; standalone stable-ID replay remains no-write when no reviewed source preimage is supplied; and every successful Discord write is counted even when a later step blocks.
 
 ## Verification evidence
 
-- focused repair suite: `20/20 passed`
-- focused repair + completed-transfer cluster: `51/51 passed`
+- focused repair suite: `22/22 passed`
+- focused repair + completed-transfer cluster: `55/55 passed`
 - admitted-evidence offline dry-run: `dry_run_ready`, 18 pending operations, `discord_mutations: 0`
 - production environment readiness: `ready` (read-only check)
 - repo-local full `npm run verify`: `passed` on the final code/test surface, exit code `0`
@@ -43,7 +49,7 @@ The refreshed live read-only preflight for plan `2179246439631b51d4ff76395660c4f
 - stable card: `mazer-mobile-shell-device-harness`
 - reason: `current_extra_tag_target`
 
-This packet does not broaden or regenerate the frozen plan around that concurrent drift. The later live packet must resolve the changed evidence set explicitly before apply authority can be admitted.
+This packet does not broaden or regenerate the frozen plan around that concurrent drift. The later live packet must recompute current evidence, explicitly classify thread `1525063357575593995`, and admit FawxzzyWeb if current owner truth requires a 14th board before apply authority can be admitted.
 
 ## Historical invariance
 
