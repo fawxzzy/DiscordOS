@@ -133,6 +133,35 @@ function validateBoardRegistry(registry, { repoRoot = path.resolve(__dirname, ".
     if (configPath && !fileExists(path.resolve(repoRoot, configPath))) {
       reasonCodes.push(`source_adapter_config_missing:${adapterId}`);
     }
+    const accepted = adapter?.acceptedPreimage;
+    if (accepted != null) {
+      if (text(adapter?.kind) !== "owner_export") reasonCodes.push(`source_adapter_preimage_kind_invalid:${adapterId}`);
+      for (const field of ["repository", "repositoryCommit", "ownerExportBlob", "exportId", "sourceRevision"]) {
+        if (!text(accepted?.[field])) reasonCodes.push(`source_adapter_preimage_field_missing:${adapterId}:${field}`);
+      }
+      if (!/^[0-9a-f]{40}$/.test(text(accepted?.repositoryCommit))) {
+        reasonCodes.push(`source_adapter_preimage_commit_invalid:${adapterId}`);
+      }
+      if (!/^[0-9a-f]{40}$/.test(text(accepted?.ownerExportBlob))) {
+        reasonCodes.push(`source_adapter_preimage_blob_invalid:${adapterId}`);
+      }
+      if (!/^sha256:[0-9a-f]{64}$/.test(text(accepted?.sourceRevision))) {
+        reasonCodes.push(`source_adapter_preimage_source_revision_invalid:${adapterId}`);
+      }
+      if (!Number.isInteger(accepted?.roadmapRecordCount) || accepted.roadmapRecordCount < 0) {
+        reasonCodes.push(`source_adapter_preimage_roadmap_count_invalid:${adapterId}`);
+      }
+      if (!Number.isInteger(accepted?.exportedNonterminalCount) || accepted.exportedNonterminalCount < 0) {
+        reasonCodes.push(`source_adapter_preimage_selection_count_invalid:${adapterId}`);
+      }
+      const orderedCardIds = Array.isArray(accepted?.orderedCardIds) ? accepted.orderedCardIds : [];
+      if (orderedCardIds.length !== accepted?.exportedNonterminalCount || orderedCardIds.some((cardId) => !text(cardId))) {
+        reasonCodes.push(`source_adapter_preimage_card_ids_invalid:${adapterId}`);
+      }
+      if (duplicateValues(orderedCardIds).length > 0) {
+        reasonCodes.push(`source_adapter_preimage_card_ids_duplicate:${adapterId}`);
+      }
+    }
   }
 
   for (const duplicate of duplicateValues(boards.map((board) => board?.id))) {

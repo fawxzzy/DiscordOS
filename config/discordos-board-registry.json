@@ -70,7 +70,30 @@
       "kind": "owner_export",
       "ownerProject": "Socials OS",
       "inputContract": "atlas.project-board.owner-export.v1",
-      "defaultExportPath": "../socials-os/exports/atlas.project-board.owner-export.v1.json"
+      "defaultExportPath": "../socials-os/exports/atlas.project-board.owner-export.v1.json",
+      "acceptedPreimage": {
+        "repository": "fawxzzy/socials-os",
+        "repositoryCommit": "99335e2f9a6fc4339d5577b41dd46fdfa7dcd85a",
+        "ownerExportBlob": "e70bd79135c99b89483e6edbd5a417d135aba753",
+        "exportId": "pbe_socials-os_773fe3821635",
+        "sourceRevision": "sha256:773fe3821635533a72ec6949bb3e716c5ed93d233df29363f1bbca4d1aeb94fe",
+        "roadmapRecordCount": 23,
+        "exportedNonterminalCount": 12,
+        "orderedCardIds": [
+          "SOC-009",
+          "SOC-010",
+          "SOC-011",
+          "SOC-012",
+          "SOC-013",
+          "SOC-015",
+          "SOC-016",
+          "SOC-017",
+          "SOC-018",
+          "SOC-020",
+          "SOC-021",
+          "SOC-022"
+        ]
+      }
     },
     "unadmitted-v1": {
       "kind": "blocked_admission",

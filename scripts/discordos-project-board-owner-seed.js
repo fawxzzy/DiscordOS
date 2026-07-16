@@ -6,8 +6,6 @@ const { _internals: textIntegrity } = require("./discordos-board-text-integrity"
 const DEFAULT_REGISTRY_PATH = path.resolve(__dirname, "..", "config", "discordos-board-registry.json");
 const OWNER_EXPORT_CONTRACT = "atlas.project-board.owner-export.v1";
 const BATCH_CONTRACT = "atlas.board-card-journal.batch.v1";
-const SOCIALS_OWNER_STABLE_RECORD_COUNT = 22;
-const SOCIALS_OWNER_NONTERMINAL_CARD_COUNT = 12;
 const TERMINAL_LIFECYCLES = new Set(["completed", "archived", "closed"]);
 const LIFECYCLE_MAP = new Map([
   ["intake", "intake"],
@@ -65,7 +63,39 @@ function activeBoardByProject(registry) {
   return result;
 }
 
-function validateExport({ ownerExport, registry, seenCardIds }) {
+function gitBlobOid(value) {
+  const content = Buffer.isBuffer(value) ? value : Buffer.from(value);
+  const header = Buffer.from(`blob ${content.length}\0`, "utf8");
+  return crypto.createHash("sha1").update(header).update(content).digest("hex");
+}
+
+function validateAcceptedPreimage({ ownerExport, adapter, observedBlobOid }) {
+  const accepted = adapter?.acceptedPreimage;
+  if (!accepted || typeof accepted !== "object") return [];
+
+  const reasonCodes = [];
+  const cardIds = Array.isArray(ownerExport?.cards)
+    ? ownerExport.cards.map((card) => typeof card?.record?.card_id === "string" ? card.record.card_id : "")
+    : [];
+  if (ownerExport?.export_id !== accepted.exportId) reasonCodes.push("owner_export_preimage_export_id_mismatch");
+  if (ownerExport?.source_revision !== accepted.sourceRevision) reasonCodes.push("owner_export_preimage_source_revision_mismatch");
+  if (ownerExport?.extensions?.selection?.roadmap_record_count !== accepted.roadmapRecordCount) {
+    reasonCodes.push("owner_export_preimage_roadmap_record_count_mismatch");
+  }
+  if (ownerExport?.extensions?.selection?.exported_nonterminal_count !== accepted.exportedNonterminalCount) {
+    reasonCodes.push("owner_export_preimage_exported_nonterminal_count_mismatch");
+  }
+  if (cardIds.length !== accepted.exportedNonterminalCount) reasonCodes.push("owner_export_preimage_card_count_mismatch");
+  if (JSON.stringify(cardIds) !== JSON.stringify(accepted.orderedCardIds)) {
+    reasonCodes.push("owner_export_preimage_ordered_card_ids_mismatch");
+  }
+  if (observedBlobOid && observedBlobOid !== accepted.ownerExportBlob) {
+    reasonCodes.push("owner_export_preimage_blob_mismatch");
+  }
+  return reasonCodes;
+}
+
+function validateExport({ ownerExport, registry, seenCardIds, observedBlobOid = null }) {
   const reasonCodes = [];
   if (ownerExport?.contract_version !== OWNER_EXPORT_CONTRACT) reasonCodes.push("owner_export_contract_unsupported");
   if (!text(ownerExport?.project_id)) reasonCodes.push("owner_export_project_id_missing");
@@ -73,8 +103,12 @@ function validateExport({ ownerExport, registry, seenCardIds }) {
   if (!Array.isArray(ownerExport?.cards)) reasonCodes.push("owner_export_cards_missing");
 
   const board = activeBoardByProject(registry).get(text(ownerExport?.project_id).toLowerCase()) || null;
+  const adapter = registry?.sourceAdapters?.[text(board?.sourceAdapter) || text(ownerExport?.adapter_id)] || null;
   if (!board) reasonCodes.push("owner_export_enabled_board_missing");
   if (board && board.sourceAdapter !== ownerExport.adapter_id) reasonCodes.push("owner_export_adapter_mismatch");
+  if (adapter?.acceptedPreimage && board?.sourceAdapter !== ownerExport?.adapter_id) {
+    reasonCodes.push("owner_export_preimage_adapter_mismatch");
+  }
   if (board && !text(board.forumChannelId)) reasonCodes.push("owner_export_forum_channel_missing");
   const expectedBoardId = board ? `discordos:project-feedback:${text(board.stableCardNamespace)}` : null;
   if (expectedBoardId && text(ownerExport?.board_id) !== expectedBoardId) reasonCodes.push("owner_export_board_id_mismatch");
@@ -105,11 +139,7 @@ function validateExport({ ownerExport, registry, seenCardIds }) {
       reasonCodes.push(`owner_export_card_lifecycle_unsupported:${cardId || "unknown"}`);
     }
   }
-  if (ownerExport?.adapter_id === "socials-os-roadmap-v1") {
-    if ((ownerExport.cards || []).length !== SOCIALS_OWNER_NONTERMINAL_CARD_COUNT) reasonCodes.push("socials_owner_export_event_count_mismatch");
-    if (ownerExport?.extensions?.selection?.roadmap_record_count !== SOCIALS_OWNER_STABLE_RECORD_COUNT) reasonCodes.push("socials_owner_export_stable_record_count_mismatch");
-    if (ownerExport?.extensions?.selection?.exported_nonterminal_count !== SOCIALS_OWNER_NONTERMINAL_CARD_COUNT) reasonCodes.push("socials_owner_export_nonterminal_count_mismatch");
-  }
+  reasonCodes.push(...validateAcceptedPreimage({ ownerExport, adapter, observedBlobOid }));
   return { board, reasonCodes: [...new Set(reasonCodes)].sort() };
 }
 
@@ -164,7 +194,7 @@ function toJournalEvent({ ownerExport, card, board }) {
   };
 }
 
-function buildOwnerSeedBatch({ registry, ownerExports }) {
+function buildOwnerSeedBatch({ registry, ownerExports, observedBlobOids = [] }) {
   if (registry?.schemaVersion !== "discordos.board-registry.v1") throw new Error("board_registry_invalid");
   const reasonCodes = [];
   const events = [];
@@ -172,8 +202,14 @@ function buildOwnerSeedBatch({ registry, ownerExports }) {
   const sources = [];
   const seenCardIds = new Set();
 
-  for (const ownerExport of [...ownerExports].sort((left, right) => text(left.project_id).localeCompare(text(right.project_id)))) {
-    const validation = validateExport({ ownerExport, registry, seenCardIds });
+  const validatedExports = ownerExports
+    .map((ownerExport, index) => ({ ownerExport, observedBlobOid: observedBlobOids[index] || null }))
+    .sort((left, right) => text(left.ownerExport.project_id).localeCompare(text(right.ownerExport.project_id)));
+
+  for (const input of validatedExports) {
+    const { ownerExport, observedBlobOid } = input;
+    const validation = validateExport({ ownerExport, registry, seenCardIds, observedBlobOid });
+    input.validation = validation;
     reasonCodes.push(...validation.reasonCodes);
     sources.push({
       projectId: text(ownerExport.project_id),
@@ -182,7 +218,11 @@ function buildOwnerSeedBatch({ registry, ownerExports }) {
       sourceRevision: text(ownerExport.source_revision),
       cardCount: Array.isArray(ownerExport.cards) ? ownerExport.cards.length : 0,
     });
-    if (validation.reasonCodes.length > 0 || !validation.board) continue;
+  }
+
+  const preimageBlocked = reasonCodes.some((code) => code.startsWith("owner_export_preimage_"));
+  for (const { ownerExport, validation } of validatedExports) {
+    if (preimageBlocked || validation.reasonCodes.length > 0 || !validation.board) continue;
     for (const card of ownerExport.cards) {
       const lifecycle = text(card.record.lifecycle).toLowerCase();
       if (TERMINAL_LIFECYCLES.has(lifecycle)) {
@@ -215,11 +255,25 @@ async function readJson(filePath, fsImpl = fs) {
   return JSON.parse((await fsImpl.readFile(filePath, "utf8")).replace(/^\uFEFF/, ""));
 }
 
+async function readOwnerExport(filePath, fsImpl = fs) {
+  const raw = await fsImpl.readFile(filePath);
+  const content = Buffer.isBuffer(raw) ? raw : Buffer.from(raw, "utf8");
+  return {
+    ownerExport: JSON.parse(content.toString("utf8").replace(/^\uFEFF/, "")),
+    blobOid: gitBlobOid(content),
+  };
+}
+
 async function buildOwnerSeedBatchFromPaths({ registryPath, exportPaths, fsImpl = fs }) {
   const registry = await readJson(registryPath, fsImpl);
   const ownerExports = [];
-  for (const exportPath of exportPaths) ownerExports.push(await readJson(exportPath, fsImpl));
-  return buildOwnerSeedBatch({ registry, ownerExports });
+  const observedBlobOids = [];
+  for (const exportPath of exportPaths) {
+    const observed = await readOwnerExport(exportPath, fsImpl);
+    ownerExports.push(observed.ownerExport);
+    observedBlobOids.push(observed.blobOid);
+  }
+  return buildOwnerSeedBatch({ registry, ownerExports, observedBlobOids });
 }
 
 function renderMarkdown(result) {
@@ -259,10 +313,13 @@ module.exports = { _internals: {
   LIFECYCLE_MAP,
   parseArgs,
   activeBoardByProject,
+  gitBlobOid,
+  validateAcceptedPreimage,
   validateExport,
   eventId,
   toJournalEvent,
   buildOwnerSeedBatch,
+  readOwnerExport,
   buildOwnerSeedBatchFromPaths,
   renderMarkdown,
 } };

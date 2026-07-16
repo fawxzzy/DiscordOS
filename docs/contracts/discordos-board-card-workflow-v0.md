@@ -97,6 +97,25 @@ Registry validation rejects duplicate board IDs, forum channel IDs, and stable-c
 
 The governed denominator is `13` required boards, including Socials OS. Socials has an admitted owner adapter and resolves its exact forum ID inside the first serialized provision cluster. The prior 12-board live receipt remains historical baseline evidence; it is not proof that board 13 is visible.
 
+### Owner-export accepted preimages
+
+An `owner_export` source adapter may declare an `acceptedPreimage` in the board registry. The declaration is adapter data, not adapter-specific code. Before constructing any journal event, the production owner-seed validator compares the proposed export with the declaration's exact export ID, source revision, roadmap record count, selected nonterminal count, and ordered stable card IDs. A mismatch blocks the batch and returns zero events, including events from otherwise-valid exports in the same batch. Adapters without an `acceptedPreimage` retain their prior validation behavior.
+
+The path-backed owner-seed command also computes the Git blob object ID from the exact owner-export file bytes and compares it with `ownerExportBlob`. Object-only callers cannot recover source-file bytes, so they enforce the complete declared identity and selection envelope; callers with bytes must supply and pass the blob check. The registry records the source repository and commit as immutable chain-of-custody evidence even though those values are not fields in `atlas.project-board.owner-export.v1`.
+
+The accepted `socials-os-roadmap-v1` preimage is:
+
+- repository: `fawxzzy/socials-os`
+- repository commit: `99335e2f9a6fc4339d5577b41dd46fdfa7dcd85a`
+- owner-export blob: `e70bd79135c99b89483e6edbd5a417d135aba753`
+- export ID: `pbe_socials-os_773fe3821635`
+- source revision: `sha256:773fe3821635533a72ec6949bb3e716c5ed93d233df29363f1bbca4d1aeb94fe`
+- roadmap records: `23`
+- exported nonterminal records: `12`
+- ordered card IDs: `SOC-009`, `SOC-010`, `SOC-011`, `SOC-012`, `SOC-013`, `SOC-015`, `SOC-016`, `SOC-017`, `SOC-018`, `SOC-020`, `SOC-021`, `SOC-022`
+
+Changing any accepted identity is a registry-contract change requiring a new reviewed owner packet. Count-only admission is forbidden.
+
 Forum-level configuration authority is `config/discordos-forum-profile-registry.json` and `docs/contracts/discordos-forum-profile-normalization-v1.md`. Forum tags, permissions, defaults, structure, orphan applied tags, and archive/lock expectations are scanned denominator-wide. Forum normalization remains separate from legacy card migration and active-source completion semantics.
 
 The registry-driven cross-board consistency scanner reports:

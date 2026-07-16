@@ -21,6 +21,10 @@ const SOCIALS_OWNER_CARD_IDS = [
   "SOC-016", "SOC-017", "SOC-018", "SOC-020", "SOC-021", "SOC-022",
 ];
 
+function runtimeFixturePath(name) {
+  return path.join(migration.DEFAULT_RUNTIME_ROOT, "board-integrity", name);
+}
+
 function response({ ok = true, status = 200, payload = null } = {}) {
   return { ok, status, json: async () => payload };
 }
@@ -140,15 +144,15 @@ function socialsExport() {
   }));
   return {
     contract_version: "atlas.project-board.owner-export.v1",
-    export_id: "pbe_socials-os_test",
+    export_id: "pbe_socials-os_773fe3821635",
     project_id: "socials-os",
     board_id: "discordos:project-feedback:socials-os",
     owner: "socials-os",
     adapter_id: "socials-os-roadmap-v1",
-    source_revision: "sha256:test",
+    source_revision: "sha256:773fe3821635533a72ec6949bb3e716c5ed93d233df29363f1bbca4d1aeb94fe",
     generated_at: "2026-07-15T06:48:39Z",
     cards,
-    extensions: { selection: { roadmap_record_count: 22, exported_nonterminal_count: 12 } },
+    extensions: { selection: { roadmap_record_count: 23, exported_nonterminal_count: 12 } },
   };
 }
 
@@ -337,8 +341,8 @@ test("Socials owner adapter fails closed when the accepted 12-card nonterminal c
   drifted.extensions.selection.exported_nonterminal_count = 11;
   const blocked = ownerSeed.buildOwnerSeedBatch({ registry: resolvedRegistry(), ownerExports: [drifted] });
   assert.equal(blocked.ok, false);
-  assert(blocked.reasonCodes.includes("socials_owner_export_event_count_mismatch"));
-  assert(blocked.reasonCodes.includes("socials_owner_export_nonterminal_count_mismatch"));
+  assert(blocked.reasonCodes.includes("owner_export_preimage_card_count_mismatch"));
+  assert(blocked.reasonCodes.includes("owner_export_preimage_exported_nonterminal_count_mismatch"));
 });
 
 test("exact current Socials cards are residual no-ops", () => {
@@ -463,11 +467,9 @@ const savedResidualSnapshotPath = path.resolve(repoRoot, "..", "..", "runtime", 
 const currentSocialsExportPath = path.resolve(repoRoot, "..", "socials-os", "exports", "atlas.project-board.owner-export.v1.json");
 
 function assertAcceptedSocialsPreimage(ownerExport) {
-  assert.equal(ownerExport.export_id, "pbe_socials-os_ed44a0055c40");
-  assert.equal(ownerExport.source_revision, "sha256:ed44a0055c40046748e8c932c1a94fdbef58535304218f56716853a29304ffb1");
-  assert.equal(ownerExport.extensions?.selection?.roadmap_record_count, 22);
-  assert.equal(ownerExport.extensions?.selection?.exported_nonterminal_count, 12);
-  assert.deepEqual(ownerExport.cards.map((card) => card.record.card_id), SOCIALS_OWNER_CARD_IDS);
+  const result = ownerSeed.buildOwnerSeedBatch({ registry: resolvedRegistry(), ownerExports: [ownerExport] });
+  assert.equal(result.ok, true, result.reasonCodes.join(","));
+  assert.equal(result.eventCount, 12);
 }
 
 test("saved Socials preimage digest guard fails closed on unreviewed owner-export drift", {
@@ -655,7 +657,7 @@ test("guarded residual recovery creates only the missing Socials identity, reope
     registry: firstSnapshot.registry,
     profileRegistry: profiles,
     socialsOwnerExport: ownerExport,
-    snapshotPath: "C:\\ATLAS\\runtime\\board-integrity\\residual-test.json",
+    snapshotPath: runtimeFixturePath("residual-test.json"),
     allowRecovery: true,
     apply: true,
     env: {
@@ -691,7 +693,7 @@ test("guarded residual recovery creates only the missing Socials identity, reope
     registry: secondSnapshot.registry,
     profileRegistry: profiles,
     socialsOwnerExport: ownerExport,
-    snapshotPath: "C:\\ATLAS\\runtime\\board-integrity\\residual-test-2.json",
+    snapshotPath: runtimeFixturePath("residual-test-2.json"),
     allowRecovery: true,
     apply: true,
     env: {
@@ -748,7 +750,7 @@ test("scanner proves an exact 13-board canonical denominator", async () => {
 
 test("recovery receipt never accepts partial or orphan-terminal state", () => {
   const receipt = migration.buildRecoveryReceipt({
-    snapshotPath: "C:\\ATLAS\\runtime\\board-integrity\\snapshot.json",
+    snapshotPath: runtimeFixturePath("snapshot.json"),
     phases: [
       { phase: "safe_tag_preclear", ok: true },
       { phase: "canonical_forum_patch", ok: false },
@@ -764,7 +766,7 @@ test("recovery receipt never accepts partial or orphan-terminal state", () => {
 
 test("migration artifacts are runtime-only and apply remains double guarded", () => {
   assert.throws(() => migration.assertRuntimePath(path.join(repoRoot, "docs", "snapshot.json")), /migration_artifact_must_be_under_atlas_runtime/);
-  assert.doesNotThrow(() => migration.assertRuntimePath("C:\\ATLAS\\runtime\\board-integrity\\snapshot.json"));
+  assert.doesNotThrow(() => migration.assertRuntimePath(runtimeFixturePath("snapshot.json")));
   assert.equal(migration.resolveAdmission({ apply: true, allowMigration: true, env: {} }).admitted, false);
   assert.equal(migration.resolveAdmission({ apply: false, allowMigration: false, env: {} }).status, "dry_run");
   assert.equal(migration.resolveRecoveryAdmission({ apply: true, allowRecovery: true, env: {} }).admitted, false);
@@ -776,8 +778,8 @@ test("migration artifacts are runtime-only and apply remains double guarded", ()
   const options = migration.parseArgs([
     "--recover-residual",
     "--allow-recovery",
-    "--snapshot-output", "C:\\ATLAS\\runtime\\board-integrity\\snapshot.json",
-    "--output", "C:\\ATLAS\\runtime\\board-integrity\\receipt.json",
+    "--snapshot-output", runtimeFixturePath("snapshot.json"),
+    "--output", runtimeFixturePath("receipt.json"),
   ]);
   assert.equal(options.recoverResidual, true);
   assert.equal(options.allowRecovery, true);
