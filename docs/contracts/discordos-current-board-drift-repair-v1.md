@@ -25,9 +25,9 @@ The admitted evidence is content-addressed, not path-trusted:
 
 - raw SHA-256: `a4768859896ea7c7d73f21eff6009dae5cbd3915aa8e14780d89a8d66ab2f182`
 - canonical JSON SHA-256: `0f246e6196bf039924c1afd7799da16fd881ca778cfbb330f335dc3a15fcaddd`
-- plan SHA-256: `1e2354552c5182b4a5475b8104959957725aa5a28294c89c8e204fb3806d4705`
+- plan SHA-256: `2179246439631b51d4ff76395660c4fdf3e7a237d81c0cfd1e80d28dc1fe2841`
 
-The plan contains the exact stable board, channel, thread, card, tag, source-title, owner, body-hash, event, and order-slot preimages. The executor accepts only the reviewed plan schema/event and verifies the plan digest before any live read or write.
+The plan contains the exact stable board, channel, thread, card, tag, source-title, owner, complete source body, body hash, event, order-slot, and full guild-channel invariant preimages. The executor binds execution to the independently published digest above, in addition to recomputing the plan digest and checking both evidence digests. Recomputing a digest over a modified plan does not authorize it.
 
 ## Fixed scope
 
@@ -60,14 +60,16 @@ Operations are idempotent:
 - exact tag postimages are recorded as already complete;
 - exact registry order is recorded as already complete;
 - completed destinations are reusable only through one exact stable-card-ID match;
-- exact completed-transfer readback must include the managed body, completed state, source link, Feature/Completed tags, journal event, success reaction, reciprocal source link, and archived+locked source;
+- archived destination discovery and journal-event lookup paginate to exhaustion under explicit fail-closed page limits;
+- exact completed-transfer readback must byte-match the deterministic managed destination body, deterministic journal event, deterministic reciprocal source body, completed state, source link, Feature/Completed tags, success reaction, and archived+locked source;
+- a corrupted known destination body or journal can be repaired only to the plan-derived exact postimage; no new destination or journal is created during that recovery;
 - a successful replay produces zero writes.
 
 On partial failure, the receipt stops at the first failed write/readback. A later invocation re-runs the complete preflight and skips only operations proven complete by exact postimage readback. Duplicate completed cards and title-only destination reuse are forbidden.
 
 ## Ordering boundary
 
-The order operation sends one bounded `PATCH /guilds/{guild.id}/channels` payload containing only the 13 registered forum channel IDs mapped onto the existing 13 board slots. Unrelated category channels are neither selected nor assigned positions. Exact guild-channel readback is mandatory.
+The order operation sends one bounded `PATCH /guilds/{guild.id}/channels` payload containing only the 13 registered forum channel IDs mapped onto the existing 13 board slots. Unrelated category channels are neither selected nor assigned positions. The plan records the full relevant guild-channel preimage, and preflight plus post-write readback require every unrelated channel's ID, type, parent, position, and name to remain exact.
 
 ## Terminal reconciliation
 

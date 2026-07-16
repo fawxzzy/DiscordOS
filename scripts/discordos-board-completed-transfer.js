@@ -199,21 +199,44 @@ function buildSourceMessage({ sourceContent, destinationUrl, cardId }) {
 async function listForumThreads({ forumChannelId, guildId, token, fetchImpl = fetch }) {
   const [active, archived] = await Promise.all([
     cardContract.discordRequest({ path: `/guilds/${guildId}/threads/active`, token, fetchImpl }),
-    cardContract.discordRequest({
-      path: `/channels/${forumChannelId}/threads/archived/public?limit=100`,
-      token,
-      fetchImpl,
-    }),
+    journal.readArchivedForumThreads({ forumChannelId, token, fetchImpl }),
   ]);
   const reasonCodes = [];
   if (!active.ok) reasonCodes.push("completed_active_threads_read_failed");
   if (!archived.ok) reasonCodes.push("completed_archived_threads_read_failed");
+  for (const code of archived.reasonCodes || []) {
+    if (code === "archived_threads_pagination_cursor_missing") {
+      reasonCodes.push("completed_archived_threads_pagination_cursor_missing");
+    } else if (code === "archived_threads_read_truncated") {
+      reasonCodes.push("completed_archived_threads_pagination_limit");
+    }
+  }
   const seen = new Set();
   const threads = [
     ...(active.payload?.threads || []).filter((thread) => thread.parent_id === forumChannelId),
-    ...(archived.payload?.threads || []),
+    ...(archived.threads || []),
   ].filter((thread) => thread?.id && !seen.has(thread.id) && seen.add(thread.id));
-  return { ok: reasonCodes.length === 0, threads, reasonCodes };
+  return {
+    ok: reasonCodes.length === 0,
+    threads,
+    archivedPageCount: archived.pageCount,
+    truncated: archived.truncated === true,
+    reasonCodes: [...new Set(reasonCodes)],
+  };
+}
+
+async function readAllThreadMessages({ threadId, token, fetchImpl = fetch }) {
+  const result = await journal.readThreadMessages({ threadId, token, fetchImpl });
+  const reasonCodes = [];
+  if (!result.ok) reasonCodes.push("completed_card_journal_history_read_failed");
+  if (result.truncated) reasonCodes.push("completed_card_journal_history_pagination_limit");
+  return {
+    ok: result.ok && reasonCodes.length === 0,
+    messages: result.payload || [],
+    pageCount: result.pageCount,
+    truncated: result.truncated === true,
+    reasonCodes,
+  };
 }
 
 async function findCompletedThread({ threads, cardId, expectedTitle, token, fetchImpl = fetch }) {
@@ -278,6 +301,8 @@ async function buildCompletedBoardTransfer({
   occurredAt = null,
   completedTagIds = null,
   requireStableIdentity = false,
+  sourceContentPreimage = null,
+  repairExactPostimage = false,
   evidence,
   allowApply = false,
   apply = false,
@@ -297,9 +322,12 @@ async function buildCompletedBoardTransfer({
     occurredAt,
     completedTagIds,
     requireStableIdentity,
+    sourceContentPreimage,
+    repairExactPostimage,
     evidence,
   };
   const admission = resolveAdmission({ allowApply, env });
+  const resolvedOccurredAt = occurredAt || new Date().toISOString();
   const reasonCodes = [
     ...validateInput(options),
     ...(apply ? admission.reasonCodes : []),
@@ -357,6 +385,9 @@ async function buildCompletedBoardTransfer({
     || completedTagIds.some((value) => typeof value !== "string" || value.length === 0)
   )) reasonCodes.push("completed_card_tag_ids_invalid");
   const sourceUrl = discordThreadUrl(guildId, sourceThreadId);
+  const plannedSourceContent = sourceContentPreimage == null
+    ? String(sourceMessage.payload?.content || "")
+    : String(sourceContentPreimage);
   const preview = {
     sourceThreadId,
     sourceForumChannelId,
@@ -383,6 +414,39 @@ async function buildCompletedBoardTransfer({
 
   const destinationThreadId = existing?.thread?.id || null;
   const destinationUrl = destinationThreadId ? discordThreadUrl(guildId, destinationThreadId) : null;
+  const expectedSourcePostimage = destinationUrl
+    ? buildSourceMessage({ sourceContent: plannedSourceContent, destinationUrl, cardId })
+    : null;
+  const sourceThreadArchived = sourceThread.payload?.thread_metadata?.archived === true;
+  const sourceThreadLocked = sourceThread.payload?.thread_metadata?.locked === true;
+  const plannedSourcePreimageExact = String(sourceMessage.payload?.content || "") === plannedSourceContent
+    && !sourceThreadArchived
+    && !sourceThreadLocked;
+  const plannedSourcePostimageExact = Boolean(expectedSourcePostimage)
+    && String(sourceMessage.payload?.content || "") === expectedSourcePostimage
+    && sourceThreadArchived
+    && sourceThreadLocked;
+  if (sourceContentPreimage != null && !plannedSourcePreimageExact && !plannedSourcePostimageExact) {
+    reasonCodes.push("source_card_planned_preimage_mismatch");
+  }
+  if (reasonCodes.length > 0) {
+    return { ok: false, status: "blocked", apply, admission, cardId, preview, reasonCodes: [...new Set(reasonCodes)] };
+  }
+  const expectedDestinationContent = buildCompletedMessage({
+    cardId,
+    project,
+    sourceForumChannelId,
+    title: sourceThread.payload.name,
+    type,
+    priority,
+    owner,
+    eventId,
+    occurredAt: resolvedOccurredAt,
+    sourceContent: plannedSourceContent,
+    sourceUrl,
+    destinationUrl: null,
+    evidence,
+  });
   const spec = {
     cardId,
     stableIdentity: cardContract.normalizeIdentity(cardId),
@@ -411,6 +475,28 @@ async function buildCompletedBoardTransfer({
       reasonCodes: [...new Set(reasonCodes)],
     };
   }
+  let destinationBodyRepair = null;
+  if (existing && repairExactPostimage && String(existing.message?.content || "") !== expectedDestinationContent) {
+    destinationBodyRepair = await cardContract.updateThreadMessage({
+      threadId: existing.thread.id,
+      messageId: existing.thread.id,
+      token,
+      message: { content: expectedDestinationContent, allowed_mentions: { parse: [] } },
+      fetchImpl,
+    });
+    if (!destinationBodyRepair.ok) reasonCodes.push("completed_card_exact_body_repair_failed");
+  }
+  if (reasonCodes.length > 0) {
+    return {
+      ok: false,
+      status: "blocked",
+      apply,
+      admission,
+      cardId,
+      preview,
+      reasonCodes: [...new Set(reasonCodes)],
+    };
+  }
   const upsert = await cardContract.upsertDiscordForumCard({
     spec,
     existingThread: existing ? {
@@ -425,21 +511,7 @@ async function buildCompletedBoardTransfer({
       name: sourceThread.payload.name,
       auto_archive_duration: cardContract.DEFAULT_AUTO_ARCHIVE_DURATION,
       message: {
-        content: buildCompletedMessage({
-          cardId,
-          project,
-          sourceForumChannelId,
-          title: sourceThread.payload.name,
-          type,
-          priority,
-          owner,
-          eventId,
-          occurredAt,
-          sourceContent: sourceMessage.payload?.content,
-          sourceUrl,
-          destinationUrl,
-          evidence,
-        }),
+        content: expectedDestinationContent,
         allowed_mentions: { parse: [] },
       },
       ...(completedTagIds ? { applied_tags: completedTagIds } : {}),
@@ -461,25 +533,37 @@ async function buildCompletedBoardTransfer({
     sourceUrl,
     destinationUrl: finalDestinationUrl,
     eventId,
-    occurredAt,
+    occurredAt: resolvedOccurredAt,
   });
   const completionJournal = journal.buildJournalMessage(completionEvent);
   let journalAction = "not_attempted";
   let journalMessageId = null;
   if (upsert.ok && finalDestinationId) {
-    const history = await cardContract.discordRequest({
-      path: `/channels/${finalDestinationId}/messages?limit=100`,
-      token,
-      fetchImpl,
-    });
-    if (!history.ok || !Array.isArray(history.payload)) {
-      reasonCodes.push("completed_card_journal_history_read_failed");
-    } else {
+    const history = await readAllThreadMessages({ threadId: finalDestinationId, token, fetchImpl });
+    reasonCodes.push(...history.reasonCodes);
+    if (history.ok) {
       const marker = journal.eventMarker(completionEvent.eventId);
-      const existingJournal = history.payload.find((message) => String(message?.content || "").includes(marker));
-      if (existingJournal) {
+      const matchingJournals = history.messages.filter((message) => String(message?.content || "").includes(marker));
+      if (matchingJournals.length > 1) {
+        reasonCodes.push("completed_card_journal_event_duplicate");
+      } else if (matchingJournals.length === 1 && String(matchingJournals[0]?.content || "") === completionJournal) {
+        const existingJournal = matchingJournals[0];
         journalAction = "reused";
         journalMessageId = existingJournal.id;
+      } else if (matchingJournals.length === 1) {
+        const existingJournal = matchingJournals[0];
+        const updated = await cardContract.discordRequest({
+          path: `/channels/${finalDestinationId}/messages/${existingJournal.id}`,
+          token,
+          method: "PATCH",
+          body: { content: completionJournal, allowed_mentions: { parse: [] } },
+          fetchImpl,
+        });
+        if (!updated.ok) reasonCodes.push("completed_card_journal_update_failed");
+        else {
+          journalAction = "updated";
+          journalMessageId = existingJournal.id;
+        }
       } else {
         const posted = await cardContract.discordRequest({
           path: `/channels/${finalDestinationId}/messages`,
@@ -548,6 +632,8 @@ async function buildCompletedBoardTransfer({
       ),
       journalRead: journalRead.ok,
       journalMarkerPresent: journalContent.includes(journal.eventMarker(completionEvent.eventId)),
+      bodyExact: content === expectedDestinationContent,
+      journalExact: journalContent === completionJournal,
     };
     if (!Object.values(destinationReadback).every(Boolean)) reasonCodes.push("completed_card_readback_failed");
   }
@@ -556,9 +642,15 @@ async function buildCompletedBoardTransfer({
   let sourceArchive = null;
   let sourceReadback = null;
   if (reasonCodes.length === 0 && finalDestinationUrl) {
+    const expectedSourceContent = buildSourceMessage({
+      sourceContent: plannedSourceContent,
+      destinationUrl: finalDestinationUrl,
+      cardId,
+    });
     const wasArchived = sourceThread.payload?.thread_metadata?.archived === true;
     const wasLocked = sourceThread.payload?.thread_metadata?.locked === true;
-    if (wasArchived || wasLocked) {
+    const sourceContentAlreadyExact = String(sourceMessage.payload?.content || "") === expectedSourceContent;
+    if (!sourceContentAlreadyExact && (wasArchived || wasLocked)) {
       const reopened = await setThreadArchiveState({
         threadId: sourceThreadId,
         token,
@@ -568,14 +660,14 @@ async function buildCompletedBoardTransfer({
       });
       if (!reopened.ok) reasonCodes.push("source_card_reopen_failed");
     }
-    if (reasonCodes.length === 0) {
+    if (reasonCodes.length === 0 && !sourceContentAlreadyExact) {
       sourceUpdate = await cardContract.updateThreadMessage({
         threadId: sourceThreadId,
         messageId: sourceThreadId,
         token,
         message: {
           content: buildSourceMessage({
-            sourceContent: sourceMessage.payload?.content,
+            sourceContent: plannedSourceContent,
             destinationUrl: finalDestinationUrl,
             cardId,
           }),
@@ -585,7 +677,7 @@ async function buildCompletedBoardTransfer({
       });
       if (!sourceUpdate.ok) reasonCodes.push("source_card_link_update_failed");
     }
-    if (reasonCodes.length === 0) {
+    if (reasonCodes.length === 0 && (!sourceContentAlreadyExact || !wasArchived || !wasLocked)) {
       sourceArchive = await setThreadArchiveState({
         threadId: sourceThreadId,
         token,
@@ -607,6 +699,7 @@ async function buildCompletedBoardTransfer({
         archived: threadRead.payload?.thread_metadata?.archived === true,
         locked: threadRead.payload?.thread_metadata?.locked === true,
         completedLinkPresent: content.includes(finalDestinationUrl),
+        postimageExact: content === expectedSourceContent,
       };
       if (!Object.values(sourceReadback).every(Boolean)) reasonCodes.push("source_card_readback_failed");
     }
@@ -643,6 +736,7 @@ async function buildCompletedBoardTransfer({
       upsert.reactionResult?.status === "applied",
       journalAction === "created",
       destinationTagUpdate?.action === "updated",
+      destinationBodyRepair?.ok === true,
       sourceUpdate?.ok === true,
       sourceArchive?.ok === true,
     ].filter(Boolean).length,
@@ -679,6 +773,7 @@ module.exports = {
     buildCompletedMessage,
     buildSourceMessage,
     listForumThreads,
+    readAllThreadMessages,
     findCompletedThread,
     setThreadArchiveState,
     buildCompletedBoardTransfer,

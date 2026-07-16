@@ -8,6 +8,9 @@ const {
 const {
   _internals: completedTransfer,
 } = require("./discordos-board-completed-transfer");
+const {
+  _internals: journal,
+} = require("./discordos-board-card-journal");
 const forumProfileModule = require("./discordos-forum-profile");
 const { _internals: forumProfile } = forumProfileModule;
 const FORUM_SCAN_SCHEMA_VERSION = forumProfileModule.SCAN_SCHEMA_VERSION;
@@ -18,6 +21,7 @@ const EVENT_ID = "discordos-current-13-board-drift-repair-2026-07-16";
 const REPAIR_ENV = "DISCORDOS_CURRENT_BOARD_DRIFT_REPAIR";
 const REPAIR_ENV_VALUE = "enabled";
 const ADMITTED_EVIDENCE_SHA256 = "a4768859896ea7c7d73f21eff6009dae5cbd3915aa8e14780d89a8d66ab2f182";
+const TRUSTED_PLAN_DIGEST_SHA256 = "2179246439631b51d4ff76395660c4fdf3e7a237d81c0cfd1e80d28dc1fe2841";
 const DEFAULT_PLAN_PATH = path.resolve(
   __dirname,
   "..",
@@ -293,7 +297,23 @@ function tagIdsForNames(scan, boardId, names, reasonCodes) {
   }).filter(Boolean);
 }
 
-function buildDeterministicPlan({ scan, evidenceBytes, transferSources, admittedEvidenceSha256 = ADMITTED_EVIDENCE_SHA256 }) {
+function guildChannelInvariant(channel) {
+  return {
+    id: channel?.id || null,
+    type: channel?.type ?? null,
+    parentId: channel?.parent_id || null,
+    position: channel?.position ?? null,
+    name: channel?.name || null,
+  };
+}
+
+function buildDeterministicPlan({
+  scan,
+  evidenceBytes,
+  transferSources,
+  guildChannels,
+  admittedEvidenceSha256 = ADMITTED_EVIDENCE_SHA256,
+}) {
   const reasonCodes = initialEvidenceReasonCodes(scan, evidenceBytes, admittedEvidenceSha256);
   const sourceByThread = new Map((transferSources || []).map((row) => [row.sourceThreadId, row]));
   const tagRepairs = TAG_TARGETS.map((target, index) => {
@@ -330,13 +350,27 @@ function buildDeterministicPlan({ scan, evidenceBytes, transferSources, admitted
       channelId: forumById.get(boardId)?.forumChannelId || null,
       position: slots[index],
     })),
+    guildChannelPreimage: (guildChannels || [])
+      .map(guildChannelInvariant)
+      .sort((left, right) => String(left.id).localeCompare(String(right.id))),
   };
+  if (!Array.isArray(guildChannels) || guildChannels.length === 0) reasonCodes.push("guild_channel_preimage_missing");
+  if (unique((guildChannels || []).map((row) => row.id)).length !== (guildChannels || []).length) {
+    reasonCodes.push("guild_channel_preimage_duplicate_id");
+  }
+  const guildChannelIds = new Set((guildChannels || []).map((row) => row.id));
+  for (const row of orderRepair.preimage) {
+    if (!guildChannelIds.has(row.channelId)) reasonCodes.push(`guild_channel_preimage_board_missing:${row.channelId}`);
+  }
   const completedTagIds = tagIdsForNames(scan, "shared-completed", ["Feature", "Completed"], reasonCodes);
   const completedTransfers = TRANSFER_TARGETS.map((target, index) => {
     const source = sourceByThread.get(target.sourceThreadId);
     if (!source) reasonCodes.push(`transfer_source_enrichment_missing:${target.sourceThreadId}`);
     if (source && source.sourceContentSha256 !== target.sourceContentSha256) {
       reasonCodes.push(`transfer_source_enrichment_digest_mismatch:${target.sourceThreadId}`);
+    }
+    if (source && sha256(String(source.sourceContent || "")) !== target.sourceContentSha256) {
+      reasonCodes.push(`transfer_source_enrichment_content_mismatch:${target.sourceThreadId}`);
     }
     if (source?.existingDestinationThreadIds?.length > 0) {
       reasonCodes.push(`transfer_destination_preexists:${target.sourceThreadId}`);
@@ -350,6 +384,7 @@ function buildDeterministicPlan({ scan, evidenceBytes, transferSources, admitted
         threadId: target.sourceThreadId,
         cardId: target.cardId,
         title: source?.title || null,
+        content: source?.sourceContent ?? null,
         contentSha256: target.sourceContentSha256,
         archived: false,
         locked: false,
@@ -419,11 +454,18 @@ function buildDeterministicPlan({ scan, evidenceBytes, transferSources, admitted
   return plan;
 }
 
-function verifyPlan({ plan, evidenceBytes, scan, admittedEvidenceSha256 = ADMITTED_EVIDENCE_SHA256 }) {
+function verifyPlan({
+  plan,
+  evidenceBytes,
+  scan,
+  admittedEvidenceSha256 = ADMITTED_EVIDENCE_SHA256,
+  trustedPlanDigestSha256 = TRUSTED_PLAN_DIGEST_SHA256,
+}) {
   const reasonCodes = [];
   pushIf(reasonCodes, plan?.schemaVersion !== PLAN_SCHEMA_VERSION, "plan_schema_mismatch");
   pushIf(reasonCodes, plan?.eventId !== EVENT_ID, "plan_event_mismatch");
   pushIf(reasonCodes, plan?.planDigestSha256 !== objectDigest(plan), "plan_digest_mismatch");
+  pushIf(reasonCodes, plan?.planDigestSha256 !== trustedPlanDigestSha256, "plan_trusted_digest_mismatch");
   pushIf(reasonCodes, sha256(evidenceBytes) !== admittedEvidenceSha256, "admitted_evidence_digest_mismatch");
   pushIf(reasonCodes, plan?.generatedFrom?.rawSha256 !== sha256(evidenceBytes), "plan_evidence_raw_digest_mismatch");
   pushIf(reasonCodes, plan?.generatedFrom?.canonicalSha256 !== sha256(canonicalJson(scan)), "plan_evidence_canonical_digest_mismatch");
@@ -452,6 +494,8 @@ function verifyPlan({ plan, evidenceBytes, scan, admittedEvidenceSha256 = ADMITT
   pushIf(reasonCodes, !sameArray(order?.preimage?.map((row) => row.boardId), scan?.relativeOrder?.observedBoardIds), "plan_order_preimage_mismatch");
   pushIf(reasonCodes, !sameArray(order?.postimage?.map((row) => row.boardId), EXPECTED_BOARD_IDS), "plan_order_postimage_mismatch");
   pushIf(reasonCodes, unique((order?.postimage || []).map((row) => row.channelId)).length !== 13, "plan_order_channel_set_mismatch");
+  pushIf(reasonCodes, !Array.isArray(order?.guildChannelPreimage) || order.guildChannelPreimage.length < 13, "plan_guild_channel_preimage_missing");
+  pushIf(reasonCodes, unique((order?.guildChannelPreimage || []).map((row) => row.id)).length !== (order?.guildChannelPreimage || []).length, "plan_guild_channel_preimage_duplicate_id");
   for (const target of TRANSFER_TARGETS) {
     const matches = transfers.filter((row) => row.source?.threadId === target.sourceThreadId);
     pushIf(reasonCodes, matches.length !== 1, `plan_transfer_target_not_exact:${target.sourceThreadId}`);
@@ -461,6 +505,7 @@ function verifyPlan({ plan, evidenceBytes, scan, admittedEvidenceSha256 = ADMITT
     pushIf(reasonCodes, row.source?.forumChannelId !== target.sourceForumChannelId, `plan_transfer_forum_mismatch:${target.sourceThreadId}`);
     pushIf(reasonCodes, row.source?.cardId !== target.cardId, `plan_transfer_card_mismatch:${target.sourceThreadId}`);
     pushIf(reasonCodes, row.source?.contentSha256 !== target.sourceContentSha256, `plan_transfer_content_digest_mismatch:${target.sourceThreadId}`);
+    pushIf(reasonCodes, typeof row.source?.content !== "string" || sha256(row.source.content) !== target.sourceContentSha256, `plan_transfer_content_preimage_mismatch:${target.sourceThreadId}`);
     pushIf(reasonCodes, !row.source?.title || !row.source?.owner || !row.source?.project || !row.source?.type || !row.source?.priority, `plan_transfer_enrichment_missing:${target.sourceThreadId}`);
     pushIf(reasonCodes, row.destination?.forumChannelId !== COMPLETED_FORUM_CHANNEL_ID, `plan_transfer_destination_mismatch:${target.sourceThreadId}`);
     pushIf(reasonCodes, row.destination?.stableCardId !== target.cardId, `plan_transfer_destination_identity_mismatch:${target.sourceThreadId}`);
@@ -500,6 +545,7 @@ async function inspectTransferSource(target, { env = process.env, fetchImpl = fe
     ok: reasonCodes.length === 0,
     sourceThreadId: target.sourceThreadId,
     sourceContentSha256: sha256(content),
+    sourceContent: content,
     title: thread.name || null,
     project: parsed?.project || null,
     type: parsed?.type || null,
@@ -521,6 +567,14 @@ async function inspectTransferSources({ env = process.env, fetchImpl = fetch } =
     throw error;
   }
   return rows;
+}
+
+async function inspectGuildChannels({ guildId, env = process.env, fetchImpl = fetch } = {}) {
+  const token = String(env?.DISCORDOS_BOT_TOKEN || "").trim();
+  if (!token) throw new Error("discord_bot_token_missing");
+  const read = await cardContract.discordRequest({ path: `/guilds/${guildId}/channels`, token, fetchImpl });
+  if (!read.ok || !Array.isArray(read.payload)) throw new Error("guild_channel_preimage_read_failed");
+  return read.payload;
 }
 
 function currentSemanticRow(scan, operation) {
@@ -652,15 +706,8 @@ async function inspectTransferRuntime(operation, { env = process.env, fetchImpl 
   const sourceThread = sourceThreadRead.payload || {};
   const sourceMessage = sourceMessageRead.payload || {};
   const sourceContent = String(sourceMessage.content || "");
-  const sourceCard = cardContract.parseCanonicalCardBody(sourceContent);
   pushIf(reasonCodes, sourceThread.parent_id !== operation.source.forumChannelId, "transfer_source_forum_mismatch");
-  pushIf(reasonCodes, sourceThread.guild_id !== (operation.guildId || sourceThread.guild_id), "transfer_source_guild_mismatch");
   pushIf(reasonCodes, sourceThread.name !== operation.source.title, "transfer_source_title_preimage_drift");
-  pushIf(reasonCodes, sourceCard?.id !== operation.source.cardId, "transfer_source_card_identity_mismatch");
-  pushIf(reasonCodes, sourceCard?.project !== operation.source.project, "transfer_source_project_preimage_drift");
-  pushIf(reasonCodes, sourceCard?.type !== operation.source.type, "transfer_source_type_preimage_drift");
-  pushIf(reasonCodes, sourceCard?.priority !== operation.source.priority, "transfer_source_priority_preimage_drift");
-  pushIf(reasonCodes, sourceCard?.owner !== operation.source.owner, "transfer_source_owner_preimage_drift");
   const guildId = sourceThread.guild_id;
   let destination = null;
   let destinationMessage = null;
@@ -693,13 +740,9 @@ async function inspectTransferRuntime(operation, { env = process.env, fetchImpl 
     if (stableMatches.length === 1) {
       destination = stableMatches[0].thread;
       destinationMessage = stableMatches[0].message;
-      const history = await cardContract.discordRequest({
-        path: `/channels/${destination.id}/messages?limit=100`,
-        token,
-        fetchImpl,
-      });
-      if (!history.ok || !Array.isArray(history.payload)) reasonCodes.push("completed_card_journal_history_read_failed");
-      else journalMessages = history.payload;
+      const history = await completedTransfer.readAllThreadMessages({ threadId: destination.id, token, fetchImpl });
+      reasonCodes.push(...history.reasonCodes);
+      if (history.ok) journalMessages = history.messages;
     }
   } else reasonCodes.push("transfer_source_guild_missing");
   const destinationUrl = destination && guildId
@@ -708,29 +751,77 @@ async function inspectTransferRuntime(operation, { env = process.env, fetchImpl 
   const sourceUrl = guildId
     ? completedTransfer.discordThreadUrl(guildId, operation.source.threadId)
     : null;
-  const sourcePreimageExact = sha256(sourceContent) === operation.source.contentSha256
+  const expectedDestinationContent = sourceUrl
+    ? completedTransfer.buildCompletedMessage({
+      cardId: operation.source.cardId,
+      project: operation.source.project,
+      sourceForumChannelId: operation.source.forumChannelId,
+      title: operation.source.title,
+      type: operation.source.type,
+      priority: operation.source.priority,
+      owner: operation.source.owner,
+      eventId: operation.event.eventId,
+      occurredAt: operation.event.occurredAt,
+      sourceContent: operation.source.content,
+      sourceUrl,
+      destinationUrl: null,
+      evidence: operation.event.evidence,
+    })
+    : null;
+  const completionEvent = sourceUrl && destinationUrl
+    ? completedTransfer.buildCompletedEvent({
+      cardId: operation.source.cardId,
+      project: operation.source.project,
+      sourceForumChannelId: operation.source.forumChannelId,
+      title: operation.source.title,
+      type: operation.source.type,
+      priority: operation.source.priority,
+      owner: operation.source.owner,
+      eventId: operation.event.eventId,
+      occurredAt: operation.event.occurredAt,
+      evidence: operation.event.evidence,
+      sourceUrl,
+      destinationUrl,
+    })
+    : null;
+  const expectedJournalContent = completionEvent ? journal.buildJournalMessage(completionEvent) : null;
+  const expectedSourceContent = destinationUrl
+    ? completedTransfer.buildSourceMessage({
+      sourceContent: operation.source.content,
+      destinationUrl,
+      cardId: operation.source.cardId,
+    })
+    : null;
+  const sourcePreimageExact = sourceContent === operation.source.content
     && sourceThread.thread_metadata?.archived !== true
     && sourceThread.thread_metadata?.locked !== true;
-  const reciprocalExact = Boolean(destinationUrl)
-    && sourceContent.includes(`ATLAS-COMPLETED-CARD: ${destinationUrl}`);
-  if (!sourcePreimageExact && !reciprocalExact) reasonCodes.push("transfer_source_content_preimage_drift");
+  const sourcePostimageExact = Boolean(expectedSourceContent)
+    && sourceContent === expectedSourceContent
+    && sourceThread.thread_metadata?.archived === true
+    && sourceThread.thread_metadata?.locked === true;
+  const reciprocalExact = sourcePostimageExact;
+  if (!sourcePreimageExact && !sourcePostimageExact) reasonCodes.push("transfer_source_content_preimage_drift");
   const destinationContent = String(destinationMessage?.content || "");
   const eventMarker = `ATLAS-JOURNAL-EVENT-ID: \`${operation.event.eventId}\``;
-  const journalMarkerCount = journalMessages.filter((message) => String(message?.content || "").includes(eventMarker)).length;
+  const matchingJournalMessages = journalMessages.filter((message) => String(message?.content || "").includes(eventMarker));
+  const journalMarkerCount = matchingJournalMessages.length;
   if (journalMarkerCount > 1) reasonCodes.push("completed_card_journal_event_duplicate");
   const readback = destination ? {
     stableIdentity: destinationContent.includes(completedTransfer.cardMarker(operation.source.cardId)),
     exactTitle: destination.name === operation.source.title,
     parentMatches: destination.parent_id === operation.destination.forumChannelId,
-    managedBody: destinationContent.includes(cardContract.CANONICAL_CARD_START) && destinationContent.includes(cardContract.CANONICAL_CARD_END),
-    completedState: destinationContent.includes("- state: `completed`"),
-    sourceLink: Boolean(sourceUrl) && destinationContent.includes(sourceUrl),
+    managedBody: destinationContent === expectedDestinationContent,
+    completedState: destinationContent === expectedDestinationContent,
+    sourceLink: destinationContent === expectedDestinationContent,
+    bodyExact: destinationContent === expectedDestinationContent,
     exactTags: sameArray(destination.applied_tags || [], operation.destination.appliedTagIds),
-    journalEvent: journalMarkerCount === 1,
+    journalEvent: journalMarkerCount === 1 && String(matchingJournalMessages[0]?.content || "") === expectedJournalContent,
+    journalExact: journalMarkerCount === 1 && String(matchingJournalMessages[0]?.content || "") === expectedJournalContent,
     successReaction: successReactionPresent(destinationMessage),
     reciprocalSourceLink: reciprocalExact,
-    sourceArchived: sourceThread.thread_metadata?.archived === true,
-    sourceLocked: sourceThread.thread_metadata?.locked === true,
+    sourceArchived: sourcePostimageExact,
+    sourceLocked: sourcePostimageExact,
+    sourcePostimageExact,
   } : null;
   if (destination && readback.exactTitle !== true) reasonCodes.push("completed_card_title_drift");
   if (destination && readback.parentMatches !== true) reasonCodes.push("completed_card_parent_drift");
@@ -743,6 +834,7 @@ async function inspectTransferRuntime(operation, { env = process.env, fetchImpl 
       threadId: operation.source.threadId,
       contentSha256: sha256(sourceContent),
       preimageExact: sourcePreimageExact,
+      postimageExact: sourcePostimageExact,
       reciprocalExact,
       archived: sourceThread.thread_metadata?.archived === true,
       locked: sourceThread.thread_metadata?.locked === true,
@@ -785,17 +877,53 @@ function projectOrderRows(channels, operation) {
     });
 }
 
+function compareGuildChannelInvariants(channels, operation) {
+  const planned = operation.guildChannelPreimage || [];
+  const current = (channels || [])
+    .map(guildChannelInvariant)
+    .sort((left, right) => String(left.id).localeCompare(String(right.id)));
+  const boardIds = new Set(operation.preimage.map((row) => row.channelId));
+  const plannedById = new Map(planned.map((row) => [row.id, row]));
+  const currentById = new Map(current.map((row) => [row.id, row]));
+  const channelSetExact = sameSet(planned.map((row) => row.id), current.map((row) => row.id));
+  const unrelatedExact = channelSetExact && planned
+    .filter((row) => !boardIds.has(row.id))
+    .every((row) => canonicalJson(row) === canonicalJson(currentById.get(row.id)));
+  const boardInvariantsExact = channelSetExact && [...boardIds].every((id) => {
+    const expected = plannedById.get(id);
+    const actual = currentById.get(id);
+    if (!expected || !actual) return false;
+    const { position: ignoredExpectedPosition, ...expectedInvariant } = expected;
+    const { position: ignoredActualPosition, ...actualInvariant } = actual;
+    return canonicalJson(expectedInvariant) === canonicalJson(actualInvariant);
+  });
+  return { current, channelSetExact, unrelatedExact, boardInvariantsExact };
+}
+
 async function inspectOrderRuntime(operation, { env = process.env, fetchImpl = fetch } = {}) {
   const token = String(env?.DISCORDOS_BOT_TOKEN || "").trim();
   if (!token) return { ok: false, operationId: operation.operationId, status: "blocked", reasonCodes: ["discord_bot_token_missing"] };
   const read = await cardContract.discordRequest({ path: `/guilds/${operation.guildId}/channels`, token, fetchImpl });
   const rows = read.ok && Array.isArray(read.payload) ? projectOrderRows(read.payload, operation) : [];
+  const invariants = read.ok && Array.isArray(read.payload)
+    ? compareGuildChannelInvariants(read.payload, operation)
+    : { current: [], channelSetExact: false, unrelatedExact: false, boardInvariantsExact: false };
   const pending = canonicalJson(rows) === canonicalJson(operation.preimage);
   const complete = canonicalJson(rows) === canonicalJson(operation.postimage);
   const reasonCodes = [];
   if (!read.ok || !Array.isArray(read.payload)) reasonCodes.push("forum_order_read_failed");
+  if (read.ok && !invariants.channelSetExact) reasonCodes.push("forum_order_guild_channel_set_drift");
+  if (read.ok && !invariants.unrelatedExact) reasonCodes.push("forum_order_unrelated_channel_drift");
+  if (read.ok && !invariants.boardInvariantsExact) reasonCodes.push("forum_order_board_invariant_drift");
   if (!pending && !complete) reasonCodes.push("forum_order_live_preimage_drift");
-  return { ok: reasonCodes.length === 0, operationId: operation.operationId, status: complete ? "complete" : pending ? "pending" : "blocked", rows, reasonCodes };
+  return {
+    ok: reasonCodes.length === 0,
+    operationId: operation.operationId,
+    status: reasonCodes.length > 0 ? "blocked" : complete ? "complete" : pending ? "pending" : "blocked",
+    rows,
+    guildChannelReadback: invariants,
+    reasonCodes,
+  };
 }
 
 async function applyTagRepair(operation, { env = process.env, fetchImpl = fetch } = {}) {
@@ -835,13 +963,13 @@ function validateTransferReceipt(operation, receipt) {
   pushIf(reasonCodes, receipt?.ok !== true, "completed_transfer_failed");
   pushIf(reasonCodes, receipt?.completed?.threadId == null, "completed_transfer_destination_missing");
   pushIf(reasonCodes, receipt?.completed?.reaction?.presentAfter !== true, "completed_transfer_success_reaction_missing");
-  pushIf(reasonCodes, !["created", "reused"].includes(receipt?.completed?.journal?.action), "completed_transfer_journal_missing");
+  pushIf(reasonCodes, !["created", "reused", "updated"].includes(receipt?.completed?.journal?.action), "completed_transfer_journal_missing");
   const destinationReadback = receipt?.completed?.readback || {};
-  for (const field of ["threadRead", "messageRead", "parentMatches", "cardMarkerPresent", "canonicalBodyPresent", "completedStatePresent", "sourceLinkPresent", "appliedTagsExact", "journalRead", "journalMarkerPresent"]) {
+  for (const field of ["threadRead", "messageRead", "parentMatches", "cardMarkerPresent", "canonicalBodyPresent", "completedStatePresent", "sourceLinkPresent", "appliedTagsExact", "journalRead", "journalMarkerPresent", "bodyExact", "journalExact"]) {
     pushIf(reasonCodes, destinationReadback[field] !== true, `completed_transfer_destination_readback_missing:${field}`);
   }
   const sourceReadback = receipt?.source?.readback || {};
-  for (const field of ["threadRead", "messageRead", "archived", "locked", "completedLinkPresent"]) {
+  for (const field of ["threadRead", "messageRead", "archived", "locked", "completedLinkPresent", "postimageExact"]) {
     pushIf(reasonCodes, sourceReadback[field] !== true, `completed_transfer_source_readback_missing:${field}`);
   }
   return { ok: reasonCodes.length === 0, operationId: operation.operationId, reasonCodes };
@@ -881,8 +1009,15 @@ async function runRepair({
   transferApplyImpl = completedTransfer.buildCompletedBoardTransfer,
   offlineFixture = false,
   admittedEvidenceSha256 = ADMITTED_EVIDENCE_SHA256,
+  trustedPlanDigestSha256 = TRUSTED_PLAN_DIGEST_SHA256,
 } = {}) {
-  const planReasonCodes = verifyPlan({ plan, evidenceBytes, scan: admittedScan, admittedEvidenceSha256 });
+  const planReasonCodes = verifyPlan({
+    plan,
+    evidenceBytes,
+    scan: admittedScan,
+    admittedEvidenceSha256,
+    trustedPlanDigestSha256,
+  });
   const admission = resolveAdmission({ mode, allowApply, env });
   const reasonCodes = [...planReasonCodes, ...(mode === "apply" ? admission.reasonCodes : [])];
   if (mode === "apply" && offlineFixture) reasonCodes.push("apply_fixture_scan_not_allowed");
@@ -992,6 +1127,8 @@ async function runRepair({
         occurredAt: operation.event.occurredAt,
         evidence: operation.event.evidence,
         requireStableIdentity: true,
+        sourceContentPreimage: operation.source.content,
+        repairExactPostimage: true,
         allowApply: true,
         apply: true,
         env,
@@ -1062,7 +1199,15 @@ async function main() {
   const evidence = await readJsonWithBytes(options.evidencePath);
   if (options.mode === "generate_plan") {
     const transferSources = await inspectTransferSources();
-    const plan = buildDeterministicPlan({ scan: evidence.value, evidenceBytes: evidence.bytes, transferSources });
+    const guildIds = unique(transferSources.map((row) => row.guildId).filter(Boolean));
+    if (guildIds.length !== 1) throw new Error("transfer_source_guild_not_exact");
+    const guildChannels = await inspectGuildChannels({ guildId: guildIds[0] });
+    const plan = buildDeterministicPlan({
+      scan: evidence.value,
+      evidenceBytes: evidence.bytes,
+      transferSources,
+      guildChannels,
+    });
     await writeJson(options.outputPath, plan);
     process.stdout.write(options.json ? `${JSON.stringify(plan, null, 2)}\n` : `plan_ready: ${plan.planDigestSha256}\n`);
     return;
@@ -1099,6 +1244,7 @@ module.exports = {
     REPAIR_ENV,
     REPAIR_ENV_VALUE,
     ADMITTED_EVIDENCE_SHA256,
+    TRUSTED_PLAN_DIGEST_SHA256,
     DEFAULT_PLAN_PATH,
     EXPECTED_BOARD_IDS,
     INITIAL_OBSERVED_BOARD_IDS,
@@ -1114,10 +1260,13 @@ module.exports = {
     verifyPlan,
     inspectTransferSource,
     inspectTransferSources,
+    inspectGuildChannels,
     currentScanEvaluation,
     inspectTransferRuntime,
     inspectTagRuntime,
     inspectOrderRuntime,
+    guildChannelInvariant,
+    compareGuildChannelInvariants,
     applyTagRepair,
     applyOrderRepair,
     validateTransferReceipt,

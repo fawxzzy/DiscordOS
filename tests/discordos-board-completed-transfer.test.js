@@ -134,7 +134,7 @@ test("completed transfer creates, verifies, links, archives, and locks", async (
       throw new Error(`unexpected request ${init.method} ${url}`);
     },
   });
-  assert.equal(result.ok, true);
+  assert.equal(result.ok, true, JSON.stringify(result, null, 2));
   assert.equal(result.status, "transferred");
   assert.equal(result.completed.threadId, "completed-thread");
   assert.equal(result.completed.reaction.presentAfter, true);
@@ -296,4 +296,315 @@ test("targeted transfers never reuse a title-only destination", async () => {
   });
   assert.equal(result.ok, false);
   assert(result.reasonCodes.includes("completed_card_stable_identity_required"));
+});
+
+test("delayed resume finds an archived stable destination beyond page one", async () => {
+  const firstPage = Array.from({ length: 100 }, (_, index) => ({
+    id: `archived-${index}`,
+    name: `Archived ${index}`,
+    parent_id: "completed-forum",
+    thread_metadata: { archive_timestamp: `2026-07-15T00:${String(index).padStart(2, "0")}:00.000Z` },
+  }));
+  const target = {
+    id: "delayed-stable-destination",
+    name: "Card title",
+    parent_id: "completed-forum",
+    thread_metadata: { archive_timestamp: "2026-07-14T00:00:00.000Z" },
+  };
+  const result = await _internals.buildCompletedBoardTransfer({
+    ...baseOptions,
+    requireStableIdentity: true,
+    apply: false,
+    fetchImpl: async (url) => {
+      if (url.endsWith("/channels/source-thread/messages/source-thread")) {
+        return response({ payload: { id: "source-thread", content: "Original card" } });
+      }
+      if (url.endsWith("/channels/source-thread")) {
+        return response({ payload: { id: "source-thread", name: "Card title", parent_id: "source-forum", guild_id: "guild" } });
+      }
+      if (url.endsWith("/guilds/guild/threads/active")) return response({ payload: { threads: [] } });
+      if (url.endsWith("/channels/completed-forum/threads/archived/public?limit=100")) {
+        return response({ payload: { threads: firstPage, has_more: true } });
+      }
+      if (url.includes("/channels/completed-forum/threads/archived/public?limit=100&before=")) {
+        return response({ payload: { threads: [target], has_more: false } });
+      }
+      if (url.endsWith("/channels/delayed-stable-destination/messages/delayed-stable-destination")) {
+        return response({ payload: { id: target.id, content: "ATLAS-CARD-ID: `CARD-42`" } });
+      }
+      if (url.includes("/messages/")) return response({ payload: { content: "unrelated body" } });
+      throw new Error(`unexpected request ${url}`);
+    },
+  });
+  assert.equal(result.ok, true, JSON.stringify(result, null, 2));
+  assert.equal(result.preview.existingCompletedThreadId, target.id);
+  assert.equal(result.preview.action, "reuse_completed_card");
+});
+
+test("completed-transfer pagination fails closed on missing cursors and bounded history limits", async () => {
+  const archived = await _internals.listForumThreads({
+    forumChannelId: "completed-forum",
+    guildId: "guild",
+    token: "token",
+    fetchImpl: async (url) => {
+      if (url.endsWith("/guilds/guild/threads/active")) return response({ payload: { threads: [] } });
+      if (url.endsWith("/channels/completed-forum/threads/archived/public?limit=100")) {
+        return response({ payload: { threads: [], has_more: true } });
+      }
+      throw new Error(`unexpected request ${url}`);
+    },
+  });
+  assert.equal(archived.ok, false);
+  assert(archived.reasonCodes.includes("completed_archived_threads_pagination_cursor_missing"));
+
+  let pages = 0;
+  const history = await _internals.readAllThreadMessages({
+    threadId: "completed-thread",
+    token: "token",
+    fetchImpl: async () => {
+      pages += 1;
+      return response({ payload: Array.from({ length: 100 }, (_, index) => ({ id: `p${pages}-${index}` })) });
+    },
+  });
+  assert.equal(history.ok, false);
+  assert.equal(history.truncated, true);
+  assert.equal(pages, 10);
+  assert(history.reasonCodes.includes("completed_card_journal_history_pagination_limit"));
+});
+
+test("planned source preimage drift blocks before every mutation", async () => {
+  const calls = [];
+  const result = await _internals.buildCompletedBoardTransfer({
+    ...baseOptions,
+    sourceContentPreimage: "Planned original card",
+    requireStableIdentity: true,
+    repairExactPostimage: true,
+    apply: true,
+    allowApply: true,
+    fetchImpl: async (url, init) => {
+      calls.push({ url, method: init.method });
+      if (url.endsWith("/channels/source-thread/messages/source-thread")) {
+        return response({ payload: { id: "source-thread", content: "Unexpected changed card" } });
+      }
+      if (url.endsWith("/channels/source-thread")) {
+        return response({ payload: {
+          id: "source-thread",
+          name: "Card title",
+          parent_id: "source-forum",
+          guild_id: "guild",
+          thread_metadata: { archived: false, locked: false },
+        } });
+      }
+      if (url.endsWith("/guilds/guild/threads/active")) return response({ payload: { threads: [] } });
+      if (url.endsWith("/channels/completed-forum/threads/archived/public?limit=100")) {
+        return response({ payload: { threads: [], has_more: false } });
+      }
+      throw new Error(`unexpected request ${init.method} ${url}`);
+    },
+  });
+  assert.equal(result.ok, false);
+  assert(result.reasonCodes.includes("source_card_planned_preimage_mismatch"));
+  assert(calls.every((call) => call.method === "GET"));
+});
+
+test("delayed resume reuses an exact journal event beyond page one without duplication", async () => {
+  const eventId = "completed:CARD-42:delayed-resume";
+  const occurredAt = "2026-07-16T12:00:00.000Z";
+  const sourceUrl = "https://discord.com/channels/guild/source-thread";
+  const destinationUrl = "https://discord.com/channels/guild/completed-thread";
+  const originalSource = "Original card";
+  const expectedDestination = _internals.buildCompletedMessage({
+    cardId: "CARD-42",
+    sourceForumChannelId: "source-forum",
+    title: "Card title",
+    eventId,
+    occurredAt,
+    sourceContent: originalSource,
+    sourceUrl,
+    destinationUrl: null,
+    evidence: baseOptions.evidence,
+  });
+  const completionEvent = _internals.buildCompletedEvent({
+    cardId: "CARD-42",
+    sourceForumChannelId: "source-forum",
+    title: "Card title",
+    eventId,
+    occurredAt,
+    sourceUrl,
+    destinationUrl,
+    evidence: baseOptions.evidence,
+  });
+  const expectedJournal = journal.buildJournalMessage(completionEvent);
+  const fillers = Array.from({ length: 100 }, (_, index) => ({ id: `filler-${index}`, content: "unrelated" }));
+  let sourceContent = originalSource;
+  let sourceArchived = false;
+  let sourceLocked = false;
+  let journalPosts = 0;
+  const result = await _internals.buildCompletedBoardTransfer({
+    ...baseOptions,
+    eventId,
+    occurredAt,
+    completedTagIds: ["feature-tag", "completed-tag"],
+    requireStableIdentity: true,
+    sourceContentPreimage: originalSource,
+    repairExactPostimage: true,
+    apply: true,
+    allowApply: true,
+    fetchImpl: async (url, init) => {
+      if (url.endsWith("/channels/source-thread/messages/source-thread")) {
+        if (init.method === "PATCH") sourceContent = JSON.parse(init.body).content;
+        return response({ payload: { id: "source-thread", content: sourceContent } });
+      }
+      if (url.endsWith("/channels/source-thread")) {
+        if (init.method === "PATCH") {
+          const body = JSON.parse(init.body);
+          sourceArchived = body.archived;
+          sourceLocked = body.locked;
+        }
+        return response({ payload: {
+          id: "source-thread",
+          name: "Card title",
+          parent_id: "source-forum",
+          guild_id: "guild",
+          thread_metadata: { archived: sourceArchived, locked: sourceLocked },
+        } });
+      }
+      if (url.endsWith("/guilds/guild/threads/active")) return response({ payload: { threads: [{
+        id: "completed-thread",
+        name: "Card title",
+        parent_id: "completed-forum",
+        applied_tags: ["feature-tag", "completed-tag"],
+      }] } });
+      if (url.endsWith("/channels/completed-forum/threads/archived/public?limit=100")) {
+        return response({ payload: { threads: [], has_more: false } });
+      }
+      if (url.endsWith("/channels/completed-thread/messages/completed-thread")) {
+        return response({ payload: {
+          id: "completed-thread",
+          content: expectedDestination,
+          reactions: [{ emoji: { name: "success", id: "1507384062166302851" }, me: true, count: 1 }],
+        } });
+      }
+      if (url.endsWith("/channels/completed-thread/messages?limit=100")) return response({ payload: fillers });
+      if (url.includes("/channels/completed-thread/messages?limit=100&before=")) {
+        return response({ payload: [{ id: "journal-old", content: expectedJournal }] });
+      }
+      if (url.endsWith("/channels/completed-thread/messages/journal-old")) {
+        return response({ payload: { id: "journal-old", content: expectedJournal } });
+      }
+      if (url.endsWith("/channels/completed-thread/messages") && init.method === "POST") {
+        journalPosts += 1;
+        return response({ status: 201, payload: { id: "duplicate-journal" } });
+      }
+      if (url.endsWith("/channels/completed-thread")) {
+        return response({ payload: { id: "completed-thread", name: "Card title", parent_id: "completed-forum", applied_tags: ["feature-tag", "completed-tag"] } });
+      }
+      throw new Error(`unexpected request ${init.method} ${url}`);
+    },
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.completed.journal.action, "reused");
+  assert.equal(journalPosts, 0);
+  assert.equal(result.completed.readback.journalExact, true);
+  assert.equal(result.source.readback.postimageExact, true);
+});
+
+test("corrupted destination replay is repaired to the exact deterministic postimage", async () => {
+  const eventId = "completed:CARD-42:corruption-recovery";
+  const occurredAt = "2026-07-16T13:00:00.000Z";
+  const sourceUrl = "https://discord.com/channels/guild/source-thread";
+  const destinationUrl = "https://discord.com/channels/guild/completed-thread";
+  const originalSource = "Original card";
+  const expectedDestination = _internals.buildCompletedMessage({
+    cardId: "CARD-42",
+    sourceForumChannelId: "source-forum",
+    title: "Card title",
+    eventId,
+    occurredAt,
+    sourceContent: originalSource,
+    sourceUrl,
+    destinationUrl: null,
+    evidence: baseOptions.evidence,
+  });
+  const expectedSource = _internals.buildSourceMessage({ sourceContent: originalSource, destinationUrl, cardId: "CARD-42" });
+  const expectedJournal = journal.buildJournalMessage(_internals.buildCompletedEvent({
+    cardId: "CARD-42",
+    sourceForumChannelId: "source-forum",
+    title: "Card title",
+    eventId,
+    occurredAt,
+    sourceUrl,
+    destinationUrl,
+    evidence: baseOptions.evidence,
+  }));
+  let destinationContent = expectedDestination.replace("- owner: `Unassigned`", "- owner: `corrupted-owner`");
+  let destinationCreates = 0;
+  let journalCreates = 0;
+  const result = await _internals.buildCompletedBoardTransfer({
+    ...baseOptions,
+    eventId,
+    occurredAt,
+    completedTagIds: ["feature-tag", "completed-tag"],
+    requireStableIdentity: true,
+    sourceContentPreimage: originalSource,
+    repairExactPostimage: true,
+    apply: true,
+    allowApply: true,
+    fetchImpl: async (url, init) => {
+      if (url.endsWith("/channels/source-thread/messages/source-thread")) {
+        return response({ payload: { id: "source-thread", content: expectedSource } });
+      }
+      if (url.endsWith("/channels/source-thread")) {
+        return response({ payload: {
+          id: "source-thread",
+          name: "Card title",
+          parent_id: "source-forum",
+          guild_id: "guild",
+          thread_metadata: { archived: true, locked: true },
+        } });
+      }
+      if (url.endsWith("/guilds/guild/threads/active")) return response({ payload: { threads: [{
+        id: "completed-thread",
+        name: "Card title",
+        parent_id: "completed-forum",
+        applied_tags: ["feature-tag", "completed-tag"],
+      }] } });
+      if (url.endsWith("/channels/completed-forum/threads/archived/public?limit=100")) {
+        return response({ payload: { threads: [], has_more: false } });
+      }
+      if (url.endsWith("/channels/completed-forum/threads") && init.method === "POST") {
+        destinationCreates += 1;
+        return response({ status: 201, payload: { id: "duplicate-destination" } });
+      }
+      if (url.endsWith("/channels/completed-thread/messages/completed-thread")) {
+        if (init.method === "PATCH") destinationContent = JSON.parse(init.body).content;
+        return response({ payload: {
+          id: "completed-thread",
+          content: destinationContent,
+          reactions: [{ emoji: { name: "success", id: "1507384062166302851" }, me: true, count: 1 }],
+        } });
+      }
+      if (url.endsWith("/channels/completed-thread/messages?limit=100")) {
+        return response({ payload: [{ id: "journal", content: expectedJournal }] });
+      }
+      if (url.endsWith("/channels/completed-thread/messages/journal")) {
+        return response({ payload: { id: "journal", content: expectedJournal } });
+      }
+      if (url.endsWith("/channels/completed-thread/messages") && init.method === "POST") {
+        journalCreates += 1;
+        return response({ status: 201, payload: { id: "duplicate-journal" } });
+      }
+      if (url.endsWith("/channels/completed-thread")) {
+        return response({ payload: { id: "completed-thread", name: "Card title", parent_id: "completed-forum", applied_tags: ["feature-tag", "completed-tag"] } });
+      }
+      throw new Error(`unexpected request ${init.method} ${url}`);
+    },
+  });
+  assert.equal(result.ok, true, JSON.stringify(result, null, 2));
+  assert.equal(destinationContent, expectedDestination);
+  assert.equal(result.completed.readback.bodyExact, true);
+  assert.equal(result.completed.readback.journalExact, true);
+  assert.equal(result.source.readback.postimageExact, true);
+  assert.equal(destinationCreates, 0);
+  assert.equal(journalCreates, 0);
 });

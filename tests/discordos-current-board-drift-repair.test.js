@@ -5,6 +5,8 @@ const path = require("node:path");
 const test = require("node:test");
 
 const { _internals } = require("../scripts/discordos-current-board-drift-repair");
+const { _internals: completedTransfer } = require("../scripts/discordos-board-completed-transfer");
+const { _internals: journal } = require("../scripts/discordos-board-card-journal");
 
 const repoRoot = path.resolve(__dirname, "..");
 const planTemplate = JSON.parse(fs.readFileSync(path.join(
@@ -20,6 +22,10 @@ function digest(value) {
 
 function clone(value) {
   return structuredClone(value);
+}
+
+function response({ ok = true, status = 200, payload = null } = {}) {
+  return { ok, status, json: async () => payload };
 }
 
 function makeInitialScan() {
@@ -156,6 +162,7 @@ function makeFixture() {
     .map((operation) => ({
       sourceThreadId: operation.source.threadId,
       sourceContentSha256: operation.source.contentSha256,
+      sourceContent: operation.source.content,
       title: operation.source.title,
       project: operation.source.project,
       type: operation.source.type,
@@ -164,10 +171,21 @@ function makeFixture() {
       guildId: planTemplate.operations.find((row) => row.kind === "forum_order_repair").guildId,
       existingDestinationThreadIds: [],
     }));
+  const guildChannels = planTemplate.operations
+    .find((row) => row.kind === "forum_order_repair")
+    .guildChannelPreimage
+    .map((row) => ({
+      id: row.id,
+      type: row.type,
+      parent_id: row.parentId,
+      position: row.position,
+      name: row.name,
+    }));
   const plan = _internals.buildDeterministicPlan({
     scan,
     evidenceBytes,
     transferSources,
+    guildChannels,
     admittedEvidenceSha256,
   });
   return { scan, evidenceBytes, admittedEvidenceSha256, plan };
@@ -184,6 +202,7 @@ function expectPlanGenerationBlocked(mutator, reasonFragment) {
     transferSources: fixture.plan.operations.filter((row) => row.kind === "completed_transfer").map((operation) => ({
       sourceThreadId: operation.source.threadId,
       sourceContentSha256: operation.source.contentSha256,
+      sourceContent: operation.source.content,
       title: operation.source.title,
       project: operation.source.project,
       type: operation.source.type,
@@ -192,12 +211,21 @@ function expectPlanGenerationBlocked(mutator, reasonFragment) {
       guildId: fixture.plan.operations.find((row) => row.kind === "forum_order_repair").guildId,
       existingDestinationThreadIds: [],
     })),
+    guildChannels: fixture.plan.operations.find((row) => row.kind === "forum_order_repair").guildChannelPreimage.map((row) => ({
+      id: row.id,
+      type: row.type,
+      parent_id: row.parentId,
+      position: row.position,
+      name: row.name,
+    })),
     admittedEvidenceSha256: digest(bytes),
   }), new RegExp(reasonFragment));
 }
 
 test("deterministic plan binds the exact 14 + 1 + 3 operation set and both evidence digests", () => {
   const fixture = makeFixture();
+  assert.equal(planTemplate.planDigestSha256, _internals.TRUSTED_PLAN_DIGEST_SHA256);
+  assert.equal(_internals.objectDigest(planTemplate), _internals.TRUSTED_PLAN_DIGEST_SHA256);
   assert.equal(fixture.plan.operations.length, 18);
   assert.equal(fixture.plan.operations.filter((row) => row.kind === "tag_repair").length, 14);
   assert.equal(fixture.plan.operations.filter((row) => row.kind === "forum_order_repair").length, 1);
@@ -209,6 +237,7 @@ test("deterministic plan binds the exact 14 + 1 + 3 operation set and both evide
     evidenceBytes: fixture.evidenceBytes,
     scan: fixture.scan,
     admittedEvidenceSha256: fixture.admittedEvidenceSha256,
+    trustedPlanDigestSha256: fixture.plan.planDigestSha256,
   }), []);
 });
 
@@ -220,6 +249,7 @@ test("wrong admitted scan digest and changed plan digest fail closed", () => {
     evidenceBytes: wrong,
     scan: fixture.scan,
     admittedEvidenceSha256: fixture.admittedEvidenceSha256,
+    trustedPlanDigestSha256: fixture.plan.planDigestSha256,
   });
   assert(reasons.includes("admitted_evidence_digest_mismatch"));
   assert(reasons.includes("plan_evidence_raw_digest_mismatch"));
@@ -230,7 +260,29 @@ test("wrong admitted scan digest and changed plan digest fail closed", () => {
     evidenceBytes: fixture.evidenceBytes,
     scan: fixture.scan,
     admittedEvidenceSha256: fixture.admittedEvidenceSha256,
+    trustedPlanDigestSha256: fixture.plan.planDigestSha256,
   }).includes("plan_digest_mismatch"));
+});
+
+test("recomputed digest cannot admit tampered tag IDs or order positions", () => {
+  const fixture = makeFixture();
+  for (const mutate of [
+    (plan) => { plan.operations.find((row) => row.kind === "tag_repair").postimage.appliedTagIds[0] = "tampered-tag-id"; },
+    (plan) => { plan.operations.find((row) => row.kind === "forum_order_repair").postimage[0].position += 100; },
+  ]) {
+    const changed = clone(fixture.plan);
+    mutate(changed);
+    changed.planDigestSha256 = _internals.objectDigest(changed);
+    const reasons = _internals.verifyPlan({
+      plan: changed,
+      evidenceBytes: fixture.evidenceBytes,
+      scan: fixture.scan,
+      admittedEvidenceSha256: fixture.admittedEvidenceSha256,
+      trustedPlanDigestSha256: fixture.plan.planDigestSha256,
+    });
+    assert(!reasons.includes("plan_digest_mismatch"));
+    assert(reasons.includes("plan_trusted_digest_mismatch"));
+  }
 });
 
 test("extra drift reason or extra target is rejected", () => {
@@ -284,6 +336,7 @@ test("default preflight and dry-run fixture modes produce zero writes", async ()
       evidenceBytes: fixture.evidenceBytes,
       admittedScan: fixture.scan,
       admittedEvidenceSha256: fixture.admittedEvidenceSha256,
+      trustedPlanDigestSha256: fixture.plan.planDigestSha256,
       currentScanImpl: async () => clone(fixture.scan),
       offlineFixture: true,
       tagApplyImpl: async () => { writes += 1; throw new Error("write called"); },
@@ -303,6 +356,7 @@ test("explicit apply flag and both environment guards are mandatory", async () =
     evidenceBytes: fixture.evidenceBytes,
     admittedScan: fixture.scan,
     admittedEvidenceSha256: fixture.admittedEvidenceSha256,
+    trustedPlanDigestSha256: fixture.plan.planDigestSha256,
     currentScanImpl: async () => { throw new Error("preflight should not run"); },
     env: {},
   });
@@ -373,12 +427,13 @@ function successfulTransferReceipt(operation) {
   const destinationReadback = Object.fromEntries([
     "threadRead", "messageRead", "parentMatches", "cardMarkerPresent", "canonicalBodyPresent",
     "completedStatePresent", "sourceLinkPresent", "appliedTagsExact", "journalRead", "journalMarkerPresent",
+    "bodyExact", "journalExact",
   ].map((field) => [field, true]));
   return {
     ok: true,
     status: "transferred",
     writeCount: 6,
-    source: { readback: { threadRead: true, messageRead: true, archived: true, locked: true, completedLinkPresent: true } },
+    source: { readback: { threadRead: true, messageRead: true, archived: true, locked: true, completedLinkPresent: true, postimageExact: true } },
     completed: {
       threadId: `destination-${operation.source.cardId}`,
       reaction: { presentAfter: true },
@@ -415,6 +470,7 @@ test("partial failure resumes safely and successful replay produces no duplicate
     evidenceBytes: fixture.evidenceBytes,
     admittedScan: fixture.scan,
     admittedEvidenceSha256: fixture.admittedEvidenceSha256,
+    trustedPlanDigestSha256: fixture.plan.planDigestSha256,
     allowApply: true,
     env: {
       DISCORDOS_BOT_TOKEN: "fixture",
@@ -472,6 +528,124 @@ test("completed transfer receipt requires reciprocal link, archive, lock, body, 
   assert(result.reasonCodes.includes("completed_transfer_source_readback_missing:completedLinkPresent"));
   assert(result.reasonCodes.includes("completed_transfer_destination_readback_missing:appliedTagsExact"));
   assert(result.reasonCodes.includes("completed_transfer_success_reaction_missing"));
+});
+
+test("completed transfer replay rejects corrupted owner, project, evidence, or body and accepts only exact repair", async () => {
+  const operation = planTemplate.operations.find((row) => row.kind === "completed_transfer");
+  const destinationId = "completed-destination";
+  const guildId = planTemplate.operations.find((row) => row.kind === "forum_order_repair").guildId;
+  const sourceUrl = completedTransfer.discordThreadUrl(guildId, operation.source.threadId);
+  const destinationUrl = completedTransfer.discordThreadUrl(guildId, destinationId);
+  const expectedDestination = completedTransfer.buildCompletedMessage({
+    cardId: operation.source.cardId,
+    project: operation.source.project,
+    sourceForumChannelId: operation.source.forumChannelId,
+    title: operation.source.title,
+    type: operation.source.type,
+    priority: operation.source.priority,
+    owner: operation.source.owner,
+    eventId: operation.event.eventId,
+    occurredAt: operation.event.occurredAt,
+    sourceContent: operation.source.content,
+    sourceUrl,
+    destinationUrl: null,
+    evidence: operation.event.evidence,
+  });
+  const expectedSource = completedTransfer.buildSourceMessage({
+    sourceContent: operation.source.content,
+    destinationUrl,
+    cardId: operation.source.cardId,
+  });
+  const expectedJournal = journal.buildJournalMessage(completedTransfer.buildCompletedEvent({
+    cardId: operation.source.cardId,
+    project: operation.source.project,
+    sourceForumChannelId: operation.source.forumChannelId,
+    title: operation.source.title,
+    type: operation.source.type,
+    priority: operation.source.priority,
+    owner: operation.source.owner,
+    eventId: operation.event.eventId,
+    occurredAt: operation.event.occurredAt,
+    sourceUrl,
+    destinationUrl,
+    evidence: operation.event.evidence,
+  }));
+  const inspect = (destinationContent) => _internals.inspectTransferRuntime(operation, {
+    env: { DISCORDOS_BOT_TOKEN: "fixture" },
+    fetchImpl: async (url) => {
+      if (url.endsWith(`/channels/${operation.source.threadId}/messages/${operation.source.threadId}`)) {
+        return response({ payload: { id: operation.source.threadId, content: expectedSource } });
+      }
+      if (url.endsWith(`/channels/${operation.source.threadId}`)) {
+        return response({ payload: {
+          id: operation.source.threadId,
+          name: operation.source.title,
+          parent_id: operation.source.forumChannelId,
+          guild_id: guildId,
+          thread_metadata: { archived: true, locked: true },
+        } });
+      }
+      if (url.endsWith(`/guilds/${guildId}/threads/active`)) {
+        return response({ payload: { threads: [{
+          id: destinationId,
+          name: operation.source.title,
+          parent_id: operation.destination.forumChannelId,
+          applied_tags: operation.destination.appliedTagIds,
+        }] } });
+      }
+      if (url.endsWith(`/channels/${operation.destination.forumChannelId}/threads/archived/public?limit=100`)) {
+        return response({ payload: { threads: [], has_more: false } });
+      }
+      if (url.endsWith(`/channels/${destinationId}/messages/${destinationId}`)) {
+        return response({ payload: {
+          id: destinationId,
+          content: destinationContent,
+          reactions: [{ emoji: { name: "success", id: "1507384062166302851" }, me: true, count: 1 }],
+        } });
+      }
+      if (url.endsWith(`/channels/${destinationId}/messages?limit=100`)) {
+        return response({ payload: [{ id: "journal", content: expectedJournal }] });
+      }
+      throw new Error(`unexpected request ${url}`);
+    },
+  });
+
+  const exact = await inspect(expectedDestination);
+  assert.equal(exact.status, "complete");
+  assert.equal(exact.complete, true);
+  const corruptions = [
+    expectedDestination.replace(`- owner: \`${operation.source.owner}\``, "- owner: `corrupt-owner`"),
+    expectedDestination.replace(`- project: \`${operation.source.project}\``, "- project: `corrupt-project`"),
+    expectedDestination.replace(operation.event.evidence, "corrupt-evidence"),
+    `${expectedDestination}\ncorrupt-body`,
+  ];
+  for (const corruption of corruptions) {
+    const result = await inspect(corruption);
+    assert.equal(result.ok, true);
+    assert.equal(result.status, "pending");
+    assert.equal(result.complete, false);
+    assert.equal(result.destination.readback.bodyExact, false);
+  }
+});
+
+test("forum order readback fails if an unrelated guild channel moves", async () => {
+  const operation = planTemplate.operations.find((row) => row.kind === "forum_order_repair");
+  const channels = operation.guildChannelPreimage.map((row) => ({
+    id: row.id,
+    type: row.type,
+    parent_id: row.parentId,
+    position: row.position,
+    name: row.name,
+  }));
+  const boardIds = new Set(operation.preimage.map((row) => row.channelId));
+  const unrelated = channels.find((row) => !boardIds.has(row.id));
+  unrelated.position += 1;
+  const result = await _internals.inspectOrderRuntime(operation, {
+    env: { DISCORDOS_BOT_TOKEN: "fixture" },
+    fetchImpl: async () => response({ payload: channels }),
+  });
+  assert.equal(result.status, "blocked");
+  assert(result.reasonCodes.includes("forum_order_unrelated_channel_drift"));
 });
 
 test("historical closeout artifacts remain byte invariant", () => {

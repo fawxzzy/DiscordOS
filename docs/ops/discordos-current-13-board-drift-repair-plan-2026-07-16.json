@@ -540,6 +540,211 @@
           "channelId": "1526862405139828858",
           "position": 19
         }
+      ],
+      "guildChannelPreimage": [
+        {
+          "id": "1504671871512346695",
+          "type": 5,
+          "parentId": "1504751249965322430",
+          "position": 1,
+          "name": "updates"
+        },
+        {
+          "id": "1504673475489562744",
+          "type": 15,
+          "parentId": "1508057063874629684",
+          "position": 7,
+          "name": "feedback"
+        },
+        {
+          "id": "1504674484068552784",
+          "type": 0,
+          "parentId": "1504751249965322430",
+          "position": 2,
+          "name": "main"
+        },
+        {
+          "id": "1504694737494478888",
+          "type": 0,
+          "parentId": null,
+          "position": 0,
+          "name": "verify"
+        },
+        {
+          "id": "1504751249965322430",
+          "type": 4,
+          "parentId": null,
+          "position": 0,
+          "name": "Community"
+        },
+        {
+          "id": "1505433984773918820",
+          "type": 4,
+          "parentId": null,
+          "position": 3,
+          "name": "Purgatory"
+        },
+        {
+          "id": "1505433985860505600",
+          "type": 0,
+          "parentId": "1505433984773918820",
+          "position": 20,
+          "name": "purgatory"
+        },
+        {
+          "id": "1505465334512095272",
+          "type": 0,
+          "parentId": "1505827423919411360",
+          "position": 22,
+          "name": "temp"
+        },
+        {
+          "id": "1505742572419809400",
+          "type": 0,
+          "parentId": "1504751249965322430",
+          "position": 4,
+          "name": "exercise-image-development"
+        },
+        {
+          "id": "1505827423919411360",
+          "type": 4,
+          "parentId": null,
+          "position": 4,
+          "name": "Testing"
+        },
+        {
+          "id": "1505827424766660780",
+          "type": 15,
+          "parentId": "1505827423919411360",
+          "position": 21,
+          "name": "feedback-testing"
+        },
+        {
+          "id": "1508057063874629684",
+          "type": 4,
+          "parentId": null,
+          "position": 2,
+          "name": "Project Feedback Boards"
+        },
+        {
+          "id": "1508139160853286942",
+          "type": 15,
+          "parentId": "1508057063874629684",
+          "position": 18,
+          "name": "music-sesh"
+        },
+        {
+          "id": "1508144612957622313",
+          "type": 15,
+          "parentId": "1508057063874629684",
+          "position": 8,
+          "name": "fawxzzy-fitness"
+        },
+        {
+          "id": "1508359985602625638",
+          "type": 15,
+          "parentId": "1508057063874629684",
+          "position": 19,
+          "name": "completed"
+        },
+        {
+          "id": "1508391092662567013",
+          "type": 0,
+          "parentId": "1508057063874629684",
+          "position": 6,
+          "name": "feedback-submission"
+        },
+        {
+          "id": "1515220075366580224",
+          "type": 5,
+          "parentId": "1504751249965322430",
+          "position": 3,
+          "name": "alerts"
+        },
+        {
+          "id": "1515943795999510579",
+          "type": 0,
+          "parentId": "1505827423919411360",
+          "position": 23,
+          "name": "discordos-testing"
+        },
+        {
+          "id": "1516089949286568007",
+          "type": 4,
+          "parentId": null,
+          "position": 1,
+          "name": "Music Sesh"
+        },
+        {
+          "id": "1516089950787862689",
+          "type": 0,
+          "parentId": "1516089949286568007",
+          "position": 5,
+          "name": "music-sesh"
+        },
+        {
+          "id": "1524889569475170478",
+          "type": 15,
+          "parentId": "1508057063874629684",
+          "position": 9,
+          "name": "mazer"
+        },
+        {
+          "id": "1526814470486360144",
+          "type": 15,
+          "parentId": "1508057063874629684",
+          "position": 10,
+          "name": "atlas"
+        },
+        {
+          "id": "1526814471916486821",
+          "type": 15,
+          "parentId": "1508057063874629684",
+          "position": 11,
+          "name": "cortex"
+        },
+        {
+          "id": "1526814473267187864",
+          "type": 15,
+          "parentId": "1508057063874629684",
+          "position": 12,
+          "name": "discordos"
+        },
+        {
+          "id": "1526814474173026438",
+          "type": 15,
+          "parentId": "1508057063874629684",
+          "position": 14,
+          "name": "foundation"
+        },
+        {
+          "id": "1526814475720851497",
+          "type": 15,
+          "parentId": "1508057063874629684",
+          "position": 15,
+          "name": "lifeline"
+        },
+        {
+          "id": "1526814476857376858",
+          "type": 15,
+          "parentId": "1508057063874629684",
+          "position": 16,
+          "name": "playbook"
+        },
+        {
+          "id": "1526814478157742131",
+          "type": 15,
+          "parentId": "1508057063874629684",
+          "position": 17,
+          "name": "stack"
+        },
+        {
+          "id": "1526862405139828858",
+          "type": 15,
+          "parentId": "1508057063874629684",
+          "position": 13,
+          "name": "socials-os"
+        }
       ]
     },
     {
@@ -551,6 +756,7 @@
         "threadId": "1526829391609335828",
         "cardId": "lane-discordos-cross-project-board-integrity",
         "title": "DiscordOS cross-project board integrity and lifecycle repair",
+        "content": "<!-- ATLAS-CARD:START -->\nATLAS-CARD-ID: `lane-discordos-cross-project-board-integrity`\n- project: `atlas`\n- type: `governance`\n- state: `in_progress`\n- priority: `Unspecified`\n- owner: `DiscordOS`\n- progress: `Unmeasured`\n- autonomous implementation: `not_admitted`\n- updated: `2026-07-14T21:54:10Z`\n\n## Summary\nDetect and repair lifecycle, reaction, completion movement, body, journal, encoding, duplicate, formatting, and readback drift across every governed Discord... [see journal/source]\n\n## Objective\n- Detect and repair lifecycle, reaction, completion movement, body, journal, encoding, duplicate, formatting, and readback drift across ev... [see journal/source]\n\n## Acceptance criteria\n- All ten proof units have current code, test, and live readback evidence across every governed board class or an expl... [see journal/source]\n- Incomplete cards show the canonical failure/X reaction and completed cards show the canonical success/check reaction\n- 4 more item(s) in journal/source\n\n## Discoveries\n- Priority is unresolved in the owner source and remains explicitly null.\n\n## Next actions\n- Not established\n\n## Blockers\n- None\n\n## Evidence\n- docs/registry/ATLAS-FULL-SYSTEM-REEVALUATION-LANES.json#lane-discordos-cross-project-board-integrity\n- 12 more item(s) in journal/source\n<!-- ATLAS-CARD:END -->",
         "contentSha256": "15b44ed4a82f8e89ed8424f48a99881bcba3dc956be4bd58143453cac6d51413",
         "archived": false,
         "locked": false,
@@ -600,6 +806,7 @@
         "threadId": "1526830094361038928",
         "cardId": "DOS-201",
         "title": "Admit and seed seven missing project boards",
+        "content": "<!-- ATLAS-CARD:START -->\nATLAS-CARD-ID: `DOS-201`\n- project: `discordos`\n- type: `migration`\n- state: `in_progress`\n- priority: `Unspecified`\n- owner: `discordos`\n- progress: `Unmeasured`\n- autonomous implementation: `not_admitted`\n- updated: `2026-07-14T00:00:00.000Z`\n\n## Summary\nCreate the missing Atlas, DiscordOS, Foundation, Lifeline, Cortex, _stack, and Playbook forums, admit their owner adapters, and seed current owner exports through the single writer.\n\n## Objective\n- Create the missing Atlas, DiscordOS, Foundation, Lifeline, Cortex, _stack, and Playbook forums, admit their owner adapters, and seed current owner exports through the single writer.\n\n## Acceptance criteria\n- Each missing project forum is created once under the canonical Project Feedback Boards category and read back by exact channel identity.\n- Every registry entry names its admitted owner adapter and stable forum channel ID.\n- Owner exports seed idempotently with exact card and journal readback; the explicit empty _stack export creates no cards.\n- No source priority, lifecycle, or ownership value is guessed during admission.\n\n## Next actions\n- Not established\n\n## Blockers\n- None\n\n## Evidence\n- repos/DiscordOS/config/discordos-owner-work-registry.json#DOS-201\n- repos/DiscordOS/config/discordos-board-registry.json\n- repos/DiscordOS/docs/contracts/discordos-board-card-workflow-v0.md\n- repos/DiscordOS/scripts/discordos-board-card-migration-plan.js\n- repos/DiscordOS/scripts/discordos-board-card-reconciliation.js\n<!-- ATLAS-CARD:END -->",
         "contentSha256": "280fc4f2fca2cb74de6a6744628c1053c11e6693305be1067f3f75af8e38e410",
         "archived": false,
         "locked": false,
@@ -649,6 +856,7 @@
         "threadId": "1526830102946512959",
         "cardId": "DOS-202",
         "title": "Close cross-project board integrity and lifecycle proof",
+        "content": "<!-- ATLAS-CARD:START -->\nATLAS-CARD-ID: `DOS-202`\n- project: `discordos`\n- type: `reliability`\n- state: `planning`\n- priority: `Unspecified`\n- owner: `discordos`\n- progress: `Unmeasured`\n- autonomous implementation: `not_admitted`\n- updated: `2026-07-14T00:00:00.000Z`\n\n## Summary\nProve the fixed ten-unit board integrity denominator across every admitted project, board, and card class with recurring fail-closed drift detection.\n\n## Objective\n- Prove the fixed ten-unit board integrity denominator across every admitted project, board, and card class with recurring fail-closed drift detection.\n\n## Acceptance criteria\n- All ten integrity units have current code, tests, and denominator-wide live readback or an explicit accepted not-applicable disposition.\n- Structural legacy drift is repaired or durably classified without deleting immutable Discord system history.\n- A recurring scanner fails closed on identity, lifecycle, reaction, journal, encoding, writer, or readback drift.\n- The Atlas marker moves only after evidence satisfies the fixed binary denominator.\n\n## Next actions\n- Not established\n\n## Blockers\n- None\n\n## Evidence\n- repos/DiscordOS/config/discordos-owner-work-registry.json#DOS-202\n- repos/DiscordOS/config/discordos-board-registry.json\n- repos/DiscordOS/scripts/discordos-board-card-consistency.js\n- repos/DiscordOS/scripts/discordos-board-lifecycle-reaction-drift-monitor.js\n- repos/DiscordOS/scripts/discordos-board-text-integrity.js\n<!-- ATLAS-CARD:END -->",
         "contentSha256": "d847fd8dde8ed2caa5e41b0501c042f630b74981fe043a02f5243a354224b969",
         "archived": false,
         "locked": false,
@@ -691,5 +899,5 @@
     }
   ],
   "nextPacket": "DiscordOS guarded current 13-board drift live apply and reconciliation",
-  "planDigestSha256": "1e2354552c5182b4a5475b8104959957725aa5a28294c89c8e204fb3806d4705"
+  "planDigestSha256": "2179246439631b51d4ff76395660c4fdf3e7a237d81c0cfd1e80d28dc1fe2841"
 }

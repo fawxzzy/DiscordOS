@@ -10,32 +10,34 @@
 
 ## Delivered contract
 
-The packet adds one plan-first command with `generate-plan`, default/preflight, dry-run, and guarded apply semantics. The executor verifies both admitted-evidence digests and the plan digest, validates all live preimages before the first write, stops on the first failed exact readback, and resumes only from exact postimages.
+The packet adds one plan-first command with `generate-plan`, default/preflight, dry-run, and guarded apply semantics. The executor verifies both admitted-evidence digests, recomputes the plan digest, and binds it to the independently published digest before accepting the plan. It validates all live preimages before the first write, stops on the first failed exact readback, and resumes only from exact postimages.
 
 Durable machine plan:
 
 - path: `docs/ops/discordos-current-13-board-drift-repair-plan-2026-07-16.json`
 - raw admitted scan SHA-256: `a4768859896ea7c7d73f21eff6009dae5cbd3915aa8e14780d89a8d66ab2f182`
 - canonical admitted scan SHA-256: `0f246e6196bf039924c1afd7799da16fd881ca778cfbb330f335dc3a15fcaddd`
-- plan SHA-256: `1e2354552c5182b4a5475b8104959957725aa5a28294c89c8e204fb3806d4705`
+- plan SHA-256: `2179246439631b51d4ff76395660c4fdf3e7a237d81c0cfd1e80d28dc1fe2841`
 - exact operations: `18` = `14 tag + 1 order + 3 completed transfer`
 
 Read-only transfer enrichment resolved the three exact source titles, projects, types, priorities, owners, content hashes, guild ID, destination tag IDs, and deterministic event identities. No unknown was replaced with an inferred value.
 
+The exact-head review repair adds four fail-closed guarantees: recomputed modified plans remain unauthorized; archived destinations and journal history are paginated to bounded exhaustion; destination body, journal, source reciprocal body, tags, state, reaction, archive, and lock are exact deterministic postimages; and full guild-channel readback proves unrelated channels remain invariant during the bounded 13-board reorder.
+
 ## Verification evidence
 
-- focused repair suite: `12/12 passed`
-- focused repair + completed-transfer cluster: `23/23 passed`
+- focused repair suite: `15/15 passed`
+- focused repair + completed-transfer cluster: `31/31 passed`
 - admitted-evidence offline dry-run: `dry_run_ready`, 18 pending operations, `discord_mutations: 0`
 - production environment readiness: `ready` (read-only check)
-- repo-local full `npm run verify`: `passed`, exit code `0`
+- repo-local full `npm run verify`: `passed` on the final code/test surface, exit code `0`
 - historical closeout artifact invariance: `passed`
 
 The first unmodified full-verification attempt reproduced the known nested-worktree `atlas_contracts_package_unavailable` discovery issue. The passing full run used only the accepted temporary untracked copy from the canonical stack `packages/atlas-contracts` directory to the misderived nested-worktree package path. Cleanup ran in `finally`; explicit post-run residue check: `false`. No test or discovery contract was weakened.
 
 ## Current live preflight result
 
-The live read-only preflight correctly failed closed with `discord_mutations: 0` because current live state contains one drift target not present in the admitted scan:
+The refreshed live read-only preflight for plan `2179246439631b51d4ff76395660c4fdf3e7a237d81c0cfd1e80d28dc1fe2841` correctly failed closed with `discord_mutations: 0` because current live state contains one drift target not present in the admitted scan:
 
 - thread: `1525063357575593995`
 - stable card: `mazer-mobile-shell-device-harness`
