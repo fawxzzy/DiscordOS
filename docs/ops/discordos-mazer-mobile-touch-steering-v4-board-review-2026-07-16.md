@@ -86,3 +86,49 @@ No legacy, config-wide, or full-board Mazer sync ran. No card or thread was crea
 - Preservation: the visible DiscordOS checkout stayed untouched; no full-board Mazer sync, completed transfer, deployment, or unrelated board mutation occurred.
 - Lifecycle: both cards remain in Review because physical iPhone proof must follow merge and a separately authorized production deployment.
 - Product production: Mazer merge commit `993b8e5c68d59882c58cb2fb560b95bb980a4900` is live as Vercel deployment `dpl_2ZHL85A9uKeJJ1LXfdksMQxgXXrc` at the canonical alias.
+
+## Full-height overlay shell follow-up
+
+### Product and production truth
+
+- Mazer PR [#79](https://github.com/fawxzzy/mazer/pull/79) merged at `2026-07-16T19:39:32Z` as `9600cfb42ffce53578d357cdf610e6c8c950d080`; `origin/main` matched the merge commit before deployment.
+- Vercel production deployment `dpl_2LQxaMdD7Q41XGyr1Z3iQ6K2zmz8` reached `Ready` and updated [the canonical production alias](https://fawxzzy-mazer.vercel.app).
+- Live in-app proof at `390x844` measured an `8/8/374/828` shared overlay shell, a `24/84/342/626` Pause scroll viewport, and a `24/88/342/672` Options scroll viewport. Every guide, label, and bottom action stayed inside its owner; a `12px` touch drag retained the partially visible `PLAYER GUIDE` title; browser logs were empty.
+- Focused UI proof passed `63/63`; architecture proof passed `18/18`; the production build and `git diff --check` passed. The serial full suite passed `370/371` on its first run because one unrelated generation timing case exceeded its `5s` limit at `5.309s`; the exact case passed on immediate rerun at `4.956s`, so no product or timeout contract was changed.
+
+### Exact DiscordOS card receipts
+
+#### Cross-viewport UI reliability
+
+- Stable card: `mazer-cross-viewport-ui-reliability`.
+- Exact thread/starter: `1525337748830031875`.
+- Event: `mazer-full-height-overlay-shell-cross-viewport-production-20260716`.
+- Occurred: `2026-07-16T19:46:02.471Z`.
+- First apply scan: `2026-07-16T19:51:31.171Z` through `2026-07-16T19:53:56.709Z`.
+- Journal: `1527402939231109201`.
+- First apply: card `updated`, journal `created`.
+- Idempotent replay: card `updated`, journal `reused` with the same ID.
+- Live state/progress: `review` / `84%`.
+- Readback: starter, journal, title, starter code points, and journal code points all exact.
+- Identity preflight: one matching location, zero collisions, `245` current identities, and no scan, blocking, row, or aggregate reason codes.
+
+#### Mobile shell and device harness
+
+- Stable card: `mazer-mobile-shell-device-harness`.
+- Exact thread/starter: `1525063357575593995`.
+- Event: `mazer-full-height-overlay-shell-mobile-shell-production-20260716`.
+- Occurred: `2026-07-16T19:46:03.471Z`.
+- First apply scan: `2026-07-16T19:59:39.584Z` through `2026-07-16T20:02:18.854Z`.
+- Journal: `1527405045564440628`.
+- First apply: card `updated`, journal `created`.
+- Idempotent replay: card `updated`, journal `reused` with the same ID.
+- Live state/progress: `review` / `62%`.
+- Readback: starter, journal, title, starter code points, and journal code points all exact.
+- Identity preflight: one matching location, zero collisions, `245` current identities, and no scan, blocking, row, or aggregate reason codes.
+
+### Lifecycle and scope reconciliation
+
+- Both existing cards now carry the PR #79 merge, exact production deployment, route-aware geometry, scroll-continuity proof, and physical-device next actions in their managed bodies and append-only journals.
+- Both cards remain in Review. Physical iPhone screenshots, safe-area/browser-chrome behavior, installed-PWA behavior, touch alignment, and controller feel remain acceptance evidence; production alone does not make either broad card Completed.
+- Mutation scope was exactly two existing threads, one at a time. No legacy, config-wide, or full-board Mazer sync ran; no unrelated starter was rewritten; no card, thread, or duplicate journal was created.
+- Focused DiscordOS config/journal/readback/consistency proof passed `66/66` before mutation. Both dry runs, applies, and idempotent replays completed through the double-guarded exact-thread journal writer.
