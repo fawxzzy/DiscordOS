@@ -2250,7 +2250,7 @@
       "completionPercent": 84,
       "summary": "Coordinate the mobile safe-area/portrait and browser layout-persistence lanes through one viewport contract and proof matrix without turning either delivery into an offset patch.",
       "whyItMatters": "The same UI can be valid in a desktop canvas, narrow browser, mobile browser, installed PWA, or restored window only if viewport state, safe areas, and restoration behavior share deliberate rules.",
-      "currentStatus": "Merged Mazer PR #60 at afc6e8401893c2ddb4c0681db39e6b3b435985ff adds shared optical-centering and guide/toggle geometry, button-label and guide-panel diagnostics, authenticated Chromium proof at 405x958 and 1440x900, and a passing 360x720 -> 1440x900 -> 360x720 -> 405x958 restoration matrix for Menu, Options, play, and Pause. The marker rises from 78 to 84 because shared layout adoption and proof-backed coverage widened. Physical iPhone safe-area, installed-PWA banding, and native browser-chrome/maximize proof remain open; deterministic emulation does not override those device findings.",
+      "currentStatus": "Merged Mazer PR #60 at afc6e8401893c2ddb4c0681db39e6b3b435985ff established the shared layout foundation. New operator iPhone evidence then exposed a clipped Player Guide edge and sticky/misdirected held controls. Draft Mazer PR #77 at b3da05dc repairs the compact guide mask alignment and versions directional intent so weak analog input stays on the dominant lane at T-junctions, one-tile wall fallback remains bounded, and captured arrow/stick holds can recover while blocked. Focused proof passed 84 tests; clean full verification passed 49 files / 367 tests plus build; isolated 390x844 pointer proof passed with zero page/console errors. The marker remains 84 because physical iPhone, installed-PWA banding, native browser-chrome/maximize, and post-release feel proof remain open.",
       "workBreakdown": [
         "Define canonical viewport, safe-area, visible-height, and no-overlap invariants for menu, Options, play, Pause, dialogs, HUD, controls, and scroll rails.",
         "Maintain the child boundary between mobile shell/device behavior and browser layout-state persistence.",
@@ -2262,7 +2262,8 @@
         "Complete native browser-chrome and maximize/restore proof without replacing the deterministic transition harness.",
         "Keep browser-layout, mobile-shell, and visual-proof cards as linked owners for persistence, device harness, and proof-policy follow-through.",
         "Repair the physical-device play shell so HUD, Pause, maze, controller, and installed-app background consume one safe content rectangle with no status-bar obstruction or unexplained top/bottom band.",
-        "Reuse the merged PR #60 centering, containment, guide, and scroll diagnostics for every follow-up instead of adding per-screenshot offsets."
+        "Reuse the merged PR #60 centering, containment, guide, and scroll diagnostics for every follow-up instead of adding per-screenshot offsets.",
+        "Merge Mazer PR #77 after review, then verify Player Guide containment plus stick and sliding-arrow feel on the operator's physical iPhone before considering another marker ratchet."
       ],
       "acceptanceCriteria": [
         "Every primary Mazer surface has an owner, supported viewport category, and no-overlap contract.",
@@ -2275,7 +2276,7 @@
         "Review generated proof metadata for route, viewport, mode, overlay, safe-area, and scroll state.",
         "Read back linked card status before ratcheting this coordinating marker."
       ],
-      "reference": "repos/mazer/docs/ops/MAZER-CROSS-PLATFORM-UI-FOLLOWUP-PACKET-2026-07-11.md",
+      "reference": "repos/mazer/docs/ops/MAZER-MOBILE-CONTROL-INTENT-REWORK-2026-07-16.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-cross-viewport-ui-reliability",
       "relatedCardIds": [
         "mazer-mobile-shell-device-harness",

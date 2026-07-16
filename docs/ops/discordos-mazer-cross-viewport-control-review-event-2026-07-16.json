@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "atlas.board-card-journal.v1",
+  "eventId": "mazer-cross-viewport-control-review-20260716",
+  "occurredAt": "2026-07-16T05:25:00.000Z",
+  "actor": "Mazer",
+  "card": {
+    "id": "mazer-cross-viewport-ui-reliability",
+    "project": "Mazer",
+    "sourceForumChannelId": "1524889569475170478",
+    "threadId": "1525337748830031875",
+    "title": "mazer: cross-viewport UI reliability and layout hardening",
+    "type": "reliability",
+    "state": "review",
+    "previousState": "in_progress",
+    "priority": "High",
+    "owner": "Mazer",
+    "progress": "84%",
+    "summary": "Coordinate mobile safe-area, overlay containment, browser layout, and touch-control behavior through one viewport contract and physical-device proof path.",
+    "objective": "Keep every Mazer surface contained and usable across desktop, narrow browser, phone browser, and installed PWA while preserving one deterministic control-intent contract.",
+    "acceptanceCriteria": [
+      "Every primary Mazer surface has an owner, supported viewport category, and no-overlap contract.",
+      "Mobile and browser layout work can be verified independently and together through a shared matrix.",
+      "No completion claim relies on desktop-only proof for a phone or restored-window defect.",
+      "Player Guide content remains contained and held stick/arrow intent remains recoverable on the physical-phone surface."
+    ],
+    "discoveries": [
+      "The compact guide card began six pixels behind its viewport mask after scrollbar-center adjustment.",
+      "Blocked held movement canceled its repeat timer, and MenuScene discarded the stick's ordered dominant/fallback candidates through a coarser analog recomputation.",
+      "A weak analog secondary must be a wall-only fallback rather than an eager queued turn at a legal T-junction branch."
+    ],
+    "nextActions": [
+      "Review and merge Mazer PR #77 without mixing unrelated product work.",
+      "After a separately authorized production release, verify guide containment, one-tile wall fallback, T-junction behavior, and sliding arrows on the operator's physical iPhone.",
+      "Keep installed-PWA banding and native browser-chrome/maximize proof open."
+    ],
+    "blockers": [
+      "Physical iPhone post-release feel and containment verification is pending."
+    ],
+    "evidence": [
+      "Mazer draft PR #77 at b3da05dc452983a1b51a257ae128293d98a96ddb.",
+      "Focused TypeScript/control/UI/architecture proof passed 5 files / 84 tests.",
+      "Clean full Mazer verification passed 49 files / 367 tests plus Vite/PWA build.",
+      "Isolated 390x844 browser proof passed guide alignment, real T-junction dominant-lane continuity, beyond-frame and center arrow capture, blocked retry, release cleanup, and zero page/console errors."
+    ]
+  },
+  "entry": {
+    "kind": "review",
+    "headline": "Mobile guide and held-control rework is review-ready",
+    "completed": [
+      "Aligned the compact Player Guide with its viewport mask.",
+      "Separated decisive queued turns from weak analog wall-only fallbacks.",
+      "Kept captured arrow and stick repeats alive while blocked and preserved arrow capture beyond the frame and through the center.",
+      "Completed focused, full-repository, build, and isolated browser proof."
+    ],
+    "discovered": [
+      "Earlier deterministic proof did not supersede the operator's later physical-device regression evidence.",
+      "The active coordinating card must remain below completion until the repaired production build is checked on the physical iPhone."
+    ],
+    "next": [
+      "Review and merge Mazer PR #77.",
+      "Run physical-iPhone post-release verification before lifecycle completion or marker ratchet."
+    ],
+    "blockers": [
+      "Physical iPhone post-release verification remains pending."
+    ],
+    "evidence": [
+      "https://github.com/fawxzzy/mazer/pull/77",
+      "Mazer commit b3da05dc452983a1b51a257ae128293d98a96ddb",
+      "repos/mazer/docs/ops/MAZER-MOBILE-CONTROL-INTENT-REWORK-2026-07-16.md"
+    ]
+  },
+  "correlation": {
+    "taskId": "019f52d9-7667-72a3-a5f7-9c0613aedd8f",
+    "branch": "codex/mobile-control-intent-rework-20260715",
+    "commit": "b3da05dc452983a1b51a257ae128293d98a96ddb",
+    "receipt": "repos/mazer/docs/ops/MAZER-MOBILE-CONTROL-INTENT-REWORK-2026-07-16.md"
+  }
+}
