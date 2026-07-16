@@ -1,0 +1,903 @@
+{
+  "schemaVersion": "discordos.current-board-drift-repair-plan.v1",
+  "eventId": "discordos-current-13-board-drift-repair-2026-07-16",
+  "generatedFrom": {
+    "admittedEvidenceFile": "discordos-forum-profile-scan-current-20260716.json",
+    "rawSha256": "a4768859896ea7c7d73f21eff6009dae5cbd3915aa8e14780d89a8d66ab2f182",
+    "canonicalSha256": "0f246e6196bf039924c1afd7799da16fd881ca778cfbb330f335dc3a15fcaddd",
+    "generatedAt": "2026-07-16T14:56:38.088Z"
+  },
+  "writerBoundary": "discordos-single-logical-writer",
+  "historicalCloseout": "immutable_no_ratchet",
+  "allowedDrift": {
+    "tagRepairs": 14,
+    "forumOrderRepairs": 1,
+    "completedTransfers": 3,
+    "initialReasonCodes": [
+      "card_tag_semantic_mismatch:fitness-active",
+      "card_tag_semantic_mismatch:mazer-active",
+      "card_tag_semantic_mismatch:shared-completed",
+      "forum_relative_order_mismatch"
+    ]
+  },
+  "denominator": {
+    "initial": {
+      "boards": 13,
+      "currentCards": 243,
+      "healthyCards": 243,
+      "duplicateStableIdentities": 0,
+      "actionableTextFindings": 0
+    },
+    "terminal": {
+      "boards": 13,
+      "currentCards": 246,
+      "healthyCards": 246,
+      "duplicateStableIdentities": 0,
+      "actionableTextFindings": 0
+    },
+    "historical": {
+      "totalThreads": 443,
+      "retainedLegacyRows": 151,
+      "supersededRows": 49,
+      "immutableSystemHistoryFindings": 124
+    }
+  },
+  "operations": [
+    {
+      "operationId": "tag-01",
+      "kind": "tag_repair",
+      "boardId": "fitness-active",
+      "forumChannelId": "1508144612957622313",
+      "threadId": "1526833783385358407",
+      "cardId": "FF-ROUTINE-001",
+      "preimage": {
+        "appliedTagNames": [
+          "Feature",
+          "Planning"
+        ],
+        "appliedTagIds": [
+          "1508144612957622315",
+          "1526863190170927123"
+        ]
+      },
+      "postimage": {
+        "appliedTagNames": [
+          "Feature",
+          "Review"
+        ],
+        "appliedTagIds": [
+          "1508144612957622315",
+          "1526863190187708530"
+        ]
+      }
+    },
+    {
+      "operationId": "tag-02",
+      "kind": "tag_repair",
+      "boardId": "fitness-active",
+      "forumChannelId": "1508144612957622313",
+      "threadId": "1526112879303196763",
+      "cardId": "FF-RET-004",
+      "preimage": {
+        "appliedTagNames": [
+          "Feature",
+          "Review"
+        ],
+        "appliedTagIds": [
+          "1508144612957622315",
+          "1526863190187708530"
+        ]
+      },
+      "postimage": {
+        "appliedTagNames": [
+          "Feature",
+          "In Progress"
+        ],
+        "appliedTagIds": [
+          "1508144612957622315",
+          "1508144612957622319"
+        ]
+      }
+    },
+    {
+      "operationId": "tag-03",
+      "kind": "tag_repair",
+      "boardId": "mazer-active",
+      "forumChannelId": "1524889569475170478",
+      "threadId": "1526644909241667644",
+      "cardId": "mazer-shared-run-status-panel",
+      "preimage": {
+        "appliedTagNames": [
+          "Feature",
+          "Planning",
+          "High"
+        ],
+        "appliedTagIds": [
+          "1526863192112762885",
+          "1526863192112762887",
+          "1526863192171741210"
+        ]
+      },
+      "postimage": {
+        "appliedTagNames": [
+          "Feature",
+          "Review",
+          "High"
+        ],
+        "appliedTagIds": [
+          "1526863192112762885",
+          "1526863192171741205",
+          "1526863192171741210"
+        ]
+      }
+    },
+    {
+      "operationId": "tag-04",
+      "kind": "tag_repair",
+      "boardId": "mazer-active",
+      "forumChannelId": "1524889569475170478",
+      "threadId": "1526284203464065185",
+      "cardId": "mazer-run-quality-metric-contract-v2",
+      "preimage": {
+        "appliedTagNames": [
+          "Feature",
+          "In Progress",
+          "High"
+        ],
+        "appliedTagIds": [
+          "1526863192112762885",
+          "1526863192171741204",
+          "1526863192171741210"
+        ]
+      },
+      "postimage": {
+        "appliedTagNames": [
+          "Feature",
+          "Review",
+          "High"
+        ],
+        "appliedTagIds": [
+          "1526863192112762885",
+          "1526863192171741205",
+          "1526863192171741210"
+        ]
+      }
+    },
+    {
+      "operationId": "tag-05",
+      "kind": "tag_repair",
+      "boardId": "mazer-active",
+      "forumChannelId": "1524889569475170478",
+      "threadId": "1525337752290197514",
+      "cardId": "mazer-browser-layout-persistence",
+      "preimage": {
+        "appliedTagNames": [
+          "Feature",
+          "In Progress",
+          "High"
+        ],
+        "appliedTagIds": [
+          "1526863192112762885",
+          "1526863192171741204",
+          "1526863192171741210"
+        ]
+      },
+      "postimage": {
+        "appliedTagNames": [
+          "Feature",
+          "Opened",
+          "High"
+        ],
+        "appliedTagIds": [
+          "1526863192112762885",
+          "1526863192112762889",
+          "1526863192171741210"
+        ]
+      }
+    },
+    {
+      "operationId": "tag-06",
+      "kind": "tag_repair",
+      "boardId": "mazer-active",
+      "forumChannelId": "1524889569475170478",
+      "threadId": "1525337748830031875",
+      "cardId": "mazer-cross-viewport-ui-reliability",
+      "preimage": {
+        "appliedTagNames": [
+          "Feature",
+          "In Progress",
+          "High"
+        ],
+        "appliedTagIds": [
+          "1526863192112762885",
+          "1526863192171741204",
+          "1526863192171741210"
+        ]
+      },
+      "postimage": {
+        "appliedTagNames": [
+          "Feature",
+          "Review",
+          "High"
+        ],
+        "appliedTagIds": [
+          "1526863192112762885",
+          "1526863192171741205",
+          "1526863192171741210"
+        ]
+      }
+    },
+    {
+      "operationId": "tag-07",
+      "kind": "tag_repair",
+      "boardId": "shared-completed",
+      "forumChannelId": "1508359985602625638",
+      "threadId": "1527196057665277962",
+      "cardId": "FF-SESSION-006",
+      "preimage": {
+        "appliedTagNames": [],
+        "appliedTagIds": []
+      },
+      "postimage": {
+        "appliedTagNames": [
+          "Feature",
+          "Completed"
+        ],
+        "appliedTagIds": [
+          "1524827256352936166",
+          "1526863195179057218"
+        ]
+      }
+    },
+    {
+      "operationId": "tag-08",
+      "kind": "tag_repair",
+      "boardId": "shared-completed",
+      "forumChannelId": "1508359985602625638",
+      "threadId": "1527193630249455656",
+      "cardId": "FF-SESSION-002",
+      "preimage": {
+        "appliedTagNames": [],
+        "appliedTagIds": []
+      },
+      "postimage": {
+        "appliedTagNames": [
+          "Feature",
+          "Completed"
+        ],
+        "appliedTagIds": [
+          "1524827256352936166",
+          "1526863195179057218"
+        ]
+      }
+    },
+    {
+      "operationId": "tag-09",
+      "kind": "tag_repair",
+      "boardId": "shared-completed",
+      "forumChannelId": "1508359985602625638",
+      "threadId": "1527191534196228188",
+      "cardId": "FF-ROUTINE-001",
+      "preimage": {
+        "appliedTagNames": [],
+        "appliedTagIds": []
+      },
+      "postimage": {
+        "appliedTagNames": [
+          "Feature",
+          "Completed"
+        ],
+        "appliedTagIds": [
+          "1524827256352936166",
+          "1526863195179057218"
+        ]
+      }
+    },
+    {
+      "operationId": "tag-10",
+      "kind": "tag_repair",
+      "boardId": "shared-completed",
+      "forumChannelId": "1508359985602625638",
+      "threadId": "1527189545005748315",
+      "cardId": "FF-SESSION-004",
+      "preimage": {
+        "appliedTagNames": [],
+        "appliedTagIds": []
+      },
+      "postimage": {
+        "appliedTagNames": [
+          "Feature",
+          "Completed"
+        ],
+        "appliedTagIds": [
+          "1524827256352936166",
+          "1526863195179057218"
+        ]
+      }
+    },
+    {
+      "operationId": "tag-11",
+      "kind": "tag_repair",
+      "boardId": "shared-completed",
+      "forumChannelId": "1508359985602625638",
+      "threadId": "1527188130690502796",
+      "cardId": "FF-SESSION-003",
+      "preimage": {
+        "appliedTagNames": [],
+        "appliedTagIds": []
+      },
+      "postimage": {
+        "appliedTagNames": [
+          "Feature",
+          "Completed"
+        ],
+        "appliedTagIds": [
+          "1524827256352936166",
+          "1526863195179057218"
+        ]
+      }
+    },
+    {
+      "operationId": "tag-12",
+      "kind": "tag_repair",
+      "boardId": "shared-completed",
+      "forumChannelId": "1508359985602625638",
+      "threadId": "1527053476381720617",
+      "cardId": "FF-SESSION-001",
+      "preimage": {
+        "appliedTagNames": [],
+        "appliedTagIds": []
+      },
+      "postimage": {
+        "appliedTagNames": [
+          "Feature",
+          "Completed"
+        ],
+        "appliedTagIds": [
+          "1524827256352936166",
+          "1526863195179057218"
+        ]
+      }
+    },
+    {
+      "operationId": "tag-13",
+      "kind": "tag_repair",
+      "boardId": "shared-completed",
+      "forumChannelId": "1508359985602625638",
+      "threadId": "1526956415133024286",
+      "cardId": "FF-RET-004",
+      "preimage": {
+        "appliedTagNames": [],
+        "appliedTagIds": []
+      },
+      "postimage": {
+        "appliedTagNames": [
+          "Feature",
+          "Completed"
+        ],
+        "appliedTagIds": [
+          "1524827256352936166",
+          "1526863195179057218"
+        ]
+      }
+    },
+    {
+      "operationId": "tag-14",
+      "kind": "tag_repair",
+      "boardId": "shared-completed",
+      "forumChannelId": "1508359985602625638",
+      "threadId": "1526900827564933142",
+      "cardId": "SOC-019",
+      "preimage": {
+        "appliedTagNames": [],
+        "appliedTagIds": []
+      },
+      "postimage": {
+        "appliedTagNames": [
+          "Feature",
+          "Completed"
+        ],
+        "appliedTagIds": [
+          "1524827256352936166",
+          "1526863195179057218"
+        ]
+      }
+    },
+    {
+      "operationId": "order-01",
+      "kind": "forum_order_repair",
+      "guildId": "1504668396338413670",
+      "preimage": [
+        {
+          "boardId": "legacy-general-feedback",
+          "channelId": "1504673475489562744",
+          "position": 7
+        },
+        {
+          "boardId": "fitness-active",
+          "channelId": "1508144612957622313",
+          "position": 8
+        },
+        {
+          "boardId": "mazer-active",
+          "channelId": "1524889569475170478",
+          "position": 9
+        },
+        {
+          "boardId": "atlas-active-admission",
+          "channelId": "1526814470486360144",
+          "position": 10
+        },
+        {
+          "boardId": "cortex-active-admission",
+          "channelId": "1526814471916486821",
+          "position": 11
+        },
+        {
+          "boardId": "discordos-active-admission",
+          "channelId": "1526814473267187864",
+          "position": 12
+        },
+        {
+          "boardId": "socials-os-active-admission",
+          "channelId": "1526862405139828858",
+          "position": 13
+        },
+        {
+          "boardId": "foundation-active-admission",
+          "channelId": "1526814474173026438",
+          "position": 14
+        },
+        {
+          "boardId": "lifeline-active-admission",
+          "channelId": "1526814475720851497",
+          "position": 15
+        },
+        {
+          "boardId": "playbook-active-admission",
+          "channelId": "1526814476857376858",
+          "position": 16
+        },
+        {
+          "boardId": "stack-active-admission",
+          "channelId": "1526814478157742131",
+          "position": 17
+        },
+        {
+          "boardId": "music-sesh-active",
+          "channelId": "1508139160853286942",
+          "position": 18
+        },
+        {
+          "boardId": "shared-completed",
+          "channelId": "1508359985602625638",
+          "position": 19
+        }
+      ],
+      "postimage": [
+        {
+          "boardId": "legacy-general-feedback",
+          "channelId": "1504673475489562744",
+          "position": 7
+        },
+        {
+          "boardId": "fitness-active",
+          "channelId": "1508144612957622313",
+          "position": 8
+        },
+        {
+          "boardId": "mazer-active",
+          "channelId": "1524889569475170478",
+          "position": 9
+        },
+        {
+          "boardId": "atlas-active-admission",
+          "channelId": "1526814470486360144",
+          "position": 10
+        },
+        {
+          "boardId": "cortex-active-admission",
+          "channelId": "1526814471916486821",
+          "position": 11
+        },
+        {
+          "boardId": "discordos-active-admission",
+          "channelId": "1526814473267187864",
+          "position": 12
+        },
+        {
+          "boardId": "foundation-active-admission",
+          "channelId": "1526814474173026438",
+          "position": 13
+        },
+        {
+          "boardId": "lifeline-active-admission",
+          "channelId": "1526814475720851497",
+          "position": 14
+        },
+        {
+          "boardId": "playbook-active-admission",
+          "channelId": "1526814476857376858",
+          "position": 15
+        },
+        {
+          "boardId": "stack-active-admission",
+          "channelId": "1526814478157742131",
+          "position": 16
+        },
+        {
+          "boardId": "music-sesh-active",
+          "channelId": "1508139160853286942",
+          "position": 17
+        },
+        {
+          "boardId": "shared-completed",
+          "channelId": "1508359985602625638",
+          "position": 18
+        },
+        {
+          "boardId": "socials-os-active-admission",
+          "channelId": "1526862405139828858",
+          "position": 19
+        }
+      ],
+      "guildChannelPreimage": [
+        {
+          "id": "1504671871512346695",
+          "type": 5,
+          "parentId": "1504751249965322430",
+          "position": 1,
+          "name": "updates"
+        },
+        {
+          "id": "1504673475489562744",
+          "type": 15,
+          "parentId": "1508057063874629684",
+          "position": 7,
+          "name": "feedback"
+        },
+        {
+          "id": "1504674484068552784",
+          "type": 0,
+          "parentId": "1504751249965322430",
+          "position": 2,
+          "name": "main"
+        },
+        {
+          "id": "1504694737494478888",
+          "type": 0,
+          "parentId": null,
+          "position": 0,
+          "name": "verify"
+        },
+        {
+          "id": "1504751249965322430",
+          "type": 4,
+          "parentId": null,
+          "position": 0,
+          "name": "Community"
+        },
+        {
+          "id": "1505433984773918820",
+          "type": 4,
+          "parentId": null,
+          "position": 3,
+          "name": "Purgatory"
+        },
+        {
+          "id": "1505433985860505600",
+          "type": 0,
+          "parentId": "1505433984773918820",
+          "position": 20,
+          "name": "purgatory"
+        },
+        {
+          "id": "1505465334512095272",
+          "type": 0,
+          "parentId": "1505827423919411360",
+          "position": 22,
+          "name": "temp"
+        },
+        {
+          "id": "1505742572419809400",
+          "type": 0,
+          "parentId": "1504751249965322430",
+          "position": 4,
+          "name": "exercise-image-development"
+        },
+        {
+          "id": "1505827423919411360",
+          "type": 4,
+          "parentId": null,
+          "position": 4,
+          "name": "Testing"
+        },
+        {
+          "id": "1505827424766660780",
+          "type": 15,
+          "parentId": "1505827423919411360",
+          "position": 21,
+          "name": "feedback-testing"
+        },
+        {
+          "id": "1508057063874629684",
+          "type": 4,
+          "parentId": null,
+          "position": 2,
+          "name": "Project Feedback Boards"
+        },
+        {
+          "id": "1508139160853286942",
+          "type": 15,
+          "parentId": "1508057063874629684",
+          "position": 18,
+          "name": "music-sesh"
+        },
+        {
+          "id": "1508144612957622313",
+          "type": 15,
+          "parentId": "1508057063874629684",
+          "position": 8,
+          "name": "fawxzzy-fitness"
+        },
+        {
+          "id": "1508359985602625638",
+          "type": 15,
+          "parentId": "1508057063874629684",
+          "position": 19,
+          "name": "completed"
+        },
+        {
+          "id": "1508391092662567013",
+          "type": 0,
+          "parentId": "1508057063874629684",
+          "position": 6,
+          "name": "feedback-submission"
+        },
+        {
+          "id": "1515220075366580224",
+          "type": 5,
+          "parentId": "1504751249965322430",
+          "position": 3,
+          "name": "alerts"
+        },
+        {
+          "id": "1515943795999510579",
+          "type": 0,
+          "parentId": "1505827423919411360",
+          "position": 23,
+          "name": "discordos-testing"
+        },
+        {
+          "id": "1516089949286568007",
+          "type": 4,
+          "parentId": null,
+          "position": 1,
+          "name": "Music Sesh"
+        },
+        {
+          "id": "1516089950787862689",
+          "type": 0,
+          "parentId": "1516089949286568007",
+          "position": 5,
+          "name": "music-sesh"
+        },
+        {
+          "id": "1524889569475170478",
+          "type": 15,
+          "parentId": "1508057063874629684",
+          "position": 9,
+          "name": "mazer"
+        },
+        {
+          "id": "1526814470486360144",
+          "type": 15,
+          "parentId": "1508057063874629684",
+          "position": 10,
+          "name": "atlas"
+        },
+        {
+          "id": "1526814471916486821",
+          "type": 15,
+          "parentId": "1508057063874629684",
+          "position": 11,
+          "name": "cortex"
+        },
+        {
+          "id": "1526814473267187864",
+          "type": 15,
+          "parentId": "1508057063874629684",
+          "position": 12,
+          "name": "discordos"
+        },
+        {
+          "id": "1526814474173026438",
+          "type": 15,
+          "parentId": "1508057063874629684",
+          "position": 14,
+          "name": "foundation"
+        },
+        {
+          "id": "1526814475720851497",
+          "type": 15,
+          "parentId": "1508057063874629684",
+          "position": 15,
+          "name": "lifeline"
+        },
+        {
+          "id": "1526814476857376858",
+          "type": 15,
+          "parentId": "1508057063874629684",
+          "position": 16,
+          "name": "playbook"
+        },
+        {
+          "id": "1526814478157742131",
+          "type": 15,
+          "parentId": "1508057063874629684",
+          "position": 17,
+          "name": "stack"
+        },
+        {
+          "id": "1526862405139828858",
+          "type": 15,
+          "parentId": "1508057063874629684",
+          "position": 13,
+          "name": "socials-os"
+        }
+      ]
+    },
+    {
+      "operationId": "transfer-01",
+      "kind": "completed_transfer",
+      "source": {
+        "boardId": "atlas-active-admission",
+        "forumChannelId": "1526814470486360144",
+        "threadId": "1526829391609335828",
+        "cardId": "lane-discordos-cross-project-board-integrity",
+        "title": "DiscordOS cross-project board integrity and lifecycle repair",
+        "content": "<!-- ATLAS-CARD:START -->\nATLAS-CARD-ID: `lane-discordos-cross-project-board-integrity`\n- project: `atlas`\n- type: `governance`\n- state: `in_progress`\n- priority: `Unspecified`\n- owner: `DiscordOS`\n- progress: `Unmeasured`\n- autonomous implementation: `not_admitted`\n- updated: `2026-07-14T21:54:10Z`\n\n## Summary\nDetect and repair lifecycle, reaction, completion movement, body, journal, encoding, duplicate, formatting, and readback drift across every governed Discord... [see journal/source]\n\n## Objective\n- Detect and repair lifecycle, reaction, completion movement, body, journal, encoding, duplicate, formatting, and readback drift across ev... [see journal/source]\n\n## Acceptance criteria\n- All ten proof units have current code, test, and live readback evidence across every governed board class or an expl... [see journal/source]\n- Incomplete cards show the canonical failure/X reaction and completed cards show the canonical success/check reaction\n- 4 more item(s) in journal/source\n\n## Discoveries\n- Priority is unresolved in the owner source and remains explicitly null.\n\n## Next actions\n- Not established\n\n## Blockers\n- None\n\n## Evidence\n- docs/registry/ATLAS-FULL-SYSTEM-REEVALUATION-LANES.json#lane-discordos-cross-project-board-integrity\n- 12 more item(s) in journal/source\n<!-- ATLAS-CARD:END -->",
+        "contentSha256": "15b44ed4a82f8e89ed8424f48a99881bcba3dc956be4bd58143453cac6d51413",
+        "archived": false,
+        "locked": false,
+        "project": "atlas",
+        "type": "governance",
+        "state": "in_progress",
+        "priority": "Unspecified",
+        "owner": "DiscordOS"
+      },
+      "destination": {
+        "boardId": "shared-completed",
+        "forumChannelId": "1508359985602625638",
+        "stableCardId": "lane-discordos-cross-project-board-integrity",
+        "appliedTagNames": [
+          "Feature",
+          "Completed"
+        ],
+        "appliedTagIds": [
+          "1524827256352936166",
+          "1526863195179057218"
+        ]
+      },
+      "event": {
+        "eventId": "completed:lane-discordos-cross-project-board-integrity:current-13-board-drift-repair-v1",
+        "occurredAt": "2026-07-16T14:56:38.088Z",
+        "evidence": "operator-admitted current-board maintenance transfer; scan sha256:a4768859896ea7c7d73f21eff6009dae5cbd3915aa8e14780d89a8d66ab2f182"
+      },
+      "requiredReadback": [
+        "destination_managed_body",
+        "destination_completed_state",
+        "destination_source_link",
+        "destination_exact_tags",
+        "destination_journal_event",
+        "destination_success_reaction",
+        "source_reciprocal_link",
+        "source_archived",
+        "source_locked",
+        "deterministic_no_write_replay"
+      ]
+    },
+    {
+      "operationId": "transfer-02",
+      "kind": "completed_transfer",
+      "source": {
+        "boardId": "discordos-active-admission",
+        "forumChannelId": "1526814473267187864",
+        "threadId": "1526830094361038928",
+        "cardId": "DOS-201",
+        "title": "Admit and seed seven missing project boards",
+        "content": "<!-- ATLAS-CARD:START -->\nATLAS-CARD-ID: `DOS-201`\n- project: `discordos`\n- type: `migration`\n- state: `in_progress`\n- priority: `Unspecified`\n- owner: `discordos`\n- progress: `Unmeasured`\n- autonomous implementation: `not_admitted`\n- updated: `2026-07-14T00:00:00.000Z`\n\n## Summary\nCreate the missing Atlas, DiscordOS, Foundation, Lifeline, Cortex, _stack, and Playbook forums, admit their owner adapters, and seed current owner exports through the single writer.\n\n## Objective\n- Create the missing Atlas, DiscordOS, Foundation, Lifeline, Cortex, _stack, and Playbook forums, admit their owner adapters, and seed current owner exports through the single writer.\n\n## Acceptance criteria\n- Each missing project forum is created once under the canonical Project Feedback Boards category and read back by exact channel identity.\n- Every registry entry names its admitted owner adapter and stable forum channel ID.\n- Owner exports seed idempotently with exact card and journal readback; the explicit empty _stack export creates no cards.\n- No source priority, lifecycle, or ownership value is guessed during admission.\n\n## Next actions\n- Not established\n\n## Blockers\n- None\n\n## Evidence\n- repos/DiscordOS/config/discordos-owner-work-registry.json#DOS-201\n- repos/DiscordOS/config/discordos-board-registry.json\n- repos/DiscordOS/docs/contracts/discordos-board-card-workflow-v0.md\n- repos/DiscordOS/scripts/discordos-board-card-migration-plan.js\n- repos/DiscordOS/scripts/discordos-board-card-reconciliation.js\n<!-- ATLAS-CARD:END -->",
+        "contentSha256": "280fc4f2fca2cb74de6a6744628c1053c11e6693305be1067f3f75af8e38e410",
+        "archived": false,
+        "locked": false,
+        "project": "discordos",
+        "type": "migration",
+        "state": "in_progress",
+        "priority": "Unspecified",
+        "owner": "discordos"
+      },
+      "destination": {
+        "boardId": "shared-completed",
+        "forumChannelId": "1508359985602625638",
+        "stableCardId": "DOS-201",
+        "appliedTagNames": [
+          "Feature",
+          "Completed"
+        ],
+        "appliedTagIds": [
+          "1524827256352936166",
+          "1526863195179057218"
+        ]
+      },
+      "event": {
+        "eventId": "completed:DOS-201:current-13-board-drift-repair-v1",
+        "occurredAt": "2026-07-16T14:56:38.088Z",
+        "evidence": "docs/ops/discordos-dos-201-dos-202-owner-lifecycle-closeout-2026-07-16.md"
+      },
+      "requiredReadback": [
+        "destination_managed_body",
+        "destination_completed_state",
+        "destination_source_link",
+        "destination_exact_tags",
+        "destination_journal_event",
+        "destination_success_reaction",
+        "source_reciprocal_link",
+        "source_archived",
+        "source_locked",
+        "deterministic_no_write_replay"
+      ]
+    },
+    {
+      "operationId": "transfer-03",
+      "kind": "completed_transfer",
+      "source": {
+        "boardId": "discordos-active-admission",
+        "forumChannelId": "1526814473267187864",
+        "threadId": "1526830102946512959",
+        "cardId": "DOS-202",
+        "title": "Close cross-project board integrity and lifecycle proof",
+        "content": "<!-- ATLAS-CARD:START -->\nATLAS-CARD-ID: `DOS-202`\n- project: `discordos`\n- type: `reliability`\n- state: `planning`\n- priority: `Unspecified`\n- owner: `discordos`\n- progress: `Unmeasured`\n- autonomous implementation: `not_admitted`\n- updated: `2026-07-14T00:00:00.000Z`\n\n## Summary\nProve the fixed ten-unit board integrity denominator across every admitted project, board, and card class with recurring fail-closed drift detection.\n\n## Objective\n- Prove the fixed ten-unit board integrity denominator across every admitted project, board, and card class with recurring fail-closed drift detection.\n\n## Acceptance criteria\n- All ten integrity units have current code, tests, and denominator-wide live readback or an explicit accepted not-applicable disposition.\n- Structural legacy drift is repaired or durably classified without deleting immutable Discord system history.\n- A recurring scanner fails closed on identity, lifecycle, reaction, journal, encoding, writer, or readback drift.\n- The Atlas marker moves only after evidence satisfies the fixed binary denominator.\n\n## Next actions\n- Not established\n\n## Blockers\n- None\n\n## Evidence\n- repos/DiscordOS/config/discordos-owner-work-registry.json#DOS-202\n- repos/DiscordOS/config/discordos-board-registry.json\n- repos/DiscordOS/scripts/discordos-board-card-consistency.js\n- repos/DiscordOS/scripts/discordos-board-lifecycle-reaction-drift-monitor.js\n- repos/DiscordOS/scripts/discordos-board-text-integrity.js\n<!-- ATLAS-CARD:END -->",
+        "contentSha256": "d847fd8dde8ed2caa5e41b0501c042f630b74981fe043a02f5243a354224b969",
+        "archived": false,
+        "locked": false,
+        "project": "discordos",
+        "type": "reliability",
+        "state": "planning",
+        "priority": "Unspecified",
+        "owner": "discordos"
+      },
+      "destination": {
+        "boardId": "shared-completed",
+        "forumChannelId": "1508359985602625638",
+        "stableCardId": "DOS-202",
+        "appliedTagNames": [
+          "Feature",
+          "Completed"
+        ],
+        "appliedTagIds": [
+          "1524827256352936166",
+          "1526863195179057218"
+        ]
+      },
+      "event": {
+        "eventId": "completed:DOS-202:current-13-board-drift-repair-v1",
+        "occurredAt": "2026-07-16T14:56:38.088Z",
+        "evidence": "docs/ops/discordos-dos-201-dos-202-owner-lifecycle-closeout-2026-07-16.md"
+      },
+      "requiredReadback": [
+        "destination_managed_body",
+        "destination_completed_state",
+        "destination_source_link",
+        "destination_exact_tags",
+        "destination_journal_event",
+        "destination_success_reaction",
+        "source_reciprocal_link",
+        "source_archived",
+        "source_locked",
+        "deterministic_no_write_replay"
+      ]
+    }
+  ],
+  "nextPacket": "DiscordOS guarded current 13-board drift live apply and reconciliation",
+  "planDigestSha256": "2179246439631b51d4ff76395660c4fdf3e7a237d81c0cfd1e80d28dc1fe2841"
+}

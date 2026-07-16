@@ -659,6 +659,7 @@ async function upsertDiscordForumCard({
   buildPayload,
   apply = false,
   preflight = null,
+  deferRequiredReaction = false,
   fetchImpl = fetch,
 }) {
   if (apply && !preflight) {
@@ -786,7 +787,20 @@ async function upsertDiscordForumCard({
 
   const reaction = spec.requiredReactions[0];
   const reactionResult = threadId && messageId && reasonCodes.length === 0
-    ? preflight && !preflight.reactionChanged
+    ? deferRequiredReaction
+      ? {
+        ok: true,
+        status: "deferred",
+        reactionTarget: { channelId: threadId, messageId },
+        emoji: formatReactionEmoji(reaction),
+        beforeHttpStatus: preflight?.existingMessage ? 200 : null,
+        addHttpStatus: null,
+        afterHttpStatus: null,
+        alreadyPresent: preflight ? !preflight.reactionChanged : false,
+        presentAfter: preflight ? !preflight.reactionChanged : false,
+        reasonCodes: [],
+      }
+      : preflight && !preflight.reactionChanged
       ? {
         ok: true,
         status: "already_present",
