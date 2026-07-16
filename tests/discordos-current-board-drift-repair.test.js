@@ -648,13 +648,14 @@ test("forum order readback fails if an unrelated guild channel moves", async () 
   assert(result.reasonCodes.includes("forum_order_unrelated_channel_drift"));
 });
 
-test("historical closeout artifacts remain byte invariant", () => {
+test("historical closeout artifacts remain canonical Git-byte invariant", () => {
   const expected = new Map([
-    ["docs/ops/discordos-canonical-13-board-migration-implementation-2026-07-15.md", "957bcaf06221f13d7704e54e800f7a1179cabbf310927d0ee56021c4ef3be0fc"],
-    ["docs/contracts/discordos-forum-profile-normalization-v1.md", "f4b3e5a07decce5aeadce688fb100d646afbf8a5d468faae21ed11080851d300"],
-    ["docs/ops/discordos-forum-profile-normalization-later-packets-2026-07-15.md", "b98852dd7dff1c9d8911873eb022ba9eb048e5a9f790c7ab810922e2bafe0d0a"],
+    ["docs/ops/discordos-canonical-13-board-migration-implementation-2026-07-15.md", "9eab268d33d8775d8e50dde6e371553d96ef4c2b17f7bb17a0d96cc169e911d6"],
+    ["docs/contracts/discordos-forum-profile-normalization-v1.md", "8fd49c097c8429849468568a2c4d78566da6b682803448cc28615e0a5eac2387"],
+    ["docs/ops/discordos-forum-profile-normalization-later-packets-2026-07-15.md", "db1b60ae16a28f2c26e265b18d72e84a16bd5880e912a58608617e013c3a47c2"],
   ]);
   for (const [relativePath, expectedSha] of expected) {
-    assert.equal(digest(fs.readFileSync(path.join(repoRoot, relativePath))), expectedSha, relativePath);
+    const canonicalGitBytes = Buffer.from(fs.readFileSync(path.join(repoRoot, relativePath), "utf8").replace(/\r\n/g, "\n"));
+    assert.equal(digest(canonicalGitBytes), expectedSha, relativePath);
   }
 });
