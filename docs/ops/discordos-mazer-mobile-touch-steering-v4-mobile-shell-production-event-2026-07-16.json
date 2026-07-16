@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "atlas.board-card-journal.v1",
+  "eventId": "mazer-mobile-touch-steering-v4-mobile-shell-production-20260716",
+  "occurredAt": "2026-07-16T17:23:50.343Z",
+  "actor": "Mazer",
+  "card": {
+    "id": "mazer-mobile-shell-device-harness",
+    "project": "Mazer",
+    "sourceForumChannelId": "1524889569475170478",
+    "threadId": "1525063357575593995",
+    "title": "mazer: mobile shell, portrait lock, and device harness",
+    "type": "feature",
+    "state": "review",
+    "previousState": "review",
+    "priority": "Medium",
+    "owner": "Mazer",
+    "progress": "62%",
+    "summary": "Prove the phone-shell path for safe-area placement, exact touch registration, continuous stick intent, portrait behavior, and real-device confidence.",
+    "objective": "Keep the canvas and every custom input surface in one live coordinate space while preserving a smooth 360-degree steering signal for grid-legal movement.",
+    "acceptanceCriteria": [
+      "The rendered touch target and accepted game input agree across iPhone visual-viewport and safe-area origin changes.",
+      "Stick input publishes a continuous normalized vector without angular sectors or hysteresis buckets.",
+      "The grid resolver turns toward the strongest legal thumb projection and preserves bounded one-tile Smart Steering.",
+      "Physical phone feel, browser-chrome, and installed-PWA evidence remain required before terminal completion."
+    ],
+    "discoveries": [
+      "The production surface exposes stick mode and Smart Steering enabled through the merged control contract.",
+      "Production play diagnostics preserve the 163px stick outer radius area with a 63px knob travel radius at 390x844."
+    ],
+    "nextActions": [
+      "Collect operator physical-iPhone feel proof for direct turns, T-junctions, one-tile Smart Steering, and release behavior.",
+      "Collect physical touch-alignment proof across browser-chrome and safe-area origin changes.",
+      "Continue installed-PWA, authenticated keyboard, and browser-chrome proof without treating emulation as physical closure."
+    ],
+    "blockers": [
+      "Physical-device post-deploy feel and safe-area proof remain operator-held."
+    ],
+    "evidence": [
+      "Mazer PR #78 merged as 993b8e5c68d59882c58cb2fb560b95bb980a4900.",
+      "Vercel production deployment dpl_2ZHL85A9uKeJJ1LXfdksMQxgXXrc is Ready and aliased to https://fawxzzy-mazer.vercel.app.",
+      "Production 390x844 proof reported stick mode, Smart Steering enabled, a visible 163px stick outer control with 63px travel radius, native canvas geometry, zero viewport violations, and zero browser warnings/errors."
+    ]
+  },
+  "entry": {
+    "kind": "progress",
+    "headline": "Merged continuous-stick and touch-coordinate repair is live for physical-iPhone review",
+    "completed": [
+      "Merged PR #78 to Mazer main as 993b8e5c68d59882c58cb2fb560b95bb980a4900.",
+      "Deployed the exact merge commit to Vercel production as dpl_2ZHL85A9uKeJJ1LXfdksMQxgXXrc.",
+      "Verified production at 390x844 with stick mode, Smart Steering enabled, native canvas geometry, visible continuous-stick control, zero viewport findings, and zero browser warnings/errors."
+    ],
+    "discovered": [
+      "The canonical production alias is now the correct physical-device review target for the rebuilt controller."
+    ],
+    "next": [
+      "Use operator iPhone testing to judge direct-turn capture, T-junction intent, one-tile lane shifts, touch alignment, and release feel."
+    ],
+    "blockers": [
+      "Physical-iPhone feel proof remains open."
+    ],
+    "evidence": [
+      "https://github.com/fawxzzy/mazer/pull/78",
+      "https://fawxzzy-mazer.vercel.app",
+      "Vercel deployment dpl_2ZHL85A9uKeJJ1LXfdksMQxgXXrc"
+    ]
+  },
+  "correlation": {
+    "taskId": "019f52d9-7667-72a3-a5f7-9c0613aedd8f",
+    "branch": "codex/mobile-touch-steering-v4-20260716",
+    "commit": "993b8e5c68d59882c58cb2fb560b95bb980a4900",
+    "receipt": "docs/ops/MAZER-MOBILE-TOUCH-STEERING-V4-PACKET-2026-07-16.md"
+  }
+}

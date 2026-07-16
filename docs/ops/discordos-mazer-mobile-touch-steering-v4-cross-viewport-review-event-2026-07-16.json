@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "atlas.board-card-journal.v1",
+  "eventId": "mazer-mobile-touch-steering-v4-cross-viewport-review-20260716",
+  "occurredAt": "2026-07-16T15:56:25.364Z",
+  "actor": "Mazer",
+  "card": {
+    "id": "mazer-cross-viewport-ui-reliability",
+    "project": "Mazer",
+    "sourceForumChannelId": "1524889569475170478",
+    "threadId": "1525337748830031875",
+    "title": "mazer: cross-viewport UI reliability and layout hardening",
+    "type": "feature",
+    "state": "review",
+    "previousState": "review",
+    "priority": "High",
+    "owner": "Mazer",
+    "progress": "84%",
+    "summary": "Coordinate mobile safe-area and browser layout behavior through one viewport, text-alignment, and input-coordinate contract instead of screenshot-specific offsets.",
+    "objective": "Keep menu, Options, play, and Pause geometry visually balanced and make the rendered touch target agree with the user's physical touch across visual-viewport origin changes.",
+    "acceptanceCriteria": [
+      "Shared UI text uses consistent optical centering and symmetric padding without bottom-biased empty space.",
+      "Touch input remains aligned when mobile browser chrome or safe-area origin changes without a width or height change.",
+      "Phone-sized menu, Options, play, and Pause surfaces pass route-aware bounds, overlap, and console proof.",
+      "Physical iPhone and installed-PWA evidence remains required before terminal completion."
+    ],
+    "discoveries": [
+      "Role-specific upward label lift and bottom-only run-status padding caused the reported asymmetric text boxes.",
+      "Phaser retained stale canvas bounds when the visual viewport moved but kept the same dimensions, so game-only touch hit-testing drifted below the finger."
+    ],
+    "nextActions": [
+      "Review and merge Mazer PR #78 after code review.",
+      "After a separately authorized production deployment, collect operator physical-iPhone screenshots and touch-alignment proof.",
+      "Retain the existing installed-PWA and native browser-chrome matrix as open acceptance work."
+    ],
+    "blockers": [
+      "Physical-device post-deploy proof is not available before merge and a separately authorized deployment."
+    ],
+    "evidence": [
+      "Mazer draft PR #78 at b778bc6c34fc1db01539d0286b9cc3ae2ab1d35e.",
+      "Focused input/UI packet passed 6 files / 95 tests; architecture passed 5 files / 18 tests; canonical verification passed 49 files / 367 tests; production build passed.",
+      "Isolated in-app 390x844 proof reported native canvas geometry, zero viewport or overlap violations, zero console warnings/errors, and exact upper-stick hit alignment."
+    ]
+  },
+  "entry": {
+    "kind": "review",
+    "headline": "Mobile text alignment and touch-coordinate repair is ready for review",
+    "completed": [
+      "Removed role-specific upward label offsets and made the two-row run-status padding symmetric.",
+      "Refreshed Phaser canvas bounds on same-size viewport publications and normalized custom gesture coordinates through the live canvas rectangle.",
+      "Completed focused, architecture, canonical, build, and 390x844 in-app browser proof."
+    ],
+    "discovered": [
+      "The vertical touch error was a stale coordinate-origin defect, not a device-wide touch calibration issue."
+    ],
+    "next": [
+      "Merge PR #78 after review, then obtain separately authorized production and physical-device evidence."
+    ],
+    "blockers": [
+      "Physical-device post-deploy proof remains open."
+    ],
+    "evidence": [
+      "https://github.com/fawxzzy/mazer/pull/78",
+      "Mazer commit b778bc6c34fc1db01539d0286b9cc3ae2ab1d35e",
+      "docs/ops/MAZER-MOBILE-TOUCH-STEERING-V4-PACKET-2026-07-16.md"
+    ]
+  },
+  "correlation": {
+    "taskId": "019f52d9-7667-72a3-a5f7-9c0613aedd8f",
+    "branch": "codex/mobile-touch-steering-v4-20260716",
+    "commit": "b778bc6c34fc1db01539d0286b9cc3ae2ab1d35e",
+    "receipt": "docs/ops/MAZER-MOBILE-TOUCH-STEERING-V4-PACKET-2026-07-16.md"
+  }
+}

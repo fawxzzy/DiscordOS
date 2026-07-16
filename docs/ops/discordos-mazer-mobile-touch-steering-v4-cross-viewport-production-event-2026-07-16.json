@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "atlas.board-card-journal.v1",
+  "eventId": "mazer-mobile-touch-steering-v4-cross-viewport-production-20260716",
+  "occurredAt": "2026-07-16T17:23:49.343Z",
+  "actor": "Mazer",
+  "card": {
+    "id": "mazer-cross-viewport-ui-reliability",
+    "project": "Mazer",
+    "sourceForumChannelId": "1524889569475170478",
+    "threadId": "1525337748830031875",
+    "title": "mazer: cross-viewport UI reliability and layout hardening",
+    "type": "feature",
+    "state": "review",
+    "previousState": "review",
+    "priority": "High",
+    "owner": "Mazer",
+    "progress": "84%",
+    "summary": "Coordinate mobile safe-area and browser layout behavior through one viewport, text-alignment, and input-coordinate contract instead of screenshot-specific offsets.",
+    "objective": "Keep menu, Options, play, and Pause geometry visually balanced and make the rendered touch target agree with the user's physical touch across visual-viewport origin changes.",
+    "acceptanceCriteria": [
+      "Shared UI text uses consistent optical centering and symmetric padding without bottom-biased empty space.",
+      "Touch input remains aligned when mobile browser chrome or safe-area origin changes without a width or height change.",
+      "Phone-sized menu, Options, play, and Pause surfaces pass route-aware bounds, overlap, and console proof.",
+      "Physical iPhone and installed-PWA evidence remains required before terminal completion."
+    ],
+    "discoveries": [
+      "The production surface is serving the merged PR #78 layout and input-coordinate repair at the canonical alias.",
+      "At 390x844 the production play HUD and Pause control both occupy a 62px lane while the status text remains contained."
+    ],
+    "nextActions": [
+      "Collect operator physical-iPhone screenshots for text padding, safe areas, menu, Options, play, and Pause.",
+      "Collect physical touch-alignment proof across mobile browser-chrome changes.",
+      "Retain installed-PWA and native browser-chrome/maximize acceptance work."
+    ],
+    "blockers": [
+      "Physical-device post-deploy screenshots and touch proof remain operator-held."
+    ],
+    "evidence": [
+      "Mazer PR #78 merged as 993b8e5c68d59882c58cb2fb560b95bb980a4900.",
+      "Vercel production deployment dpl_2ZHL85A9uKeJJ1LXfdksMQxgXXrc is Ready and aliased to https://fawxzzy-mazer.vercel.app.",
+      "Production 390x844 proof reported native 390x844 canvas geometry, zero overlap/offscreen violations, fitting status text, equal 62px status/Pause height, and zero browser warnings/errors."
+    ]
+  },
+  "entry": {
+    "kind": "progress",
+    "headline": "Merged mobile UI repair is live in production and ready for physical-iPhone review",
+    "completed": [
+      "Merged PR #78 to Mazer main as 993b8e5c68d59882c58cb2fb560b95bb980a4900.",
+      "Deployed the exact merge commit to Vercel production as dpl_2ZHL85A9uKeJJ1LXfdksMQxgXXrc.",
+      "Verified the canonical production alias at 390x844 with native canvas geometry, contained status text, matched HUD/Pause height, zero overlap/offscreen findings, and zero browser warnings/errors."
+    ],
+    "discovered": [
+      "The production alias resolves the new hashed main bundle and the merged viewport/input contract."
+    ],
+    "next": [
+      "Use operator iPhone screenshots to complete physical safe-area, text-padding, and touch-alignment review without ratcheting from emulation alone."
+    ],
+    "blockers": [
+      "Physical-iPhone evidence remains open."
+    ],
+    "evidence": [
+      "https://github.com/fawxzzy/mazer/pull/78",
+      "https://fawxzzy-mazer.vercel.app",
+      "Vercel deployment dpl_2ZHL85A9uKeJJ1LXfdksMQxgXXrc"
+    ]
+  },
+  "correlation": {
+    "taskId": "019f52d9-7667-72a3-a5f7-9c0613aedd8f",
+    "branch": "codex/mobile-touch-steering-v4-20260716",
+    "commit": "993b8e5c68d59882c58cb2fb560b95bb980a4900",
+    "receipt": "docs/ops/MAZER-MOBILE-TOUCH-STEERING-V4-PACKET-2026-07-16.md"
+  }
+}

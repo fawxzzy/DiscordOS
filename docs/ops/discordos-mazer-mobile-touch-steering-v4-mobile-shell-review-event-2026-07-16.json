@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "atlas.board-card-journal.v1",
+  "eventId": "mazer-mobile-touch-steering-v4-mobile-shell-review-20260716",
+  "occurredAt": "2026-07-16T15:56:26.364Z",
+  "actor": "Mazer",
+  "card": {
+    "id": "mazer-mobile-shell-device-harness",
+    "project": "Mazer",
+    "sourceForumChannelId": "1524889569475170478",
+    "threadId": "1525063357575593995",
+    "title": "mazer: mobile shell, portrait lock, and device harness",
+    "type": "feature",
+    "state": "review",
+    "previousState": "review",
+    "priority": "Medium",
+    "owner": "Mazer",
+    "progress": "62%",
+    "summary": "Prove the phone-shell path for safe-area placement, exact touch registration, continuous stick intent, portrait behavior, and real-device confidence.",
+    "objective": "Keep the canvas and every custom input surface in one live coordinate space while preserving a smooth 360-degree steering signal for grid-legal movement.",
+    "acceptanceCriteria": [
+      "The rendered touch target and accepted game input agree across iPhone visual-viewport and safe-area origin changes.",
+      "Stick input publishes a continuous normalized vector without angular sectors or hysteresis buckets.",
+      "The grid resolver turns toward the strongest legal thumb projection and preserves bounded one-tile Smart Steering.",
+      "Physical phone feel, browser-chrome, and installed-PWA evidence remain required before terminal completion."
+    ],
+    "discoveries": [
+      "The prior controller quantized the stick before the movement resolver, then discarded secondary-axis intent again, creating hard turn boundaries.",
+      "Same-size visual-viewport origin changes bypassed Phaser scale refresh and left cached hit-test bounds stale."
+    ],
+    "nextActions": [
+      "Review and merge Mazer PR #78 after code review.",
+      "After a separately authorized production deployment, validate continuous-stick turns and touch alignment on the operator's iPhone.",
+      "Continue installed-PWA, browser-chrome, and authenticated keyboard proof without treating desktop emulation as physical-device closure."
+    ],
+    "blockers": [
+      "Physical-device post-deploy feel and safe-area proof remain unavailable before merge and deployment."
+    ],
+    "evidence": [
+      "Mazer draft PR #78 at b778bc6c34fc1db01539d0286b9cc3ae2ab1d35e.",
+      "Pure fixtures cover continuous vector ranking, direct upward T turns, legal corners, one-tile lane shifts, release cleanup, and live client-to-canvas coordinate mapping.",
+      "An exact upper-stick action at 390x844 moved the player from (26,36) to (26,35) in one accepted turn and released to idle with zero active controls."
+    ]
+  },
+  "entry": {
+    "kind": "review",
+    "headline": "Continuous stick and mobile touch-coordinate repair is ready for review",
+    "completed": [
+      "Replaced stick segments and secondary-axis thresholding with one continuous normalized vector.",
+      "Ranked legal cardinal exits from the live thumb projection on every movement cadence.",
+      "Preserved direct turns, legal corners, bounded one-tile Smart Steering, and clean release semantics.",
+      "Aligned custom touch gestures and Phaser hit-testing with the live canvas rectangle."
+    ],
+    "discovered": [
+      "The hard-to-turn behavior came from two quantization layers rather than the physical stick radius."
+    ],
+    "next": [
+      "Merge PR #78 after review, then obtain separately authorized production and physical-iPhone feel proof."
+    ],
+    "blockers": [
+      "Physical-device post-deploy feel proof remains open."
+    ],
+    "evidence": [
+      "https://github.com/fawxzzy/mazer/pull/78",
+      "Mazer commit b778bc6c34fc1db01539d0286b9cc3ae2ab1d35e",
+      "docs/ops/MAZER-MOBILE-TOUCH-STEERING-V4-PACKET-2026-07-16.md"
+    ]
+  },
+  "correlation": {
+    "taskId": "019f52d9-7667-72a3-a5f7-9c0613aedd8f",
+    "branch": "codex/mobile-touch-steering-v4-20260716",
+    "commit": "b778bc6c34fc1db01539d0286b9cc3ae2ab1d35e",
+    "receipt": "docs/ops/MAZER-MOBILE-TOUCH-STEERING-V4-PACKET-2026-07-16.md"
+  }
+}
