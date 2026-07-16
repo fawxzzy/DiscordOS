@@ -106,6 +106,10 @@ function validateInput(options) {
     typeof options.destinationStatePreimage !== "object"
     || typeof options.destinationStatePreimage.archived !== "boolean"
     || typeof options.destinationStatePreimage.locked !== "boolean"
+    || (
+      options.destinationStatePreimage.threadId != null
+      && (typeof options.destinationStatePreimage.threadId !== "string" || options.destinationStatePreimage.threadId.length === 0)
+    )
   )) reasonCodes.push("destination_state_preimage_invalid");
   if (options.sourceForumChannelId === options.completedForumChannelId) {
     reasonCodes.push("source_and_completed_forum_must_differ");
@@ -583,6 +587,11 @@ async function buildCompletedBoardTransfer({
   reasonCodes.push(...upsertPreflight.reasonCodes);
 
   if (destinationStatePreimage && !existing) reasonCodes.push("completed_card_destination_state_preimage_without_destination");
+  if (
+    destinationStatePreimage?.threadId
+    && existing
+    && existing.thread.id !== destinationStatePreimage.threadId
+  ) reasonCodes.push("completed_card_destination_state_thread_mismatch");
   const destinationLiveState = existing ? {
     archived: existing.thread?.thread_metadata?.archived === true,
     locked: existing.thread?.thread_metadata?.locked === true,
@@ -970,7 +979,7 @@ async function buildCompletedBoardTransfer({
         reopenHttpStatus: destinationReopen?.status || null,
         restored: destinationRestored,
         restoreHttpStatus: destinationRestore?.status || null,
-        expected: destinationOriginalState,
+        expected: destinationOriginalState || (finalDestinationId ? { archived: false, locked: false } : null),
       },
       journal: {
         action: journalAction,

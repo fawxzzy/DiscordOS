@@ -333,6 +333,131 @@ test("completed transfer creates, verifies, links, archives, and locks", async (
   assert(calls.some((call) => call.url.endsWith("/channels/source-thread") && call.method === "PATCH"));
 });
 
+test("a newly created destination persists exact resume state after journal failure", async () => {
+  const eventId = "completed:CARD-42:new-destination-resume";
+  const occurredAt = "2026-07-16T18:00:00.000Z";
+  let destinationExists = false;
+  let destinationContent = "";
+  let destinationTags = [];
+  let journalContent = null;
+  let journalCreateFails = true;
+  let reactionPresent = false;
+  let sourceContent = "Original card";
+  let sourceArchived = false;
+  let sourceLocked = false;
+  let destinationCreates = 0;
+  let journalCreates = 0;
+  const run = (destinationStatePreimage = null) => _internals.buildCompletedBoardTransfer({
+    ...baseOptions,
+    eventId,
+    occurredAt,
+    completedTagIds: ["feature-tag", "completed-tag"],
+    requireStableIdentity: true,
+    sourceContentPreimage: "Original card",
+    sourceTitlePreimage: "Card title",
+    destinationStatePreimage,
+    repairExactPostimage: true,
+    apply: true,
+    allowApply: true,
+    fetchImpl: async (url, init) => {
+      if (url.endsWith("/channels/source-thread/messages/source-thread")) {
+        if (init.method === "PATCH") sourceContent = JSON.parse(init.body).content;
+        return response({ payload: { id: "source-thread", content: sourceContent } });
+      }
+      if (url.endsWith("/channels/source-thread")) {
+        if (init.method === "PATCH") {
+          const body = JSON.parse(init.body);
+          sourceArchived = body.archived;
+          sourceLocked = body.locked;
+        }
+        return response({ payload: {
+          id: "source-thread",
+          name: "Card title",
+          parent_id: "source-forum",
+          guild_id: "guild",
+          thread_metadata: { archived: sourceArchived, locked: sourceLocked },
+        } });
+      }
+      if (url.endsWith("/guilds/guild/threads/active")) {
+        return response({ payload: { threads: destinationExists ? [{
+          id: "completed-thread",
+          name: "Card title",
+          parent_id: "completed-forum",
+          applied_tags: destinationTags,
+          thread_metadata: { archived: false, locked: false },
+        }] : [] } });
+      }
+      if (url.endsWith("/channels/completed-forum/threads/archived/public?limit=100")) {
+        return response({ payload: { threads: [], has_more: false } });
+      }
+      if (url.endsWith("/channels/completed-forum/threads") && init.method === "POST") {
+        destinationCreates += 1;
+        destinationExists = true;
+        const body = JSON.parse(init.body);
+        destinationContent = body.message.content;
+        destinationTags = body.applied_tags;
+        return response({ status: 201, payload: { id: "completed-thread", message: { id: "completed-thread" } } });
+      }
+      if (url.endsWith("/channels/completed-thread/messages/completed-thread")) {
+        return response({ payload: {
+          id: "completed-thread",
+          content: destinationContent,
+          reactions: reactionPresent
+            ? [{ emoji: { name: "success", id: "1507384062166302851" }, me: true, count: 1 }]
+            : [],
+        } });
+      }
+      if (url.endsWith("/channels/completed-thread/messages?limit=100")) {
+        return response({ payload: journalContent ? [{ id: "completion-journal", content: journalContent }] : [] });
+      }
+      if (url.endsWith("/channels/completed-thread/messages") && init.method === "POST") {
+        if (journalCreateFails) return response({ ok: false, status: 500, payload: { message: "Injected journal failure" } });
+        journalCreates += 1;
+        journalContent = JSON.parse(init.body).content;
+        return response({ status: 201, payload: { id: "completion-journal", content: journalContent } });
+      }
+      if (url.endsWith("/channels/completed-thread/messages/completion-journal")) {
+        return response({ payload: { id: "completion-journal", content: journalContent } });
+      }
+      if (url.includes("/channels/completed-thread/messages/completed-thread/reactions/") && init.method === "PUT") {
+        reactionPresent = true;
+        return response({ status: 204 });
+      }
+      if (url.endsWith("/channels/completed-thread")) {
+        return response({ payload: {
+          id: "completed-thread",
+          name: "Card title",
+          parent_id: "completed-forum",
+          applied_tags: destinationTags,
+          thread_metadata: { archived: false, locked: false },
+        } });
+      }
+      throw new Error(`unexpected request ${init.method} ${url}`);
+    },
+  });
+
+  const partial = await run();
+  assert.equal(partial.ok, false);
+  assert(partial.reasonCodes.includes("completed_card_journal_create_failed"));
+  assert.equal(partial.writeCount, 1, "the destination creation is retained in the blocked receipt");
+  assert.equal(partial.completed.threadId, "completed-thread");
+  assert.deepEqual(partial.completed.archiveState.expected, { archived: false, locked: false });
+
+  journalCreateFails = false;
+  const resumeState = { threadId: partial.completed.threadId, ...partial.completed.archiveState.expected };
+  const resumed = await run(resumeState);
+  assert.equal(resumed.ok, true, JSON.stringify(resumed, null, 2));
+  assert.equal(resumed.writeCount, 4, "journal, reaction, source link, and source archive are the only resume writes");
+  assert.equal(destinationCreates, 1, "resume must reuse the exact created destination");
+  assert.equal(journalCreates, 1);
+
+  const replay = await run(resumeState);
+  assert.equal(replay.ok, true, JSON.stringify(replay, null, 2));
+  assert.equal(replay.writeCount, 0);
+  assert.equal(destinationCreates, 1);
+  assert.equal(journalCreates, 1);
+});
+
 test("destination failure never archives the source card", async () => {
   const calls = [];
   const result = await _internals.buildCompletedBoardTransfer({
@@ -360,6 +485,7 @@ test("destination failure never archives the source card", async () => {
   assert.equal(result.ok, false);
   assert.equal(result.status, "blocked");
   assert(result.reasonCodes.includes("card_thread_create_failed"));
+  assert.equal(result.completed.archiveState.expected, null, "failed creation must not invent destination state");
   assert(!calls.some((call) => call.url.endsWith("/channels/source-thread") && call.method === "PATCH"));
 });
 

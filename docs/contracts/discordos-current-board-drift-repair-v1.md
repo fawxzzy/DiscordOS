@@ -7,7 +7,7 @@ This contract defines one targeted, fail-closed DiscordOS maintenance command fo
 The sole command surface is:
 
 ```text
-npm run ops:discordos:current-board-drift-repair -- <mode> --evidence <scan.json> [--plan <plan.json>] [--output <receipt.json>]
+npm run ops:discordos:current-board-drift-repair -- <mode> --evidence <scan.json> [--plan <plan.json>] [--output <receipt.json>] [--resume-receipt <prior-blocked-receipt.json>]
 ```
 
 Modes are separate:
@@ -17,7 +17,7 @@ Modes are separate:
 - `--dry-run`: the same no-write contract with a dry-run receipt.
 - `--apply --allow-apply`: execute only after every current preimage passes.
 
-The default mode is `--preflight`. `--current-scan <fixture>` is admitted only for no-write preflight/dry-run evidence and is rejected by apply mode.
+The default mode is `--preflight`. `--current-scan <fixture>` is admitted only for no-write preflight/dry-run evidence and is rejected by apply mode. Apply requires `--output` so every admitted mutation attempt leaves a durable receipt. `--resume-receipt` is apply-only.
 
 ## Evidence and plan identity
 
@@ -69,13 +69,14 @@ Operations are idempotent:
 - strict byte-exact body and journal enforcement is enabled only when the reviewed source preimage is supplied by this plan-backed command; the reusable standalone transfer CLI preserves a stable-ID-matched persisted destination and journal on replay;
 - an exact archived+locked destination is classified without reopening and replays with zero writes; a repair-needed archived destination is reopened only for the bounded repair and restored to its exact prior archive/lock state before source mutation. The original state is retained in the operation receipt, restoration gets at most two logical attempts (each retaining the existing HTTP retry guard), only a successful re-close is recorded as restored, and a recovered first-attempt failure does not leave a stale blocking reason;
 - if both bounded re-close attempts fail, the receipt remains blocked with the original required archive/lock state and exact successful-write count. A later plan-backed invocation may not adopt an open destination that still needs destination repair as its new preimage; without an explicit trusted state preimage it fails closed with `completed_card_destination_archive_preimage_unknown`;
+- every blocked completed-transfer receipt that created or adopted a destination persists its exact stable thread ID and the destination archive/lock state that must survive the operation. This is `false/false` for a newly created destination and the captured live preimage for an existing destination; a failed create records no invented destination state. A later apply may use that prior exact plan/evidence-bound blocked receipt through `--resume-receipt`; the executor binds its plan, evidence, card, operation, destination ID, and state before allowing the partial destination to resume. A different destination or state fails closed;
 - journal history is classified before an archived destination reopens, required success-reaction reconciliation is deferred until the journal succeeds, and any journal read/create/update failure is a hard barrier before tag, reaction, or source mutation;
 - the one admitted partial source state is the exact reviewed reciprocal-link body while the source is explicitly open and not locked (`locked` may be omitted by Discord); replay may perform only the remaining archive+lock transition, while every other source-body or state drift blocks;
 - applied tag IDs are duplicate-sensitive sets: response order is irrelevant, but missing, extra, or duplicate IDs are rejected;
 - completed-transfer receipts count every successful non-GET Discord request, including writes completed before a later blocked return;
 - a successful replay produces zero writes.
 
-On partial failure, the receipt stops at the first failed write/readback except for a bounded destination archive-state restoration required after a repair attempt. A later invocation re-runs the complete preflight and skips only operations proven complete by exact postimage readback. Duplicate completed cards and title-only destination reuse are forbidden.
+On partial failure, the receipt stops at the first failed write/readback except for a bounded destination archive-state restoration required after a repair attempt. A later invocation re-runs the complete preflight and skips only operations proven complete by exact postimage readback. When a completed destination was created or reopened before the failure, resume requires the durable prior blocked receipt; it is never inferred from the currently open thread. Duplicate completed cards and title-only destination reuse are forbidden.
 
 ## Ordering boundary
 

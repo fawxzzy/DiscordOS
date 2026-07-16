@@ -189,6 +189,7 @@ function parseArgs(args) {
     evidencePath: null,
     planPath: DEFAULT_PLAN_PATH,
     currentScanPath: null,
+    resumeReceiptPath: null,
     outputPath: null,
     allowApply: false,
     json: false,
@@ -209,6 +210,9 @@ function parseArgs(args) {
     } else if (arg === "--current-scan") {
       options.currentScanPath = path.resolve(readValue(args, index, "missing_current_scan_path"));
       index += 1;
+    } else if (arg === "--resume-receipt") {
+      options.resumeReceiptPath = path.resolve(readValue(args, index, "missing_resume_receipt_path"));
+      index += 1;
     } else if (arg === "--output") {
       options.outputPath = path.resolve(readValue(args, index, "missing_output_path"));
       index += 1;
@@ -218,6 +222,8 @@ function parseArgs(args) {
   }
   if (!options.evidencePath) throw new Error("evidence_path_missing");
   if (options.mode === "apply" && options.currentScanPath) throw new Error("apply_fixture_scan_not_allowed");
+  if (options.resumeReceiptPath && options.mode !== "apply") throw new Error("resume_receipt_requires_apply");
+  if (options.mode === "apply" && !options.outputPath) throw new Error("apply_output_path_missing");
   if (options.mode === "generate_plan" && !options.outputPath) options.outputPath = options.planPath;
   return options;
 }
@@ -703,7 +709,11 @@ function successReactionPresent(message) {
   );
 }
 
-async function inspectTransferRuntime(operation, { env = process.env, fetchImpl = fetch } = {}) {
+async function inspectTransferRuntime(operation, {
+  env = process.env,
+  fetchImpl = fetch,
+  destinationStatePreimage = null,
+} = {}) {
   const reasonCodes = [];
   const token = String(env?.DISCORDOS_BOT_TOKEN || "").trim();
   if (!token) return { ok: false, operationId: operation.operationId, reasonCodes: ["discord_bot_token_missing"] };
@@ -817,6 +827,30 @@ async function inspectTransferRuntime(operation, { env = process.env, fetchImpl 
     reasonCodes.push("transfer_source_content_preimage_drift");
   }
   const destinationContent = String(destinationMessage?.content || "");
+  if (destinationStatePreimage && !destination) reasonCodes.push("completed_card_destination_state_preimage_without_destination");
+  if (
+    destinationStatePreimage?.threadId
+    && destination
+    && destination.id !== destinationStatePreimage.threadId
+  ) reasonCodes.push("completed_card_destination_state_thread_mismatch");
+  const destinationLiveState = destination ? {
+    archived: destination.thread_metadata?.archived === true,
+    locked: destination.thread_metadata?.locked === true,
+  } : null;
+  const destinationArchiveStateExact = Boolean(destination && destinationStatePreimage) && (
+    destinationLiveState.archived === destinationStatePreimage.archived
+    && destinationLiveState.locked === destinationStatePreimage.locked
+  );
+  if (
+    destinationStatePreimage
+    && destination
+    && !destinationArchiveStateExact
+    && !(
+      destinationLiveState.archived === false
+      && destinationLiveState.locked === false
+      && (destinationStatePreimage.archived || destinationStatePreimage.locked)
+    )
+  ) reasonCodes.push("completed_card_destination_state_preimage_mismatch");
   const eventMarker = `ATLAS-JOURNAL-EVENT-ID: \`${operation.event.eventId}\``;
   const matchingJournalMessages = journalMessages.filter((message) => String(message?.content || "").includes(eventMarker));
   const journalMarkerCount = matchingJournalMessages.length;
@@ -837,6 +871,7 @@ async function inspectTransferRuntime(operation, { env = process.env, fetchImpl 
     sourceArchived: sourcePostimageExact,
     sourceLocked: sourcePostimageExact,
     sourcePostimageExact,
+    archiveStateExact: !destinationStatePreimage || destinationArchiveStateExact,
   } : null;
   const destinationRepairExact = Boolean(readback) && [
     "stableIdentity",
@@ -853,6 +888,7 @@ async function inspectTransferRuntime(operation, { env = process.env, fetchImpl 
   ].every((field) => readback[field] === true);
   if (
     destination
+    && !destinationStatePreimage
     && destination.thread_metadata?.archived !== true
     && destination.thread_metadata?.locked !== true
     && !destinationRepairExact
@@ -886,6 +922,56 @@ async function inspectTransferRuntime(operation, { env = process.env, fetchImpl 
     complete,
     reasonCodes: unique(reasonCodes).sort(),
   };
+}
+
+function extractTransferResumeStates(plan, resumeReceipt) {
+  const reasonCodes = [];
+  const states = new Map();
+  if (resumeReceipt == null) return { ok: true, states, reasonCodes };
+  pushIf(reasonCodes, resumeReceipt?.schemaVersion !== RECEIPT_SCHEMA_VERSION, "resume_receipt_schema_mismatch");
+  pushIf(reasonCodes, resumeReceipt?.eventId !== EVENT_ID, "resume_receipt_event_mismatch");
+  pushIf(reasonCodes, resumeReceipt?.mode !== "apply", "resume_receipt_mode_mismatch");
+  pushIf(reasonCodes, resumeReceipt?.ok !== false || resumeReceipt?.status !== "blocked", "resume_receipt_status_mismatch");
+  pushIf(reasonCodes, resumeReceipt?.planDigestSha256 !== plan?.planDigestSha256, "resume_receipt_plan_digest_mismatch");
+  pushIf(reasonCodes, resumeReceipt?.evidence?.rawSha256 !== plan?.generatedFrom?.rawSha256, "resume_receipt_evidence_raw_digest_mismatch");
+  pushIf(reasonCodes, resumeReceipt?.evidence?.canonicalSha256 !== plan?.generatedFrom?.canonicalSha256, "resume_receipt_evidence_canonical_digest_mismatch");
+  pushIf(reasonCodes, !Array.isArray(resumeReceipt?.operationReceipts), "resume_receipt_operations_missing");
+  const planned = new Map((plan?.operations || [])
+    .filter((operation) => operation.kind === "completed_transfer")
+    .map((operation) => [operation.operationId, operation]));
+  for (const row of resumeReceipt?.operationReceipts || []) {
+    if (row?.kind !== "completed_transfer") continue;
+    const operation = planned.get(row.operationId);
+    if (!operation) {
+      reasonCodes.push("resume_receipt_extra_transfer_operation");
+      continue;
+    }
+    if (row?.ok === true && row?.status !== "blocked") continue;
+    const expected = row?.receipt?.completed?.archiveState?.expected;
+    if (expected == null) continue;
+    if (
+      row?.ok !== false
+      || row?.status !== "blocked"
+      || typeof expected?.archived !== "boolean"
+      || typeof expected?.locked !== "boolean"
+      || row?.receipt?.cardId !== operation.source.cardId
+      || typeof row?.receipt?.completed?.threadId !== "string"
+      || row.receipt.completed.threadId.length === 0
+    ) {
+      reasonCodes.push(`resume_receipt_transfer_state_invalid:${row.operationId}`);
+      continue;
+    }
+    if (states.has(row.operationId)) {
+      reasonCodes.push(`resume_receipt_transfer_duplicate:${row.operationId}`);
+      continue;
+    }
+    states.set(row.operationId, {
+      threadId: row.receipt.completed.threadId,
+      archived: expected.archived,
+      locked: expected.locked,
+    });
+  }
+  return { ok: reasonCodes.length === 0, states, reasonCodes: unique(reasonCodes).sort() };
 }
 
 async function inspectTagRuntime(operation, { env = process.env, fetchImpl = fetch } = {}) {
@@ -1052,6 +1138,7 @@ async function runRepair({
   offlineFixture = false,
   admittedEvidenceSha256 = ADMITTED_EVIDENCE_SHA256,
   trustedPlanDigestSha256 = TRUSTED_PLAN_DIGEST_SHA256,
+  resumeReceipt = null,
 } = {}) {
   const planReasonCodes = verifyPlan({
     plan,
@@ -1061,7 +1148,8 @@ async function runRepair({
     trustedPlanDigestSha256,
   });
   const admission = resolveAdmission({ mode, allowApply, env });
-  const reasonCodes = [...planReasonCodes, ...(mode === "apply" ? admission.reasonCodes : [])];
+  const resumeState = extractTransferResumeStates(plan, resumeReceipt);
+  const reasonCodes = [...planReasonCodes, ...resumeState.reasonCodes, ...(mode === "apply" ? admission.reasonCodes : [])];
   if (mode === "apply" && offlineFixture) reasonCodes.push("apply_fixture_scan_not_allowed");
   if (reasonCodes.length > 0) {
     return {
@@ -1091,7 +1179,11 @@ async function runRepair({
     tagInspections = await Promise.all(tagOperations.map((operation) => tagInspectionImpl(operation, { env, fetchImpl })));
     orderInspection = await orderInspectionImpl(orderOperation, { env, fetchImpl });
     for (const operation of transferOperations) {
-      transferInspections.push(await transferInspectionImpl(operation, { env, fetchImpl }));
+      transferInspections.push(await transferInspectionImpl(operation, {
+        env,
+        fetchImpl,
+        destinationStatePreimage: resumeState.states.get(operation.operationId) || null,
+      }));
     }
     reasonCodes.push(...tagInspections.flatMap((row) => row.reasonCodes || []));
     reasonCodes.push(...(orderInspection?.reasonCodes || []));
@@ -1171,6 +1263,7 @@ async function runRepair({
         requireStableIdentity: true,
         sourceContentPreimage: operation.source.content,
         sourceTitlePreimage: operation.source.title,
+        destinationStatePreimage: resumeState.states.get(operation.operationId) || null,
         repairExactPostimage: true,
         allowApply: true,
         apply: true,
@@ -1256,6 +1349,9 @@ async function main() {
     return;
   }
   const plan = (await readJsonWithBytes(options.planPath)).value;
+  const resumeReceipt = options.resumeReceiptPath
+    ? (await readJsonWithBytes(options.resumeReceiptPath)).value
+    : null;
   let fixtureScan = null;
   if (options.currentScanPath) fixtureScan = (await readJsonWithBytes(options.currentScanPath)).value;
   const receipt = await runRepair({
@@ -1264,6 +1360,7 @@ async function main() {
     evidenceBytes: evidence.bytes,
     admittedScan: evidence.value,
     allowApply: options.allowApply,
+    resumeReceipt,
     currentScanImpl: fixtureScan ? async () => structuredClone(fixtureScan) : buildLiveScan,
     offlineFixture: Boolean(fixtureScan),
   });
@@ -1314,6 +1411,7 @@ module.exports = {
     applyTagRepair,
     applyOrderRepair,
     validateTransferReceipt,
+    extractTransferResumeStates,
     resolveAdmission,
     buildLiveScan,
     runRepair,

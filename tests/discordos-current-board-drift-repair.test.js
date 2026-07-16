@@ -382,6 +382,25 @@ test("explicit apply flag and both environment guards are mandatory", async () =
   assert.equal(receipt.discordMutations, 0);
 });
 
+test("apply requires a durable output and accepts a resume receipt only in apply mode", () => {
+  assert.throws(
+    () => _internals.parseArgs(["--apply", "--evidence", "scan.json"]),
+    /apply_output_path_missing/,
+  );
+  assert.throws(
+    () => _internals.parseArgs(["--dry-run", "--evidence", "scan.json", "--resume-receipt", "prior.json"]),
+    /resume_receipt_requires_apply/,
+  );
+  const parsed = _internals.parseArgs([
+    "--apply", "--allow-apply", "--evidence", "scan.json", "--output", "next.json",
+    "--resume-receipt", "prior.json",
+  ]);
+  assert.equal(parsed.mode, "apply");
+  assert.equal(parsed.allowApply, true);
+  assert.equal(parsed.resumeReceiptPath, path.resolve("prior.json"));
+  assert.equal(parsed.outputPath, path.resolve("next.json"));
+});
+
 function markTagComplete(scan, operation) {
   const profile = scan.cards.boardProfiles.find((row) => row.boardId === operation.boardId);
   const row = profile.appliedTagSafety.semanticRows.find((candidate) => candidate.threadId === operation.threadId);
@@ -447,10 +466,12 @@ function successfulTransferReceipt(operation) {
   return {
     ok: true,
     status: "transferred",
+    cardId: operation.source.cardId,
     writeCount: 6,
     source: { readback: { threadRead: true, messageRead: true, archived: true, locked: true, completedLinkPresent: true, postimageExact: true } },
     completed: {
       threadId: `destination-${operation.source.cardId}`,
+      archiveState: { expected: { archived: false, locked: false } },
       reaction: { presentAfter: true },
       journal: { action: "created" },
       readback: destinationReadback,
@@ -458,6 +479,94 @@ function successfulTransferReceipt(operation) {
     reasonCodes: [],
   };
 }
+
+test("a plan-bound blocked receipt authorizes only its exact incomplete destination state", async () => {
+  const fixture = makeFixture();
+  const operation = fixture.plan.operations.find((row) => row.kind === "completed_transfer");
+  const completedOperation = fixture.plan.operations.find((row) =>
+    row.kind === "completed_transfer" && row.operationId !== operation.operationId
+  );
+  const resumeReceipt = {
+    schemaVersion: _internals.RECEIPT_SCHEMA_VERSION,
+    eventId: _internals.EVENT_ID,
+    ok: false,
+    status: "blocked",
+    mode: "apply",
+    planDigestSha256: fixture.plan.planDigestSha256,
+    evidence: clone(fixture.plan.generatedFrom),
+    operationReceipts: [{
+      operationId: operation.operationId,
+      kind: operation.kind,
+      ok: false,
+      status: "blocked",
+      receipt: {
+        cardId: operation.source.cardId,
+        completed: {
+          threadId: "destination-resume",
+          archiveState: { expected: { archived: false, locked: false } },
+        },
+      },
+    }, {
+      operationId: completedOperation.operationId,
+      kind: completedOperation.kind,
+      ok: true,
+      status: "transferred",
+      receipt: successfulTransferReceipt(completedOperation),
+    }],
+  };
+  const extracted = _internals.extractTransferResumeStates(fixture.plan, resumeReceipt);
+  assert.equal(extracted.ok, true);
+  assert.deepEqual(extracted.states.get(operation.operationId), {
+    threadId: "destination-resume",
+    archived: false,
+    locked: false,
+  });
+
+  const capturedInspectionStates = [];
+  const capturedApplyStates = [];
+  const result = await _internals.runRepair({
+    mode: "apply",
+    plan: fixture.plan,
+    evidenceBytes: fixture.evidenceBytes,
+    admittedScan: fixture.scan,
+    admittedEvidenceSha256: fixture.admittedEvidenceSha256,
+    trustedPlanDigestSha256: fixture.plan.planDigestSha256,
+    resumeReceipt,
+    allowApply: true,
+    env: {
+      DISCORDOS_BOT_TOKEN: "fixture",
+      DISCORDOS_CURRENT_BOARD_DRIFT_REPAIR: "enabled",
+      DISCORDOS_BOARD_COMPLETED_TRANSFER: "enabled",
+    },
+    currentScanImpl: async () => clone(fixture.scan),
+    tagInspectionImpl: async (candidate) => ({ ok: true, operationId: candidate.operationId, status: "complete", reasonCodes: [] }),
+    orderInspectionImpl: async (candidate) => ({ ok: true, operationId: candidate.operationId, status: "complete", reasonCodes: [] }),
+    transferInspectionImpl: async (candidate, options) => {
+      capturedInspectionStates.push([candidate.operationId, options.destinationStatePreimage]);
+      return {
+        ok: true,
+        operationId: candidate.operationId,
+        status: candidate.operationId === operation.operationId ? "pending" : "complete",
+        complete: candidate.operationId !== operation.operationId,
+        destination: { readback: {} },
+        reasonCodes: [],
+      };
+    },
+    transferApplyImpl: async (options) => {
+      capturedApplyStates.push(options.destinationStatePreimage);
+      return { ok: false, status: "blocked", cardId: operation.source.cardId, writeCount: 0, reasonCodes: ["injected_stop"] };
+    },
+  });
+  assert.equal(result.ok, false);
+  assert.deepEqual(capturedInspectionStates.find(([id]) => id === operation.operationId)[1], extracted.states.get(operation.operationId));
+  assert.deepEqual(capturedApplyStates, [extracted.states.get(operation.operationId)]);
+
+  const tampered = clone(resumeReceipt);
+  tampered.operationReceipts[0].receipt.completed.threadId = "wrong-destination";
+  const tamperedState = _internals.extractTransferResumeStates(fixture.plan, tampered);
+  assert.equal(tamperedState.ok, true, "receipt parser retains the exact claimed ID for live byte-exact validation");
+  assert.equal(tamperedState.states.get(operation.operationId).threadId, "wrong-destination");
+});
 
 test("partial failure resumes safely and successful replay produces no duplicate writes", async () => {
   const fixture = makeFixture();
@@ -590,8 +699,10 @@ test("completed transfer replay rejects corrupted owner, project, evidence, or b
     sourceContent = expectedSource,
     sourceArchived = true,
     sourceLocked = true,
+    destinationStatePreimage = null,
   } = {}) => _internals.inspectTransferRuntime(operation, {
     env: { DISCORDOS_BOT_TOKEN: "fixture" },
+    destinationStatePreimage,
     fetchImpl: async (url) => {
       if (url.endsWith(`/channels/${operation.source.threadId}/messages/${operation.source.threadId}`)) {
         return response({ payload: { id: operation.source.threadId, content: sourceContent } });
@@ -683,7 +794,18 @@ test("completed transfer replay rejects corrupted owner, project, evidence, or b
     assert.equal(result.complete, false);
     assert.equal(result.destination.readback.bodyExact, false);
     assert(result.reasonCodes.includes("completed_card_destination_archive_preimage_unknown"));
+    const resumed = await inspect(corruption, {
+      destinationStatePreimage: { threadId: destinationId, archived: false, locked: false },
+    });
+    assert.equal(resumed.ok, true);
+    assert.equal(resumed.status, "pending");
+    assert.equal(resumed.destination.readback.archiveStateExact, true);
   }
+  const wrongDestination = await inspect(corruptions[0], {
+    destinationStatePreimage: { threadId: "wrong-destination", archived: false, locked: false },
+  });
+  assert.equal(wrongDestination.ok, false);
+  assert(wrongDestination.reasonCodes.includes("completed_card_destination_state_thread_mismatch"));
 });
 
 test("forum order readback fails if an unrelated guild channel moves", async () => {
