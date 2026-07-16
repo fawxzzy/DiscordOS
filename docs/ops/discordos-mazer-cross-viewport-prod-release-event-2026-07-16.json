@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "atlas.board-card-journal.v1",
+  "eventId": "mazer-cross-viewport-prod-release-20260716",
+  "occurredAt": "2026-07-16T13:18:58.761Z",
+  "actor": "Mazer",
+  "card": {
+    "id": "mazer-cross-viewport-ui-reliability",
+    "project": "Mazer",
+    "sourceForumChannelId": "1524889569475170478",
+    "threadId": "1525337748830031875",
+    "title": "mazer: cross-viewport UI reliability and layout hardening",
+    "type": "reliability",
+    "state": "review",
+    "previousState": "review",
+    "priority": "High",
+    "owner": "Mazer",
+    "progress": "84%",
+    "summary": "Coordinate mobile safe-area, overlay containment, browser layout, and touch-control behavior through one viewport contract and physical-device proof path.",
+    "objective": "Keep every Mazer surface contained and usable across desktop, narrow browser, phone browser, and installed PWA while preserving one deterministic control-intent contract.",
+    "acceptanceCriteria": [
+      "Every primary Mazer surface has an owner, supported viewport category, and no-overlap contract.",
+      "Mobile and browser layout work can be verified independently and together through a shared matrix.",
+      "No completion claim relies on desktop-only proof for a phone or restored-window defect.",
+      "Player Guide content remains contained and held stick/arrow intent remains recoverable on the physical-phone surface."
+    ],
+    "discoveries": [
+      "The exact production UI packet is clean at 390x844 DPR 2 after excluding an unrelated known topology assertion for seed 3749.",
+      "Automated browser geometry and deterministic pointer proof cannot replace the operator's physical-iPhone control-feel acceptance.",
+      "The card must remain in Review at 84 percent until the deployed build is checked on the physical iPhone."
+    ],
+    "nextActions": [
+      "Verify Player Guide left-edge containment on the production build using the operator's physical iPhone.",
+      "Verify one-tile wall fallback, dominant-lane T-junction steering, blocked-hold recovery, and sliding-arrow capture on the physical iPhone.",
+      "Keep installed-PWA banding and native browser-chrome/maximize proof open."
+    ],
+    "blockers": [
+      "Physical iPhone post-release feel and containment verification is pending."
+    ],
+    "evidence": [
+      "Mazer PR #77 merged at 8ea4eed42024914397573af83a63d8ee79c5ced1.",
+      "Vercel deployment dpl_3PGem7fCME4mAkUdM4h98MQefet3 is READY and aliased to https://fawxzzy-mazer.vercel.app.",
+      "The canonical production alias returned HTTP 200 with bundle assets/main-D7gXztN9.js.",
+      "The production 390x844 DPR-2 capture packet passed Menu, Options, Play, Pause, top/bottom scroll states, diagnostics, and zero page/console-error checks.",
+      "Vercel returned no runtime error logs for the release deployment."
+    ]
+  },
+  "entry": {
+    "kind": "review",
+    "headline": "Merged control repair is live in Mazer production",
+    "completed": [
+      "Merged Mazer PR #77 into main through merge commit 8ea4eed42024914397573af83a63d8ee79c5ced1.",
+      "Deployed that exact clean merge to the existing Mazer production project.",
+      "Verified the production alias and release bundle over HTTP.",
+      "Passed the complete authenticated phone-sized UI surface packet against production."
+    ],
+    "discovered": [
+      "The first broad capture was red only on the unrelated topology diagnostic for seed 3749; the admitted UI/control release scope passed when that separate assertion was explicitly excluded.",
+      "Physical-device feel remains an acceptance surface that automation cannot claim complete."
+    ],
+    "next": [
+      "Collect the operator's physical-iPhone screenshots and control-feel result against production.",
+      "Complete the card only if the physical-device acceptance criteria pass; otherwise journal the exact residual and continue the same card."
+    ],
+    "blockers": [
+      "Physical iPhone post-release verification remains pending."
+    ],
+    "evidence": [
+      "https://github.com/fawxzzy/mazer/pull/77",
+      "https://fawxzzy-mazer.vercel.app",
+      "Vercel deployment dpl_3PGem7fCME4mAkUdM4h98MQefet3",
+      "Mazer merge commit 8ea4eed42024914397573af83a63d8ee79c5ced1",
+      "repos/mazer/docs/ops/MAZER-MOBILE-CONTROL-INTENT-REWORK-2026-07-16.md"
+    ]
+  },
+  "correlation": {
+    "taskId": "019f52d9-7667-72a3-a5f7-9c0613aedd8f",
+    "branch": "main",
+    "commit": "8ea4eed42024914397573af83a63d8ee79c5ced1",
+    "receipt": "repos/mazer/docs/ops/MAZER-MOBILE-CONTROL-INTENT-REWORK-2026-07-16.md"
+  }
+}
