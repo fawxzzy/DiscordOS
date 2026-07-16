@@ -789,17 +789,19 @@ test("transient destination restore failure retries the bounded re-close", async
     eventId: "completed:CARD-42:restore-retry",
     destinationArchived: true,
     destinationLocked: true,
-    journalMode: "missing",
-    failJournalCreate: true,
+    destinationBody: "corrupt",
     failDestinationRestoreOnce: true,
+    sourceMode: "preimage",
   });
   const result = await harness.run();
-  assert.equal(result.ok, false);
-  assert(result.reasonCodes.includes("completed_card_journal_create_failed"));
-  assert(result.reasonCodes.includes("completed_card_restore_state_failed"));
-  assert.equal(result.writeCount, 2, "only the reopen and successful retry are counted");
+  assert.equal(result.ok, true, JSON.stringify(result, null, 2));
+  assert(!result.reasonCodes.includes("completed_card_restore_state_failed"));
+  assert.equal(result.writeCount, 5, "reopen, body repair, successful re-close, source link, and source archive are counted");
   assert.equal(harness.state.destinationArchived, true);
   assert.equal(harness.state.destinationLocked, true);
+  assert.equal(harness.state.sourceContent, harness.expectedSource);
+  assert.equal(harness.state.sourceArchived, true);
+  assert.equal(harness.state.sourceLocked, true);
   assert.equal(result.completed.archiveState.restored, true);
   assert.equal(result.completed.archiveState.restoreHttpStatus, 200);
   const restoreAttempts = harness.calls.filter((call) =>

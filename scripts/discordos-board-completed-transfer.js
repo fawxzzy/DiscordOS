@@ -693,7 +693,6 @@ async function buildCompletedBoardTransfer({
       fetchImpl,
     });
     destinationRestored = destinationRestore.ok;
-    if (!destinationRestore.ok) reasonCodes.push("completed_card_restore_state_failed");
   };
   if (
     existing
@@ -834,6 +833,7 @@ async function buildCompletedBoardTransfer({
   }
   await restoreDestinationState();
   if (!destinationRestored) await restoreDestinationState();
+  if (destinationReopened && !destinationRestored) reasonCodes.push("completed_card_restore_state_failed");
   let destinationReadback = null;
   if (upsert.ok && finalDestinationId && journalMessageId) {
     const [threadRead, messageRead, journalRead] = await Promise.all([
