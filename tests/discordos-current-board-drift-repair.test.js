@@ -568,6 +568,42 @@ test("default preflight and dry-run fixture modes produce zero writes", async ()
   assert.equal(writes, 0);
 });
 
+test("changed 245-card live denominator blocks the frozen plan before every writer phase", async () => {
+  const fixture = makeFixture();
+  const liveScan = clone(fixture.scan);
+  liveScan.cards.currentCardCount = 245;
+  liveScan.cards.healthyCardCount = 245;
+  liveScan.cards.totalThreadCount = 445;
+  let writerCalls = 0;
+  const result = await _internals.runRepair({
+    mode: "apply",
+    plan: fixture.plan,
+    evidenceBytes: fixture.evidenceBytes,
+    admittedScan: fixture.scan,
+    admittedEvidenceSha256: fixture.admittedEvidenceSha256,
+    trustedPlanDigestSha256: fixture.plan.planDigestSha256,
+    allowApply: true,
+    env: {
+      DISCORDOS_BOT_TOKEN: "fixture",
+      DISCORDOS_CURRENT_BOARD_DRIFT_REPAIR: "enabled",
+      DISCORDOS_BOARD_COMPLETED_TRANSFER: "enabled",
+    },
+    currentScanImpl: async () => clone(liveScan),
+    tagApplyImpl: async () => { writerCalls += 1; throw new Error("tag writer reached changed denominator"); },
+    orderApplyImpl: async () => { writerCalls += 1; throw new Error("order writer reached changed denominator"); },
+    transferApplyImpl: async () => { writerCalls += 1; throw new Error("transfer writer reached changed denominator"); },
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "blocked");
+  assert.equal(result.discordMutations, 0);
+  assert.equal(result.discordMutationOutcomesUnknown, 0);
+  assert.equal(result.mutatesDiscord, false);
+  assert.equal(writerCalls, 0);
+  assert(result.reasonCodes.includes("current_card_denominator_mismatch"));
+  assert(result.reasonCodes.includes("current_healthy_card_denominator_mismatch"));
+  assert(result.reasonCodes.includes("current_total_thread_denominator_mismatch"));
+});
+
 test("explicit apply flag and both environment guards are mandatory", async () => {
   const fixture = makeFixture();
   const receipt = await _internals.runRepair({
@@ -689,6 +725,96 @@ function successfulTransferReceipt(operation) {
     reasonCodes: [],
   };
 }
+
+test("rejected final reconciliation scan preserves confirmed writes in a blocked receipt", async () => {
+  const fixture = makeFixture();
+  const firstTag = fixture.plan.operations.find((row) => row.kind === "tag_repair");
+  let scans = 0;
+  const result = await _internals.runRepair({
+    mode: "apply",
+    plan: fixture.plan,
+    evidenceBytes: fixture.evidenceBytes,
+    admittedScan: fixture.scan,
+    admittedEvidenceSha256: fixture.admittedEvidenceSha256,
+    trustedPlanDigestSha256: fixture.plan.planDigestSha256,
+    allowApply: true,
+    env: {
+      DISCORDOS_BOT_TOKEN: "fixture",
+      DISCORDOS_CURRENT_BOARD_DRIFT_REPAIR: "enabled",
+      DISCORDOS_BOARD_COMPLETED_TRANSFER: "enabled",
+    },
+    currentScanImpl: async () => {
+      scans += 1;
+      if (scans === 1) return clone(fixture.scan);
+      throw new Error("Injected final scan rejection");
+    },
+    tagInspectionImpl: async (operation) => ({
+      ok: true,
+      operationId: operation.operationId,
+      status: operation.operationId === firstTag.operationId ? "pending" : "complete",
+      reasonCodes: [],
+    }),
+    orderInspectionImpl: async (operation) => ({ ok: true, operationId: operation.operationId, status: "complete", reasonCodes: [] }),
+    transferInspectionImpl: async (operation) => ({ ok: true, operationId: operation.operationId, status: "complete", complete: true, destination: { readback: {} }, reasonCodes: [] }),
+    tagApplyImpl: async (operation) => ({ ok: true, operationId: operation.operationId, status: "applied", writeCount: 1, writeOutcomeUnknownCount: 0, reasonCodes: [] }),
+  });
+  assert.equal(scans, 2);
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "blocked");
+  assert.equal(result.discordMutations, 1);
+  assert.equal(result.discordMutationOutcomesUnknown, 0);
+  assert.equal(result.mutatesDiscord, true);
+  assert.equal(result.operationReceipts.find((row) => row.operationId === firstTag.operationId).writeCount, 1);
+  assert.equal(result.reconciliation.status, "blocked");
+  assert(result.reasonCodes.includes("terminal_reconciliation_scan_rejected"));
+  assert(result.reasonCodes.includes("terminal_reconciliation_incomplete"));
+});
+
+test("terminal reconciliation revalidates every exact transfer postimage", async () => {
+  const fixture = makeFixture();
+  const terminalScan = clone(fixture.scan);
+  for (const operation of fixture.plan.operations.filter((row) => row.kind === "tag_repair")) markTagComplete(terminalScan, operation);
+  markOrderComplete(terminalScan, fixture.plan.operations.find((row) => row.kind === "forum_order_repair"));
+  for (const operation of fixture.plan.operations.filter((row) => row.kind === "completed_transfer")) markTransferComplete(terminalScan, operation);
+  const target = fixture.plan.operations.find((row) => row.kind === "completed_transfer");
+  const inspectionCounts = new Map();
+  const result = await _internals.runRepair({
+    mode: "apply",
+    plan: fixture.plan,
+    evidenceBytes: fixture.evidenceBytes,
+    admittedScan: fixture.scan,
+    admittedEvidenceSha256: fixture.admittedEvidenceSha256,
+    trustedPlanDigestSha256: fixture.plan.planDigestSha256,
+    allowApply: true,
+    env: {
+      DISCORDOS_BOT_TOKEN: "fixture",
+      DISCORDOS_CURRENT_BOARD_DRIFT_REPAIR: "enabled",
+      DISCORDOS_BOARD_COMPLETED_TRANSFER: "enabled",
+    },
+    currentScanImpl: async () => clone(terminalScan),
+    tagInspectionImpl: async (operation) => ({ ok: true, operationId: operation.operationId, status: "complete", reasonCodes: [] }),
+    orderInspectionImpl: async (operation) => ({ ok: true, operationId: operation.operationId, status: "complete", reasonCodes: [] }),
+    transferInspectionImpl: async (operation) => {
+      const count = (inspectionCounts.get(operation.operationId) || 0) + 1;
+      inspectionCounts.set(operation.operationId, count);
+      if (operation.operationId === target.operationId && count === 2) {
+        return { ok: false, operationId: operation.operationId, status: "blocked", complete: false, reasonCodes: ["injected_terminal_transfer_postimage_drift"] };
+      }
+      return { ok: true, operationId: operation.operationId, status: "complete", complete: true, destination: { readback: {} }, reasonCodes: [] };
+    },
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "blocked");
+  assert.equal(result.discordMutations, 0);
+  assert.equal(result.discordMutationOutcomesUnknown, 0);
+  assert.equal(result.reconciliation.status, "blocked");
+  assert.equal(result.reconciliation.transferPostimages.length, 3);
+  assert(result.reasonCodes.includes(`terminal_transfer_postimage_incomplete:${target.operationId}`));
+  assert(result.reasonCodes.includes("injected_terminal_transfer_postimage_drift"));
+  for (const operation of fixture.plan.operations.filter((row) => row.kind === "completed_transfer")) {
+    assert.equal(inspectionCounts.get(operation.operationId), 2, `${operation.operationId} must be inspected in preflight and terminal reconciliation`);
+  }
+});
 
 test("a plan-bound blocked receipt authorizes only its exact incomplete destination state", async () => {
   const fixture = makeFixture();

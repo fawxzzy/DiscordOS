@@ -1380,8 +1380,52 @@ async function runRepair({
   }
   let reconciliation = null;
   if (reasonCodes.length === 0) {
-    const finalScan = await currentScanImpl({ env, fetchImpl });
-    reconciliation = currentScanEvaluation(plan, finalScan);
+    try {
+      const finalScan = await currentScanImpl({ env, fetchImpl });
+      reconciliation = currentScanEvaluation(plan, finalScan);
+    } catch {
+      reconciliation = {
+        ok: false,
+        status: "blocked",
+        completedTransferCount: null,
+        operationStatuses: [],
+        transferPostimages: [],
+        reasonCodes: ["terminal_reconciliation_scan_rejected"],
+      };
+    }
+    if (reconciliation.ok && reconciliation.status === "terminal") {
+      reconciliation.transferPostimages = [];
+      for (const operation of transferOperations) {
+        let inspection;
+        try {
+          inspection = await transferInspectionImpl(operation, {
+            env,
+            fetchImpl,
+            destinationStatePreimage: resumeState.states.get(operation.operationId) || null,
+          });
+        } catch {
+          inspection = {
+            ok: false,
+            operationId: operation.operationId,
+            status: "blocked",
+            complete: false,
+            reasonCodes: ["terminal_transfer_postimage_inspection_rejected"],
+          };
+        }
+        reconciliation.transferPostimages.push(inspection);
+        if (inspection?.ok !== true || inspection?.status !== "complete" || inspection?.complete !== true) {
+          reconciliation.reasonCodes.push(
+            `terminal_transfer_postimage_incomplete:${operation.operationId}`,
+            ...(inspection?.reasonCodes || []),
+          );
+        }
+      }
+      reconciliation.reasonCodes = unique(reconciliation.reasonCodes).sort();
+      if (reconciliation.reasonCodes.length > 0) {
+        reconciliation.ok = false;
+        reconciliation.status = "blocked";
+      }
+    }
     if (!reconciliation.ok || reconciliation.status !== "terminal") {
       reasonCodes.push(...reconciliation.reasonCodes);
       if (reconciliation.status !== "terminal") reasonCodes.push("terminal_reconciliation_incomplete");
