@@ -633,9 +633,13 @@ function planExistingSocialReconciliation({ socialsForum, seedBatch, socialsOwne
   return { existingCardIds, bodyActions, tagActions, journalActions };
 }
 
-function buildResidualRecoveryPlan({ snapshot, socialsOwnerExport }) {
+function buildResidualRecoveryPlan({ snapshot, socialsOwnerExport, socialsOwnerExportBlobOid }) {
   const reasonCodes = [...(snapshot.reasonCodes || [])];
-  const seedBatch = ownerSeed.buildOwnerSeedBatch({ registry: snapshot.registry, ownerExports: [socialsOwnerExport] });
+  const seedBatch = ownerSeed.buildOwnerSeedBatch({
+    registry: snapshot.registry,
+    ownerExports: [socialsOwnerExport],
+    observedBlobOids: [socialsOwnerExportBlobOid],
+  });
   reasonCodes.push(...seedBatch.reasonCodes);
   const inspectedIdentityRows = [];
   const titleActions = [];
@@ -943,6 +947,7 @@ async function runResidualBoardRecovery({
   registry,
   profileRegistry,
   socialsOwnerExport,
+  socialsOwnerExportBlobOid,
   snapshotPath,
   allowRecovery = false,
   apply = false,
@@ -962,7 +967,7 @@ async function runResidualBoardRecovery({
   const snapshot = await captureSnapshotImpl({ registry, env, fetchImpl, now });
   await fsImpl.mkdir(path.dirname(snapshotPath), { recursive: true });
   await fsImpl.writeFile(snapshotPath, `${JSON.stringify({ residualPreimage: snapshot }, null, 2)}\n`, "utf8");
-  const plan = buildResidualRecoveryPlan({ snapshot, socialsOwnerExport });
+  const plan = buildResidualRecoveryPlan({ snapshot, socialsOwnerExport, socialsOwnerExportBlobOid });
   const phases = [];
   const reasonCodes = [...plan.reasonCodes];
   let titleReceipt = null;
@@ -1116,6 +1121,7 @@ async function runCanonicalBoardMigration({
   registry,
   profileRegistry,
   socialsOwnerExport,
+  socialsOwnerExportBlobOid,
   registryPath = DEFAULT_REGISTRY_PATH,
   snapshotPath,
   allowMigration = false,
@@ -1124,18 +1130,23 @@ async function runCanonicalBoardMigration({
   fetchImpl = fetch,
   fsImpl = fs,
   now = () => new Date(),
+  captureSnapshotImpl = captureSnapshot,
 } = {}) {
   assertRuntimePath(snapshotPath);
   const admission = resolveAdmission({ apply, allowMigration, env });
   if (apply && !admission.admitted) return { schemaVersion: RECEIPT_SCHEMA_VERSION, generatedAt: now().toISOString(), ok: false, status: "blocked", apply, admission, mutatesDiscord: false, reasonCodes: admission.reasonCodes };
-  const initialSnapshot = await captureSnapshot({ registry, env, fetchImpl, now });
+  const initialSnapshot = await captureSnapshotImpl({ registry, env, fetchImpl, now });
   await fsImpl.mkdir(path.dirname(snapshotPath), { recursive: true });
   await fsImpl.writeFile(snapshotPath, `${JSON.stringify({ preProvision: initialSnapshot }, null, 2)}\n`, "utf8");
 
   const prospective = structuredClone(initialSnapshot);
   const pendingSocial = prospective.registry.boards.find((board) => board.id === "socials-os-active-admission" && !board.forumChannelId);
   if (pendingSocial) pendingSocial.forumChannelId = "pending-provision-exact-readback";
-  const seedBatchPreview = ownerSeed.buildOwnerSeedBatch({ registry: prospective.registry, ownerExports: [socialsOwnerExport] });
+  const seedBatchPreview = ownerSeed.buildOwnerSeedBatch({
+    registry: prospective.registry,
+    ownerExports: [socialsOwnerExport],
+    observedBlobOids: [socialsOwnerExportBlobOid],
+  });
   const initialPlan = buildMigrationPlan({ snapshot: initialSnapshot, profileRegistry, ownerExports: [socialsOwnerExport] });
   if (!apply) {
     const reasonCodes = unique([...initialPlan.reasonCodes, ...seedBatchPreview.reasonCodes]);
@@ -1158,18 +1169,21 @@ async function runCanonicalBoardMigration({
 
   const token = text(env.DISCORDOS_BOT_TOKEN);
   const phases = [];
-  const reasonCodes = [];
-  const provisionReceipt = await provision.buildProjectBoardForumProvision({
-    registryPath,
-    allowProvision: true,
-    apply: true,
-    env: { ...env, [provision.PROVISION_ENV]: provision.PROVISION_ENV_VALUE },
-    fetchImpl,
-  });
-  phases.push({ phase: "socials_provision", ok: provisionReceipt.ok, receipt: provisionReceipt });
-  if (!provisionReceipt.ok) reasonCodes.push(...provisionReceipt.reasonCodes);
+  const reasonCodes = [...seedBatchPreview.reasonCodes];
+  let provisionReceipt = null;
+  if (reasonCodes.length === 0) {
+    provisionReceipt = await provision.buildProjectBoardForumProvision({
+      registryPath,
+      allowProvision: true,
+      apply: true,
+      env: { ...env, [provision.PROVISION_ENV]: provision.PROVISION_ENV_VALUE },
+      fetchImpl,
+    });
+    phases.push({ phase: "socials_provision", ok: provisionReceipt.ok, receipt: provisionReceipt });
+    if (!provisionReceipt.ok) reasonCodes.push(...provisionReceipt.reasonCodes);
+  }
 
-  const workingSnapshot = reasonCodes.length === 0 ? await captureSnapshot({ registry, env, fetchImpl, now }) : null;
+  const workingSnapshot = reasonCodes.length === 0 ? await captureSnapshotImpl({ registry, env, fetchImpl, now }) : null;
   if (workingSnapshot) {
     await fsImpl.writeFile(snapshotPath, `${JSON.stringify({ preProvision: initialSnapshot, postProvisionPreProfile: workingSnapshot }, null, 2)}\n`, "utf8");
     reasonCodes.push(...workingSnapshot.reasonCodes);
@@ -1214,7 +1228,11 @@ async function runCanonicalBoardMigration({
     reasonCodes.push(...managedMigration.reasonCodes);
   }
   if (reasonCodes.length === 0) {
-    const batch = ownerSeed.buildOwnerSeedBatch({ registry: workingSnapshot.registry, ownerExports: [socialsOwnerExport] });
+    const batch = ownerSeed.buildOwnerSeedBatch({
+      registry: workingSnapshot.registry,
+      ownerExports: [socialsOwnerExport],
+      observedBlobOids: [socialsOwnerExportBlobOid],
+    });
     if (!batch.ok) reasonCodes.push(...batch.reasonCodes);
     else {
       socialsSeedReceipt = await journal.buildBoardCardJournal({
@@ -1283,16 +1301,21 @@ function renderMarkdown(receipt) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
-  const [registry, profileRegistry, socialsOwnerExport] = await Promise.all([
+  const [registry, profileRegistry, socialsOwnerExportBytes] = await Promise.all([
     textIntegrity.readUtf8Json(options.registryPath),
     textIntegrity.readUtf8Json(options.profilePath),
-    textIntegrity.readUtf8Json(options.socialsExportPath),
+    fs.readFile(options.socialsExportPath),
   ]);
+  const socialsOwnerExport = await textIntegrity.readUtf8Json(options.socialsExportPath, {
+    fsImpl: { readFile: async () => socialsOwnerExportBytes },
+  });
+  const socialsOwnerExportBlobOid = ownerSeed.gitBlobOid(socialsOwnerExportBytes);
   const receipt = options.recoverResidual
     ? await runResidualBoardRecovery({
       registry,
       profileRegistry,
       socialsOwnerExport,
+      socialsOwnerExportBlobOid,
       snapshotPath: options.snapshotPath,
       allowRecovery: options.allowRecovery,
       apply: options.apply,
@@ -1301,6 +1324,7 @@ async function main() {
       registry,
       profileRegistry,
       socialsOwnerExport,
+      socialsOwnerExportBlobOid,
       registryPath: options.registryPath,
       snapshotPath: options.snapshotPath,
       allowMigration: options.allowMigration,
@@ -1326,6 +1350,8 @@ module.exports = {
   RECEIPT_SCHEMA_VERSION,
   SNAPSHOT_SCHEMA_VERSION,
   _internals: {
+    MIGRATION_ENV,
+    MIGRATION_ENV_VALUE,
     RECOVERY_ENV,
     RECOVERY_ENV_VALUE,
     DEFAULT_REGISTRY_PATH,
