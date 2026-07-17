@@ -316,6 +316,95 @@ test("failed archived tag patch also restores the exact original lifecycle and t
   assert(result.reasonCodes.includes("tag_repair_write_failed"));
 });
 
+test("ambiguous archived reopen restores exact original lifecycle and tags without claiming success", async () => {
+  const state = {
+    parent_id: "fitness-forum",
+    applied_tags: ["tag-feature", "tag-planning"],
+    thread_metadata: { archived: true, locked: true },
+  };
+  const writes = [];
+  const operation = archivedTagOperation();
+  const fetchImpl = async (_url, init) => {
+    if (init.method === "GET") return response(structuredClone(state));
+    const body = JSON.parse(init.body);
+    writes.push(body);
+    if (body.archived === false && body.locked === false) {
+      state.thread_metadata = { archived: false, locked: false };
+      return response({ message: "ambiguous reopen", retry_after: 0 }, 503);
+    }
+    if (Object.hasOwn(body, "applied_tags")) state.applied_tags = [...body.applied_tags];
+    if (Object.hasOwn(body, "archived")) state.thread_metadata.archived = body.archived;
+    if (Object.hasOwn(body, "locked")) state.thread_metadata.locked = body.locked;
+    return response(structuredClone(state));
+  };
+  const result = await _internals.applyPlannedTagRepair(operation, {
+    env: { DISCORDOS_BOT_TOKEN: "test-token" },
+    fetchImpl,
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "blocked");
+  assert.equal(result.httpStatus, 503);
+  assert.equal(result.writeCount, 1);
+  assert.equal(result.writeOutcomeUnknownCount, 1);
+  assert.equal(result.critical, false);
+  assert.equal(result.lifecycle.restorationVerified, true);
+  assert.deepEqual(writes.at(-1), {
+    applied_tags: ["tag-feature", "tag-planning"],
+    archived: true,
+    locked: true,
+  });
+  assert.deepEqual(result.readback.actualThreadState, { archived: true, locked: true });
+  assert.deepEqual(result.readback.actualAppliedTagIds, ["tag-feature", "tag-planning"]);
+  assert(result.reasonCodes.includes("tag_repair_reopen_outcome_unknown"));
+  assert(!result.reasonCodes.includes("critical_tag_target_lifecycle_unresolved"));
+});
+
+test("ambiguous archived reopen makes every failed or uncertain restore terminal Critical", async (t) => {
+  for (const restoreCase of [
+    { name: "rejected restore", status: 400, reasonCode: "tag_repair_restore_failed", unknownWrites: 1 },
+    { name: "outcome-unknown restore", status: 503, reasonCode: "tag_repair_restore_outcome_unknown", unknownWrites: 2 },
+  ]) {
+    await t.test(restoreCase.name, async () => {
+      const state = {
+        parent_id: "fitness-forum",
+        applied_tags: ["tag-feature", "tag-planning"],
+        thread_metadata: { archived: true, locked: true },
+      };
+      const writes = [];
+      const operation = archivedTagOperation();
+      const fetchImpl = async (_url, init) => {
+        if (init.method === "GET") return response(structuredClone(state));
+        const body = JSON.parse(init.body);
+        writes.push(body);
+        if (body.archived === false && body.locked === false) {
+          state.thread_metadata = { archived: false, locked: false };
+          return response({ message: "ambiguous reopen", retry_after: 0 }, 503);
+        }
+        return response({ message: restoreCase.name, retry_after: 0 }, restoreCase.status);
+      };
+      const result = await _internals.applyPlannedTagRepair(operation, {
+        env: { DISCORDOS_BOT_TOKEN: "test-token" },
+        fetchImpl,
+      });
+      assert.equal(result.ok, false);
+      assert.equal(result.status, "blocked");
+      assert.equal(result.httpStatus, restoreCase.status);
+      assert.equal(result.writeOutcomeUnknownCount, restoreCase.unknownWrites);
+      assert.equal(result.critical, true);
+      assert.equal(result.severity, "Critical");
+      assert.equal(result.lifecycle.restorationVerified, false);
+      assert.deepEqual(writes.at(-1), {
+        applied_tags: ["tag-feature", "tag-planning"],
+        archived: true,
+        locked: true,
+      });
+      assert.deepEqual(result.readback.actualThreadState, { archived: false, locked: false });
+      assert(result.reasonCodes.includes(restoreCase.reasonCode));
+      assert(result.reasonCodes.includes("critical_tag_target_lifecycle_unresolved"));
+    });
+  }
+});
+
 test("outcome-unknown lifecycle restore is Critical and never reports repair success", async () => {
   const state = {
     parent_id: "fitness-forum",

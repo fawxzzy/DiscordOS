@@ -1168,16 +1168,18 @@ async function applyPlannedTagRepair(operation, { env = process.env, fetchImpl =
         body,
         fetchImpl,
       });
+      const outcomeUnknown = !result.ok && result.status >= 500;
       if (result.ok) writeCount += 1;
-      return { ...result, rejected: false };
+      if (outcomeUnknown) writeOutcomeUnknownCount += 1;
+      return { ...result, rejected: false, outcomeUnknown };
     } catch {
       writeOutcomeUnknownCount += 1;
-      return { ok: false, status: 0, payload: null, rejected: true };
+      return { ok: false, status: 0, payload: null, rejected: true, outcomeUnknown: true };
     }
   };
   const reasonCodes = [];
   const reopen = await write({ archived: false, locked: false });
-  if (!reopen.ok) reasonCodes.push(reopen.rejected ? "tag_repair_reopen_outcome_unknown" : "tag_repair_reopen_failed");
+  if (!reopen.ok) reasonCodes.push(reopen.outcomeUnknown ? "tag_repair_reopen_outcome_unknown" : "tag_repair_reopen_failed");
 
   let openRead = null;
   let tagWrite = null;
@@ -1191,18 +1193,18 @@ async function applyPlannedTagRepair(operation, { env = process.env, fetchImpl =
     if (!openExact) reasonCodes.push("tag_repair_reopen_readback_failed");
     if (openExact) {
       tagWrite = await write({ applied_tags: operation.postimage.appliedTagIds });
-      if (!tagWrite.ok) reasonCodes.push(tagWrite.rejected ? "tag_repair_write_outcome_unknown" : "tag_repair_write_failed");
+      if (!tagWrite.ok) reasonCodes.push(tagWrite.outcomeUnknown ? "tag_repair_write_outcome_unknown" : "tag_repair_write_failed");
     }
   }
 
   let restore = null;
-  const restoreRequired = reopen.ok || reopen.rejected;
+  const restoreRequired = reopen.ok || reopen.outcomeUnknown;
   if (restoreRequired) {
     const restoreBody = tagWrite?.ok
       ? operation.threadState
       : { applied_tags: operation.preimage.appliedTagIds, ...operation.threadState };
     restore = await write(restoreBody);
-    if (!restore.ok) reasonCodes.push(restore.rejected ? "tag_repair_restore_outcome_unknown" : "tag_repair_restore_failed");
+    if (!restore.ok) reasonCodes.push(restore.outcomeUnknown ? "tag_repair_restore_outcome_unknown" : "tag_repair_restore_failed");
   }
   const readback = await inspectPlannedTagRuntime(operation, { env, fetchImpl });
   const expectedFinalTagIds = tagWrite?.ok
