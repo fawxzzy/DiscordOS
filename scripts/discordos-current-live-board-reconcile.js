@@ -1349,6 +1349,7 @@ async function runApply({ plan, preflight, boardRegistry, env = process.env, fet
       ok: true,
       status: "idempotent_replay",
       mode: "apply",
+      planDigestSha256: plan.planDigestSha256,
       mutatesDiscord: false,
       discordMutations: 0,
       discordMutationOutcomesUnknown: 0,

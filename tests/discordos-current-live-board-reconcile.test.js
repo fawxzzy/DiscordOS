@@ -409,6 +409,38 @@ test("a Critical lifecycle drift stops every later targeted mutation", async () 
   assert(receipt.reasonCodes.includes("critical_target_lifecycle_unresolved"));
 });
 
+test("targeted idempotent replay binds the trusted plan digest and performs zero writes", async () => {
+  const operation = archivedTagOperation({ operationId: "tag-02" });
+  const plan = {
+    executionScope: "targeted_tag_recovery",
+    planDigestSha256: "e".repeat(64),
+    operations: [operation],
+    ownerAuthority: { blockedSubsets: [] },
+  };
+  const complete = {
+    ok: true,
+    operationId: operation.operationId,
+    status: "complete",
+    actualAppliedTagIds: operation.postimage.appliedTagIds,
+    actualThreadState: operation.threadState,
+    httpStatus: 200,
+    reasonCodes: [],
+  };
+  const receipt = await _internals.runApply({
+    plan,
+    preflight: { ok: true, status: "terminal_postimage", allComplete: true, tagStatuses: [complete] },
+    boardRegistry: {},
+    fetchImpl: async () => { throw new Error("idempotent_replay_must_not_fetch"); },
+  });
+  assert.equal(receipt.ok, true);
+  assert.equal(receipt.status, "idempotent_replay");
+  assert.equal(receipt.planDigestSha256, plan.planDigestSha256);
+  assert.equal(receipt.mutatesDiscord, false);
+  assert.equal(receipt.discordMutations, 0);
+  assert.equal(receipt.discordMutationOutcomesUnknown, 0);
+  assert.deepEqual(receipt.reconciliation.touchedTagPostimages, [complete]);
+});
+
 test("forum scan projects into the journal writer's authoritative identity contract", () => {
   const profileScan = {
     status: "drift_detected",
