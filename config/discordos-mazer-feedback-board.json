@@ -988,7 +988,7 @@
       "completionPercent": 88,
       "summary": "Finish the account-backed progression loop, remote cycle receipts, and Atlas/playbook handoff without exposing internal debug surfaces to players.",
       "whyItMatters": "Mazer needs continuity. Account-backed progress, cycle receipts, and Atlas reports are what let the game learn, tune difficulty, and preserve user/AI history across sessions.",
-      "currentStatus": "Remote cycle receipts, account-scoped progression, Supabase proof, Atlas-safe reports, compact AI decision scores, playable shortest-path comparison, render-safety pressure, and bounded AI reset proof are in place. Mazer PR #38 removes report-side scorer duplication, publishes scorer version `1.0.0`, validates scorer identity in Atlas reports, and preserves stored-versus-recomputed history. Run-quality v2 may add future compact aggregates only after its metric contract; no historical row will be rewritten or backfilled. Atlas-side consumer wiring, future receipt metadata, idempotent retry/outbox coverage, and explanation of the durable-receipt gap remain open. Future remote sync must reconcile offline checkpoint and receipt outboxes idempotently; stale remote state cannot overwrite a later valid local Endless checkpoint.",
+      "currentStatus": "Mazer PR #80 merged at c633315d from the validated ed090e8d head and production deployment BMopmVCmS5oi4Xd6fEu7qJFiJxFQ is Ready on the canonical alias. The release hydrates canonical player and AI progression plus account settings before the first maze, uses monotonic revision compare-and-swap writes, rebases stale normal advancement forward, and rejects stale resets. Production fixture proof passed at 390x844 and 499x958 without mutating a live user row. The additive hosted migration predated the platform write hold; no Supabase, Auth, billing, secret, or user-data mutation occurred during merge or deployment. Same-account phone/computer confirmation, Atlas consumer wiring, future receipt metadata, and durable receipt/outbox coverage remain open.",
       "workBreakdown": [
         "Keep compact remote cycle receipts behind the opt-in env flag and authenticated guard.",
         "Preserve player and AI progression tracks independently.",
@@ -999,6 +999,7 @@
         "Import the one canonical versioned AI scorer instead of reproducing report-side score weights."
       ],
       "nextActions": [
+        "Verify the same authenticated account hydrates matching progression and settings on phone and computer without resetting either client.",
         "Wire the validator-gated consumer receipt into an Atlas-side process.",
         "Calibrate report trends from longer player and AI sample bands.",
         "Keep remote sync player-safe and non-noisy for guest, missing-client, disabled, and failure outcomes.",
@@ -2250,7 +2251,7 @@
       "completionPercent": 84,
       "summary": "Coordinate the mobile safe-area/portrait and browser layout-persistence lanes through one viewport contract and proof matrix without turning either delivery into an offset patch.",
       "whyItMatters": "The same UI can be valid in a desktop canvas, narrow browser, mobile browser, installed PWA, or restored window only if viewport state, safe areas, and restoration behavior share deliberate rules.",
-      "currentStatus": "Merged Mazer PR #60 at afc6e8401893c2ddb4c0681db39e6b3b435985ff adds shared optical-centering and guide/toggle geometry, button-label and guide-panel diagnostics, authenticated Chromium proof at 405x958 and 1440x900, and a passing 360x720 -> 1440x900 -> 360x720 -> 405x958 restoration matrix for Menu, Options, play, and Pause. The marker rises from 78 to 84 because shared layout adoption and proof-backed coverage widened. Physical iPhone safe-area, installed-PWA banding, and native browser-chrome/maximize proof remain open; deterministic emulation does not override those device findings.",
+      "currentStatus": "Merged Mazer PR #60 remains the shared layout baseline. PR #80 merged at c633315d and production deployment BMopmVCmS5oi4Xd6fEu7qJFiJxFQ is Ready on the canonical alias. Fresh production menu/play proof passed at 390x844 and 499x958 with one canvas and zero off-screen/overlap violations; the phone branch rendered a 360px play board and the fine-pointer browser rendered the matching compact mobile composition with a 469px play board and lower joystick. Physical iPhone safe-area, installed-PWA banding, and native browser-chrome/maximize proof remain open.",
       "workBreakdown": [
         "Define canonical viewport, safe-area, visible-height, and no-overlap invariants for menu, Options, play, Pause, dialogs, HUD, controls, and scroll rails.",
         "Maintain the child boundary between mobile shell/device behavior and browser layout-state persistence.",
@@ -2258,6 +2259,7 @@
         "Require route, mode, viewport, safe-area state, scroll position, and layout diagnostics beside visual proof."
       ],
       "nextActions": [
+        "Use the production 390x844 versus 499x958 matrix as the baseline for the remaining physical-device and native-browser checks.",
         "Complete real-device safe-area and installed-PWA proof for the shared menu and play geometry.",
         "Complete native browser-chrome and maximize/restore proof without replacing the deterministic transition harness.",
         "Keep browser-layout, mobile-shell, and visual-proof cards as linked owners for persistence, device harness, and proof-policy follow-through.",
@@ -2301,7 +2303,7 @@
       "completionPercent": 82,
       "summary": "Normalize responsive browser UI geometry so a narrow-window layout cannot overlap, escape, or expand incorrectly after resize, maximize, restore, or reload. Persist semantic intent only if the product later introduces it.",
       "whyItMatters": "The root-cause pass proved that Mazer has no user-adjustable panel geometry to restore. Derived dimensions must be recomputed from one viewport snapshot instead of being saved and replayed across browser states.",
-      "currentStatus": "Merged Mazer PR #60 at afc6e8401893c2ddb4c0681db39e6b3b435985ff closes the shared component/layout slice with authenticated Chromium captures at 405x958 and 1440x900 plus exact 360x720 -> 1440x900 -> 360x720 restoration and 405x958 endpoint proof for Menu, Options, play, and Pause. Button labels, guide copy, scroll reachability, safe bounds, console state, and stable restored diagnostics all pass. The marker rises from 75 to 82; native maximize/restore automation and browser-chrome changes remain open.",
+      "currentStatus": "Merged Mazer PR #60 established shared component and layout standards. PR #80 merged at c633315d and production deployment BMopmVCmS5oi4Xd6fEu7qJFiJxFQ is Ready on the canonical alias. Its bounded portrait 431..600px fine-pointer rule makes 499x958 menu/play use the mobile maze/controller composition while preserving the 390x844 phone branch. Fresh production proof repeated both viewports with one canvas and zero off-screen/overlap violations. Native maximize/restore and browser-chrome changes remain open.",
       "workBreakdown": [
         "Document the intentional no-persisted-geometry contract and keep semantic toggle/account preference state separate.",
         "Normalize layout-derived state on reload, resize, maximize, restore, narrow-to-wide, wide-to-narrow, mobile emulation, and orientation transitions.",
@@ -2309,7 +2311,7 @@
         "Introduce a versioned semantic layout schema only if a supported user-adjustable intent is added later."
       ],
       "nextActions": [
-        "Extend the deterministic fixture to native maximize/restore and browser-chrome changes.",
+        "Extend the production 390x844 and 499x958 baseline into native maximize, restore, and browser-chrome proof.",
         "Classify any future state as semantic user intent, transient overlay state, account preference, or viewport-derived geometry before persisting it.",
         "Add a migration/fallback matrix only if supported semantic layout state is introduced.",
         "Validate browser behavior separately from mobile safe-area work, then feed both into the cross-viewport proof matrix."
