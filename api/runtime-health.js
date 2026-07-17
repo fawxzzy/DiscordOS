@@ -2,6 +2,11 @@ const { _internals: activationInternals } = require("./activation");
 const { _internals: persistInternals } = require("./feedback-persist");
 const { _internals: liveTransferInternals } = require("./live-transfer-status");
 const { _internals: readinessInternals } = require("./readiness");
+const {
+  _internals: interactionReviewInternals,
+} = require("../scripts/discordos-interaction-reliability-review");
+
+const INTERACTION_REVIEW_SURFACE = "interaction-reliability-review";
 
 function hasValue(value) {
   return typeof value === "string" && value.trim().length > 0;
@@ -23,6 +28,21 @@ function percentFromComponents(components) {
 
   const readyCount = values.filter((component) => component.state === "ready").length;
   return Math.round((readyCount / values.length) * 100);
+}
+
+function isInteractionReliabilityReviewRequest(req) {
+  return req?.query?.surface === INTERACTION_REVIEW_SURFACE;
+}
+
+function runtimeIdentity(env = process.env) {
+  return {
+    sourceRevision: env.VERCEL_GIT_COMMIT_SHA || "UNKNOWN",
+    deploymentId: env.VERCEL_DEPLOYMENT_ID || null,
+    runtimeUrl: env.VERCEL_URL
+      ? `https://${env.VERCEL_URL}`
+      : "https://fawxzzy-discordos.vercel.app",
+    environment: env.VERCEL_ENV || "local",
+  };
 }
 
 function buildRuntimeHealthSnapshot({
@@ -106,6 +126,15 @@ module.exports = async function runtimeHealth(req, res) {
     });
   }
 
+  if (isInteractionReliabilityReviewRequest(req)) {
+    const review = interactionReviewInternals.buildInteractionReliabilityReview(runtimeIdentity());
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("X-DiscordOS-Canary", "interaction-reliability-review-v1");
+    res.setHeader("X-DiscordOS-Review-Id", review.reviewId);
+    res.setHeader("X-DiscordOS-Review-Digest", review.reviewDigest);
+    return res.status(review.ok ? 200 : 409).json(review);
+  }
+
   const configuredSupabaseUrl = process.env.DISCORDOS_SUPABASE_URL || null;
   const edgeServiceRoleStatus = await readinessInternals.getEdgeServiceRoleStatus({
     supabaseUrl: configuredSupabaseUrl,
@@ -129,4 +158,7 @@ module.exports._internals = {
   buildRuntimeHealthSnapshot,
   percentFromComponents,
   stateFromBlockedReasons,
+  isInteractionReliabilityReviewRequest,
+  runtimeIdentity,
+  INTERACTION_REVIEW_SURFACE,
 };

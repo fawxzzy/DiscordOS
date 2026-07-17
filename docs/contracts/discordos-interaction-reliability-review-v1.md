@@ -49,9 +49,12 @@ uses that contract.
 
 ## Hosted route
 
-`GET /api/interaction-reliability-review` returns the complete matrix and uses
-`Cache-Control: no-store`. Other methods return `405`. The route does not accept
-caller-controlled scenario input and cannot address product cards.
+`GET /api/runtime-health?surface=interaction-reliability-review` returns the
+complete matrix and uses `Cache-Control: no-store`. The frozen selector is
+mounted on the existing read-only runtime-health function so the review does
+not increase the Vercel serverless-function denominator. Other methods return
+`405`. The surface does not accept caller-controlled scenario input and cannot
+address product cards. Ordinary `/api/runtime-health` behavior is unchanged.
 
 ## Acceptance
 

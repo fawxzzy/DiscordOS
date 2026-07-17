@@ -1,7 +1,7 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 
-const handler = require("../api/interaction-reliability-review");
+const handler = require("../api/runtime-health");
 const {
   _internals,
 } = require("../scripts/discordos-interaction-reliability-review");
@@ -144,7 +144,7 @@ test("status boundaries and prohibited-action proof remain explicit", () => {
 
 test("hosted canary endpoint is GET-only and side-effect free", async () => {
   const response = responseRecorder();
-  await handler({ method: "GET" }, response);
+  await handler({ method: "GET", query: { surface: "interaction-reliability-review" } }, response);
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.headers["cache-control"], "no-store");
@@ -155,9 +155,19 @@ test("hosted canary endpoint is GET-only and side-effect free", async () => {
   assert.equal(response.body.accounting.externalWrites, 0);
 
   const rejected = responseRecorder();
-  await handler({ method: "POST" }, rejected);
+  await handler({ method: "POST", query: { surface: "interaction-reliability-review" } }, rejected);
   assert.equal(rejected.statusCode, 405);
   assert.equal(rejected.body.error, "METHOD_NOT_ALLOWED");
+});
+
+test("hosted canary dispatch requires the exact frozen runtime-health selector", () => {
+  assert.equal(handler._internals.isInteractionReliabilityReviewRequest({
+    query: { surface: "interaction-reliability-review" },
+  }), true);
+  assert.equal(handler._internals.isInteractionReliabilityReviewRequest({
+    query: { surface: "interaction-reliability-review-extra" },
+  }), false);
+  assert.equal(handler._internals.isInteractionReliabilityReviewRequest({ query: {} }), false);
 });
 
 test("CLI arguments reject unsupported or malformed values", () => {
