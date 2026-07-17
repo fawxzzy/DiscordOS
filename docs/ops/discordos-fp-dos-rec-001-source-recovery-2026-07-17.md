@@ -4,13 +4,13 @@ Date: 2026-07-17
 
 ## Scope
 
-Recovered repository source only from authenticated, read-only Supabase metadata and source surfaces. No Supabase, Auth, schema, data, Edge Function, cron, Vercel, Discord, board, production, or secret mutation was performed.
+Recovered repository source only from authenticated, read-only Supabase metadata and source surfaces. No Supabase, Auth, schema, data, Edge Function, cron, Discord, board, production, or secret mutation was performed. Publishing the required GitHub PR exercised the repository's existing automatic non-production Vercel Preview integration; no manual deployment, promotion, or production action occurred.
 
 The isolated branch started from `aef01f277e006e3cb46550e507ebd8e4a1be9d21`. The canonical checkout, DiscordOS PR #104, Atlas root, and other owner repositories were not modified.
 
 ## Recovered source
 
-The repository now maps all 17 live migration versions to 17 canonical source files. The six recovered live-only versions are:
+The repository now maps all 17 live migration versions to 17 canonical source files, and every filename begins with its exact live version. The six recovered live-only versions are:
 
 - `20260612082854`
 - `20260627201353`
@@ -25,7 +25,7 @@ The manifest also binds all six live Edge Function identities. `discordos-update
 
 ## Disposable replay
 
-A new packet-owned PostgreSQL 17 cluster was created on an isolated high local port. The replay used manifest order rather than filename order because several historical live versions map to earlier canonical source filenames.
+A new packet-owned PostgreSQL 17 cluster was created on an isolated high local port. The replay used manifest live-version order. Review remediation subsequently aligned all ten mismatched historical filenames to those same live versions without changing their source blobs, so normal migration filename order now matches the replay contract.
 
 - versions `20260612082758` through `20260627201353`: applied successfully from zero
 - version `20260627202737`: failed because the local PostgreSQL installation has neither `pg_cron` nor `pg_net` extension control files
@@ -52,6 +52,12 @@ Read-only, no-reveal catalog queries confirmed the accepted live shape:
 
 The cron command plaintext was not returned or committed. Its hidden secret-reference mechanism remains UNKNOWN because the safe metadata showed neither a Vault nor `current_setting` reference.
 
+## Known live security risk
+
+The exact recovered `discordos-update-drafts` v5 source uses its service-role credential after Edge gateway JWT verification without an additional caller-role or internal shared-secret check. A project publishable/anon JWT accepted by the gateway may therefore reach service-role RPC operations. This is a known live authorization risk, not an UNKNOWN.
+
+Changing the recovered file in this packet would alter accepted live behavior and invalidate the authenticated 6,703-byte source identity. Remediation requires a separately admitted Edge security packet, deterministic authorization tests, and explicit deployment authority. This PR does not deploy the recovered source.
+
 ## Advisor baseline
 
 Read-only advisor checks were recorded, not repaired:
@@ -66,13 +72,18 @@ These are accepted live-baseline observations for source recovery. Semantic clea
 `tests/discordos-supabase-source-provenance.test.js` proves:
 
 - complete 17-migration and 6-Edge denominators
+- exact live-version filename identities for all 17 migrations
 - exact canonical source byte counts and SHA-256 digests
+- provider-raw migration and Edge digests re-derived from committed bytes, including provider terminal-newline behavior
 - the six recovered historical identities
-- exact Edge raw-source and bundle-digest separation
+- exact Edge raw-source and independently frozen provider-bundle digest separation
 - parameterized scheduler helper semantics without cron plaintext
 - 10-table, 18-function, and 6-trigger source identities
 - RLS and service-role-only update-draft contracts
+- explicit regression evidence for the accepted update-drafts caller-authorization risk
 - no credential-value or machine-path shapes in recovered artifacts
+
+The provenance regression is part of canonical `npm run verify` as well as the deployment-surface subset.
 
 ## Remaining UNKNOWNs
 

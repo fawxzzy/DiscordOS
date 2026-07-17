@@ -15,7 +15,7 @@ It proves a shadow transfer path only. It does not move Fitness traffic, does no
 - Updated `api/activation.js` to distinguish `shadowWorkflowParityProved` from `liveWorkflowParityProved`.
 - Updated `api/readiness.js` to project the same shadow/live parity distinction.
 - Updated the Supabase Edge writer to admit `shadow-transfer-proof-*` rows as proof-only.
-- Added migration `supabase/migrations/20260612170500_discordos_feedback_shadow_transfer_proof_rpc.sql` to keep the proof RPC allowlist aligned.
+- Added migration `supabase/migrations/20260612175354_discordos_feedback_shadow_transfer_proof_rpc.sql` to keep the proof RPC allowlist aligned.
 
 ## Required Production Posture
 

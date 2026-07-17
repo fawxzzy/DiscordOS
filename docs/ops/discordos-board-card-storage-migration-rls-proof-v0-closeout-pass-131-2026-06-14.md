@@ -8,7 +8,7 @@ Date: 2026-06-14
 
 ## Completed Work
 
-- Added `supabase/migrations/20260614231000_discordos_board_cards.sql`.
+- Added `supabase/migrations/20260615005519_discordos_board_cards.sql`.
 - Added `scripts/discordos-storage-migration-rls-proof.js`.
 - Added `tests/discordos-storage-migration-rls-proof.test.js`.
 - Added `npm run ops:discordos:board-card-storage-migration-rls-proof`.

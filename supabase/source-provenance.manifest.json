@@ -60,7 +60,7 @@
     {
       "liveVersion": "20260612162531",
       "name": "discordos_feedback_proof_rpc",
-      "sourcePath": "supabase/migrations/20260612162500_discordos_feedback_proof_rpc.sql",
+      "sourcePath": "supabase/migrations/20260612162531_discordos_feedback_proof_rpc.sql",
       "providerRawSource": {
         "bytes": 2297,
         "sha256": "e4607350857d293e444155b1afc76788245288bedd9e44d3602d762542206aec"
@@ -73,7 +73,7 @@
     {
       "liveVersion": "20260612175354",
       "name": "discordos_feedback_shadow_transfer_proof_rpc",
-      "sourcePath": "supabase/migrations/20260612170500_discordos_feedback_shadow_transfer_proof_rpc.sql",
+      "sourcePath": "supabase/migrations/20260612175354_discordos_feedback_shadow_transfer_proof_rpc.sql",
       "providerRawSource": {
         "bytes": 2406,
         "sha256": "8ee11279eece14e79d2e72308ce44964590f77474d222f97bfe6f248213685d4"
@@ -86,7 +86,7 @@
     {
       "liveVersion": "20260612212851",
       "name": "discordos_feedback_fitness_live_transfer_proof_rpc",
-      "sourcePath": "supabase/migrations/20260612213000_discordos_feedback_fitness_live_transfer_proof_rpc.sql",
+      "sourcePath": "supabase/migrations/20260612212851_discordos_feedback_fitness_live_transfer_proof_rpc.sql",
       "providerRawSource": {
         "bytes": 2493,
         "sha256": "f87e60fbfe4601896f483f9a611b5a46346383b0645bab8ec9e547d1d9c4e570"
@@ -99,7 +99,7 @@
     {
       "liveVersion": "20260612222352",
       "name": "discordos_live_transfer_status_rpc",
-      "sourcePath": "supabase/migrations/20260612222000_discordos_live_transfer_status_rpc.sql",
+      "sourcePath": "supabase/migrations/20260612222352_discordos_live_transfer_status_rpc.sql",
       "providerRawSource": {
         "bytes": 2885,
         "sha256": "4276d2b6f64df4c8510f48e1427292fa5f2d89b832d65c50828120b2750c91b9"
@@ -112,7 +112,7 @@
     {
       "liveVersion": "20260613144114",
       "name": "discordos_runtime_health_cron_runs",
-      "sourcePath": "supabase/migrations/20260613143000_discordos_runtime_health_cron_runs.sql",
+      "sourcePath": "supabase/migrations/20260613144114_discordos_runtime_health_cron_runs.sql",
       "providerRawSource": {
         "bytes": 6881,
         "sha256": "c41ffde8ba5446ba62dd863512bc4f65fdf6e73800701c32130bbcb80290aaca"
@@ -125,7 +125,7 @@
     {
       "liveVersion": "20260615005519",
       "name": "discordos_board_cards",
-      "sourcePath": "supabase/migrations/20260614231000_discordos_board_cards.sql",
+      "sourcePath": "supabase/migrations/20260615005519_discordos_board_cards.sql",
       "providerRawSource": {
         "bytes": 2131,
         "sha256": "6ee8a53ba9aa90758df451baee642df0e1a1cb62e8a23bfd1604e6e12f5bd699"
@@ -138,7 +138,7 @@
     {
       "liveVersion": "20260615005542",
       "name": "discordos_moderation_audit_log",
-      "sourcePath": "supabase/migrations/20260614232000_discordos_moderation_audit_log.sql",
+      "sourcePath": "supabase/migrations/20260615005542_discordos_moderation_audit_log.sql",
       "providerRawSource": {
         "bytes": 2278,
         "sha256": "f1df85ac0e1c5f7d7a54208a717b8e6dd42f607db7fcf6eb33cb3cda596c6e2e"
@@ -151,7 +151,7 @@
     {
       "liveVersion": "20260615020059",
       "name": "discordos_board_moderation_writer_rpcs",
-      "sourcePath": "supabase/migrations/20260615012500_discordos_board_moderation_writer_rpcs.sql",
+      "sourcePath": "supabase/migrations/20260615020059_discordos_board_moderation_writer_rpcs.sql",
       "providerRawSource": {
         "bytes": 8974,
         "sha256": "5468f43543a2640afd30061904cd06be158c9cbfc117f19cefbf35905fa1b094"
@@ -164,7 +164,7 @@
     {
       "liveVersion": "20260615034751",
       "name": "discordos_music_sesh_storage",
-      "sourcePath": "supabase/migrations/20260615033000_discordos_music_sesh_storage.sql",
+      "sourcePath": "supabase/migrations/20260615034751_discordos_music_sesh_storage.sql",
       "providerRawSource": {
         "bytes": 4663,
         "sha256": "83babdbb8f979f20cc4ee295549a3a10a6f665cc5a5c0bf35e4bfd269acd6913"
@@ -177,7 +177,7 @@
     {
       "liveVersion": "20260615034829",
       "name": "discordos_music_sesh_writer_rpcs",
-      "sourcePath": "supabase/migrations/20260615034000_discordos_music_sesh_writer_rpcs.sql",
+      "sourcePath": "supabase/migrations/20260615034829_discordos_music_sesh_writer_rpcs.sql",
       "providerRawSource": {
         "bytes": 5755,
         "sha256": "f4821f1d887f15ca7b9ec2cd3e716bc1c3407f83b2a5e32969fc19652bc66231"
@@ -343,6 +343,15 @@
         "sha256": "b0658e5a52534a34cb14abec5776cdaab8969c0fa04f7c3b64b4652c83272050"
       },
       "providerBundleSha256": "fc366e5b614f9a776ff15f291a41d8dc3173375a6fa5dcd86e5e5b65eec229fa"
+    }
+  ],
+  "knownRisks": [
+    {
+      "id": "discordos-update-drafts-caller-authorization",
+      "status": "accepted_live_risk_outside_exact_source_recovery",
+      "evidence": "Recovered v5 source uses the service-role credential after Edge gateway JWT verification without an additional caller-role or internal shared-secret check.",
+      "boundary": "Changing this exact recovered source would alter accepted live semantics and invalidate its authenticated source digest.",
+      "nextAction": "Admit a separate Edge security remediation packet before any deployment."
     }
   ],
   "unknowns": [
