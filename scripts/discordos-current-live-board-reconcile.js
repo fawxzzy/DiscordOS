@@ -1167,6 +1167,7 @@ async function applyPlannedTagRepair(operation, { env = process.env, fetchImpl =
         method: "PATCH",
         body,
         fetchImpl,
+        retryCount: 0,
       });
       const outcomeUnknown = !result.ok && result.status >= 500;
       if (result.ok) writeCount += 1;

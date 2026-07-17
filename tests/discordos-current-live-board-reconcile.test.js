@@ -323,12 +323,15 @@ test("ambiguous archived reopen restores exact original lifecycle and tags witho
     thread_metadata: { archived: true, locked: true },
   };
   const writes = [];
+  let reopenAttempts = 0;
   const operation = archivedTagOperation();
   const fetchImpl = async (_url, init) => {
     if (init.method === "GET") return response(structuredClone(state));
     const body = JSON.parse(init.body);
     writes.push(body);
     if (body.archived === false && body.locked === false) {
+      reopenAttempts += 1;
+      if (reopenAttempts > 1) return response({ message: "retry must not hide reopen ambiguity" }, 400);
       state.thread_metadata = { archived: false, locked: false };
       return response({ message: "ambiguous reopen", retry_after: 0 }, 503);
     }
@@ -348,6 +351,8 @@ test("ambiguous archived reopen restores exact original lifecycle and tags witho
   assert.equal(result.writeOutcomeUnknownCount, 1);
   assert.equal(result.critical, false);
   assert.equal(result.lifecycle.restorationVerified, true);
+  assert.equal(reopenAttempts, 1);
+  assert.equal(writes.length, 2);
   assert.deepEqual(writes.at(-1), {
     applied_tags: ["tag-feature", "tag-planning"],
     archived: true,
