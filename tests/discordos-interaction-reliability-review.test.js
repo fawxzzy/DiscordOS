@@ -47,6 +47,14 @@ test("review proves exactly the five frozen scenarios with complete correlation"
   for (const scenario of review.scenarios) {
     assert.equal(scenario.validation.ok, true);
     assert.equal(scenario.objects.readback.exact, true);
+    assert.equal(
+      scenario.fixtureTrace.filter((entry) => entry.operation === "read").length,
+      scenario.accounting.fixtureReads,
+    );
+    assert.equal(
+      scenario.fixtureTrace.filter((entry) => entry.operation === "write").length,
+      scenario.accounting.fixtureWrites,
+    );
     assert.match(scenario.correlation.requestId, /^dirq_[0-9a-f]{24}$/);
     assert.match(scenario.correlation.interactionEventId, /^dievt_[0-9a-f]{24}$/);
     assert.match(scenario.correlation.taskId, /^ditask_[0-9a-f]{24}$/);
@@ -84,6 +92,9 @@ test("validation recomputes object digests and publication readback", () => {
 
   scenario.objects.readback.observedPublication.digest = "sha256:" + "0".repeat(64);
   assert.equal(_internals.validateScenario(scenario).publicationExpected, false);
+
+  scenario.fixtureTrace.pop();
+  assert.equal(_internals.validateScenario(scenario).traceAccountingExact, false);
 });
 
 test("duplicate replay reuses terminal identities with zero writes", () => {
@@ -111,6 +122,9 @@ test("interrupted task recovers once under the same job", () => {
   assert.equal(scenario.objects.recovery.status, "recovered");
   assert.equal(scenario.objects.recovery.sameJob, true);
   assert.equal(scenario.objects.recovery.publicationCount, 1);
+  assert.equal(scenario.objects.task.leaseId, scenario.correlation.restartLeaseId);
+  assert.equal(scenario.objects.receipt.leaseId, scenario.correlation.restartLeaseId);
+  assert.equal(scenario.objects.recovery.recoveredReceiptLeaseId, scenario.correlation.restartLeaseId);
   assert.equal(scenario.objects.readback.exact, true);
 });
 
@@ -119,7 +133,10 @@ test("stale receipt is rejected before writes and preserves current receipt", ()
 
   assert.equal(scenario.objects.staleSubmission.disposition, "rejected_before_write");
   assert.equal(scenario.objects.readback.currentReceiptUnchanged, true);
-  assert.equal(scenario.objects.readback.currentReceiptId, scenario.correlation.executionReceiptId);
+  assert.equal(scenario.objects.readback.expectedCurrentReceipt.id, scenario.correlation.executionReceiptId);
+  assert.equal(scenario.objects.readback.observedCurrentReceipt.id, scenario.correlation.executionReceiptId);
+  assert.equal(scenario.objects.readback.expectedCurrentReceipt.digest, scenario.objects.receipt.digest);
+  assert.equal(scenario.objects.readback.observedCurrentReceipt.digest, scenario.objects.receipt.digest);
   assert.equal(scenario.accounting.fixtureWrites, 0);
   assert.equal(scenario.objects.publication, null);
 });
@@ -133,9 +150,9 @@ test("status boundaries and prohibited-action proof remain explicit", () => {
   assert(review.statusBoundaries.unknown.includes("real_user_interactions_outside_the_fixed_canary"));
   assert(review.proofScope.unknown.includes("production_message_command_path_adoption"));
   assert.match(review.proofScope.admissionRationale, /does not claim production-path adoption/);
-  assert.equal(review.accounting.fixtureRequests, 27);
-  assert.equal(review.accounting.fixtureReads, 11);
-  assert.equal(review.accounting.fixtureWrites, 16);
+  assert.equal(review.accounting.fixtureRequests, 31);
+  assert.equal(review.accounting.fixtureReads, 12);
+  assert.equal(review.accounting.fixtureWrites, 19);
   assert.equal(review.accounting.externalWrites, 0);
   assert(Object.values(review.prohibitedActionsObserved).every((value) => value === false));
   assert.equal(review.retainedQueueEventsRetried, false);
@@ -143,8 +160,29 @@ test("status boundaries and prohibited-action proof remain explicit", () => {
 });
 
 test("hosted canary endpoint is GET-only and side-effect free", async () => {
+  const previous = {
+    VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA,
+    VERCEL_DEPLOYMENT_ID: process.env.VERCEL_DEPLOYMENT_ID,
+    VERCEL_ENV: process.env.VERCEL_ENV,
+    VERCEL_URL: process.env.VERCEL_URL,
+  };
+  process.env.VERCEL_GIT_COMMIT_SHA = REVISION;
+  process.env.VERCEL_DEPLOYMENT_ID = "dpl_test_owned";
+  process.env.VERCEL_ENV = "preview";
+  process.env.VERCEL_URL = "preview.example.test";
+
   const response = responseRecorder();
-  await handler({ method: "GET", query: { surface: "interaction-reliability-review" } }, response);
+  try {
+    await handler({ method: "GET", query: { surface: "interaction-reliability-review" } }, response);
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  }
 
   assert.equal(response.statusCode, 200);
   assert.equal(response.headers["cache-control"], "no-store");
@@ -158,6 +196,51 @@ test("hosted canary endpoint is GET-only and side-effect free", async () => {
   await handler({ method: "POST", query: { surface: "interaction-reliability-review" } }, rejected);
   assert.equal(rejected.statusCode, 405);
   assert.equal(rejected.body.error, "METHOD_NOT_ALLOWED");
+});
+
+test("hosted proof fails closed without an exact deployed source revision", () => {
+  const review = _internals.buildInteractionReliabilityReview({
+    sourceRevision: "UNKNOWN",
+    deploymentId: "dpl_unknown_source",
+    runtimeUrl: "https://preview.example.test",
+    environment: "preview",
+    generatedAt: "2026-07-17T00:00:00.000Z",
+  });
+
+  assert.equal(review.ok, false);
+  assert.equal(review.runtime.identityProof.sourceRevisionExact, false);
+  assert(review.runtime.identityProof.blockedReasons.includes("source_revision_not_exact_git_sha"));
+  assert(!review.proofScope.proven.includes("exact_candidate_head_executes_the_fixed_hosted_canary"));
+  assert(review.proofScope.unknown.includes("exact_candidate_head_execution"));
+});
+
+test("hosted endpoint returns a failed receipt when deployed source identity is absent", async () => {
+  const previous = {
+    VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA,
+    VERCEL_DEPLOYMENT_ID: process.env.VERCEL_DEPLOYMENT_ID,
+    VERCEL_ENV: process.env.VERCEL_ENV,
+  };
+  delete process.env.VERCEL_GIT_COMMIT_SHA;
+  process.env.VERCEL_DEPLOYMENT_ID = "dpl_unknown_source";
+  process.env.VERCEL_ENV = "preview";
+  const response = responseRecorder();
+
+  try {
+    await handler({ method: "GET", query: { surface: "interaction-reliability-review" } }, response);
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  }
+
+  assert.equal(response.statusCode, 409);
+  assert.equal(response.body.ok, false);
+  assert.equal(response.body.runtime.identityProof.exact, false);
+  assert(response.body.runtime.identityProof.blockedReasons.includes("source_revision_not_exact_git_sha"));
 });
 
 test("hosted canary dispatch requires the exact frozen runtime-health selector", () => {

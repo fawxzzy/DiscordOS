@@ -71,6 +71,10 @@ function hasValue(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function isExactGitRevision(value) {
+  return typeof value === "string" && /^[0-9a-f]{40}$/i.test(value);
+}
+
 function fixtureAccounting(fixtureReads, fixtureWrites) {
   return {
     fixtureRequests: fixtureReads + fixtureWrites,
@@ -138,206 +142,359 @@ function baseIds(sourceRevision, seed, requestAttempt = 1) {
   };
 }
 
-function buildObjects({ ids, outcome, receiptStatus, responseStatus, publicationStatus, readbackMode }) {
-  const interaction = withDigest({
+class InMemoryReliabilityFixture {
+  constructor() {
+    this.tables = Object.fromEntries(
+      ["requests", "interactions", "tasks", "receipts", "responses", "publications"]
+        .map((name) => [name, new Map()]),
+    );
+    this.idempotencyIndex = new Map();
+    this.fixtureReads = 0;
+    this.fixtureWrites = 0;
+    this.trace = [];
+  }
+
+  seed(table, key, value) {
+    this.tables[table].set(key, structuredClone(value));
+    if (table === "interactions") {
+      this.idempotencyIndex.set(value.idempotencyKey, key);
+    }
+    this.trace.push({ operation: "seed", table, key, digest: value.digest });
+  }
+
+  write(table, key, value) {
+    const previous = this.tables[table].get(key) || null;
+    this.tables[table].set(key, structuredClone(value));
+    if (table === "interactions") {
+      this.idempotencyIndex.set(value.idempotencyKey, key);
+    }
+    this.fixtureWrites += 1;
+    this.trace.push({
+      operation: "write",
+      table,
+      key,
+      previousDigest: previous?.digest || null,
+      digest: value.digest,
+    });
+    return structuredClone(value);
+  }
+
+  read(table, key) {
+    const value = this.tables[table].get(key) || null;
+    this.fixtureReads += 1;
+    this.trace.push({
+      operation: "read",
+      table,
+      key,
+      digest: value?.digest || null,
+    });
+    return value ? structuredClone(value) : null;
+  }
+
+  readByIdempotencyKey(idempotencyKey) {
+    const interactionId = this.idempotencyIndex.get(idempotencyKey) || null;
+    const value = interactionId ? this.tables.interactions.get(interactionId) || null : null;
+    this.fixtureReads += 1;
+    this.trace.push({
+      operation: "read",
+      table: "idempotency-index",
+      key: idempotencyKey,
+      resolvedKey: interactionId,
+      digest: value?.digest || null,
+    });
+    return value ? structuredClone(value) : null;
+  }
+
+  reject(kind, details) {
+    this.trace.push({ operation: "reject", kind, ...details });
+  }
+
+  resetAccounting() {
+    this.fixtureReads = 0;
+    this.fixtureWrites = 0;
+    this.trace = [];
+  }
+
+  accounting() {
+    return fixtureAccounting(this.fixtureReads, this.fixtureWrites);
+  }
+
+  executionTrace() {
+    return structuredClone(this.trace);
+  }
+}
+
+function requestObject(ids, status = "received") {
+  return withDigest({ id: ids.requestId, idempotencyKey: ids.idempotencyKey, status });
+}
+
+function interactionObject(ids, status = "accepted") {
+  return withDigest({
     id: ids.interactionEventId,
     requestId: ids.requestId,
     idempotencyKey: ids.idempotencyKey,
-    status: outcome === "stale" ? "stale" : outcome === "duplicate" ? "duplicate" : "accepted",
+    status,
   });
-  const task = withDigest({
+}
+
+function taskObject(ids, status, leaseId = ids.leaseId) {
+  return withDigest({
     contractVersion: JOB_CONTRACT_VERSION,
     taskId: ids.taskId,
     jobId: ids.jobId,
     interactionEventId: ids.interactionEventId,
-    leaseId: ids.leaseId,
-    status: outcome === "failed"
-      ? "failed"
-      : outcome === "duplicate"
-        ? "not_reexecuted"
-        : outcome === "stale"
-          ? "unchanged"
-          : "succeeded",
+    leaseId,
+    status,
   });
-  const receipt = withDigest({
+}
+
+function receiptObject(ids, status, { receiptId = ids.executionReceiptId, leaseId = ids.leaseId, attempt = 1 } = {}) {
+  return withDigest({
     contractVersion: RECEIPT_CONTRACT_VERSION,
-    receiptId: ids.executionReceiptId,
+    receiptId,
     jobId: ids.jobId,
     interactionEventId: ids.interactionEventId,
-    status: receiptStatus,
+    leaseId,
+    attempt,
+    status,
   });
-  const response = withDigest({
+}
+
+function responseObject(ids, status) {
+  return withDigest({
     id: ids.responseId,
     interactionEventId: ids.interactionEventId,
     receiptId: ids.executionReceiptId,
-    status: responseStatus,
+    status,
   });
-  const publication = publicationStatus === "absent"
-    ? null
-    : withDigest({
-      attemptId: ids.publicationAttemptId,
-      id: ids.publicationId,
-      responseId: ids.responseId,
-      receiptId: ids.executionReceiptId,
-      status: publicationStatus,
-    });
-  const expectedPublication = publication
-    ? { id: publication.id, digest: publication.digest }
+}
+
+function publicationObject(ids, status) {
+  return withDigest({
+    attemptId: ids.publicationAttemptId,
+    id: ids.publicationId,
+    responseId: ids.responseId,
+    receiptId: ids.executionReceiptId,
+    status,
+  });
+}
+
+function publicationReadback(ids, mode, observedPublication) {
+  const observed = observedPublication
+    ? { id: observedPublication.id, digest: observedPublication.digest }
     : null;
-  const readback = withDigest({
+  return withDigest({
     id: ids.readbackId,
-    mode: readbackMode,
+    mode,
     exact: true,
-    expectedPublication,
-    observedPublication: expectedPublication,
-    publicationAbsent: publication === null,
+    expectedPublication: observed,
+    observedPublication: observed,
+    publicationAbsent: observedPublication === null,
     taskId: ids.taskId,
     jobId: ids.jobId,
     receiptId: ids.executionReceiptId,
   });
-
-  return { interaction, task, receipt, response, publication, readback };
 }
 
-function buildSuccessfulScenario(sourceRevision) {
+function executeSuccessfulScenario(sourceRevision) {
   const ids = baseIds(sourceRevision, "successful");
+  const fixture = new InMemoryReliabilityFixture();
+  const request = fixture.write("requests", ids.requestId, requestObject(ids));
+  const interaction = fixture.write("interactions", ids.interactionEventId, interactionObject(ids));
+  const task = fixture.write("tasks", ids.taskId, taskObject(ids, "succeeded"));
+  const receipt = fixture.write("receipts", ids.executionReceiptId, receiptObject(ids, "succeeded"));
+  const response = fixture.write("responses", ids.responseId, responseObject(ids, "published"));
+  const publication = fixture.write("publications", ids.publicationId, publicationObject(ids, "applied"));
+  const observedPublication = fixture.read("publications", ids.publicationId);
+  const readback = publicationReadback(ids, "exact_touched_object", observedPublication);
+
   return {
-    id: "successful",
-    outcome: "applied",
-    classifications: ["accepted", "applied"],
-    correlation: ids,
-    objects: buildObjects({
-      ids,
+    fixture,
+    scenario: {
+      id: "successful",
       outcome: "applied",
-      receiptStatus: "succeeded",
-      responseStatus: "published",
-      publicationStatus: "applied",
-      readbackMode: "exact_touched_object",
-    }),
-    accounting: fixtureAccounting(1, 5),
+      classifications: ["accepted", "applied"],
+      correlation: ids,
+      objects: { request, interaction, task, receipt, response, publication, readback },
+      accounting: fixture.accounting(),
+      fixtureTrace: fixture.executionTrace(),
+    },
   };
 }
 
-function buildFailedScenario(sourceRevision) {
+function executeFailedScenario(sourceRevision) {
   const ids = { ...baseIds(sourceRevision, "failed"), publicationId: null };
+  const fixture = new InMemoryReliabilityFixture();
+  const request = fixture.write("requests", ids.requestId, requestObject(ids));
+  const interaction = fixture.write("interactions", ids.interactionEventId, interactionObject(ids));
+  const task = fixture.write("tasks", ids.taskId, taskObject(ids, "failed"));
+  const receipt = fixture.write("receipts", ids.executionReceiptId, receiptObject(ids, "failed"));
+  const response = fixture.write("responses", ids.responseId, responseObject(ids, "failure_returned"));
+  const publication = fixture.read("publications", ids.publicationAttemptId);
+  const readback = publicationReadback(ids, "exact_absence", publication);
+
   return {
     id: "failed",
     outcome: "failed",
     classifications: ["accepted", "failed", "blocked"],
     correlation: ids,
-    objects: buildObjects({
-      ids,
-      outcome: "failed",
-      receiptStatus: "failed",
-      responseStatus: "failure_returned",
-      publicationStatus: "absent",
-      readbackMode: "exact_absence",
-    }),
-    accounting: fixtureAccounting(1, 4),
+    objects: { request, interaction, task, receipt, response, publication, readback },
+    accounting: fixture.accounting(),
+    fixtureTrace: fixture.executionTrace(),
   };
 }
 
-function buildDuplicateScenario(sourceRevision, successful) {
-  const replayRequestId = baseIds(sourceRevision, "successful", 2).requestId;
+function executeDuplicateScenario(sourceRevision, successful, fixture) {
+  fixture.resetAccounting();
   const ids = {
     ...successful.correlation,
-    requestId: replayRequestId,
+    requestId: baseIds(sourceRevision, "successful", 2).requestId,
     duplicateOfRequestId: successful.correlation.requestId,
   };
-  const objects = structuredClone(successful.objects);
-  objects.duplicateRequest = withDigest({
-    id: ids.interactionEventId,
-    requestId: ids.requestId,
+  const duplicateRequest = withDigest({
+    id: ids.requestId,
     duplicateOfRequestId: ids.duplicateOfRequestId,
     idempotencyKey: ids.idempotencyKey,
     status: "duplicate",
   });
+  const interaction = fixture.readByIdempotencyKey(ids.idempotencyKey);
+  const task = fixture.read("tasks", ids.taskId);
+  const receipt = fixture.read("receipts", ids.executionReceiptId);
+  const response = fixture.read("responses", ids.responseId);
+  const publication = fixture.read("publications", ids.publicationId);
+  fixture.read("requests", ids.duplicateOfRequestId);
+  const readback = publicationReadback(successful.correlation, "exact_touched_object", publication);
+
   return {
     id: "duplicate",
     outcome: "duplicate",
     classifications: ["duplicate"],
     correlation: ids,
-    objects,
-    accounting: fixtureAccounting(6, 0),
+    objects: { duplicateRequest, interaction, task, receipt, response, publication, readback },
+    accounting: fixture.accounting(),
+    fixtureTrace: fixture.executionTrace(),
   };
 }
 
-function buildInterruptedScenario(sourceRevision) {
+function executeInterruptedScenario(sourceRevision) {
   const ids = baseIds(sourceRevision, "interrupted-restarted");
   ids.interruptedReceiptId = stableId("direceipt", sourceRevision, "interrupted-restarted", "interrupted");
   ids.restartLeaseId = stableId("dilease", sourceRevision, "interrupted-restarted", "restart");
-  const objects = buildObjects({
-    ids,
-    outcome: "recovered",
-    receiptStatus: "succeeded_after_restart",
-    responseStatus: "published_after_recovery",
-    publicationStatus: "applied_once_after_recovery",
-    readbackMode: "exact_recovered_touched_object",
-  });
-  objects.interruptedReceipt = withDigest({
-    contractVersion: RECEIPT_CONTRACT_VERSION,
-    receiptId: ids.interruptedReceiptId,
-    jobId: ids.jobId,
-    interactionEventId: ids.interactionEventId,
-    leaseId: ids.leaseId,
-    status: "interrupted",
-    publicationId: null,
-  });
-  objects.recovery = withDigest({
+  const fixture = new InMemoryReliabilityFixture();
+  const request = fixture.write("requests", ids.requestId, requestObject(ids));
+  const interaction = fixture.write("interactions", ids.interactionEventId, interactionObject(ids));
+  const interruptedTask = fixture.write("tasks", ids.taskId, taskObject(ids, "interrupted", ids.leaseId));
+  const interruptedReceipt = fixture.write(
+    "receipts",
+    ids.interruptedReceiptId,
+    receiptObject(ids, "interrupted", { receiptId: ids.interruptedReceiptId, leaseId: ids.leaseId, attempt: 1 }),
+  );
+  const task = fixture.write("tasks", ids.taskId, taskObject(ids, "succeeded_after_restart", ids.restartLeaseId));
+  const receipt = fixture.write(
+    "receipts",
+    ids.executionReceiptId,
+    receiptObject(ids, "succeeded_after_restart", { leaseId: ids.restartLeaseId, attempt: 2 }),
+  );
+  const response = fixture.write("responses", ids.responseId, responseObject(ids, "published_after_recovery"));
+  const publication = fixture.write(
+    "publications",
+    ids.publicationId,
+    publicationObject(ids, "applied_once_after_recovery"),
+  );
+  const observedPublication = fixture.read("publications", ids.publicationId);
+  const readback = publicationReadback(ids, "exact_recovered_touched_object", observedPublication);
+  const recovery = withDigest({
     priorReceiptId: ids.interruptedReceiptId,
     recoveryReceiptId: ids.executionReceiptId,
     originalLeaseId: ids.leaseId,
     restartLeaseId: ids.restartLeaseId,
-    sameJob: true,
+    recoveredTaskLeaseId: task.leaseId,
+    recoveredReceiptLeaseId: receipt.leaseId,
+    sameJob: interruptedReceipt.jobId === receipt.jobId,
     publicationCount: 1,
     status: "recovered",
   });
+
   return {
     id: "interrupted-restarted",
     outcome: "recovered",
     classifications: ["accepted", "interrupted", "recovered", "applied"],
     correlation: ids,
-    objects,
-    accounting: fixtureAccounting(1, 7),
+    objects: {
+      request,
+      interaction,
+      interruptedTask,
+      interruptedReceipt,
+      task,
+      receipt,
+      response,
+      publication,
+      readback,
+      recovery,
+    },
+    accounting: fixture.accounting(),
+    fixtureTrace: fixture.executionTrace(),
   };
 }
 
-function buildStaleScenario(sourceRevision) {
+function executeStaleScenario(sourceRevision) {
   const ids = { ...baseIds(sourceRevision, "stale-receipt"), publicationId: null };
   ids.staleReceiptId = stableId("direceipt", sourceRevision, "stale-receipt", "attempt-1");
   ids.executionReceiptId = stableId("direceipt", sourceRevision, "stale-receipt", "attempt-2-current");
-  const objects = buildObjects({
-    ids,
-    outcome: "stale",
-    receiptStatus: "current_unchanged",
-    responseStatus: "stale_rejected",
-    publicationStatus: "absent",
-    readbackMode: "exact_current_receipt_unchanged",
-  });
-  objects.staleSubmission = withDigest({
+  const fixture = new InMemoryReliabilityFixture();
+  const interaction = interactionObject(ids, "accepted_current");
+  const task = taskObject(ids, "succeeded_current");
+  const receipt = receiptObject(ids, "succeeded_current", { attempt: 2 });
+  const response = responseObject(ids, "current_response_unchanged");
+  fixture.seed("interactions", ids.interactionEventId, interaction);
+  fixture.seed("tasks", ids.taskId, task);
+  fixture.seed("receipts", ids.executionReceiptId, receipt);
+  fixture.seed("responses", ids.responseId, response);
+
+  const before = fixture.read("receipts", ids.executionReceiptId);
+  const staleSubmission = withDigest({
     receiptId: ids.staleReceiptId,
     jobId: ids.jobId,
     interactionEventId: ids.interactionEventId,
+    requestId: ids.requestId,
+    leaseId: ids.leaseId,
     attempt: 1,
-    currentAttempt: 2,
+    currentAttempt: before.attempt,
     status: "stale",
     disposition: "rejected_before_write",
   });
-  const readback = { ...objects.readback };
-  delete readback.digest;
-  objects.readback = withDigest({
-    ...readback,
-    currentReceiptId: ids.executionReceiptId,
+  fixture.reject("stale_receipt", {
     submittedReceiptId: ids.staleReceiptId,
-    currentReceiptUnchanged: true,
+    currentReceiptId: ids.executionReceiptId,
+    submittedAttempt: staleSubmission.attempt,
+    currentAttempt: before.attempt,
   });
+  const after = fixture.read("receipts", ids.executionReceiptId);
+  const publication = fixture.read("publications", ids.publicationAttemptId);
+  const readback = withDigest({
+    id: ids.readbackId,
+    mode: "exact_current_receipt_unchanged",
+    exact: true,
+    taskId: ids.taskId,
+    jobId: ids.jobId,
+    receiptId: ids.executionReceiptId,
+    submittedReceiptId: ids.staleReceiptId,
+    expectedCurrentReceipt: { id: before.receiptId, digest: before.digest },
+    observedCurrentReceipt: { id: after.receiptId, digest: after.digest },
+    currentReceiptUnchanged: before.digest === after.digest,
+    expectedPublication: null,
+    observedPublication: null,
+    publicationAbsent: publication === null,
+  });
+
   return {
     id: "stale-receipt",
     outcome: "stale",
     classifications: ["stale", "blocked"],
     correlation: ids,
-    objects,
-    accounting: fixtureAccounting(2, 0),
+    objects: { interaction, task, receipt: after, response, publication, staleSubmission, readback },
+    accounting: fixture.accounting(),
+    fixtureTrace: fixture.executionTrace(),
   };
 }
 
@@ -360,6 +517,10 @@ function validateScenario(scenario) {
   const readbackExact = scenario.objects.readback?.exact === true;
   const accountingExact = scenario.accounting?.fixtureRequests
     === scenario.accounting?.fixtureReads + scenario.accounting?.fixtureWrites;
+  const traceReads = scenario.fixtureTrace.filter((entry) => entry.operation === "read").length;
+  const traceWrites = scenario.fixtureTrace.filter((entry) => entry.operation === "write").length;
+  const traceAccountingExact = traceReads === scenario.accounting.fixtureReads
+    && traceWrites === scenario.accounting.fixtureWrites;
   const publicationExpected = scenario.correlation.publicationId === null
     ? scenario.objects.publication === null && scenario.objects.readback?.publicationAbsent === true
     : scenario.objects.publication?.id === scenario.correlation.publicationId
@@ -367,11 +528,35 @@ function validateScenario(scenario) {
       && scenario.objects.readback?.expectedPublication?.digest === scenario.objects.publication.digest
       && scenario.objects.readback?.observedPublication?.id === scenario.objects.publication.id
       && scenario.objects.readback?.observedPublication?.digest === scenario.objects.publication.digest;
+  const duplicateReusedWithoutWrite = scenario.id !== "duplicate"
+    || (scenario.accounting.fixtureWrites === 0
+      && scenario.objects.duplicateRequest?.status === "duplicate"
+      && scenario.objects.interaction?.id === scenario.correlation.interactionEventId
+      && scenario.objects.receipt?.receiptId === scenario.correlation.executionReceiptId);
+  const recoveryLeaseBound = scenario.id !== "interrupted-restarted"
+    || (scenario.objects.task?.leaseId === scenario.correlation.restartLeaseId
+      && scenario.objects.receipt?.leaseId === scenario.correlation.restartLeaseId
+      && scenario.objects.recovery?.recoveredTaskLeaseId === scenario.correlation.restartLeaseId
+      && scenario.objects.recovery?.recoveredReceiptLeaseId === scenario.correlation.restartLeaseId
+      && scenario.objects.recovery?.sameJob === true
+      && scenario.objects.recovery?.publicationCount === 1);
+  const staleReceiptUnchanged = scenario.id !== "stale-receipt"
+    || (scenario.accounting.fixtureWrites === 0
+      && scenario.fixtureTrace.some((entry) => entry.operation === "reject" && entry.kind === "stale_receipt")
+      && scenario.objects.readback?.expectedCurrentReceipt?.id === scenario.correlation.executionReceiptId
+      && scenario.objects.readback?.observedCurrentReceipt?.id === scenario.correlation.executionReceiptId
+      && scenario.objects.readback?.expectedCurrentReceipt?.digest === scenario.objects.receipt?.digest
+      && scenario.objects.readback?.observedCurrentReceipt?.digest === scenario.objects.receipt?.digest
+      && scenario.objects.readback?.currentReceiptUnchanged === true);
   const ok = missingIds.length === 0
     && invalidDigests.length === 0
     && readbackExact
     && publicationExpected
-    && accountingExact;
+    && accountingExact
+    && traceAccountingExact
+    && duplicateReusedWithoutWrite
+    && recoveryLeaseBound
+    && staleReceiptUnchanged;
   return {
     ok,
     missingIds,
@@ -379,6 +564,10 @@ function validateScenario(scenario) {
     readbackExact,
     publicationExpected,
     accountingExact,
+    traceAccountingExact,
+    duplicateReusedWithoutWrite,
+    recoveryLeaseBound,
+    staleReceiptUnchanged,
   };
 }
 
@@ -389,34 +578,54 @@ function buildInteractionReliabilityReview({
   environment = "local",
   generatedAt = new Date().toISOString(),
 } = {}) {
-  const successful = buildSuccessfulScenario(sourceRevision);
+  const successfulExecution = executeSuccessfulScenario(sourceRevision);
+  const successful = successfulExecution.scenario;
   const scenarios = [
     successful,
-    buildFailedScenario(sourceRevision),
-    buildDuplicateScenario(sourceRevision, successful),
-    buildInterruptedScenario(sourceRevision),
-    buildStaleScenario(sourceRevision),
+    executeFailedScenario(sourceRevision),
+    executeDuplicateScenario(sourceRevision, successful, successfulExecution.fixture),
+    executeInterruptedScenario(sourceRevision),
+    executeStaleScenario(sourceRevision),
   ].map((scenario) => ({ ...scenario, validation: validateScenario(scenario) }));
   const fixtureRequests = scenarios.reduce((total, scenario) => total + scenario.accounting.fixtureRequests, 0);
   const fixtureReads = scenarios.reduce((total, scenario) => total + scenario.accounting.fixtureReads, 0);
   const fixtureWrites = scenarios.reduce((total, scenario) => total + scenario.accounting.fixtureWrites, 0);
   const validationsExact = scenarios.every((scenario) => scenario.validation.ok);
+  const hostedEnvironment = environment === "preview" || environment === "production";
+  const identityProof = {
+    sourceRevisionExact: isExactGitRevision(sourceRevision),
+    deploymentIdPresent: hasValue(deploymentId),
+    hostedEnvironment,
+  };
+  identityProof.exact = identityProof.sourceRevisionExact
+    && (!hostedEnvironment || identityProof.deploymentIdPresent);
+  identityProof.blockedReasons = [
+    ...(identityProof.sourceRevisionExact ? [] : ["source_revision_not_exact_git_sha"]),
+    ...(!hostedEnvironment || identityProof.deploymentIdPresent ? [] : ["hosted_deployment_id_missing"]),
+  ];
+  const proofScope = {
+    proven: identityProof.exact
+      ? PROVEN_SCOPE
+      : PROVEN_SCOPE.filter((item) => item !== "exact_candidate_head_executes_the_fixed_hosted_canary"),
+    unknown: identityProof.exact
+      ? UNKNOWN_SCOPE
+      : [...UNKNOWN_SCOPE, "exact_candidate_head_execution"],
+    admissionRationale: ADMISSION_RATIONALE,
+  };
   const stablePayload = {
     schemaVersion: SCHEMA_VERSION,
     sourceRevision,
     scenarios,
     accounting: { fixtureRequests, fixtureReads, fixtureWrites, externalRequests: 0, externalWrites: 0 },
-    proofScope: {
-      proven: PROVEN_SCOPE,
-      unknown: UNKNOWN_SCOPE,
-      admissionRationale: ADMISSION_RATIONALE,
-    },
+    identityProof,
+    proofScope,
   };
+  const reviewReady = validationsExact && identityProof.exact;
 
   return {
     schemaVersion: SCHEMA_VERSION,
-    ok: validationsExact,
-    status: validationsExact ? "interaction_reliability_review_ready" : "interaction_reliability_review_failed",
+    ok: reviewReady,
+    status: reviewReady ? "interaction_reliability_review_ready" : "interaction_reliability_review_failed",
     generatedAt,
     reviewId: stableId("dirr", sourceRevision, SCHEMA_VERSION),
     reviewDigest: sha256(canonicalJson(stablePayload)),
@@ -426,6 +635,7 @@ function buildInteractionReliabilityReview({
       url: runtimeUrl,
       environment,
       surface: "fixed_test_owned_hosted_canary",
+      identityProof,
       productionDeploymentPerformed: false,
     },
     contracts: {
@@ -448,7 +658,7 @@ function buildInteractionReliabilityReview({
         ...UNKNOWN_SCOPE,
       ],
     },
-    proofScope: stablePayload.proofScope,
+    proofScope,
     accounting: {
       hostedCanaryRequests: 1,
       fixtureRequests,

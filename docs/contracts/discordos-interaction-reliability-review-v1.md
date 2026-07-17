@@ -9,7 +9,10 @@ successful, failed, duplicate, interrupted/restarted, and stale receipt.
 The surface is a fixed GET-only canary. It makes no Discord, board, Supabase,
 Auth, billing, schema, secret, deployment, or other owner-repository mutation.
 Its object writes are deterministic in-memory fixture transitions, reported
-separately from external requests and writes.
+separately from external requests and writes. The canary executes each state
+transition against keyed fixture tables and derives receipts, publications,
+readbacks, and accounting from the resulting operation trace; it does not
+declare a scenario healthy from preassembled terminal objects.
 
 Fixture request counts are the sum of the explicit fixture reads and writes for
 each scenario. The hosted GET is counted separately from those logical fixture
@@ -31,6 +34,11 @@ A failed or stale interaction has a stable publication-attempt identity and an
 exact absence readback, but no fabricated publication ID. A duplicate request
 has a new ingress request ID and reuses the original terminal interaction,
 receipt, response, publication, and readback identities with zero writes.
+Interrupted work first persists the original lease and interrupted receipt,
+then overwrites the task under a distinct restart lease. Both the recovered
+task and recovered receipt bind that restart lease before the single
+publication is admitted. A stale submission captures exact current-receipt
+preimage and postimage digests and passes only when they are identical.
 
 ## Status boundaries
 
@@ -55,11 +63,16 @@ mounted on the existing read-only runtime-health function so the review does
 not increase the Vercel serverless-function denominator. Other methods return
 `405`. The surface does not accept caller-controlled scenario input and cannot
 address product cards. Ordinary `/api/runtime-health` behavior is unchanged.
+Hosted proof fails closed unless the runtime provides an exact 40-character
+Git source revision and, for Preview or Production, a deployment ID. An
+identity failure returns a failed review and removes exact-head execution from
+the proven scope.
 
 ## Acceptance
 
 - exactly five scenarios in frozen order;
 - deterministic IDs and digests at one source revision;
+- accounting derived from the stateful fixture operation trace;
 - exact readback for every scenario;
 - duplicate and stale scenarios perform zero fixture writes;
 - interrupted work publishes once after recovery;
