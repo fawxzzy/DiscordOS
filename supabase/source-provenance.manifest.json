@@ -1,0 +1,352 @@
+{
+  "schemaVersion": "discordos.supabase-source-provenance.v1",
+  "project": {
+    "ref": "nwexsktuuenfdegzrbut",
+    "name": "DiscordOS"
+  },
+  "capturedDate": "2026-07-17",
+  "provenance": {
+    "providerReads": [
+      "supabase_migrations.schema_migrations",
+      "Supabase Edge Function metadata and no-reveal source readback"
+    ],
+    "mutationsPerformed": false,
+    "secretsCaptured": false,
+    "cronCommandCaptured": false,
+    "machinePathsCaptured": false
+  },
+  "comparisonPolicy": {
+    "encoding": "utf-8",
+    "migrations": {
+      "lineEndings": "lf",
+      "terminalNewline": "exactly_one"
+    },
+    "edgeProviderRawSource": {
+      "bytes": "preserve_exact_authenticated_provider_bytes"
+    },
+    "edgeCanonicalSource": {
+      "lineEndings": "lf",
+      "terminalNewline": "exactly_one"
+    },
+    "providerBundleDigest": "Supabase ezbr_sha256 metadata; intentionally distinct from raw source SHA-256"
+  },
+  "migrations": [
+    {
+      "liveVersion": "20260612082758",
+      "name": "discordos_feedback_runtime_schema_v1",
+      "sourcePath": "supabase/migrations/20260612082758_discordos_feedback_runtime_schema_v1.sql",
+      "providerRawSource": {
+        "bytes": 5332,
+        "sha256": "ce0ea15323209f2959b36baeaa71432a49bcc02c0f4388b465ca65c675d13650"
+      },
+      "canonicalSource": {
+        "bytes": 5333,
+        "sha256": "9ccf19680336d55c1e907b3a37e046ab51c782f3e01a3a40537e7bb55c7d7bea"
+      }
+    },
+    {
+      "liveVersion": "20260612082854",
+      "name": "discordos_set_updated_at_search_path",
+      "sourcePath": "supabase/migrations/20260612082854_discordos_set_updated_at_search_path.sql",
+      "providerRawSource": {
+        "bytes": 79,
+        "sha256": "dfc460760a4d2c78e5afb0c13e668c13fff7daddb07d1721e1f50e2fa6eb28c2"
+      },
+      "canonicalSource": {
+        "bytes": 80,
+        "sha256": "ad7ccd4b44ae3848d1301f32869231b5868621a27e50b7129cc80645904a6ac7"
+      }
+    },
+    {
+      "liveVersion": "20260612162531",
+      "name": "discordos_feedback_proof_rpc",
+      "sourcePath": "supabase/migrations/20260612162500_discordos_feedback_proof_rpc.sql",
+      "providerRawSource": {
+        "bytes": 2297,
+        "sha256": "e4607350857d293e444155b1afc76788245288bedd9e44d3602d762542206aec"
+      },
+      "canonicalSource": {
+        "bytes": 2298,
+        "sha256": "548b695c619e71acc8f6da4ac7fd86f643f1688ecf379c5d6016c09982b62bb3"
+      }
+    },
+    {
+      "liveVersion": "20260612175354",
+      "name": "discordos_feedback_shadow_transfer_proof_rpc",
+      "sourcePath": "supabase/migrations/20260612170500_discordos_feedback_shadow_transfer_proof_rpc.sql",
+      "providerRawSource": {
+        "bytes": 2406,
+        "sha256": "8ee11279eece14e79d2e72308ce44964590f77474d222f97bfe6f248213685d4"
+      },
+      "canonicalSource": {
+        "bytes": 2407,
+        "sha256": "0c2f0e8a5b36af7637523e0933d46050202caa00cd33d16fb02fbf84c8fcc3a7"
+      }
+    },
+    {
+      "liveVersion": "20260612212851",
+      "name": "discordos_feedback_fitness_live_transfer_proof_rpc",
+      "sourcePath": "supabase/migrations/20260612213000_discordos_feedback_fitness_live_transfer_proof_rpc.sql",
+      "providerRawSource": {
+        "bytes": 2493,
+        "sha256": "f87e60fbfe4601896f483f9a611b5a46346383b0645bab8ec9e547d1d9c4e570"
+      },
+      "canonicalSource": {
+        "bytes": 2494,
+        "sha256": "3bc17726abd4c930862264523dc294fd50face8c56f8db7e14b4a303074b1c60"
+      }
+    },
+    {
+      "liveVersion": "20260612222352",
+      "name": "discordos_live_transfer_status_rpc",
+      "sourcePath": "supabase/migrations/20260612222000_discordos_live_transfer_status_rpc.sql",
+      "providerRawSource": {
+        "bytes": 2885,
+        "sha256": "4276d2b6f64df4c8510f48e1427292fa5f2d89b832d65c50828120b2750c91b9"
+      },
+      "canonicalSource": {
+        "bytes": 2886,
+        "sha256": "449924e88fe3a2a1a0ad2c0fdfb82a17e5364fb609b88e222428b0210d68afcb"
+      }
+    },
+    {
+      "liveVersion": "20260613144114",
+      "name": "discordos_runtime_health_cron_runs",
+      "sourcePath": "supabase/migrations/20260613143000_discordos_runtime_health_cron_runs.sql",
+      "providerRawSource": {
+        "bytes": 6881,
+        "sha256": "c41ffde8ba5446ba62dd863512bc4f65fdf6e73800701c32130bbcb80290aaca"
+      },
+      "canonicalSource": {
+        "bytes": 6882,
+        "sha256": "b19d9f31e4fb7d14bfe74e4033fccc8bf115abda199895619671de45abc73f7c"
+      }
+    },
+    {
+      "liveVersion": "20260615005519",
+      "name": "discordos_board_cards",
+      "sourcePath": "supabase/migrations/20260614231000_discordos_board_cards.sql",
+      "providerRawSource": {
+        "bytes": 2131,
+        "sha256": "6ee8a53ba9aa90758df451baee642df0e1a1cb62e8a23bfd1604e6e12f5bd699"
+      },
+      "canonicalSource": {
+        "bytes": 2132,
+        "sha256": "271b1204835324dcd37f5c8d7d5930ee465d5d256f6f3f6f8254d3cdd2f4f4fd"
+      }
+    },
+    {
+      "liveVersion": "20260615005542",
+      "name": "discordos_moderation_audit_log",
+      "sourcePath": "supabase/migrations/20260614232000_discordos_moderation_audit_log.sql",
+      "providerRawSource": {
+        "bytes": 2278,
+        "sha256": "f1df85ac0e1c5f7d7a54208a717b8e6dd42f607db7fcf6eb33cb3cda596c6e2e"
+      },
+      "canonicalSource": {
+        "bytes": 2279,
+        "sha256": "082cadea1d7380556d6788c7984daa43b631d1449ef2045a0adbdf71644cbcb0"
+      }
+    },
+    {
+      "liveVersion": "20260615020059",
+      "name": "discordos_board_moderation_writer_rpcs",
+      "sourcePath": "supabase/migrations/20260615012500_discordos_board_moderation_writer_rpcs.sql",
+      "providerRawSource": {
+        "bytes": 8974,
+        "sha256": "5468f43543a2640afd30061904cd06be158c9cbfc117f19cefbf35905fa1b094"
+      },
+      "canonicalSource": {
+        "bytes": 8974,
+        "sha256": "5468f43543a2640afd30061904cd06be158c9cbfc117f19cefbf35905fa1b094"
+      }
+    },
+    {
+      "liveVersion": "20260615034751",
+      "name": "discordos_music_sesh_storage",
+      "sourcePath": "supabase/migrations/20260615033000_discordos_music_sesh_storage.sql",
+      "providerRawSource": {
+        "bytes": 4663,
+        "sha256": "83babdbb8f979f20cc4ee295549a3a10a6f665cc5a5c0bf35e4bfd269acd6913"
+      },
+      "canonicalSource": {
+        "bytes": 4664,
+        "sha256": "b8f32e82f494c7b970b2b8afddb94f9525cd8d9da88344e6c14d235247738cbd"
+      }
+    },
+    {
+      "liveVersion": "20260615034829",
+      "name": "discordos_music_sesh_writer_rpcs",
+      "sourcePath": "supabase/migrations/20260615034000_discordos_music_sesh_writer_rpcs.sql",
+      "providerRawSource": {
+        "bytes": 5755,
+        "sha256": "f4821f1d887f15ca7b9ec2cd3e716bc1c3407f83b2a5e32969fc19652bc66231"
+      },
+      "canonicalSource": {
+        "bytes": 5756,
+        "sha256": "d1d6d74f651c384c4bada1e3ca798ef8267d7ca5f10bb331596035e9e44c4036"
+      }
+    },
+    {
+      "liveVersion": "20260627201353",
+      "name": "discordos_feedback_runtime_extract_v2",
+      "sourcePath": "supabase/migrations/20260627201353_discordos_feedback_runtime_extract_v2.sql",
+      "providerRawSource": {
+        "bytes": 3619,
+        "sha256": "3ca082fa41d1c088e6ab8a9e61135569b0f6ddbc05cef004dccf769b754da2cf"
+      },
+      "canonicalSource": {
+        "bytes": 3620,
+        "sha256": "479544d4aaf95b53847058158bc817e1131f84dd751a7bd461fddeb71bb85fd9"
+      }
+    },
+    {
+      "liveVersion": "20260627202737",
+      "name": "enable_discordos_message_poll_scheduler",
+      "sourcePath": "supabase/migrations/20260627202737_enable_discordos_message_poll_scheduler.sql",
+      "providerRawSource": {
+        "bytes": 79,
+        "sha256": "67ff8afe4d05185852d46d6a74d87096dad26a4f6c4d78be5cc5c7ed5bee1f38"
+      },
+      "canonicalSource": {
+        "bytes": 80,
+        "sha256": "b8297104b22be36124aa6a3e60e884f472b298c1edddf72d5d337f2ee088169a"
+      }
+    },
+    {
+      "liveVersion": "20260627202816",
+      "name": "add_discordos_message_poll_scheduler_helper",
+      "sourcePath": "supabase/migrations/20260627202816_add_discordos_message_poll_scheduler_helper.sql",
+      "providerRawSource": {
+        "bytes": 447,
+        "sha256": "4872d6f37343e67707b4159982de98994452605816becbc91d4d15fbd4165f73"
+      },
+      "canonicalSource": {
+        "bytes": 448,
+        "sha256": "eab4a09a3f07a3b5f8e502cdc61c5a5694a2337f64ec7ec95bb147b5bf486ac0"
+      }
+    },
+    {
+      "liveVersion": "20260627210302",
+      "name": "discordos_update_drafts_runtime",
+      "sourcePath": "supabase/migrations/20260627210302_discordos_update_drafts_runtime.sql",
+      "providerRawSource": {
+        "bytes": 3861,
+        "sha256": "f792337de60fa2f778682dd48fa1069a2809b4a0b5a03f4547b5c89ada77f67e"
+      },
+      "canonicalSource": {
+        "bytes": 3862,
+        "sha256": "5d6c420a86f0d6320b7b5a5586a92d751bbf50abdd8d106ef68f14e82580f512"
+      }
+    },
+    {
+      "liveVersion": "20260627211548",
+      "name": "discordos_update_draft_rpcs",
+      "sourcePath": "supabase/migrations/20260627211548_discordos_update_draft_rpcs.sql",
+      "providerRawSource": {
+        "bytes": 9946,
+        "sha256": "938f6ee78ea74dc6ea17f731f35e4c0c370f9a2b52cb0175969b09b05369b2d8"
+      },
+      "canonicalSource": {
+        "bytes": 9947,
+        "sha256": "1f5a9c890e28afb17adf0df19a0c096bad9d19fffc7befc28253336aeb2b5809"
+      }
+    }
+  ],
+  "edgeFunctions": [
+    {
+      "slug": "discordos-readiness",
+      "liveVersion": 5,
+      "verifyJwt": true,
+      "sourcePath": "supabase/functions/discordos-readiness/index.ts",
+      "providerRawSource": {
+        "bytes": 2684,
+        "sha256": "13658c79d0a0e4480a0044f48dfc1026775785c40c1d776786b4c0a5b2d98061"
+      },
+      "canonicalSource": {
+        "bytes": 2684,
+        "sha256": "13658c79d0a0e4480a0044f48dfc1026775785c40c1d776786b4c0a5b2d98061"
+      },
+      "providerBundleSha256": "cfee6853e6757690885c23c647a07851f8a01f90478fe42f61680b83949423a9"
+    },
+    {
+      "slug": "discordos-feedback-persist",
+      "liveVersion": 6,
+      "verifyJwt": true,
+      "sourcePath": "supabase/functions/discordos-feedback-persist/index.ts",
+      "providerRawSource": {
+        "bytes": 11675,
+        "sha256": "9e38a0612da6c8b6978ee53b9c81c6a7f6fdbbccdc75974db82552c9e9ca8ecd"
+      },
+      "canonicalSource": {
+        "bytes": 11675,
+        "sha256": "9e38a0612da6c8b6978ee53b9c81c6a7f6fdbbccdc75974db82552c9e9ca8ecd"
+      },
+      "providerBundleSha256": "4104192cdfb221aff0b7e032285981734703fd6f6bf005c2876dabce19c8f4ee"
+    },
+    {
+      "slug": "discordos-live-transfer-status",
+      "liveVersion": 2,
+      "verifyJwt": true,
+      "sourcePath": "supabase/functions/discordos-live-transfer-status/index.ts",
+      "providerRawSource": {
+        "bytes": 2951,
+        "sha256": "98c51dc5f2042a82318a2970d5c75564f86a98bd678f5b8540a021e95d138ded"
+      },
+      "canonicalSource": {
+        "bytes": 2951,
+        "sha256": "98c51dc5f2042a82318a2970d5c75564f86a98bd678f5b8540a021e95d138ded"
+      },
+      "providerBundleSha256": "f33c8eb977af62537aee1af9d6293297b15beaabd837611849b94a580d9a4fcf"
+    },
+    {
+      "slug": "discordos-runtime-health-cron-audit",
+      "liveVersion": 1,
+      "verifyJwt": true,
+      "sourcePath": "supabase/functions/discordos-runtime-health-cron-audit/index.ts",
+      "providerRawSource": {
+        "bytes": 2924,
+        "sha256": "856ca64d40e2be80fe4862968ccbcb292559d9dd382411175d7b2855efb22ae7"
+      },
+      "canonicalSource": {
+        "bytes": 2925,
+        "sha256": "55742003f392e2184f7357bd70f0250362e613e13b2a71665e8f884c20f0a304"
+      },
+      "providerBundleSha256": "dc1617fbc45d8d5ce6e14bdf564d3614bd1413d4b929d7e4a98a181c77982931"
+    },
+    {
+      "slug": "discordos-product-workflow-rpc",
+      "liveVersion": 2,
+      "verifyJwt": true,
+      "sourcePath": "supabase/functions/discordos-product-workflow-rpc/index.ts",
+      "providerRawSource": {
+        "bytes": 3493,
+        "sha256": "efd8c739d962a35411ab2e8cea0e67ac9c5792b5e93c48e3a622b5f09545dc89"
+      },
+      "canonicalSource": {
+        "bytes": 3493,
+        "sha256": "efd8c739d962a35411ab2e8cea0e67ac9c5792b5e93c48e3a622b5f09545dc89"
+      },
+      "providerBundleSha256": "394d0a7d8e69a62accd684a02083e84c18812081f3b64fe916fd9a2f2b1a82d4"
+    },
+    {
+      "slug": "discordos-update-drafts",
+      "liveVersion": 5,
+      "verifyJwt": true,
+      "sourcePath": "supabase/functions/discordos-update-drafts/index.ts",
+      "providerRawSource": {
+        "bytes": 6703,
+        "sha256": "b0658e5a52534a34cb14abec5776cdaab8969c0fa04f7c3b64b4652c83272050"
+      },
+      "canonicalSource": {
+        "bytes": 6703,
+        "sha256": "b0658e5a52534a34cb14abec5776cdaab8969c0fa04f7c3b64b4652c83272050"
+      },
+      "providerBundleSha256": "fc366e5b614f9a776ff15f291a41d8dc3173375a6fa5dcd86e5e5b65eec229fa"
+    }
+  ],
+  "unknowns": [
+    "Installed cron command plaintext was intentionally not read; only non-secret schedule/signature metadata may be compared.",
+    "Provider bundle digest derivation internals are provider-owned; ezbr_sha256 is not represented as the raw source digest."
+  ]
+}
