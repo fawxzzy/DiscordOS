@@ -443,6 +443,16 @@ test("targeted idempotent replay binds the trusted plan digest and performs zero
   assert.deepEqual(receipt.reconciliation.touchedTagPostimages, [complete]);
 });
 
+test("write-side Discord 5xx responses remain unknown even when a later retry succeeds", async () => {
+  const queued = [response({ message: "server error" }, 503), response({ ok: true }, 200), response({ message: "read error" }, 503)];
+  const counted = _internals.countedDiscordFetch(async () => queued.shift());
+  const url = "https://discord.com/api/v10/channels/fitness-thread";
+  await counted.fetchImpl(url, { method: "PATCH" });
+  await counted.fetchImpl(url, { method: "PATCH" });
+  await counted.fetchImpl(url, { method: "GET" });
+  assert.deepEqual(counted.state, { confirmedWrites: 1, unknownWriteOutcomes: 1 });
+});
+
 test("forum scan projects into the journal writer's authoritative identity contract", () => {
   const profileScan = {
     status: "drift_detected",

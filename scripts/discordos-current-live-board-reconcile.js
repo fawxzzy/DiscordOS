@@ -1389,6 +1389,7 @@ function countedDiscordFetch(fetchImpl = fetch) {
     try {
       const response = await fetchImpl(url, init);
       if (isDiscordWrite && response?.ok) state.confirmedWrites += 1;
+      else if (isDiscordWrite && Number(response?.status) >= 500) state.unknownWriteOutcomes += 1;
       return response;
     } catch (error) {
       if (isDiscordWrite) state.unknownWriteOutcomes += 1;
