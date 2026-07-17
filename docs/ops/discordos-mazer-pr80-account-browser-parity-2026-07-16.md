@@ -56,6 +56,8 @@ The guarded writer performed its required registry identity scan before each exa
 
 Each production event updated exactly its explicit existing thread and appended one new journal. The three applies ran serially. The first two had completed and the third was already in flight when the DiscordOS owner-slot release instruction arrived; the in-flight third operation was allowed to complete its built-in exact readback. No idempotent replay or further board mutation ran after that instruction.
 
+The `245` count is a bounded current-identity observation from this production closeout, not reusable apply input. PR #101's frozen `243`-identity repair plan is historical evidence and is non-applicable to this packet or any future current-live repair. The next live repair must recompute producer-backed current evidence before planning or applying changes.
+
 ## DiscordOS verification
 
 - Board, journal, and consistency suites: `52/52` passed.
