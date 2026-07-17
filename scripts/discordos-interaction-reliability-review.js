@@ -269,12 +269,13 @@ function responseObject(ids, status) {
   });
 }
 
-function publicationObject(ids, status) {
+function publicationObject(ids, status, leaseId = ids.leaseId) {
   return withDigest({
     attemptId: ids.publicationAttemptId,
     id: ids.publicationId,
     responseId: ids.responseId,
     receiptId: ids.executionReceiptId,
+    leaseId,
     status,
   });
 }
@@ -399,7 +400,7 @@ function executeInterruptedScenario(sourceRevision) {
   const publication = fixture.write(
     "publications",
     ids.publicationId,
-    publicationObject(ids, "applied_once_after_recovery"),
+    publicationObject(ids, "applied_once_after_recovery", ids.restartLeaseId),
   );
   const observedPublication = fixture.read("publications", ids.publicationId);
   const readback = publicationReadback(ids, "exact_recovered_touched_object", observedPublication);
@@ -536,6 +537,7 @@ function validateScenario(scenario) {
   const recoveryLeaseBound = scenario.id !== "interrupted-restarted"
     || (scenario.objects.task?.leaseId === scenario.correlation.restartLeaseId
       && scenario.objects.receipt?.leaseId === scenario.correlation.restartLeaseId
+      && scenario.objects.publication?.leaseId === scenario.correlation.restartLeaseId
       && scenario.objects.recovery?.recoveredTaskLeaseId === scenario.correlation.restartLeaseId
       && scenario.objects.recovery?.recoveredReceiptLeaseId === scenario.correlation.restartLeaseId
       && scenario.objects.recovery?.sameJob === true
@@ -615,6 +617,10 @@ function buildInteractionReliabilityReview({
   const stablePayload = {
     schemaVersion: SCHEMA_VERSION,
     sourceRevision,
+    deploymentIdentity: {
+      deploymentId,
+      environment,
+    },
     scenarios,
     accounting: { fixtureRequests, fixtureReads, fixtureWrites, externalRequests: 0, externalWrites: 0 },
     identityProof,

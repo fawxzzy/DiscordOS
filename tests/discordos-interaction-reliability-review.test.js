@@ -79,6 +79,15 @@ test("identical builds are deterministic apart from generated time", () => {
   assert.equal(first.reviewId, second.reviewId);
   assert.equal(first.reviewDigest, second.reviewDigest);
   assert.deepEqual(first.scenarios, second.scenarios);
+
+  const differentDeployment = _internals.buildInteractionReliabilityReview({
+    sourceRevision: REVISION,
+    deploymentId: "dpl_different_exact_head",
+    runtimeUrl: "https://different-preview.example.test",
+    environment: "preview",
+    generatedAt: "2026-07-17T01:00:00.000Z",
+  });
+  assert.notEqual(first.reviewDigest, differentDeployment.reviewDigest);
 });
 
 test("validation recomputes object digests and publication readback", () => {
@@ -124,8 +133,16 @@ test("interrupted task recovers once under the same job", () => {
   assert.equal(scenario.objects.recovery.publicationCount, 1);
   assert.equal(scenario.objects.task.leaseId, scenario.correlation.restartLeaseId);
   assert.equal(scenario.objects.receipt.leaseId, scenario.correlation.restartLeaseId);
+  assert.equal(scenario.objects.publication.leaseId, scenario.correlation.restartLeaseId);
   assert.equal(scenario.objects.recovery.recoveredReceiptLeaseId, scenario.correlation.restartLeaseId);
   assert.equal(scenario.objects.readback.exact, true);
+
+  const wrongLease = structuredClone(scenario);
+  wrongLease.objects.publication.leaseId = wrongLease.correlation.leaseId;
+  const unsigned = { ...wrongLease.objects.publication };
+  delete unsigned.digest;
+  wrongLease.objects.publication.digest = _internals.sha256(_internals.canonicalJson(unsigned));
+  assert.equal(_internals.validateScenario(wrongLease).recoveryLeaseBound, false);
 });
 
 test("stale receipt is rejected before writes and preserves current receipt", () => {

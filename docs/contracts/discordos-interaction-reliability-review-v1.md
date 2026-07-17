@@ -37,7 +37,8 @@ receipt, response, publication, and readback identities with zero writes.
 Interrupted work first persists the original lease and interrupted receipt,
 then overwrites the task under a distinct restart lease. Both the recovered
 task and recovered receipt bind that restart lease before the single
-publication is admitted. A stale submission captures exact current-receipt
+publication is admitted, and the publication itself carries the restart lease.
+A stale submission captures exact current-receipt
 preimage and postimage digests and passes only when they are identical.
 
 ## Status boundaries
@@ -66,7 +67,9 @@ address product cards. Ordinary `/api/runtime-health` behavior is unchanged.
 Hosted proof fails closed unless the runtime provides an exact 40-character
 Git source revision and, for Preview or Production, a deployment ID. An
 identity failure returns a failed review and removes exact-head execution from
-the proven scope.
+the proven scope. The review digest binds both the source revision and exact
+deployment ID so a receipt cannot be replayed as evidence for another hosted
+deployment of the same commit.
 
 ## Acceptance
 
