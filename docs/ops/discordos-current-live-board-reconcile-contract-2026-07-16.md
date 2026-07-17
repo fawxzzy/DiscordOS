@@ -59,6 +59,12 @@ The recovery plan is `docs/ops/discordos-current-live-board-reconcile-recovery-p
 
 Two independently generated recovery plans are byte-identical. The exact recovery dry run is `dry_run_ready`: both targets are still at their exact guarded preimages, both are archived and locked, the mutation count is zero, unknown outcomes are zero, and no broad scan or unrelated operation is run.
 
+The guarded recovery apply receipt is `docs/ops/discordos-current-live-board-reconcile-recovery-apply-2026-07-16.json`, file SHA-256 `d555b6747fbd68450c332d00d596081a269c650cd3c99dd3f5b05a7ec76be786`. It is `applied_and_reconciled` with exactly `6` confirmed writes, zero unknown outcomes, and no reason codes. Each target used exactly three writes and finished with its deterministic postimage tags plus `archived=true` and `locked=true`.
+
+The exact-plan replay receipt is `docs/ops/discordos-current-live-board-reconcile-recovery-replay-2026-07-16.json`, file SHA-256 `23168f598f35b0b426785d762b322e5c026a275097270970e26b79c0803bc65d`. It is `idempotent_replay`, binds canonical plan digest `e321130c2cac920f75eb7c33eb31fbb4a5a8b5d86511d84dfdbee9a5e5a70245`, reads both touched threads as exact completed postimages, and records zero writes and zero unknown outcomes.
+
+The earlier full paginated post-apply scan had exactly one remaining reason class: the two guarded Fitness tag mismatches. It otherwise proved `13/13` forum coverage, `245/245` healthy current cards, `445` total threads, zero drifted card bodies, zero duplicate stable/current-event identities, zero actionable text findings, and zero governed orphan applied tags. The targeted recovery changed only those two tag/lifecycle surfaces, then read both exact and replayed at zero operations. This compositional readback closes the structure-only tag/order subset without rescanning or reopening unrelated history.
+
 ## Apply and reconciliation contract
 
 The executor uses only the DiscordOS bot-owned path. It counts every confirmed Discord write, retains unknown write outcomes as a terminal blocker, enforces exact compare-before-write guards, performs full paginated post-apply readback, requires exact current stable/event identity uniqueness, and accepts replay only when the same trusted plan resolves to the exact terminal postimage with zero operations and zero writes.
