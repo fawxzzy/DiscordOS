@@ -4,7 +4,7 @@ const path = require("node:path");
 const MIGRATIONS = {
   board: {
     label: "DiscordOS Board Card Storage Migration",
-    path: path.resolve(process.cwd(), "supabase", "migrations", "20260614231000_discordos_board_cards.sql"),
+    path: path.resolve(process.cwd(), "supabase", "migrations", "20260615005519_discordos_board_cards.sql"),
     table: "discordos.discordos_board_cards",
     idempotencyColumn: "card_id",
     requiredTokens: [
@@ -23,7 +23,7 @@ const MIGRATIONS = {
   },
   moderation: {
     label: "DiscordOS Moderation Audit Storage Migration",
-    path: path.resolve(process.cwd(), "supabase", "migrations", "20260614232000_discordos_moderation_audit_log.sql"),
+    path: path.resolve(process.cwd(), "supabase", "migrations", "20260615005542_discordos_moderation_audit_log.sql"),
     table: "discordos.discordos_moderation_audit_log",
     idempotencyColumn: "case_id",
     requiredTokens: [
@@ -43,7 +43,7 @@ const MIGRATIONS = {
   },
   music_sesh: {
     label: "DiscordOS Music Sesh Storage Migration",
-    path: path.resolve(process.cwd(), "supabase", "migrations", "20260615033000_discordos_music_sesh_storage.sql"),
+    path: path.resolve(process.cwd(), "supabase", "migrations", "20260615034751_discordos_music_sesh_storage.sql"),
     table: "discordos.discordos_music_sesh_sessions",
     idempotencyColumn: "session_id",
     requiredTokens: [

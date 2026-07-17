@@ -61,7 +61,6 @@ create index if not exists discord_feedback_completion_reviews_report_id_reviewe
 create or replace function discordos.set_updated_at()
 returns trigger
 language plpgsql
-set search_path = discordos, pg_temp
 as $$
 begin
   new.updated_at = now();

@@ -508,16 +508,16 @@ Current governed contract surface:
   - can deliver critical-only alerts to `#alerts` when `DISCORDOS_RUNTIME_HEALTH_ALERT_SEND=enabled`
   - can write sanitized runtime-health cron execution receipts when `DISCORDOS_RUNTIME_HEALTH_CRON_AUDIT_WRITE=enabled`
   - can also run the ATLAS health watch when `DISCORDOS_ATLAS_HEALTH_WATCH_ENABLED=enabled`
-- `supabase/migrations/20260613143000_discordos_runtime_health_cron_runs.sql`
+- `supabase/migrations/20260613144114_discordos_runtime_health_cron_runs.sql`
   - private `discordos.runtime_health_cron_runs` table plus service-role-only insert/status RPCs
   - stores sanitized cron execution metadata only
-- `supabase/migrations/20260614231000_discordos_board_cards.sql`
+- `supabase/migrations/20260615005519_discordos_board_cards.sql`
   - private `discordos.discordos_board_cards` migration draft
   - enables RLS, revokes public/anon/authenticated access, grants service-role-only access, and defines board/card indexes
-- `supabase/migrations/20260614232000_discordos_moderation_audit_log.sql`
+- `supabase/migrations/20260615005542_discordos_moderation_audit_log.sql`
   - private `discordos.discordos_moderation_audit_log` migration draft
   - enables RLS, revokes public/anon/authenticated access, grants service-role-only access, and stores sanitized audit fingerprints
-- `supabase/migrations/20260615012500_discordos_board_moderation_writer_rpcs.sql`
+- `supabase/migrations/20260615020059_discordos_board_moderation_writer_rpcs.sql`
   - service-role-only RPC entrypoints for guarded board/card writes, moderation audit writes, product workflow readback, and sanitized moderation audit search
   - uses invoker permissions, revokes public/anon/authenticated execution, and grants execute only to `service_role`
 - `supabase/functions/discordos-product-workflow-rpc/index.ts`

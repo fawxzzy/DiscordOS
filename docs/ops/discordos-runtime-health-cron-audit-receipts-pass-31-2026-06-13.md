@@ -10,7 +10,7 @@ This pass does not open a named Discord product lane, expose secrets, write Fitn
 
 Added:
 
-- `supabase/migrations/20260613143000_discordos_runtime_health_cron_runs.sql`
+- `supabase/migrations/20260613144114_discordos_runtime_health_cron_runs.sql`
 - `supabase/functions/discordos-runtime-health-cron-audit/index.ts`
 - `scripts/runtime-health-cron-audit-proof.js`
 - `tests/runtime-health-cron-audit-proof.test.js`
