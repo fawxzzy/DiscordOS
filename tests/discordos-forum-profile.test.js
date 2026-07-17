@@ -33,10 +33,9 @@ function permissionOverwrites() {
 
 function exactChannels() {
   return boardRegistry.boards.map((board) => {
-    const resolvedBoard = board.id === "socials-os-active-admission" ? { ...board, forumChannelId: "socials-forum" } : board;
-    const expected = forumProfile.expectedBoardProfile(resolvedBoard, profileRegistry);
+    const expected = forumProfile.expectedBoardProfile(board, profileRegistry);
     return {
-      id: resolvedBoard.forumChannelId,
+      id: board.forumChannelId,
       guild_id: boardRegistry.guildId,
       name: expected.structure.name,
       topic: expected.structure.topic,

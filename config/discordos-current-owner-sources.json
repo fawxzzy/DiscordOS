@@ -1,0 +1,92 @@
+{
+  "schemaVersion": "discordos.current-owner-sources.v1",
+  "ownerExports": [
+    {
+      "boardId": "atlas-active-admission",
+      "adapterId": "atlas-full-system-registry-v1",
+      "repository": "fawxzzy/ATLAS",
+      "ref": "main",
+      "path": "docs/registry/project-board-owner-exports/atlas.project-board.owner-export.v1.json"
+    },
+    {
+      "boardId": "cortex-active-admission",
+      "adapterId": "atlas-full-system-registry-v1",
+      "repository": "fawxzzy/ATLAS",
+      "ref": "main",
+      "path": "docs/registry/project-board-owner-exports/cortex.project-board.owner-export.v1.json"
+    },
+    {
+      "boardId": "discordos-active-admission",
+      "adapterId": "discordos-owner-registry-v1",
+      "repository": "fawxzzy/DiscordOS",
+      "ref": "main",
+      "path": "exports/discordos.project-board.owner-export.v1.json"
+    },
+    {
+      "boardId": "foundation-active-admission",
+      "adapterId": "foundation-roadmap-v1",
+      "repository": "fawxzzy/foundation",
+      "ref": "main",
+      "path": "exports/foundation.project-board.owner-export.v1.json"
+    },
+    {
+      "boardId": "lifeline-active-admission",
+      "adapterId": "lifeline-roadmap-v1",
+      "repository": "fawxzzy/lifeline",
+      "ref": "main",
+      "path": "exports/lifeline.project-board.owner-export.v1.json"
+    },
+    {
+      "boardId": "playbook-active-admission",
+      "adapterId": "playbook-roadmap-v1",
+      "repository": "fawxzzy/playbook",
+      "ref": "main",
+      "path": "exports/playbook.project-board.owner-export.v1.json"
+    },
+    {
+      "boardId": "stack-active-admission",
+      "adapterId": "stack-owner-registry-v1",
+      "repository": "fawxzzy/_stack",
+      "ref": "main",
+      "path": "exports/stack.project-board.owner-export.v1.json"
+    },
+    {
+      "boardId": "socials-os-active-admission",
+      "adapterId": "socials-os-roadmap-v1",
+      "repository": "fawxzzy/socials-os",
+      "ref": "main",
+      "path": "exports/atlas.project-board.owner-export.v1.json"
+    }
+  ],
+  "localTerminalSources": [
+    {
+      "boardId": "discordos-active-admission",
+      "adapterId": "discordos-owner-registry-v1",
+      "path": "config/discordos-owner-work-registry.json",
+      "collection": "workItems",
+      "idField": "id",
+      "terminalField": "status",
+      "terminalValues": [
+        "complete"
+      ],
+      "occurredAtField": "updatedAt"
+    }
+  ],
+  "unresolvedRegisteredSources": [
+    {
+      "boardId": "fitness-active",
+      "adapterId": "fitness-export-v1",
+      "repository": "fawxzzy/fawxzzy-fitness",
+      "ref": "main",
+      "reason": "registered Fitness export is runtime-only and has no committed current export artifact"
+    }
+  ],
+  "excludedProjects": [
+    {
+      "project": "FawxzzyWeb",
+      "repository": "fawxzzy/FawxzzyWeb",
+      "ref": "main",
+      "reason": "no registered DiscordOS board or owner-export adapter"
+    }
+  ]
+}

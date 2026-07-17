@@ -47,7 +47,6 @@ function buildResidualPlan({ snapshot, socialsOwnerExport }) {
 
 function resolvedRegistry(socialsOwnerExport = socialsExport()) {
   const value = structuredClone(registry);
-  value.boards.find((board) => board.id === "socials-os-active-admission").forumChannelId = "socials-forum";
   if (socialsOwnerExport) {
     value.sourceAdapters["socials-os-roadmap-v1"].acceptedPreimage.ownerExportBlob = ownerExportBlobOid(socialsOwnerExport);
   }

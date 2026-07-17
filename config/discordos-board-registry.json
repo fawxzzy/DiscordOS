@@ -511,9 +511,8 @@
       "id": "socials-os-active-admission",
       "project": "Socials OS",
       "required": true,
-      "forumChannelId": null,
+      "forumChannelId": "1526862405139828858",
       "forumChannelName": "socials-os",
-      "channelIdentityResolution": "exact_name_under_category",
       "role": "active",
       "forumProfile": "project-active-v1",
       "permissionProfile": "restricted-single-writer-v1",
@@ -533,7 +532,7 @@
       "blockers": [],
       "evidence": [
         "The Socials OS owner adapter is admitted from the atlas.project-board.owner-export.v1 contract.",
-        "The initial channel identity is resolved exactly by name under the governed category during the serialized provision cluster and is then exact-ID scoped in the runtime receipt."
+        "The serialized provision cluster resolved and read back exact forum channel 1526862405139828858; current runtime operations are exact-ID scoped."
       ]
     }
   ]
