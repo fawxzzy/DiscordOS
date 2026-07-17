@@ -4,6 +4,9 @@ const path = require("node:path");
 const test = require("node:test");
 
 const { _internals } = require("../scripts/discordos-current-live-board-reconcile");
+const { _internals: cardContract } = require("../scripts/discordos-board-card-contract");
+const { _internals: completedTransfer } = require("../scripts/discordos-board-completed-transfer");
+const { _internals: currentRepair } = require("../scripts/discordos-current-board-drift-repair");
 const { _internals: journal } = require("../scripts/discordos-board-card-journal");
 
 const repoRoot = path.resolve(__dirname, "..");
@@ -409,6 +412,95 @@ test("a Critical lifecycle drift stops every later targeted mutation", async () 
   assert.equal(secondReceipt.severity, "Critical");
   assert(!writes.some((row) => row.threadId === second.threadId));
   assert(receipt.reasonCodes.includes("critical_target_lifecycle_unresolved"));
+});
+
+test("a Critical tag lifecycle drift also stops later owner reactions and completed transfers", async () => {
+  const tag = archivedTagOperation({ operationId: "tag-01" });
+  const owner = { operationId: "owner-01", kind: "owner_event", event: {}, requiredReaction: { name: "success" } };
+  const transfer = { operationId: "transfer-01", kind: "completed_transfer" };
+  const state = {
+    parent_id: "fitness-forum",
+    applied_tags: ["tag-feature", "tag-planning"],
+    thread_metadata: { archived: true, locked: true },
+  };
+  let tagWriteIndex = 0;
+  const fetchImpl = async (_url, init) => {
+    if (init.method === "GET") return response(structuredClone(state));
+    tagWriteIndex += 1;
+    const body = JSON.parse(init.body);
+    if (tagWriteIndex === 3) return response({ message: "restore rejected" }, 400);
+    if (Object.hasOwn(body, "applied_tags")) state.applied_tags = [...body.applied_tags];
+    if (Object.hasOwn(body, "archived")) state.thread_metadata.archived = body.archived;
+    if (Object.hasOwn(body, "locked")) state.thread_metadata.locked = body.locked;
+    return response(structuredClone(state));
+  };
+  const originals = {
+    journalApply: journal.buildBoardCardJournal,
+    reaction: cardContract.ensureRequiredReaction,
+    transferApply: completedTransfer.buildCompletedBoardTransfer,
+    transferInspect: currentRepair.inspectTransferRuntime,
+  };
+  let reactionCalls = 0;
+  let transferCalls = 0;
+  journal.buildBoardCardJournal = async () => ({ ok: true, results: [{ ok: true, status: "applied", threadId: "owner-thread" }] });
+  cardContract.ensureRequiredReaction = async () => { reactionCalls += 1; return { ok: true, status: "applied" }; };
+  completedTransfer.buildCompletedBoardTransfer = async () => { transferCalls += 1; return { ok: true, status: "applied" }; };
+  currentRepair.inspectTransferRuntime = async () => ({ ok: true, status: "pending", complete: false });
+  try {
+    const receipt = await _internals.runApply({
+      plan: {
+        executionScope: "current_live_full",
+        planDigestSha256: "f".repeat(64),
+        mutationCap: { logicalOperationCount: 3, maxConfirmedDiscordWrites: 20 },
+        denominator: { terminal: { boards: 1, currentCards: 1, totalThreads: 1, healthyCards: 1, retainedLegacyRows: 0, supersededRows: 0 } },
+        operations: [owner, tag, transfer],
+        ownerAuthority: { blockedSubsets: [], unresolvedRegisteredSources: [], excludedProjects: [] },
+      },
+      preflight: {
+        ok: true,
+        status: "preflight_ready",
+        allComplete: false,
+        ownerStatuses: [{ operationId: owner.operationId, status: "pending" }],
+        tagStatuses: [{ operationId: tag.operationId, status: "pending" }],
+        orderStatus: null,
+        transferStatuses: [{ operationId: transfer.operationId, status: "pending", complete: false }],
+        scan: { cards: { exactReadbackRows: [] } },
+      },
+      boardRegistry: {},
+      env: { DISCORDOS_BOT_TOKEN: "test-token" },
+      fetchImpl,
+      currentScanImpl: async () => ({
+        denominator: { requiredBoardCount: 1, inspectedBoardCount: 1, coverageStatus: "complete", uncoveredBoardCount: 0 },
+        cards: {
+          currentCardCount: 1,
+          totalThreadCount: 1,
+          healthyCardCount: 1,
+          driftedCardCount: 0,
+          retainedLegacyHistoryCount: 0,
+          supersededRecordCount: 0,
+          duplicateStableIdentityCount: 0,
+          actionableTextIntegrityFindingCount: 0,
+          boardProfiles: [],
+          exactReadbackRows: [],
+        },
+        reasonCodes: [],
+      }),
+    });
+    assert.equal(receipt.ok, false);
+    assert.equal(reactionCalls, 0);
+    assert.equal(transferCalls, 0);
+    const reactionReceipt = receipt.operationReceipts.find((row) => row.operationId === `${owner.operationId}-reaction`);
+    const transferReceipt = receipt.operationReceipts.find((row) => row.operationId === transfer.operationId);
+    assert.equal(reactionReceipt.status, "not_run");
+    assert.equal(reactionReceipt.severity, "Critical");
+    assert.equal(transferReceipt.status, "not_run");
+    assert.equal(transferReceipt.severity, "Critical");
+  } finally {
+    journal.buildBoardCardJournal = originals.journalApply;
+    cardContract.ensureRequiredReaction = originals.reaction;
+    completedTransfer.buildCompletedBoardTransfer = originals.transferApply;
+    currentRepair.inspectTransferRuntime = originals.transferInspect;
+  }
 });
 
 test("targeted idempotent replay binds the trusted plan digest and performs zero writes", async () => {

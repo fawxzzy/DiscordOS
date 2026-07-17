@@ -1485,6 +1485,18 @@ async function runApply({ plan, preflight, boardRegistry, env = process.env, fet
   for (const operation of ownerPending) {
     const ownerResult = ownerResultById.get(operation.operationId);
     if (!ownerResult?.ok || !ownerResult.threadId) continue;
+    if (criticalTagBarrier) {
+      operationReceipts.push({
+        operationId: `${operation.operationId}-reaction`,
+        kind: "owner_reaction",
+        ok: false,
+        status: "not_run",
+        writeCount: 0,
+        severity: "Critical",
+        reasonCodes: ["prior_target_lifecycle_unresolved"],
+      });
+      continue;
+    }
     const reaction = await cardContract.ensureRequiredReaction({
       channelId: ownerResult.threadId,
       messageId: ownerResult.threadId,
@@ -1511,6 +1523,18 @@ async function runApply({ plan, preflight, boardRegistry, env = process.env, fet
     const status = preflight.transferStatuses.find((row) => row.operationId === operation.operationId);
     if (status?.status === "complete" && status.complete === true) {
       operationReceipts.push({ operationId: operation.operationId, kind: operation.kind, ok: true, status: "already_complete", writeCount: 0 });
+      continue;
+    }
+    if (criticalTagBarrier) {
+      operationReceipts.push({
+        operationId: operation.operationId,
+        kind: operation.kind,
+        ok: false,
+        status: "not_run",
+        writeCount: 0,
+        severity: "Critical",
+        reasonCodes: ["prior_target_lifecycle_unresolved"],
+      });
       continue;
     }
     const receipt = await completedTransfer.buildCompletedBoardTransfer({
