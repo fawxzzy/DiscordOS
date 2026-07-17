@@ -51,6 +51,14 @@ Two earlier dry runs failed closed with zero mutations while the new composition
 
 The structure-only plan is generated twice with byte-identical output. Its exact dry run is `dry_run_ready`: `17` tag repairs pending, `1` order repair pending, zero owner/transfer operations, zero reason codes, zero Discord mutations, and zero unknown mutation outcomes. The later apply/readback/replay result is recorded in the terminal receipt.
 
+## Bounded archived-thread recovery
+
+The guarded structure apply receipt is `docs/ops/discordos-current-live-board-reconcile-apply-2026-07-16.json`, file SHA-256 `eb59e40281c7b710015dcbdf436023a059b12e3f1a9798303449ebab0a758d92`. It records `blocked_after_partial_apply`, `16` confirmed writes, zero unknown outcomes, and exactly two HTTP `400` zero-write failures: `tag-02` / `FF-RET-004` / thread `1526112879303196763` and `tag-03` / `FF-ROUTINE-001` / thread `1526833783385358407`. Both failed targets remained at their exact preimages with `archived=true` and `locked=true`; the other `16` operations are preserved and are not apply inputs to the recovery plan.
+
+The recovery plan is `docs/ops/discordos-current-live-board-reconcile-recovery-plan-2026-07-16.json`, file SHA-256 `b273291eba38d65726b3f2e14f4a9dc7c741b00150c0a50274e7050861c457fc`, canonical digest `e321130c2cac920f75eb7c33eb31fbb4a5a8b5d86511d84dfdbee9a5e5a70245`. Its scope is exactly those two thread IDs, its revised cap is `6` confirmed writes, and it performs reopen/unlock, tag PATCH, exact archive/lock restoration, and final touched-object readback per target. A failed or rejected tag PATCH restores and verifies the original tags plus lifecycle. A failed or outcome-unknown restoration is terminal `Critical`, cannot claim success, and prevents every later mutation.
+
+Two independently generated recovery plans are byte-identical. The exact recovery dry run is `dry_run_ready`: both targets are still at their exact guarded preimages, both are archived and locked, the mutation count is zero, unknown outcomes are zero, and no broad scan or unrelated operation is run.
+
 ## Apply and reconciliation contract
 
 The executor uses only the DiscordOS bot-owned path. It counts every confirmed Discord write, retains unknown write outcomes as a terminal blocker, enforces exact compare-before-write guards, performs full paginated post-apply readback, requires exact current stable/event identity uniqueness, and accepts replay only when the same trusted plan resolves to the exact terminal postimage with zero operations and zero writes.

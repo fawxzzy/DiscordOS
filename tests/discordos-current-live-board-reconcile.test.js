@@ -51,6 +51,20 @@ function event({ eventId, cardId, occurredAt, state = "in_progress" }) {
   });
 }
 
+function archivedTagOperation({ operationId = "tag-01", threadId = "fitness-thread", cardId = "FIT-1" } = {}) {
+  return {
+    operationId,
+    kind: "tag_repair",
+    boardId: "fitness-active",
+    forumChannelId: "fitness-forum",
+    threadId,
+    cardId,
+    threadState: { archived: true, locked: true },
+    preimage: { appliedTagNames: ["Feature", "Planning"], appliedTagIds: ["tag-feature", "tag-planning"] },
+    postimage: { appliedTagNames: ["Feature", "Review"], appliedTagIds: ["tag-feature", "tag-review"] },
+  };
+}
+
 test("CLI requires both a plan file and exact trusted file hash outside generation", () => {
   assert.throws(() => _internals.parseArgs(["--dry-run", "--plan", "plan.json"]), /trusted_plan_sha256_missing_or_invalid/);
   const options = _internals.parseArgs([
@@ -75,6 +89,22 @@ test("CLI requires both a plan file and exact trusted file hash outside generati
     "plan.json",
   ]);
   assert.equal(generation.structureOnly, true);
+  const recovery = _internals.parseArgs([
+    "--generate-recovery",
+    "--prior-plan",
+    "prior-plan.json",
+    "--prior-plan-sha256",
+    "b".repeat(64),
+    "--prior-receipt",
+    "prior-receipt.json",
+    "--prior-receipt-sha256",
+    "c".repeat(64),
+    "--output",
+    "recovery-plan.json",
+  ]);
+  assert.equal(recovery.mode, "generate_recovery");
+  assert.equal(recovery.priorPlanSha256, "b".repeat(64));
+  assert.equal(recovery.priorReceiptSha256, "c".repeat(64));
   assert.throws(() => _internals.parseArgs([
     "--dry-run",
     "--structure-only",
@@ -142,26 +172,241 @@ test("tag plans carry the exact parent forum identity required by runtime guards
         { id: "tag-review", name: "Review" },
       ] },
     }],
-    cards: { boardProfiles: [{
-      boardId: "fitness-active",
-      appliedTagSafety: { semanticRows: [{
+    cards: {
+      exactReadbackRows: [{
+        boardId: "fitness-active",
         threadId: "fitness-thread",
         cardId: "FIT-1",
-        exact: false,
+        superseded: false,
         retainedLegacyHistory: false,
-        actualNames: ["Feature", "Planning"],
-        expectedNames: ["Feature", "Review"],
-        unknownNames: [],
-        duplicateNames: [],
-        orphanAppliedTagIds: [],
-        overLimit: false,
-      }] },
-    }] },
+        archived: true,
+        locked: true,
+      }],
+      boardProfiles: [{
+        boardId: "fitness-active",
+        appliedTagSafety: { semanticRows: [{
+          threadId: "fitness-thread",
+          cardId: "FIT-1",
+          exact: false,
+          retainedLegacyHistory: false,
+          actualNames: ["Feature", "Planning"],
+          expectedNames: ["Feature", "Review"],
+          unknownNames: [],
+          duplicateNames: [],
+          orphanAppliedTagIds: [],
+          overLimit: false,
+        }] },
+      }],
+    },
   };
   const [operation] = _internals.buildTagOperations({ scan, ownerOperations: [] });
   assert.equal(operation.forumChannelId, "fitness-forum");
+  assert.deepEqual(operation.threadState, { archived: true, locked: true });
   assert.deepEqual(operation.preimage.appliedTagIds, ["tag-feature", "tag-planning"]);
   assert.deepEqual(operation.postimage.appliedTagIds, ["tag-feature", "tag-review"]);
+});
+
+test("archived locked tag repair reopens, patches, restores, and proves exact postimage", async () => {
+  const state = {
+    parent_id: "fitness-forum",
+    applied_tags: ["tag-feature", "tag-planning"],
+    thread_metadata: { archived: true, locked: true },
+  };
+  const writes = [];
+  const operation = archivedTagOperation();
+  const fetchImpl = async (url, init) => {
+    assert(url.endsWith("/channels/fitness-thread"));
+    if (init.method === "GET") return response(structuredClone(state));
+    const body = JSON.parse(init.body);
+    writes.push(body);
+    if (Object.hasOwn(body, "applied_tags")) state.applied_tags = [...body.applied_tags];
+    if (Object.hasOwn(body, "archived")) state.thread_metadata.archived = body.archived;
+    if (Object.hasOwn(body, "locked")) state.thread_metadata.locked = body.locked;
+    return response(structuredClone(state));
+  };
+  const result = await _internals.applyPlannedTagRepair(operation, {
+    env: { DISCORDOS_BOT_TOKEN: "test-token" },
+    fetchImpl,
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.writeCount, 3);
+  assert.deepEqual(writes, [
+    { archived: false, locked: false },
+    { applied_tags: ["tag-feature", "tag-review"] },
+    { archived: true, locked: true },
+  ]);
+  assert.deepEqual(result.readback.actualThreadState, { archived: true, locked: true });
+  assert.deepEqual(result.readback.actualAppliedTagIds, ["tag-feature", "tag-review"]);
+  assert.equal(result.lifecycle.restorationVerified, true);
+  assert.equal(result.critical, false);
+});
+
+test("rejected archived tag patch restores and verifies the exact original lifecycle and tags", async () => {
+  const state = {
+    parent_id: "fitness-forum",
+    applied_tags: ["tag-feature", "tag-planning"],
+    thread_metadata: { archived: true, locked: true },
+  };
+  const writes = [];
+  const operation = archivedTagOperation();
+  const fetchImpl = async (_url, init) => {
+    if (init.method === "GET") return response(structuredClone(state));
+    const body = JSON.parse(init.body);
+    writes.push(body);
+    if (writes.length === 2) throw new Error("simulated_tag_patch_rejection");
+    if (Object.hasOwn(body, "applied_tags")) state.applied_tags = [...body.applied_tags];
+    if (Object.hasOwn(body, "archived")) state.thread_metadata.archived = body.archived;
+    if (Object.hasOwn(body, "locked")) state.thread_metadata.locked = body.locked;
+    return response(structuredClone(state));
+  };
+  const result = await _internals.applyPlannedTagRepair(operation, {
+    env: { DISCORDOS_BOT_TOKEN: "test-token" },
+    fetchImpl,
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "blocked");
+  assert.equal(result.writeCount, 2);
+  assert.equal(result.writeOutcomeUnknownCount, 1);
+  assert.equal(result.critical, false);
+  assert.equal(result.lifecycle.restorationVerified, true);
+  assert.deepEqual(writes, [
+    { archived: false, locked: false },
+    { applied_tags: ["tag-feature", "tag-review"] },
+    { applied_tags: ["tag-feature", "tag-planning"], archived: true, locked: true },
+  ]);
+  assert.deepEqual(result.readback.actualThreadState, { archived: true, locked: true });
+  assert.deepEqual(result.readback.actualAppliedTagIds, ["tag-feature", "tag-planning"]);
+  assert(result.reasonCodes.includes("tag_repair_write_outcome_unknown"));
+  assert(!result.reasonCodes.includes("critical_tag_target_lifecycle_unresolved"));
+});
+
+test("failed archived tag patch also restores the exact original lifecycle and tags", async () => {
+  const state = {
+    parent_id: "fitness-forum",
+    applied_tags: ["tag-feature", "tag-planning"],
+    thread_metadata: { archived: true, locked: true },
+  };
+  let writeIndex = 0;
+  const operation = archivedTagOperation();
+  const fetchImpl = async (_url, init) => {
+    if (init.method === "GET") return response(structuredClone(state));
+    writeIndex += 1;
+    const body = JSON.parse(init.body);
+    if (writeIndex === 2) return response({ message: "tag update rejected" }, 400);
+    if (Object.hasOwn(body, "applied_tags")) state.applied_tags = [...body.applied_tags];
+    if (Object.hasOwn(body, "archived")) state.thread_metadata.archived = body.archived;
+    if (Object.hasOwn(body, "locked")) state.thread_metadata.locked = body.locked;
+    return response(structuredClone(state));
+  };
+  const result = await _internals.applyPlannedTagRepair(operation, {
+    env: { DISCORDOS_BOT_TOKEN: "test-token" },
+    fetchImpl,
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.httpStatus, 400);
+  assert.equal(result.writeCount, 2);
+  assert.equal(result.writeOutcomeUnknownCount, 0);
+  assert.equal(result.critical, false);
+  assert.equal(result.lifecycle.restorationVerified, true);
+  assert.deepEqual(result.readback.actualThreadState, { archived: true, locked: true });
+  assert.deepEqual(result.readback.actualAppliedTagIds, ["tag-feature", "tag-planning"]);
+  assert(result.reasonCodes.includes("tag_repair_write_failed"));
+});
+
+test("outcome-unknown lifecycle restore is Critical and never reports repair success", async () => {
+  const state = {
+    parent_id: "fitness-forum",
+    applied_tags: ["tag-feature", "tag-planning"],
+    thread_metadata: { archived: true, locked: true },
+  };
+  let writeIndex = 0;
+  const operation = archivedTagOperation();
+  const fetchImpl = async (_url, init) => {
+    if (init.method === "GET") return response(structuredClone(state));
+    writeIndex += 1;
+    const body = JSON.parse(init.body);
+    if (writeIndex === 3) throw new Error("simulated_restore_outcome_unknown");
+    if (Object.hasOwn(body, "applied_tags")) state.applied_tags = [...body.applied_tags];
+    if (Object.hasOwn(body, "archived")) state.thread_metadata.archived = body.archived;
+    if (Object.hasOwn(body, "locked")) state.thread_metadata.locked = body.locked;
+    return response(structuredClone(state));
+  };
+  const result = await _internals.applyPlannedTagRepair(operation, {
+    env: { DISCORDOS_BOT_TOKEN: "test-token" },
+    fetchImpl,
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "blocked");
+  assert.equal(result.critical, true);
+  assert.equal(result.severity, "Critical");
+  assert.equal(result.lifecycle.restorationVerified, false);
+  assert.equal(result.writeCount, 2);
+  assert.equal(result.writeOutcomeUnknownCount, 1);
+  assert.deepEqual(result.readback.actualThreadState, { archived: false, locked: false });
+  assert(result.reasonCodes.includes("tag_repair_restore_outcome_unknown"));
+  assert(result.reasonCodes.includes("critical_tag_target_lifecycle_unresolved"));
+});
+
+test("a Critical lifecycle drift stops every later targeted mutation", async () => {
+  const first = archivedTagOperation({ operationId: "tag-02", threadId: "fitness-thread-02", cardId: "FIT-2" });
+  const second = archivedTagOperation({ operationId: "tag-03", threadId: "fitness-thread-03", cardId: "FIT-3" });
+  const states = new Map([
+    [first.threadId, { parent_id: "fitness-forum", applied_tags: ["tag-feature", "tag-planning"], thread_metadata: { archived: true, locked: true } }],
+    [second.threadId, { parent_id: "fitness-forum", applied_tags: ["tag-feature", "tag-planning"], thread_metadata: { archived: true, locked: true } }],
+  ]);
+  const writes = [];
+  const fetchImpl = async (url, init) => {
+    const threadId = [...states.keys()].find((candidate) => url.endsWith(`/channels/${candidate}`));
+    assert(threadId);
+    const state = states.get(threadId);
+    if (init.method === "GET") return response(structuredClone(state));
+    const body = JSON.parse(init.body);
+    writes.push({ threadId, body });
+    if (threadId === first.threadId && writes.filter((row) => row.threadId === first.threadId).length === 3) {
+      return response({ message: "restore rejected" }, 400);
+    }
+    if (Object.hasOwn(body, "applied_tags")) state.applied_tags = [...body.applied_tags];
+    if (Object.hasOwn(body, "archived")) state.thread_metadata.archived = body.archived;
+    if (Object.hasOwn(body, "locked")) state.thread_metadata.locked = body.locked;
+    return response(structuredClone(state));
+  };
+  const plan = {
+    executionScope: "targeted_tag_recovery",
+    planDigestSha256: "d".repeat(64),
+    mutationCap: { logicalOperationCount: 2, maxConfirmedDiscordWrites: 6 },
+    operations: [first, second],
+    ownerAuthority: { blockedSubsets: [], unresolvedRegisteredSources: [], excludedProjects: [] },
+  };
+  const preflight = {
+    ok: true,
+    status: "preflight_ready",
+    allComplete: false,
+    ownerStatuses: [],
+    tagStatuses: [
+      { operationId: first.operationId, status: "pending" },
+      { operationId: second.operationId, status: "pending" },
+    ],
+    orderStatus: null,
+    transferStatuses: [],
+    scan: null,
+  };
+  const receipt = await _internals.runApply({
+    plan,
+    preflight,
+    boardRegistry: {},
+    env: { DISCORDOS_BOT_TOKEN: "test-token" },
+    fetchImpl,
+  });
+  const firstReceipt = receipt.operationReceipts.find((row) => row.operationId === first.operationId);
+  const secondReceipt = receipt.operationReceipts.find((row) => row.operationId === second.operationId);
+  assert.equal(receipt.ok, false);
+  assert.equal(receipt.status, "blocked_after_partial_apply");
+  assert.equal(firstReceipt.critical, true);
+  assert.equal(firstReceipt.severity, "Critical");
+  assert.equal(secondReceipt.status, "not_run");
+  assert.equal(secondReceipt.severity, "Critical");
+  assert(!writes.some((row) => row.threadId === second.threadId));
+  assert(receipt.reasonCodes.includes("critical_target_lifecycle_unresolved"));
 });
 
 test("forum scan projects into the journal writer's authoritative identity contract", () => {
@@ -265,7 +510,7 @@ test("plan structure binds its digest, operation IDs, counts, and mutation cap",
     executionScope: "structure_only",
     operationCounts: { ownerEvents: 0, tagRepairs: 1, forumOrderRepairs: 0, completedTransfers: 0 },
     mutationCap: { logicalOperationCount: 1, maxConfirmedDiscordWrites: 1 },
-    operations: [{ operationId: "tag-01", kind: "tag_repair" }],
+    operations: [{ operationId: "tag-01", kind: "tag_repair", threadState: { archived: false, locked: false } }],
   };
   plan.planDigestSha256 = _internals.objectDigest(plan);
   assert.deepEqual(_internals.verifyPlanStructure(plan), []);

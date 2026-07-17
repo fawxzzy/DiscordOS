@@ -22,6 +22,7 @@ const DEFAULT_BOARD_REGISTRY_PATH = path.join(REPO_ROOT, "config", "discordos-bo
 const DEFAULT_PROFILE_REGISTRY_PATH = path.join(REPO_ROOT, "config", "discordos-forum-profile-registry.json");
 const DEFAULT_SOURCE_REGISTRY_PATH = path.join(REPO_ROOT, "config", "discordos-current-owner-sources.json");
 const COMPLETED_BOARD_ID = "shared-completed";
+const TARGETED_RECOVERY_OPERATION_IDS = ["tag-02", "tag-03"];
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -72,6 +73,10 @@ function parseArgs(args) {
     evidencePath: null,
     planPath: null,
     planSha256: null,
+    priorPlanPath: null,
+    priorPlanSha256: null,
+    priorReceiptPath: null,
+    priorReceiptSha256: null,
     sourceRegistryPath: DEFAULT_SOURCE_REGISTRY_PATH,
     outputPath: null,
     allowApply: false,
@@ -81,7 +86,7 @@ function parseArgs(args) {
   let explicitMode = false;
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
-    if (["--generate-plan", "--preflight", "--dry-run", "--apply"].includes(arg)) {
+    if (["--generate-plan", "--generate-recovery", "--preflight", "--dry-run", "--apply"].includes(arg)) {
       if (explicitMode) throw new Error("multiple_modes_not_allowed");
       options.mode = arg.slice(2).replace("-", "_");
       explicitMode = true;
@@ -93,6 +98,18 @@ function parseArgs(args) {
       index += 1;
     } else if (arg === "--plan-sha256") {
       options.planSha256 = readValue(args, index, "missing_plan_sha256").toLowerCase();
+      index += 1;
+    } else if (arg === "--prior-plan") {
+      options.priorPlanPath = path.resolve(readValue(args, index, "missing_prior_plan_path"));
+      index += 1;
+    } else if (arg === "--prior-plan-sha256") {
+      options.priorPlanSha256 = readValue(args, index, "missing_prior_plan_sha256").toLowerCase();
+      index += 1;
+    } else if (arg === "--prior-receipt") {
+      options.priorReceiptPath = path.resolve(readValue(args, index, "missing_prior_receipt_path"));
+      index += 1;
+    } else if (arg === "--prior-receipt-sha256") {
+      options.priorReceiptSha256 = readValue(args, index, "missing_prior_receipt_sha256").toLowerCase();
       index += 1;
     } else if (arg === "--owner-sources") {
       options.sourceRegistryPath = path.resolve(readValue(args, index, "missing_owner_sources_path"));
@@ -107,6 +124,10 @@ function parseArgs(args) {
   }
   if (options.mode === "generate_plan") {
     if (!options.evidencePath) throw new Error("evidence_path_missing");
+    if (!options.outputPath) throw new Error("plan_output_path_missing");
+  } else if (options.mode === "generate_recovery") {
+    if (!options.priorPlanPath || !/^[a-f0-9]{64}$/.test(options.priorPlanSha256 || "")) throw new Error("trusted_prior_plan_missing_or_invalid");
+    if (!options.priorReceiptPath || !/^[a-f0-9]{64}$/.test(options.priorReceiptSha256 || "")) throw new Error("trusted_prior_receipt_missing_or_invalid");
     if (!options.outputPath) throw new Error("plan_output_path_missing");
   } else {
     if (!options.planPath) throw new Error("plan_path_missing");
@@ -513,6 +534,7 @@ async function buildOwnerOperations({ authority, scan, boardRegistry, env = proc
 
 function buildTagOperations({ scan, ownerOperations }) {
   const byThread = new Map();
+  const exactRows = currentRows(scan);
   for (const profile of scan?.cards?.boardProfiles || []) {
     const forumChannelId = (scan?.forums || []).find((forum) => forum.boardId === profile.boardId)?.forumChannelId || null;
     if (!forumChannelId) throw new Error(`tag_forum_identity_missing:${profile.boardId}`);
@@ -521,6 +543,8 @@ function buildTagOperations({ scan, ownerOperations }) {
       if ((row.unknownNames || []).length > 0 || (row.duplicateNames || []).length > 0 || (row.orphanAppliedTagIds || []).length > 0 || row.overLimit) {
         throw new Error(`unsafe_tag_target:${row.threadId}`);
       }
+      const exactRow = exactRows.find((candidate) => candidate.boardId === profile.boardId && candidate.threadId === row.threadId);
+      if (!exactRow) throw new Error(`tag_exact_row_missing:${row.threadId}`);
       byThread.set(row.threadId, {
         kind: "tag_repair",
         boardId: profile.boardId,
@@ -528,6 +552,7 @@ function buildTagOperations({ scan, ownerOperations }) {
         threadId: row.threadId,
         cardId: row.cardId,
         dependsOnOwnerOperationId: null,
+        threadState: { archived: exactRow.archived === true, locked: exactRow.locked === true },
         preimage: { appliedTagNames: row.actualNames, appliedTagIds: forumTagIds(scan, profile.boardId, row.actualNames) },
         postimage: { appliedTagNames: row.expectedNames, appliedTagIds: forumTagIds(scan, profile.boardId, row.expectedNames) },
       });
@@ -550,6 +575,7 @@ function buildTagOperations({ scan, ownerOperations }) {
         threadId: owner.preimage.threadId,
         cardId: owner.cardId,
         dependsOnOwnerOperationId: owner.operationId,
+        threadState: { archived: owner.preimage.archived === true, locked: owner.preimage.locked === true },
         preimage: { appliedTagNames: row.actualNames, appliedTagIds: forumTagIds(scan, owner.boardId, row.actualNames) },
         postimage: { appliedTagNames: owner.desiredTagNames, appliedTagIds: owner.desiredTagIds },
       });
@@ -562,6 +588,7 @@ function buildTagOperations({ scan, ownerOperations }) {
         threadId: null,
         cardId: owner.cardId,
         dependsOnOwnerOperationId: owner.operationId,
+        threadState: { archived: false, locked: false },
         preimage: { appliedTagNames: [], appliedTagIds: [] },
         postimage: { appliedTagNames: owner.desiredTagNames, appliedTagIds: owner.desiredTagIds },
       });
@@ -731,7 +758,9 @@ async function buildDeterministicPlan({
   const initialTotalThreads = scan.cards.totalThreadCount;
   const terminalCurrentCards = initialCurrentCards + ownerCreates + transfers.operations.length;
   const terminalTotalThreads = initialTotalThreads + ownerCreates + transfers.operations.length;
-  const mutationCap = counts.ownerEvents * 6 + counts.tagRepairs + counts.forumOrderRepairs + counts.completedTransfers * 12;
+  const tagWriteCap = tags.reduce((sum, operation) =>
+    sum + (operation.threadState.archived || operation.threadState.locked ? 3 : 1), 0);
+  const mutationCap = counts.ownerEvents * 6 + tagWriteCap + counts.forumOrderRepairs + counts.completedTransfers * 12;
   const plan = {
     schemaVersion: PLAN_SCHEMA_VERSION,
     eventId: EVENT_ID,
@@ -800,11 +829,134 @@ async function buildDeterministicPlan({
   return plan;
 }
 
+async function buildTargetedRecoveryPlan({
+  priorPlan,
+  priorPlanBytes,
+  trustedPriorPlanSha256,
+  priorReceipt,
+  priorReceiptBytes,
+  trustedPriorReceiptSha256,
+  env = process.env,
+  fetchImpl = fetch,
+} = {}) {
+  const reasonCodes = [];
+  if (sha256(priorPlanBytes) !== trustedPriorPlanSha256) reasonCodes.push("trusted_prior_plan_file_digest_mismatch");
+  if (priorPlan?.schemaVersion !== PLAN_SCHEMA_VERSION || priorPlan?.eventId !== EVENT_ID) reasonCodes.push("prior_plan_identity_mismatch");
+  if (priorPlan?.executionScope !== "structure_only") reasonCodes.push("prior_plan_scope_mismatch");
+  if (priorPlan?.planDigestSha256 !== objectDigest(priorPlan)) reasonCodes.push("prior_plan_digest_mismatch");
+  if (sha256(priorReceiptBytes) !== trustedPriorReceiptSha256) reasonCodes.push("trusted_prior_receipt_file_digest_mismatch");
+  if (priorReceipt?.schemaVersion !== RECEIPT_SCHEMA_VERSION || priorReceipt?.eventId !== EVENT_ID) reasonCodes.push("prior_receipt_identity_mismatch");
+  if (priorReceipt?.status !== "blocked_after_partial_apply" || priorReceipt?.planDigestSha256 !== priorPlan?.planDigestSha256) {
+    reasonCodes.push("prior_receipt_plan_or_status_mismatch");
+  }
+  if (priorReceipt?.discordMutationOutcomesUnknown !== 0 || priorReceipt?.discordMutations !== 16) reasonCodes.push("prior_receipt_write_accounting_mismatch");
+  const finalScan = priorReceipt?.reconciliation?.scan;
+  if (
+    finalScan?.denominator?.inspectedBoardCount !== priorPlan?.denominator?.terminal?.boards
+    || finalScan?.cards?.currentCardCount !== priorPlan?.denominator?.terminal?.currentCards
+    || finalScan?.cards?.healthyCardCount !== priorPlan?.denominator?.terminal?.healthyCards
+    || finalScan?.cards?.driftedCardCount !== 0
+    || finalScan?.cards?.duplicateStableIdentityCount !== 0
+    || finalScan?.cards?.actionableTextIntegrityFindingCount !== 0
+  ) reasonCodes.push("prior_receipt_terminal_denominator_invalid");
+  const failed = (priorReceipt?.operationReceipts || []).filter((receipt) => receipt?.ok === false);
+  const failedIds = failed.map((receipt) => receipt.operationId).sort();
+  if (canonicalJson(failedIds) !== canonicalJson(TARGETED_RECOVERY_OPERATION_IDS)) reasonCodes.push("prior_receipt_failed_operation_set_mismatch");
+  for (const receipt of failed) {
+    if (
+      receipt.kind !== "tag_repair"
+      || receipt.status !== "blocked"
+      || receipt.writeCount !== 0
+      || receipt.writeOutcomeUnknownCount !== 0
+      || receipt.httpStatus !== 400
+    ) reasonCodes.push(`prior_receipt_failure_not_definitive:${receipt.operationId || "unknown"}`);
+  }
+  const priorOperations = new Map((priorPlan?.operations || []).map((operation) => [operation.operationId, operation]));
+  const operations = [];
+  const touchedPreimages = [];
+  for (const operationId of TARGETED_RECOVERY_OPERATION_IDS) {
+    const priorOperation = priorOperations.get(operationId);
+    if (!priorOperation || priorOperation.kind !== "tag_repair" || priorOperation.boardId !== "fitness-active") {
+      reasonCodes.push(`prior_plan_recovery_operation_missing:${operationId}`);
+      continue;
+    }
+    const read = await readPlannedTagRuntime(priorOperation, { env, fetchImpl });
+    const threadState = {
+      archived: read.payload?.thread_metadata?.archived === true,
+      locked: read.payload?.thread_metadata?.locked === true,
+    };
+    const exact = read.ok
+      && read.payload?.parent_id === priorOperation.forumChannelId
+      && currentRepair.sameUniqueSet(read.payload?.applied_tags || [], priorOperation.preimage.appliedTagIds)
+      && threadState.archived === true
+      && threadState.locked === true;
+    if (!exact) {
+      reasonCodes.push(`targeted_recovery_preimage_mismatch:${operationId}`);
+      continue;
+    }
+    touchedPreimages.push({
+      operationId,
+      boardId: priorOperation.boardId,
+      threadId: priorOperation.threadId,
+      cardId: priorOperation.cardId,
+      forumChannelId: priorOperation.forumChannelId,
+      appliedTagIds: [...read.payload.applied_tags].sort(),
+      threadState,
+    });
+    operations.push({
+      ...priorOperation,
+      threadState,
+      recoveryFrom: {
+        priorPlanSha256: trustedPriorPlanSha256,
+        priorReceiptSha256: trustedPriorReceiptSha256,
+        priorHttpStatus: failed.find((receipt) => receipt.operationId === operationId)?.httpStatus || null,
+      },
+    });
+  }
+  if (reasonCodes.length > 0) {
+    const error = new Error(`targeted_recovery_plan_blocked:${unique(reasonCodes).sort().join(",")}`);
+    error.reasonCodes = unique(reasonCodes).sort();
+    throw error;
+  }
+  const plan = {
+    schemaVersion: PLAN_SCHEMA_VERSION,
+    eventId: EVENT_ID,
+    generatedAt: finalScan.generatedAt,
+    discordosOriginMain: priorPlan.discordosOriginMain,
+    writerBoundary: "discordos-single-logical-writer",
+    executionScope: "targeted_tag_recovery",
+    evidence: {
+      priorPlanFileSha256: trustedPriorPlanSha256,
+      priorPlanDigestSha256: priorPlan.planDigestSha256,
+      priorReceiptFileSha256: trustedPriorReceiptSha256,
+      touchedPreimages,
+      touchedPreimagesSha256: sha256(canonicalJson(touchedPreimages)),
+    },
+    ownerAuthority: priorPlan.ownerAuthority,
+    denominator: priorPlan.denominator,
+    operationCounts: planCounts(operations),
+    mutationCap: { logicalOperationCount: operations.length, maxConfirmedDiscordWrites: operations.length * 3 },
+    operations,
+    rollback: {
+      policy: "restore_exact_archive_lock_preimage_after_each_target_and_exact_tag_preimage_on_failure",
+      ownerCardPreimagesEmbedded: 0,
+      tagPreimagesEmbedded: operations.length,
+      guildChannelPreimageEmbedded: false,
+      transferSourcePreimagesEmbedded: 0,
+    },
+    historicalCloseout: "frozen_13_board_243_identity_evidence_preserved_not_reused",
+    marker: "UNMEASURED",
+    nextPacket: "DiscordOS owner-event and completed-transfer blocked follow-up",
+  };
+  plan.planDigestSha256 = objectDigest(plan);
+  return plan;
+}
+
 function verifyPlanStructure(plan) {
   const reasonCodes = [];
   if (plan?.schemaVersion !== PLAN_SCHEMA_VERSION) reasonCodes.push("plan_schema_mismatch");
   if (plan?.eventId !== EVENT_ID) reasonCodes.push("plan_event_mismatch");
-  if (!["structure_only", "current_live_full"].includes(plan?.executionScope)) reasonCodes.push("plan_execution_scope_invalid");
+  if (!["structure_only", "current_live_full", "targeted_tag_recovery"].includes(plan?.executionScope)) reasonCodes.push("plan_execution_scope_invalid");
   if (plan?.planDigestSha256 !== objectDigest(plan)) reasonCodes.push("plan_digest_mismatch");
   const operations = plan?.operations || [];
   if (unique(operations.map((operation) => operation.operationId)).length !== operations.length) reasonCodes.push("plan_operation_id_duplicate");
@@ -816,6 +968,10 @@ function verifyPlanStructure(plan) {
     if (!["owner_event", "tag_repair", "forum_order_repair", "completed_transfer"].includes(operation.kind)) {
       reasonCodes.push(`plan_operation_kind_unsupported:${operation.operationId || "unknown"}`);
     }
+    if (operation.kind === "tag_repair" && (
+      typeof operation.threadState?.archived !== "boolean"
+      || typeof operation.threadState?.locked !== "boolean"
+    )) reasonCodes.push(`plan_tag_thread_state_missing:${operation.operationId || "unknown"}`);
   }
   return unique(reasonCodes).sort();
 }
@@ -875,6 +1031,167 @@ async function inspectOwnerOperation(operation, scan, { env = process.env, fetch
   return { status: "pending", threadId: row.threadId, reasonCodes: [] };
 }
 
+async function readPlannedTagRuntime(operation, { env = process.env, fetchImpl = fetch } = {}) {
+  const token = text(env?.DISCORDOS_BOT_TOKEN);
+  if (!token) return { ok: false, status: 0, payload: null, reasonCodes: ["discord_bot_token_missing"] };
+  try {
+    const read = await cardContract.discordRequest({ path: `/channels/${operation.threadId}`, token, fetchImpl });
+    return {
+      ok: read.ok,
+      status: read.status,
+      payload: read.payload,
+      reasonCodes: read.ok ? [] : ["tag_target_read_failed"],
+    };
+  } catch {
+    return { ok: false, status: 0, payload: null, reasonCodes: ["tag_target_read_rejected"] };
+  }
+}
+
+async function inspectPlannedTagRuntime(operation, { env = process.env, fetchImpl = fetch } = {}) {
+  const read = await readPlannedTagRuntime(operation, { env, fetchImpl });
+  const actualAppliedTagIds = read.payload?.applied_tags || [];
+  const actualThreadState = {
+    archived: read.payload?.thread_metadata?.archived === true,
+    locked: read.payload?.thread_metadata?.locked === true,
+  };
+  const forumExact = read.ok && read.payload?.parent_id === operation.forumChannelId;
+  const stateExact = read.ok && canonicalJson(actualThreadState) === canonicalJson(operation.threadState);
+  const pending = forumExact && stateExact && currentRepair.sameUniqueSet(actualAppliedTagIds, operation.preimage.appliedTagIds);
+  const complete = forumExact && stateExact && currentRepair.sameUniqueSet(actualAppliedTagIds, operation.postimage.appliedTagIds);
+  const reasonCodes = [...read.reasonCodes];
+  if (read.ok && !forumExact) reasonCodes.push("tag_target_forum_mismatch");
+  if (read.ok && !stateExact) reasonCodes.push("tag_target_thread_state_drift");
+  if (!pending && !complete && read.ok) reasonCodes.push("tag_target_live_preimage_drift");
+  return {
+    ok: reasonCodes.length === 0,
+    operationId: operation.operationId,
+    status: complete ? "complete" : pending ? "pending" : "blocked",
+    actualAppliedTagIds,
+    actualThreadState,
+    httpStatus: read.status,
+    reasonCodes: unique(reasonCodes).sort(),
+  };
+}
+
+async function applyPlannedTagRepair(operation, { env = process.env, fetchImpl = fetch } = {}) {
+  const before = await inspectPlannedTagRuntime(operation, { env, fetchImpl });
+  if (before.status === "complete") {
+    return { ok: true, operationId: operation.operationId, status: "already_complete", writeCount: 0, writeOutcomeUnknownCount: 0, readback: before, reasonCodes: [] };
+  }
+  if (before.status !== "pending") {
+    return { ok: false, operationId: operation.operationId, status: "blocked", writeCount: 0, writeOutcomeUnknownCount: 0, readback: before, reasonCodes: before.reasonCodes };
+  }
+  if (!operation.threadState.archived && !operation.threadState.locked) {
+    const applied = await currentRepair.applyTagRepair(operation, { env, fetchImpl });
+    const readback = await inspectPlannedTagRuntime(operation, { env, fetchImpl });
+    return {
+      ...applied,
+      ok: applied.ok && readback.status === "complete",
+      status: applied.ok && readback.status === "complete" ? applied.status : "blocked",
+      readback,
+      reasonCodes: unique([...(applied.reasonCodes || []), ...readback.reasonCodes]).sort(),
+    };
+  }
+
+  const token = text(env?.DISCORDOS_BOT_TOKEN);
+  let writeCount = 0;
+  let writeOutcomeUnknownCount = 0;
+  const write = async (body) => {
+    try {
+      const result = await cardContract.discordRequest({
+        path: `/channels/${operation.threadId}`,
+        token,
+        method: "PATCH",
+        body,
+        fetchImpl,
+      });
+      if (result.ok) writeCount += 1;
+      return { ...result, rejected: false };
+    } catch {
+      writeOutcomeUnknownCount += 1;
+      return { ok: false, status: 0, payload: null, rejected: true };
+    }
+  };
+  const reasonCodes = [];
+  const reopen = await write({ archived: false, locked: false });
+  if (!reopen.ok) reasonCodes.push(reopen.rejected ? "tag_repair_reopen_outcome_unknown" : "tag_repair_reopen_failed");
+
+  let openRead = null;
+  let tagWrite = null;
+  if (reopen.ok) {
+    openRead = await readPlannedTagRuntime(operation, { env, fetchImpl });
+    const openExact = openRead.ok
+      && openRead.payload?.parent_id === operation.forumChannelId
+      && openRead.payload?.thread_metadata?.archived !== true
+      && openRead.payload?.thread_metadata?.locked !== true
+      && currentRepair.sameUniqueSet(openRead.payload?.applied_tags || [], operation.preimage.appliedTagIds);
+    if (!openExact) reasonCodes.push("tag_repair_reopen_readback_failed");
+    if (openExact) {
+      tagWrite = await write({ applied_tags: operation.postimage.appliedTagIds });
+      if (!tagWrite.ok) reasonCodes.push(tagWrite.rejected ? "tag_repair_write_outcome_unknown" : "tag_repair_write_failed");
+    }
+  }
+
+  let restore = null;
+  const restoreRequired = reopen.ok || reopen.rejected;
+  if (restoreRequired) {
+    const restoreBody = tagWrite?.ok
+      ? operation.threadState
+      : { applied_tags: operation.preimage.appliedTagIds, ...operation.threadState };
+    restore = await write(restoreBody);
+    if (!restore.ok) reasonCodes.push(restore.rejected ? "tag_repair_restore_outcome_unknown" : "tag_repair_restore_failed");
+  }
+  const readback = await inspectPlannedTagRuntime(operation, { env, fetchImpl });
+  const expectedFinalTagIds = tagWrite?.ok
+    ? operation.postimage.appliedTagIds
+    : operation.preimage.appliedTagIds;
+  const finalStateExact = canonicalJson(readback.actualThreadState) === canonicalJson(operation.threadState);
+  const finalTagsExact = currentRepair.sameUniqueSet(readback.actualAppliedTagIds, expectedFinalTagIds);
+  const restorationVerified = Boolean(
+    (!restoreRequired || restore?.ok)
+    && finalStateExact
+    && finalTagsExact
+    && readback.reasonCodes.length === 0
+  );
+  if (tagWrite?.ok && readback.status !== "complete") reasonCodes.push("tag_repair_readback_failed");
+  if (!tagWrite?.ok && readback.status !== "pending") reasonCodes.push("tag_repair_rollback_readback_failed");
+  reasonCodes.push(...readback.reasonCodes);
+  const critical = Boolean(
+    (restoreRequired && !restore?.ok)
+    || !finalStateExact
+    || (!tagWrite?.ok && !finalTagsExact)
+  );
+  if (critical) reasonCodes.push("critical_tag_target_lifecycle_unresolved");
+  const ok = Boolean(
+    reopen.ok
+    && tagWrite?.ok
+    && restore?.ok
+    && restorationVerified
+    && readback.status === "complete"
+    && writeOutcomeUnknownCount === 0
+  );
+  return {
+    ok,
+    operationId: operation.operationId,
+    status: ok ? "applied" : "blocked",
+    ...(critical ? { critical: true, severity: "Critical" } : { critical: false }),
+    writeCount,
+    writeOutcomeUnknownCount,
+    httpStatus: tagWrite ? tagWrite.status : reopen.status,
+    lifecycle: {
+      before: operation.threadState,
+      reopen,
+      openRead,
+      restore,
+      restorationVerified,
+      finalStateExact,
+      finalTagsExact,
+    },
+    readback,
+    reasonCodes: unique(reasonCodes).sort(),
+  };
+}
+
 function admissionFor(mode, allowApply, env = process.env) {
   if (mode !== "apply") return { requested: false, admitted: false, status: "no_write_mode", reasonCodes: [] };
   const reasonCodes = [];
@@ -905,6 +1222,31 @@ async function preflightPlan({
   const authority = await loadOwnerAuthority({ sourceRegistry, boardRegistry, token, fetchImpl });
   if (canonicalJson(authority.sources) !== canonicalJson(plan?.ownerAuthority?.sources || [])) reasonCodes.push("owner_authority_source_drift");
   if (gitRevision("origin/main") !== plan.discordosOriginMain) reasonCodes.push("discordos_origin_main_drift");
+  if (plan.executionScope === "targeted_tag_recovery") {
+    const tagStatuses = [];
+    for (const operation of plan.operations || []) {
+      const inspected = await inspectPlannedTagRuntime(operation, { env, fetchImpl });
+      tagStatuses.push(inspected);
+      reasonCodes.push(...inspected.reasonCodes.map((code) => `${code}:${operation.operationId}`));
+    }
+    const allComplete = tagStatuses.every((row) => row.status === "complete");
+    const isInitial = tagStatuses.every((row) => row.status === "pending");
+    return {
+      ok: reasonCodes.length === 0,
+      status: reasonCodes.length > 0 ? "blocked" : allComplete ? "terminal_postimage" : "preflight_ready",
+      admission,
+      authority,
+      scan: null,
+      isInitial,
+      allComplete,
+      ownerStatuses: [],
+      tagStatuses,
+      orderStatus: null,
+      transferStatuses: [],
+      ownerDryRun: null,
+      reasonCodes: unique(reasonCodes).sort(),
+    };
+  }
   const scan = await currentScanImpl({ env, fetchImpl });
   const initialDigest = sha256(canonicalJson(scanGuardProjection(scan)));
   const isInitial = initialDigest === plan?.evidence?.guardProjectionSha256;
@@ -928,7 +1270,7 @@ async function preflightPlan({
       tagStatuses.push({ operationId: operation.operationId, status: "blocked" });
       continue;
     }
-    const inspected = await currentRepair.inspectTagRuntime({ ...operation, threadId }, { env, fetchImpl });
+    const inspected = await inspectPlannedTagRuntime({ ...operation, threadId }, { env, fetchImpl });
     tagStatuses.push(inspected);
     reasonCodes.push(...(inspected.reasonCodes || []).map((code) => `${code}:${operation.operationId}`));
   }
@@ -1011,7 +1353,9 @@ async function runApply({ plan, preflight, boardRegistry, env = process.env, fet
       discordMutations: 0,
       discordMutationOutcomesUnknown: 0,
       operationReceipts: [],
-      reconciliation: { status: "terminal", scan: preflight.scan },
+      reconciliation: plan.executionScope === "targeted_tag_recovery"
+        ? { status: "terminal", touchedTagPostimages: preflight.tagStatuses }
+        : { status: "terminal", scan: preflight.scan },
       blockedSubsets: plan.ownerAuthority.blockedSubsets,
       reasonCodes: [],
     };
@@ -1044,7 +1388,21 @@ async function runApply({ plan, preflight, boardRegistry, env = process.env, fet
     ownerResultById.set(status.operationId, operationReceipts.at(-1));
   }
 
+  let criticalTagBarrier = false;
   for (const operation of plan.operations.filter((row) => row.kind === "tag_repair")) {
+    if (criticalTagBarrier) {
+      operationReceipts.push({
+        operationId: operation.operationId,
+        kind: operation.kind,
+        ok: false,
+        status: "not_run",
+        writeCount: 0,
+        writeOutcomeUnknownCount: 0,
+        severity: "Critical",
+        reasonCodes: ["prior_target_lifecycle_unresolved"],
+      });
+      continue;
+    }
     const preStatus = preflight.tagStatuses.find((row) => row.operationId === operation.operationId);
     if (preStatus?.status === "complete") {
       operationReceipts.push({ operationId: operation.operationId, kind: operation.kind, ok: true, status: "already_complete", writeCount: 0 });
@@ -1059,8 +1417,9 @@ async function runApply({ plan, preflight, boardRegistry, env = process.env, fet
       }
       threadId = ownerResult.threadId;
     }
-    const receipt = await currentRepair.applyTagRepair({ ...operation, threadId }, { env, fetchImpl: counted.fetchImpl });
+    const receipt = await applyPlannedTagRepair({ ...operation, threadId }, { env, fetchImpl: counted.fetchImpl });
     operationReceipts.push({ ...receipt, kind: operation.kind });
+    if (receipt.critical === true) criticalTagBarrier = true;
   }
 
   for (const operation of ownerPending) {
@@ -1078,7 +1437,9 @@ async function runApply({ plan, preflight, boardRegistry, env = process.env, fet
 
   const orderOperation = plan.operations.find((operation) => operation.kind === "forum_order_repair");
   if (orderOperation) {
-    if (preflight.orderStatus?.status === "complete") {
+    if (criticalTagBarrier) {
+      operationReceipts.push({ operationId: orderOperation.operationId, kind: orderOperation.kind, ok: false, status: "not_run", writeCount: 0, severity: "Critical", reasonCodes: ["prior_target_lifecycle_unresolved"] });
+    } else if (preflight.orderStatus?.status === "complete") {
       operationReceipts.push({ operationId: orderOperation.operationId, kind: orderOperation.kind, ok: true, status: "already_complete", writeCount: 0 });
     } else {
       const receipt = await currentRepair.applyOrderRepair(orderOperation, { env, fetchImpl: counted.fetchImpl });
@@ -1116,6 +1477,40 @@ async function runApply({ plan, preflight, boardRegistry, env = process.env, fet
     });
     const validation = currentRepair.validateTransferReceipt(operation, receipt);
     operationReceipts.push({ operationId: operation.operationId, kind: operation.kind, ok: validation.ok, status: validation.ok ? receipt.status : "blocked", receipt, validation });
+  }
+
+  if (plan.executionScope === "targeted_tag_recovery") {
+    const touchedTagPostimages = [];
+    const terminalReasons = [];
+    for (const operation of plan.operations) {
+      const inspected = await inspectPlannedTagRuntime(operation, { env, fetchImpl: counted.fetchImpl });
+      touchedTagPostimages.push(inspected);
+      if (inspected.status !== "complete") terminalReasons.push(`terminal_tag_incomplete:${operation.operationId}`);
+    }
+    const operationFailures = operationReceipts.filter((row) => row.ok === false);
+    terminalReasons.push(...operationFailures.map((row) => `operation_failed:${row.operationId}`));
+    if (operationReceipts.some((row) => row.critical === true)) terminalReasons.push("critical_target_lifecycle_unresolved");
+    if (counted.state.confirmedWrites > plan.mutationCap.maxConfirmedDiscordWrites) terminalReasons.push("mutation_cap_exceeded");
+    if (counted.state.unknownWriteOutcomes > 0) terminalReasons.push("discord_write_outcome_unknown");
+    return {
+      schemaVersion: RECEIPT_SCHEMA_VERSION,
+      eventId: EVENT_ID,
+      ok: terminalReasons.length === 0,
+      status: terminalReasons.length === 0 ? "applied_and_reconciled" : "blocked_after_partial_apply",
+      mode: "apply",
+      planDigestSha256: plan.planDigestSha256,
+      mutatesDiscord: counted.state.confirmedWrites > 0 || counted.state.unknownWriteOutcomes > 0,
+      discordMutations: counted.state.confirmedWrites,
+      discordMutationOutcomesUnknown: counted.state.unknownWriteOutcomes,
+      mutationCap: plan.mutationCap,
+      ownerApply,
+      operationReceipts,
+      reconciliation: { status: terminalReasons.length === 0 ? "terminal" : "blocked", touchedTagPostimages },
+      blockedSubsets: plan.ownerAuthority.blockedSubsets,
+      unresolvedRegisteredSources: plan.ownerAuthority.unresolvedRegisteredSources,
+      excludedProjects: plan.ownerAuthority.excludedProjects,
+      reasonCodes: unique(terminalReasons).sort(),
+    };
   }
 
   const finalScan = await currentScanImpl({ env, fetchImpl: counted.fetchImpl });
@@ -1172,6 +1567,23 @@ async function main() {
     forumProfile.readJson(options.sourceRegistryPath),
   ]);
   const githubToken = process.env.GH_TOKEN || process.env.GITHUB_TOKEN || "";
+  if (options.mode === "generate_recovery") {
+    const [priorPlan, priorReceipt] = await Promise.all([
+      readJsonWithBytes(options.priorPlanPath),
+      readJsonWithBytes(options.priorReceiptPath),
+    ]);
+    const plan = await buildTargetedRecoveryPlan({
+      priorPlan: priorPlan.value,
+      priorPlanBytes: priorPlan.bytes,
+      trustedPriorPlanSha256: options.priorPlanSha256,
+      priorReceipt: priorReceipt.value,
+      priorReceiptBytes: priorReceipt.bytes,
+      trustedPriorReceiptSha256: options.priorReceiptSha256,
+    });
+    await writeJson(options.outputPath, plan);
+    process.stdout.write(options.json ? `${JSON.stringify(plan, null, 2)}\n` : `plan_ready: ${plan.planDigestSha256}\n`);
+    return;
+  }
   if (options.mode === "generate_plan") {
     const evidence = await readJsonWithBytes(options.evidencePath);
     const authority = await loadOwnerAuthority({ sourceRegistry, boardRegistry, token: githubToken });
@@ -1281,9 +1693,13 @@ module.exports = {
     buildOrderOperation,
     buildTransferOperations,
     buildDeterministicPlan,
+    buildTargetedRecoveryPlan,
     verifyPlanStructure,
     scanTerminalReasonCodes,
     inspectOwnerOperation,
+    readPlannedTagRuntime,
+    inspectPlannedTagRuntime,
+    applyPlannedTagRepair,
     admissionFor,
     preflightPlan,
     countedDiscordFetch,
