@@ -937,7 +937,7 @@
       "priority": "medium",
       "category": "mazer",
       "markerName": "Play camera zoom and minimap",
-      "completionPercent": 0,
+      "completionPercent": 94,
       "summary": "Add a played-game-only camera zoom slider under the maze and a bottom-left minimap overlay after zoom is enabled.",
       "whyItMatters": "Player-centered zoom can make dense mazes feel bigger and easier to read without scaling the whole app. A minimap preserves full-maze awareness when the camera is zoomed in.",
       "currentStatus": "Deferred later-stage feature. The marker exists, but implementation should wait until play lifecycle, mobile layout, smooth movement, and camera diagnostics are stable.",
@@ -2510,7 +2510,7 @@
       "completionPercent": 0,
       "summary": "Define versioned, topology-aware run-quality metrics before exposing them as score, rank, leaderboard, or achievement signals.",
       "whyItMatters": "Completion alone cannot distinguish a clean route from exploration. A shared contract creates useful post-run insight without locking progression to an arbitrary canonical solution path.",
-      "currentStatus": "Planning admission only. Existing telemetry records shortest viable path, route overrun, wrong turns, backtracks, and bounded path previews, but it does not yet define player-facing fidelity, coverage, exploration, or revisit semantics across multi-route and wrap mazes.",
+      "currentStatus": "Review-ready on Mazer draft PR #73 at commit 371457cc. The canonical v1 scorer and topology metric snapshot now cover playable wrap-aware shortest-path truth, equally short route unions, coverage, optional exploration, revisits, Clean Run, Explorer, complete-source truncation policy, stored-versus-recomputed truth, and failed-run undefined semantics. Full serial verification passed 370/370.",
       "workBreakdown": [
         "Define optimal steps, actual accepted steps, unique visited tiles, walkable tiles, coverage, exploration, revisit steps, and clean-run semantics.",
         "Use the playable graph and shortest-path corridor union rather than one arbitrary generator solution path for multi-route fidelity.",
@@ -2518,9 +2518,9 @@
         "Decide which metrics remain telemetry-only and which are eligible for later player-facing adoption."
       ],
       "nextActions": [
-        "Write the metric glossary and denominator rules with representative single-route, multi-route, and wrap fixtures.",
-        "Obtain an explicit product decision on score/rank use after telemetry definitions are reviewed.",
-        "Do not recompute or rewrite historical receipts."
+        "Review and merge Mazer draft PR #73 if the private/internal 0-100 total and telemetry-only topology contract are accepted.",
+        "After merge, admit the separate telemetry-capture and player-results adoption cards without changing these denominators.",
+        "Continue preserving historical receipts exactly as stored; never synthesize topology metrics from bounded previews."
       ],
       "acceptanceCriteria": [
         "Every metric has a deterministic numerator, denominator, version, and undefined-state policy.",
@@ -2532,7 +2532,7 @@
         "Run pure metric fixtures for single-route, multi-route, wrap, reset, failure, and truncated-history cases.",
         "Review a redacted sample against the existing telemetry fields without Supabase writes."
       ],
-      "reference": "repos/mazer/src/legacy-runtime/mazeCycleTelemetry.ts",
+      "reference": "repos/mazer/docs/ops/MAZER-RUN-QUALITY-METRIC-CONTRACT-V2-PACKET-2026-07-15.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-run-quality-metric-contract-v2",
       "relatedCardIds": [
         "mazer-ai-run-corpus-quality-calibration",

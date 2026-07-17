@@ -1,0 +1,76 @@
+{
+  "ok": true,
+  "status": "journaled",
+  "apply": true,
+  "admission": {
+    "requested": true,
+    "admitted": true,
+    "status": "journal_admitted",
+    "reasonCodes": []
+  },
+  "eventCount": 1,
+  "liveIdentityPreflight": {
+    "ok": true,
+    "status": "admitted",
+    "registryPath": "config/discordos-board-registry.json",
+    "scanStartedAt": "2026-07-15T11:13:46.930Z",
+    "scanCompletedAt": "2026-07-15T11:15:39.499Z",
+    "scanStatus": "consistent",
+    "scanReasonCodes": [],
+    "scanBlockingReasonCodes": [],
+    "currentIdentityCount": 236,
+    "proposedIdentityCount": 1,
+    "checks": [
+      {
+        "eventIndex": 0,
+        "eventId": "mazer-run-quality-metric-contract-v2-review-20260715",
+        "cardId": "mazer-run-quality-metric-contract-v2",
+        "normalizedCardId": "mazer-run-quality-metric-contract-v2",
+        "targetThreadId": "1526284203464065185",
+        "matchingLocations": [
+          {
+            "boardId": "mazer-active",
+            "forumChannelId": "1524889569475170478",
+            "threadId": "1526284203464065185",
+            "title": "run-quality metric contract v2",
+            "cardId": "mazer-run-quality-metric-contract-v2"
+          }
+        ],
+        "collisionLocations": [],
+        "admitted": true,
+        "reasonCodes": []
+      }
+    ],
+    "reasonCodes": []
+  },
+  "results": [
+    {
+      "ok": true,
+      "status": "journaled",
+      "apply": true,
+      "eventId": "mazer-run-quality-metric-contract-v2-review-20260715",
+      "cardId": "mazer-run-quality-metric-contract-v2",
+      "threadId": "1526284203464065185",
+      "cardAction": "updated",
+      "journalAction": "reused",
+      "journalMessageId": "1526909601520291911",
+      "legacySnapshot": {
+        "action": "not_required",
+        "messageIds": [],
+        "partCount": 0
+      },
+      "archiveRestore": "not_required",
+      "matchedBy": "explicit_thread_id",
+      "readback": {
+        "starter": true,
+        "journal": true,
+        "starterCodePointsExact": true,
+        "journalCodePointsExact": true,
+        "title": true,
+        "canonicalTitle": "run-quality metric contract v2"
+      },
+      "reasonCodes": []
+    }
+  ],
+  "reasonCodes": []
+}
