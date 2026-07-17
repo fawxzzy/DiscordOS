@@ -1,0 +1,508 @@
+{
+  "schemaVersion": "discordos.current-live-board-reconcile-receipt.v1",
+  "eventId": "discordos-current-live-board-reconcile-2026-07-16",
+  "ok": true,
+  "status": "applied_and_reconciled",
+  "mode": "apply",
+  "planDigestSha256": "e321130c2cac920f75eb7c33eb31fbb4a5a8b5d86511d84dfdbee9a5e5a70245",
+  "mutatesDiscord": true,
+  "discordMutations": 6,
+  "discordMutationOutcomesUnknown": 0,
+  "mutationCap": {
+    "logicalOperationCount": 2,
+    "maxConfirmedDiscordWrites": 6
+  },
+  "ownerApply": null,
+  "operationReceipts": [
+    {
+      "ok": true,
+      "operationId": "tag-02",
+      "status": "applied",
+      "critical": false,
+      "writeCount": 3,
+      "writeOutcomeUnknownCount": 0,
+      "httpStatus": 200,
+      "lifecycle": {
+        "before": {
+          "archived": true,
+          "locked": true
+        },
+        "reopen": {
+          "ok": true,
+          "status": 200,
+          "payload": {
+            "id": "1526112879303196763",
+            "type": 11,
+            "last_message_id": "1526950741997129819",
+            "flags": 0,
+            "guild_id": "1504668396338413670",
+            "name": "Retention - Add Monthly Progress",
+            "parent_id": "1508144612957622313",
+            "rate_limit_per_user": 0,
+            "bitrate": 64000,
+            "user_limit": 0,
+            "rtc_region": null,
+            "owner_id": "1504700208251146371",
+            "thread_metadata": {
+              "archived": false,
+              "archive_timestamp": "2026-07-17T02:16:27.451516+00:00",
+              "auto_archive_duration": 10080,
+              "locked": false,
+              "create_timestamp": "2026-07-13T06:27:44.232000+00:00"
+            },
+            "message_count": 25,
+            "member_count": 1,
+            "total_message_sent": 25,
+            "applied_tags": [
+              "1526863190187708530",
+              "1508144612957622315"
+            ],
+            "member": {
+              "id": "1526112879303196763",
+              "user_id": "1504700208251146371",
+              "join_timestamp": "2026-07-13T06:27:44.239000+00:00",
+              "flags": 1,
+              "muted": false,
+              "mute_config": null
+            }
+          },
+          "rejected": false
+        },
+        "openRead": {
+          "ok": true,
+          "status": 200,
+          "payload": {
+            "id": "1526112879303196763",
+            "type": 11,
+            "last_message_id": "1526950741997129819",
+            "flags": 0,
+            "guild_id": "1504668396338413670",
+            "name": "Retention - Add Monthly Progress",
+            "parent_id": "1508144612957622313",
+            "rate_limit_per_user": 0,
+            "bitrate": 64000,
+            "user_limit": 0,
+            "rtc_region": null,
+            "owner_id": "1504700208251146371",
+            "thread_metadata": {
+              "archived": false,
+              "archive_timestamp": "2026-07-17T02:16:27.451000+00:00",
+              "auto_archive_duration": 10080,
+              "locked": false,
+              "create_timestamp": "2026-07-13T06:27:44.232000+00:00"
+            },
+            "message_count": 25,
+            "member_count": 1,
+            "total_message_sent": 25,
+            "applied_tags": [
+              "1526863190187708530",
+              "1508144612957622315"
+            ],
+            "member": {
+              "id": "1526112879303196763",
+              "user_id": "1504700208251146371",
+              "join_timestamp": "2026-07-13T06:27:44.239000+00:00",
+              "flags": 1,
+              "muted": false,
+              "mute_config": null
+            }
+          },
+          "reasonCodes": []
+        },
+        "restore": {
+          "ok": true,
+          "status": 200,
+          "payload": {
+            "id": "1526112879303196763",
+            "type": 11,
+            "last_message_id": "1526950741997129819",
+            "flags": 0,
+            "guild_id": "1504668396338413670",
+            "name": "Retention - Add Monthly Progress",
+            "parent_id": "1508144612957622313",
+            "rate_limit_per_user": 0,
+            "bitrate": 64000,
+            "user_limit": 0,
+            "rtc_region": null,
+            "owner_id": "1504700208251146371",
+            "thread_metadata": {
+              "archived": true,
+              "archive_timestamp": "2026-07-17T02:16:28.007919+00:00",
+              "auto_archive_duration": 10080,
+              "locked": true,
+              "create_timestamp": "2026-07-13T06:27:44.232000+00:00"
+            },
+            "message_count": 25,
+            "member_count": 1,
+            "total_message_sent": 25,
+            "applied_tags": [
+              "1508144612957622315",
+              "1508144612957622319"
+            ],
+            "member": {
+              "id": "1526112879303196763",
+              "user_id": "1504700208251146371",
+              "join_timestamp": "2026-07-13T06:27:44.239000+00:00",
+              "flags": 1,
+              "muted": false,
+              "mute_config": null
+            }
+          },
+          "rejected": false
+        },
+        "restorationVerified": true,
+        "finalStateExact": true,
+        "finalTagsExact": true
+      },
+      "readback": {
+        "ok": true,
+        "operationId": "tag-02",
+        "status": "complete",
+        "actualAppliedTagIds": [
+          "1508144612957622315",
+          "1508144612957622319"
+        ],
+        "actualThreadState": {
+          "archived": true,
+          "locked": true
+        },
+        "httpStatus": 200,
+        "reasonCodes": []
+      },
+      "reasonCodes": [],
+      "kind": "tag_repair"
+    },
+    {
+      "ok": true,
+      "operationId": "tag-03",
+      "status": "applied",
+      "critical": false,
+      "writeCount": 3,
+      "writeOutcomeUnknownCount": 0,
+      "httpStatus": 200,
+      "lifecycle": {
+        "before": {
+          "archived": true,
+          "locked": true
+        },
+        "reopen": {
+          "ok": true,
+          "status": 200,
+          "payload": {
+            "id": "1526833783385358407",
+            "type": 11,
+            "last_message_id": "1527191257258917899",
+            "flags": 0,
+            "guild_id": "1504668396338413670",
+            "name": "Add Optional Planned Workout Days",
+            "parent_id": "1508144612957622313",
+            "rate_limit_per_user": 0,
+            "bitrate": 64000,
+            "user_limit": 0,
+            "rtc_region": null,
+            "owner_id": "1504700208251146371",
+            "thread_metadata": {
+              "archived": false,
+              "archive_timestamp": "2026-07-17T02:16:30.597785+00:00",
+              "auto_archive_duration": 10080,
+              "locked": false,
+              "create_timestamp": "2026-07-15T06:12:21.159000+00:00"
+            },
+            "message_count": 8,
+            "member_count": 1,
+            "total_message_sent": 8,
+            "applied_tags": [
+              "1508144612957622315",
+              "1526863190170927123"
+            ],
+            "member": {
+              "id": "1526833783385358407",
+              "user_id": "1504700208251146371",
+              "join_timestamp": "2026-07-15T06:12:21.264000+00:00",
+              "flags": 1,
+              "muted": false,
+              "mute_config": null
+            }
+          },
+          "rejected": false
+        },
+        "openRead": {
+          "ok": true,
+          "status": 200,
+          "payload": {
+            "id": "1526833783385358407",
+            "type": 11,
+            "last_message_id": "1527191257258917899",
+            "flags": 0,
+            "guild_id": "1504668396338413670",
+            "name": "Add Optional Planned Workout Days",
+            "parent_id": "1508144612957622313",
+            "rate_limit_per_user": 0,
+            "bitrate": 64000,
+            "user_limit": 0,
+            "rtc_region": null,
+            "owner_id": "1504700208251146371",
+            "thread_metadata": {
+              "archived": false,
+              "archive_timestamp": "2026-07-17T02:16:30.597000+00:00",
+              "auto_archive_duration": 10080,
+              "locked": false,
+              "create_timestamp": "2026-07-15T06:12:21.159000+00:00"
+            },
+            "message_count": 8,
+            "member_count": 1,
+            "total_message_sent": 8,
+            "applied_tags": [
+              "1508144612957622315",
+              "1526863190170927123"
+            ],
+            "member": {
+              "id": "1526833783385358407",
+              "user_id": "1504700208251146371",
+              "join_timestamp": "2026-07-15T06:12:21.264000+00:00",
+              "flags": 1,
+              "muted": false,
+              "mute_config": null
+            }
+          },
+          "reasonCodes": []
+        },
+        "restore": {
+          "ok": true,
+          "status": 200,
+          "payload": {
+            "id": "1526833783385358407",
+            "type": 11,
+            "last_message_id": "1527191257258917899",
+            "flags": 0,
+            "guild_id": "1504668396338413670",
+            "name": "Add Optional Planned Workout Days",
+            "parent_id": "1508144612957622313",
+            "rate_limit_per_user": 0,
+            "bitrate": 64000,
+            "user_limit": 0,
+            "rtc_region": null,
+            "owner_id": "1504700208251146371",
+            "thread_metadata": {
+              "archived": true,
+              "archive_timestamp": "2026-07-17T02:16:34.283369+00:00",
+              "auto_archive_duration": 10080,
+              "locked": true,
+              "create_timestamp": "2026-07-15T06:12:21.159000+00:00"
+            },
+            "message_count": 8,
+            "member_count": 1,
+            "total_message_sent": 8,
+            "applied_tags": [
+              "1526863190187708530",
+              "1508144612957622315"
+            ],
+            "member": {
+              "id": "1526833783385358407",
+              "user_id": "1504700208251146371",
+              "join_timestamp": "2026-07-15T06:12:21.264000+00:00",
+              "flags": 1,
+              "muted": false,
+              "mute_config": null
+            }
+          },
+          "rejected": false
+        },
+        "restorationVerified": true,
+        "finalStateExact": true,
+        "finalTagsExact": true
+      },
+      "readback": {
+        "ok": true,
+        "operationId": "tag-03",
+        "status": "complete",
+        "actualAppliedTagIds": [
+          "1526863190187708530",
+          "1508144612957622315"
+        ],
+        "actualThreadState": {
+          "archived": true,
+          "locked": true
+        },
+        "httpStatus": 200,
+        "reasonCodes": []
+      },
+      "reasonCodes": [],
+      "kind": "tag_repair"
+    }
+  ],
+  "reconciliation": {
+    "status": "terminal",
+    "touchedTagPostimages": [
+      {
+        "ok": true,
+        "operationId": "tag-02",
+        "status": "complete",
+        "actualAppliedTagIds": [
+          "1508144612957622315",
+          "1508144612957622319"
+        ],
+        "actualThreadState": {
+          "archived": true,
+          "locked": true
+        },
+        "httpStatus": 200,
+        "reasonCodes": []
+      },
+      {
+        "ok": true,
+        "operationId": "tag-03",
+        "status": "complete",
+        "actualAppliedTagIds": [
+          "1526863190187708530",
+          "1508144612957622315"
+        ],
+        "actualThreadState": {
+          "archived": true,
+          "locked": true
+        },
+        "httpStatus": 200,
+        "reasonCodes": []
+      }
+    ]
+  },
+  "blockedSubsets": [
+    {
+      "kind": "owner_event_batch",
+      "reason": "throughput_guard_deferred_after_owner_journal_composition_failure",
+      "eventCount": 89,
+      "eventIds": [
+        "owner-seed-_stack-1499cf144b487caa2d9c",
+        "owner-seed-atlas-0e679a96a45dafdf1c37",
+        "owner-seed-atlas-0ff756cc37838f3d9ec0",
+        "owner-seed-atlas-105581320d080a1e9843",
+        "owner-seed-atlas-22ba7ae2004d49bc644f",
+        "owner-seed-atlas-270568e354930b4a86a2",
+        "owner-seed-atlas-2952c2f44f6e4e1c65ce",
+        "owner-seed-atlas-2a06ae25d1d27d926ac7",
+        "owner-seed-atlas-42b8d20be91907895100",
+        "owner-seed-atlas-52699c83816c53568b6d",
+        "owner-seed-atlas-5e8bc3975f0061af7722",
+        "owner-seed-atlas-6fe045749acf66bb6b45",
+        "owner-seed-atlas-722d272383e624cf3768",
+        "owner-seed-atlas-7570a3ab623b7d3d948f",
+        "owner-seed-atlas-814e795f041a434cf632",
+        "owner-seed-atlas-81ebf4e4f9b6399f525f",
+        "owner-seed-atlas-88a7a8564b4546a94472",
+        "owner-seed-atlas-8f843ef9f1d61e7e1532",
+        "owner-seed-atlas-9f42a02d046e3d714eed",
+        "owner-seed-atlas-a231026c831d2c4f5dab",
+        "owner-seed-atlas-a6f47960990b61278738",
+        "owner-seed-atlas-af2054a7bb1266477a08",
+        "owner-seed-atlas-b96150d29674c9505a45",
+        "owner-seed-atlas-c411f2b81f39115fac24",
+        "owner-seed-atlas-c41a3d1ec08cee1f90e3",
+        "owner-seed-atlas-c7b18d7e7fa4081d0e1a",
+        "owner-seed-atlas-c917f8e0f10195247255",
+        "owner-seed-atlas-d6b51030725dec2518fb",
+        "owner-seed-atlas-d8c891660db859f3f1a9",
+        "owner-seed-atlas-f1e27bc1c1f7dfeb3e92",
+        "owner-seed-cortex-be243dd109ffb474e707",
+        "owner-seed-cortex-ecee31d91ef528b4c689",
+        "owner-seed-discordos-1f356f426841dd5adf2b",
+        "owner-seed-discordos-2e0aff516f8464e77f58",
+        "owner-seed-discordos-dd792b9eb542891215c9",
+        "owner-seed-foundation-39b6678ac2a17d1ab298",
+        "owner-seed-foundation-52d228bffb1104f523c7",
+        "owner-seed-foundation-650c5664c20da574ea90",
+        "owner-seed-foundation-8be3ae4ba3d791c58b2d",
+        "owner-seed-foundation-ce54d1eeebf94216dc81",
+        "owner-seed-foundation-f7054a38d17c07dec341",
+        "owner-seed-lifeline-85e54ada610e4ff92bab",
+        "owner-seed-playbook-0f1eaab833f9a29bb2ab",
+        "owner-seed-playbook-19848120a1b3b059e32c",
+        "owner-seed-playbook-1c9d4fceba8a9fa4d09f",
+        "owner-seed-playbook-1d2bd817dad2325ab359",
+        "owner-seed-playbook-1d59a3790a6eba1222fa",
+        "owner-seed-playbook-2c04098a2e91560839c2",
+        "owner-seed-playbook-2e711a7363f8319f49ac",
+        "owner-seed-playbook-2ea09dfd5f086d3e5d45",
+        "owner-seed-playbook-2fecab680031c2da6bd9",
+        "owner-seed-playbook-30ebb6270c2126b3a320",
+        "owner-seed-playbook-3202d718bd7e15e27328",
+        "owner-seed-playbook-3b1150002d0ec9f966da",
+        "owner-seed-playbook-3c2d00ec193e80b53ee1",
+        "owner-seed-playbook-3fb30499d25d0b503f03",
+        "owner-seed-playbook-557ac51fc5531015953b",
+        "owner-seed-playbook-583a2dc8c56997462e52",
+        "owner-seed-playbook-5fba31244f2886a0970e",
+        "owner-seed-playbook-6c42823620793cf16ee7",
+        "owner-seed-playbook-7f6037ef08abe54577a0",
+        "owner-seed-playbook-8824b96aed0ee0e5db26",
+        "owner-seed-playbook-8f9bd4df1a7f6c60c00f",
+        "owner-seed-playbook-8ff6329f0c3b0fc8fd6c",
+        "owner-seed-playbook-a1d53165272f80b752cc",
+        "owner-seed-playbook-ab2bee0012cafdfbd048",
+        "owner-seed-playbook-b34306c346541e7b635e",
+        "owner-seed-playbook-cacbfff5bb0c3cb7ce7b",
+        "owner-seed-playbook-d3b8691c0e4948c0b8e7",
+        "owner-seed-playbook-d42c674c55e30df88b46",
+        "owner-seed-playbook-d7b6f184410e05404733",
+        "owner-seed-playbook-de81f774a7571b3e4f33",
+        "owner-seed-playbook-e4d1c2dd208040b875e3",
+        "owner-seed-playbook-e5d67c085b1223d6c9c8",
+        "owner-seed-playbook-ef47d4cab4ca254d4e0d",
+        "owner-seed-playbook-f0aa5f854b609400efbb",
+        "owner-seed-playbook-f9e0ab802aaafd66b003",
+        "owner-seed-socials-os-18a11b76f3e01446838f",
+        "owner-seed-socials-os-2edb9080e445626233f1",
+        "owner-seed-socials-os-5898f803ac554d197c7e",
+        "owner-seed-socials-os-58d73de2d8a6915c789a",
+        "owner-seed-socials-os-5d95408afb36fe3ae0cf",
+        "owner-seed-socials-os-9621f73d31c551628ff3",
+        "owner-seed-socials-os-a120d565bdf13c2d8c56",
+        "owner-seed-socials-os-a8bf218809444f36331e",
+        "owner-seed-socials-os-ae6a8002e202aef9eec8",
+        "owner-seed-socials-os-bfc26414751d87bde909",
+        "owner-seed-socials-os-e2112f90cc85de6dde5f",
+        "owner-seed-socials-os-f39f4cf3edfeaa57c0ab"
+      ]
+    },
+    {
+      "kind": "completed_transfer_batch",
+      "reason": "deferred_with_owner_event_follow_up",
+      "terminalRecordCount": 12,
+      "producerIdentities": [
+        "config/discordos-owner-work-registry.json:DOS-101:a2372e01e7033309bb6d2c825232b825d026b101",
+        "config/discordos-owner-work-registry.json:DOS-102:a2372e01e7033309bb6d2c825232b825d026b101",
+        "config/discordos-owner-work-registry.json:DOS-201:a2372e01e7033309bb6d2c825232b825d026b101",
+        "config/discordos-owner-work-registry.json:DOS-202:a2372e01e7033309bb6d2c825232b825d026b101",
+        "config/discordos-owner-work-registry.json:DOS-GOV-001:a2372e01e7033309bb6d2c825232b825d026b101",
+        "pbe_atlas_5a2e64622b8a:pbk_atlas_lane-atlas-contracts-mesh_v1",
+        "pbe_atlas_5a2e64622b8a:pbk_atlas_lane-discordos-cross-project-board-integrity_v1",
+        "pbe_atlas_5a2e64622b8a:pbk_atlas_lane-github-control-plane-integration_v1",
+        "pbe_atlas_5a2e64622b8a:pbk_atlas_lane-marker-integrity_v1",
+        "pbe_atlas_5a2e64622b8a:pbk_atlas_lane-owner-metric-scope-alignment_v1",
+        "pbe_atlas_5a2e64622b8a:pbk_atlas_lane-root-truth-convergence_v1",
+        "pbe_atlas_5a2e64622b8a:pbk_atlas_lane-stack-inventory-lock-head-reconciliation_v1"
+      ]
+    }
+  ],
+  "unresolvedRegisteredSources": [
+    {
+      "boardId": "fitness-active",
+      "adapterId": "fitness-export-v1",
+      "repository": "fawxzzy/fawxzzy-fitness",
+      "ref": "main",
+      "reason": "registered Fitness export is runtime-only and has no committed current export artifact",
+      "repositoryCommit": "e1ab7fbea979456380230c5459fdef6ae4c927e9",
+      "disposition": "blocked_owner_artifact_unavailable"
+    }
+  ],
+  "excludedProjects": [
+    {
+      "project": "FawxzzyWeb",
+      "repository": "fawxzzy/FawxzzyWeb",
+      "ref": "main",
+      "reason": "no registered DiscordOS board or owner-export adapter",
+      "repositoryCommit": "5ee0da707d3c25fe1dd63473d128e22bf37fa071",
+      "disposition": "excluded_no_registered_board_or_owner_export"
+    }
+  ],
+  "reasonCodes": []
+}
