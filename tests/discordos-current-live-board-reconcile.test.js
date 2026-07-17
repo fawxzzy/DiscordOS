@@ -342,6 +342,7 @@ test("outcome-unknown lifecycle restore is Critical and never reports repair suc
   assert.equal(result.lifecycle.restorationVerified, false);
   assert.equal(result.writeCount, 2);
   assert.equal(result.writeOutcomeUnknownCount, 1);
+  assert.equal(result.httpStatus, 0);
   assert.deepEqual(result.readback.actualThreadState, { archived: false, locked: false });
   assert(result.reasonCodes.includes("tag_repair_restore_outcome_unknown"));
   assert(result.reasonCodes.includes("critical_tag_target_lifecycle_unresolved"));
@@ -403,6 +404,7 @@ test("a Critical lifecycle drift stops every later targeted mutation", async () 
   assert.equal(receipt.status, "blocked_after_partial_apply");
   assert.equal(firstReceipt.critical, true);
   assert.equal(firstReceipt.severity, "Critical");
+  assert.equal(firstReceipt.httpStatus, 400);
   assert.equal(secondReceipt.status, "not_run");
   assert.equal(secondReceipt.severity, "Critical");
   assert(!writes.some((row) => row.threadId === second.threadId));
@@ -548,4 +550,39 @@ test("plan structure binds its digest, operation IDs, counts, and mutation cap",
   assert.deepEqual(_internals.verifyPlanStructure(plan), []);
   plan.operations.push({ operationId: "tag-01", kind: "invented" });
   assert(_internals.verifyPlanStructure(plan).includes("plan_operation_id_duplicate"));
+});
+
+test("targeted recovery structure is pinned to the exact two threads, evidence, provenance, and cap", () => {
+  const filePath = path.join(repoRoot, "docs", "ops", "discordos-current-live-board-reconcile-recovery-plan-2026-07-16.json");
+  const exact = JSON.parse(fs.readFileSync(filePath, "utf8"));
+  assert.deepEqual(_internals.verifyPlanStructure(exact), []);
+
+  const extraTarget = structuredClone(exact);
+  extraTarget.operations.push({
+    ...structuredClone(extraTarget.operations[0]),
+    operationId: "tag-04",
+    threadId: "third-thread",
+  });
+  extraTarget.operationCounts.tagRepairs += 1;
+  extraTarget.mutationCap.logicalOperationCount += 1;
+  extraTarget.mutationCap.maxConfirmedDiscordWrites += 3;
+  extraTarget.planDigestSha256 = _internals.objectDigest(extraTarget);
+  assert(_internals.verifyPlanStructure(extraTarget).includes("targeted_recovery_operation_set_mismatch"));
+
+  const substitutedTarget = structuredClone(exact);
+  substitutedTarget.operations[0].threadId = "substituted-thread";
+  substitutedTarget.evidence.touchedPreimages[0].threadId = "substituted-thread";
+  substitutedTarget.planDigestSha256 = _internals.objectDigest(substitutedTarget);
+  assert(_internals.verifyPlanStructure(substitutedTarget).includes("targeted_recovery_target_mismatch:tag-02"));
+
+  const unlinkedEvidence = structuredClone(exact);
+  unlinkedEvidence.evidence.touchedPreimages[0].threadId = unlinkedEvidence.operations[1].threadId;
+  unlinkedEvidence.planDigestSha256 = _internals.objectDigest(unlinkedEvidence);
+  assert(_internals.verifyPlanStructure(unlinkedEvidence).includes("targeted_recovery_evidence_mismatch:tag-02"));
+  assert(_internals.verifyPlanStructure(unlinkedEvidence).includes("targeted_recovery_evidence_digest_mismatch"));
+
+  const widenedCap = structuredClone(exact);
+  widenedCap.mutationCap.maxConfirmedDiscordWrites = 7;
+  widenedCap.planDigestSha256 = _internals.objectDigest(widenedCap);
+  assert(_internals.verifyPlanStructure(widenedCap).includes("targeted_recovery_mutation_cap_mismatch"));
 });

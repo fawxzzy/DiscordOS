@@ -22,7 +22,11 @@ const DEFAULT_BOARD_REGISTRY_PATH = path.join(REPO_ROOT, "config", "discordos-bo
 const DEFAULT_PROFILE_REGISTRY_PATH = path.join(REPO_ROOT, "config", "discordos-forum-profile-registry.json");
 const DEFAULT_SOURCE_REGISTRY_PATH = path.join(REPO_ROOT, "config", "discordos-current-owner-sources.json");
 const COMPLETED_BOARD_ID = "shared-completed";
-const TARGETED_RECOVERY_OPERATION_IDS = ["tag-02", "tag-03"];
+const TARGETED_RECOVERY_TARGETS = Object.freeze({
+  "tag-02": Object.freeze({ boardId: "fitness-active", cardId: "FF-RET-004", threadId: "1526112879303196763" }),
+  "tag-03": Object.freeze({ boardId: "fitness-active", cardId: "FF-ROUTINE-001", threadId: "1526833783385358407" }),
+});
+const TARGETED_RECOVERY_OPERATION_IDS = Object.keys(TARGETED_RECOVERY_TARGETS).sort();
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -876,7 +880,14 @@ async function buildTargetedRecoveryPlan({
   const touchedPreimages = [];
   for (const operationId of TARGETED_RECOVERY_OPERATION_IDS) {
     const priorOperation = priorOperations.get(operationId);
-    if (!priorOperation || priorOperation.kind !== "tag_repair" || priorOperation.boardId !== "fitness-active") {
+    const expectedTarget = TARGETED_RECOVERY_TARGETS[operationId];
+    if (
+      !priorOperation
+      || priorOperation.kind !== "tag_repair"
+      || priorOperation.boardId !== expectedTarget.boardId
+      || priorOperation.cardId !== expectedTarget.cardId
+      || priorOperation.threadId !== expectedTarget.threadId
+    ) {
       reasonCodes.push(`prior_plan_recovery_operation_missing:${operationId}`);
       continue;
     }
@@ -972,6 +983,53 @@ function verifyPlanStructure(plan) {
       typeof operation.threadState?.archived !== "boolean"
       || typeof operation.threadState?.locked !== "boolean"
     )) reasonCodes.push(`plan_tag_thread_state_missing:${operation.operationId || "unknown"}`);
+  }
+  if (plan?.executionScope === "targeted_tag_recovery") {
+    const operationIds = operations.map((operation) => operation.operationId).sort();
+    if (canonicalJson(operationIds) !== canonicalJson(TARGETED_RECOVERY_OPERATION_IDS)) {
+      reasonCodes.push("targeted_recovery_operation_set_mismatch");
+    }
+    if (
+      plan?.mutationCap?.logicalOperationCount !== TARGETED_RECOVERY_OPERATION_IDS.length
+      || plan?.mutationCap?.maxConfirmedDiscordWrites !== TARGETED_RECOVERY_OPERATION_IDS.length * 3
+    ) reasonCodes.push("targeted_recovery_mutation_cap_mismatch");
+    const evidenceRows = Array.isArray(plan?.evidence?.touchedPreimages) ? plan.evidence.touchedPreimages : [];
+    const evidenceIds = evidenceRows.map((row) => row.operationId).sort();
+    if (canonicalJson(evidenceIds) !== canonicalJson(TARGETED_RECOVERY_OPERATION_IDS)) {
+      reasonCodes.push("targeted_recovery_evidence_set_mismatch");
+    }
+    if (plan?.evidence?.touchedPreimagesSha256 !== sha256(canonicalJson(evidenceRows))) {
+      reasonCodes.push("targeted_recovery_evidence_digest_mismatch");
+    }
+    const operationById = new Map(operations.map((operation) => [operation.operationId, operation]));
+    const evidenceById = new Map(evidenceRows.map((row) => [row.operationId, row]));
+    for (const operationId of TARGETED_RECOVERY_OPERATION_IDS) {
+      const expectedTarget = TARGETED_RECOVERY_TARGETS[operationId];
+      const operation = operationById.get(operationId);
+      const evidence = evidenceById.get(operationId);
+      if (
+        !operation
+        || operation.kind !== "tag_repair"
+        || operation.boardId !== expectedTarget.boardId
+        || operation.cardId !== expectedTarget.cardId
+        || operation.threadId !== expectedTarget.threadId
+        || operation.threadState?.archived !== true
+        || operation.threadState?.locked !== true
+      ) reasonCodes.push(`targeted_recovery_target_mismatch:${operationId}`);
+      if (
+        !evidence
+        || evidence.boardId !== expectedTarget.boardId
+        || evidence.cardId !== expectedTarget.cardId
+        || evidence.threadId !== expectedTarget.threadId
+        || evidence.forumChannelId !== operation?.forumChannelId
+        || canonicalJson(evidence.threadState) !== canonicalJson(operation?.threadState)
+        || !currentRepair.sameUniqueSet(evidence.appliedTagIds || [], operation?.preimage?.appliedTagIds || [])
+      ) reasonCodes.push(`targeted_recovery_evidence_mismatch:${operationId}`);
+      if (
+        operation?.recoveryFrom?.priorPlanSha256 !== plan?.evidence?.priorPlanFileSha256
+        || operation?.recoveryFrom?.priorReceiptSha256 !== plan?.evidence?.priorReceiptFileSha256
+      ) reasonCodes.push(`targeted_recovery_provenance_mismatch:${operationId}`);
+    }
   }
   return unique(reasonCodes).sort();
 }
@@ -1177,7 +1235,7 @@ async function applyPlannedTagRepair(operation, { env = process.env, fetchImpl =
     ...(critical ? { critical: true, severity: "Critical" } : { critical: false }),
     writeCount,
     writeOutcomeUnknownCount,
-    httpStatus: tagWrite ? tagWrite.status : reopen.status,
+    httpStatus: restore && !restore.ok ? restore.status : tagWrite ? tagWrite.status : reopen.status,
     lifecycle: {
       before: operation.threadState,
       reopen,
