@@ -654,6 +654,22 @@ test("plan structure binds its digest, operation IDs, counts, and mutation cap",
   assert(_internals.verifyPlanStructure(plan).includes("plan_operation_id_duplicate"));
 });
 
+test("the exact committed structure plan remains verifiable without weakening new plan guards", () => {
+  const filePath = path.join(repoRoot, "docs", "ops", "discordos-current-live-board-reconcile-plan-2026-07-16.json");
+  const exact = JSON.parse(fs.readFileSync(filePath, "utf8"));
+  assert.equal(exact.planDigestSha256, "29d8f714aa16fadb6a8904e527eb5dcf072fd74a7468c425420edd7a8480ead0");
+  assert(exact.operations.some((operation) => operation.kind === "tag_repair" && operation.threadState === undefined));
+  assert.deepEqual(_internals.verifyPlanStructure(exact), []);
+
+  const newPlanWithoutThreadState = structuredClone(exact);
+  newPlanWithoutThreadState.generatedAt = "new-plan-must-carry-thread-state";
+  newPlanWithoutThreadState.planDigestSha256 = _internals.objectDigest(newPlanWithoutThreadState);
+  assert(
+    _internals.verifyPlanStructure(newPlanWithoutThreadState)
+      .some((reason) => reason.startsWith("plan_tag_thread_state_missing:")),
+  );
+});
+
 test("targeted recovery structure is pinned to the exact two threads, evidence, provenance, and cap", () => {
   const filePath = path.join(repoRoot, "docs", "ops", "discordos-current-live-board-reconcile-recovery-plan-2026-07-16.json");
   const exact = JSON.parse(fs.readFileSync(filePath, "utf8"));

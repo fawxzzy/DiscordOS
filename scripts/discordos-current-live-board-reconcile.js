@@ -27,6 +27,9 @@ const TARGETED_RECOVERY_TARGETS = Object.freeze({
   "tag-03": Object.freeze({ boardId: "fitness-active", cardId: "FF-ROUTINE-001", threadId: "1526833783385358407" }),
 });
 const TARGETED_RECOVERY_OPERATION_IDS = Object.keys(TARGETED_RECOVERY_TARGETS).sort();
+const LEGACY_STRUCTURE_PLAN_DIGESTS_WITHOUT_THREAD_STATE = new Set([
+  "29d8f714aa16fadb6a8904e527eb5dcf072fd74a7468c425420edd7a8480ead0",
+]);
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -975,11 +978,13 @@ function verifyPlanStructure(plan) {
   if (!Number.isInteger(plan?.mutationCap?.maxConfirmedDiscordWrites) || plan.mutationCap.maxConfirmedDiscordWrites < operations.length) {
     reasonCodes.push("plan_mutation_cap_invalid");
   }
+  const exactLegacyStructurePlan = plan?.executionScope === "structure_only"
+    && LEGACY_STRUCTURE_PLAN_DIGESTS_WITHOUT_THREAD_STATE.has(plan?.planDigestSha256);
   for (const operation of operations) {
     if (!["owner_event", "tag_repair", "forum_order_repair", "completed_transfer"].includes(operation.kind)) {
       reasonCodes.push(`plan_operation_kind_unsupported:${operation.operationId || "unknown"}`);
     }
-    if (operation.kind === "tag_repair" && (
+    if (!exactLegacyStructurePlan && operation.kind === "tag_repair" && (
       typeof operation.threadState?.archived !== "boolean"
       || typeof operation.threadState?.locked !== "boolean"
     )) reasonCodes.push(`plan_tag_thread_state_missing:${operation.operationId || "unknown"}`);
