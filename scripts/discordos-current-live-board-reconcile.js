@@ -22,7 +22,6 @@ const DEFAULT_BOARD_REGISTRY_PATH = path.join(REPO_ROOT, "config", "discordos-bo
 const DEFAULT_PROFILE_REGISTRY_PATH = path.join(REPO_ROOT, "config", "discordos-forum-profile-registry.json");
 const DEFAULT_SOURCE_REGISTRY_PATH = path.join(REPO_ROOT, "config", "discordos-current-owner-sources.json");
 const COMPLETED_BOARD_ID = "shared-completed";
-const SUCCESS_REACTION = cardContract.STATUS_REACTIONS.success;
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -76,6 +75,7 @@ function parseArgs(args) {
     sourceRegistryPath: DEFAULT_SOURCE_REGISTRY_PATH,
     outputPath: null,
     allowApply: false,
+    structureOnly: false,
     json: false,
   };
   let explicitMode = false;
@@ -101,6 +101,7 @@ function parseArgs(args) {
       options.outputPath = path.resolve(readValue(args, index, "missing_output_path"));
       index += 1;
     } else if (arg === "--allow-apply") options.allowApply = true;
+    else if (arg === "--structure-only") options.structureOnly = true;
     else if (arg === "--json") options.json = true;
     else throw new Error(`unsupported_argument:${arg}`);
   }
@@ -112,6 +113,7 @@ function parseArgs(args) {
     if (!/^[a-f0-9]{64}$/.test(options.planSha256 || "")) throw new Error("trusted_plan_sha256_missing_or_invalid");
   }
   if (options.mode === "apply" && !options.outputPath) throw new Error("apply_output_path_missing");
+  if (options.structureOnly && options.mode !== "generate_plan") throw new Error("structure_only_generation_only");
   return options;
 }
 
@@ -503,7 +505,7 @@ async function buildOwnerOperations({ authority, scan, boardRegistry, env = proc
       preimage,
       desiredTagNames: ownerEventDesiredTagNames(event),
       desiredTagIds: forumTagIds(scan, board.id, ownerEventDesiredTagNames(event)),
-      requiredReaction: SUCCESS_REACTION,
+      requiredReaction: cardContract.getRequiredReactionForCard(plannedEvent.card, board),
     });
   }
   return { operations, unchanged, blockedSubsets };
@@ -679,6 +681,7 @@ async function buildDeterministicPlan({
   boardRegistry,
   sourceRegistry,
   authority,
+  structureOnly = false,
   env = process.env,
   fetchImpl = fetch,
 } = {}) {
@@ -694,10 +697,32 @@ async function buildDeterministicPlan({
       throw new Error(`current_applied_tag_identity_unsafe:${profile.boardId}`);
     }
   }
-  const owner = await buildOwnerOperations({ authority, scan, boardRegistry, env, fetchImpl });
+  const owner = structureOnly
+    ? {
+        operations: [],
+        unchanged: [],
+        blockedSubsets: [{
+          kind: "owner_event_batch",
+          reason: "throughput_guard_deferred_after_owner_journal_composition_failure",
+          eventCount: authority.ownerBatch.events.length,
+          eventIds: authority.ownerBatch.events.map((event) => event.eventId).sort(),
+        }],
+      }
+    : await buildOwnerOperations({ authority, scan, boardRegistry, env, fetchImpl });
   const tags = buildTagOperations({ scan, ownerOperations: owner.operations });
   const order = await buildOrderOperation({ scan, boardRegistry, env, fetchImpl });
-  const transfers = await buildTransferOperations({ authority, scan, boardRegistry, env, fetchImpl });
+  const transfers = structureOnly
+    ? {
+        operations: [],
+        unchanged: [],
+        blockedSubsets: [{
+          kind: "completed_transfer_batch",
+          reason: "deferred_with_owner_event_follow_up",
+          terminalRecordCount: authority.terminalRecords.length,
+          producerIdentities: authority.terminalRecords.map((record) => record.producerIdentity).sort(),
+        }],
+      }
+    : await buildTransferOperations({ authority, scan, boardRegistry, env, fetchImpl });
   const operations = [...owner.operations, ...tags, ...(order ? [order] : []), ...transfers.operations];
   const counts = planCounts(operations);
   const ownerCreates = owner.operations.filter((operation) => operation.preimage.exists === false).length;
@@ -713,6 +738,7 @@ async function buildDeterministicPlan({
     generatedAt: scan.generatedAt,
     discordosOriginMain: gitRevision("origin/main"),
     writerBoundary: "discordos-single-logical-writer",
+    executionScope: structureOnly ? "structure_only" : "current_live_full",
     evidence: {
       rawSha256: sha256(evidenceBytes),
       canonicalSha256: sha256(canonicalJson(scan)),
@@ -766,7 +792,9 @@ async function buildDeterministicPlan({
     },
     historicalCloseout: "frozen_13_board_243_identity_evidence_preserved_not_reused",
     marker: "UNMEASURED",
-    nextPacket: "FP-DOS-REC-001 DiscordOS Supabase source recovery",
+    nextPacket: structureOnly
+      ? "DiscordOS owner-event and completed-transfer blocked follow-up"
+      : "FP-DOS-REC-001 DiscordOS Supabase source recovery",
   };
   plan.planDigestSha256 = objectDigest(plan);
   return plan;
@@ -776,6 +804,7 @@ function verifyPlanStructure(plan) {
   const reasonCodes = [];
   if (plan?.schemaVersion !== PLAN_SCHEMA_VERSION) reasonCodes.push("plan_schema_mismatch");
   if (plan?.eventId !== EVENT_ID) reasonCodes.push("plan_event_mismatch");
+  if (!["structure_only", "current_live_full"].includes(plan?.executionScope)) reasonCodes.push("plan_execution_scope_invalid");
   if (plan?.planDigestSha256 !== objectDigest(plan)) reasonCodes.push("plan_digest_mismatch");
   const operations = plan?.operations || [];
   if (unique(operations.map((operation) => operation.operationId)).length !== operations.length) reasonCodes.push("plan_operation_id_duplicate");
@@ -1152,6 +1181,7 @@ async function main() {
       boardRegistry,
       sourceRegistry,
       authority,
+      structureOnly: options.structureOnly,
     });
     await writeJson(options.outputPath, plan);
     process.stdout.write(options.json ? `${JSON.stringify(plan, null, 2)}\n` : `plan_ready: ${plan.planDigestSha256}\n`);

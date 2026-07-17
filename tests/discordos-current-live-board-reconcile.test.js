@@ -66,6 +66,23 @@ test("CLI requires both a plan file and exact trusted file hash outside generati
   assert.equal(options.mode, "apply");
   assert.equal(options.planSha256, "a".repeat(64));
   assert.equal(options.allowApply, true);
+  const generation = _internals.parseArgs([
+    "--generate-plan",
+    "--structure-only",
+    "--evidence",
+    "scan.json",
+    "--output",
+    "plan.json",
+  ]);
+  assert.equal(generation.structureOnly, true);
+  assert.throws(() => _internals.parseArgs([
+    "--dry-run",
+    "--structure-only",
+    "--plan",
+    "plan.json",
+    "--plan-sha256",
+    "a".repeat(64),
+  ]), /structure_only_generation_only/);
 });
 
 test("apply admission requires every single-writer guard", () => {
@@ -231,6 +248,11 @@ test("stale owner truth blocks only that subset while an independent missing ide
   const freshOperation = result.operations.find((operation) => operation.eventId === "evt-fresh");
   assert.equal(freshOperation.preimage.exists, true);
   assert.equal(freshOperation.event.card.threadId, "thread-fresh");
+  assert.deepEqual(freshOperation.requiredReaction, {
+    status: "failure",
+    name: "failure",
+    id: "1507384094424694785",
+  });
   assert.equal(result.blockedSubsets.length, 1);
   assert.equal(result.blockedSubsets[0].eventId, "evt-stale");
   assert.match(result.blockedSubsets[0].reasonCodes[0], /^owner_event_older_than_live:/);
@@ -240,6 +262,7 @@ test("plan structure binds its digest, operation IDs, counts, and mutation cap",
   const plan = {
     schemaVersion: _internals.PLAN_SCHEMA_VERSION,
     eventId: _internals.EVENT_ID,
+    executionScope: "structure_only",
     operationCounts: { ownerEvents: 0, tagRepairs: 1, forumOrderRepairs: 0, completedTransfers: 0 },
     mutationCap: { logicalOperationCount: 1, maxConfirmedDiscordWrites: 1 },
     operations: [{ operationId: "tag-01", kind: "tag_repair" }],

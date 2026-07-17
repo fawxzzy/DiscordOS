@@ -12,25 +12,28 @@
 
 The producer scan was rebuilt from exact paginated Discord readback and the current DiscordOS board registry. It found `13/13` required forums, `245` current cards, `445` total threads, `245` healthy cards, zero drifted card bodies, zero uncovered boards, zero current duplicate stable identities, zero current duplicate journal-event identities, zero actionable text-integrity findings, `151` retained Music Sesh/community history rows, and `49` superseded records.
 
-The only independently actionable current forum/card drift is:
+The current producer plan discovered:
 
-- `23` deterministic tag repairs: five tags for newly admitted Atlas identities, one for the newly admitted `_stack` identity, three existing Fitness tags, four existing Mazer tags, and ten existing Completed-board tags;
+- `23` deterministic tag postimages: five for missing Atlas identities, one for the missing `_stack` identity, three existing Fitness tags, four existing Mazer tags, and ten existing Completed-board tags;
 - `1` relative forum-order repair;
 - `83` exact current owner events: `77` newer producer events bound to existing exact thread preimages plus `6` missing current identities;
 - `6` producer-terminal completed transfers with exact live source preimages.
+
+After the owner-event/journal subset reached the ATLAS MAIN throughput guard, the execution plan was narrowed to the independently executable structure-only subset: `17` existing-thread tag repairs plus `1` forum-order repair. The other six tag postimages depend on nonexistent threads from the deferred owner creates; applying them independently would invent targets, so they stay with the blocked follow-up.
 
 No unmanaged Music Sesh/community/archive row is an operation target. No orphan applied tag ID is mapped. Fitness owner-event truth is excluded because its registered export is runtime-only and no committed current artifact exists; the three Fitness tag repairs are derived from the current managed card bodies. FawxzzyWeb is excluded because the current DiscordOS registry has no board or owner-export adapter for it.
 
 ## Trusted plan
 
 - machine plan: `docs/ops/discordos-current-live-board-reconcile-plan-2026-07-16.json`
-- admitted raw scan SHA-256: `589fdc94640b1229fa0824813cf8a58b5bf3bcad5072b0ae769425910aabd062`
-- plan file SHA-256: `b6eea4942f5dfe93927f584687231fe511980a6dba96d924c08f8642b3d63a32`
-- canonical plan digest: `be52393a0c2af72ec6de5cac8e0e749c2b3fbcb87410339a6081542398618a60`
-- logical operations: `113`
-- maximum confirmed Discord writes: `594`
+- execution scope: `structure_only`
+- admitted raw scan SHA-256: `7355e95ca69440761500b659afc85b4a23b60a95e19396cbf3c19bf0b7f5278a`
+- plan file SHA-256: `43d4dfc407f8e808b91c34e6d790319ef410a6df03997bb012e81c74ce7cde3b`
+- canonical plan digest: `29d8f714aa16fadb6a8904e527eb5dcf072fd74a7468c425420edd7a8480ead0`
+- logical operations: `18` = `17 tag + 1 order`
+- maximum confirmed Discord writes: `18`
 - initial denominator: `13 boards / 245 current cards / 445 total threads`
-- planned terminal denominator: `13 boards / 257 current cards / 457 total threads`
+- planned terminal denominator: `13 boards / 245 current cards / 445 total threads`
 
 Two independently generated plans are byte-identical. Apply requires the exact plan-file SHA-256, a current `origin/main` match, exact current owner-source revisions and blobs, the full scan preimage or exact terminal postimage, plus the reconciliation, journal, and completed-transfer environment guards. A mismatch blocks before writes.
 
@@ -38,13 +41,15 @@ Two independently generated plans are byte-identical. Apply requires the exact p
 
 The plan records exact repository commit, file, Git blob, raw SHA-256, export identity, source revision, and card count for every registered producer source admitted from Atlas, Cortex, DiscordOS, Foundation, Lifeline, Playbook, `_stack`, and Socials OS.
 
+The blocked full follow-up is preserved at `docs/ops/discordos-current-live-owner-follow-up-plan-2026-07-16.json`, file SHA-256 `36bdeaa847982657961bfb3d0f2a756a73858e380ed8592317f9c5d21e0800cf`, canonical digest `f2e5c6a77319c2ec398155759c71934dda6bf176eaee09ed14ed65af4bb73a6c`. It is evidence only and is not apply input for this cluster.
+
 Six terminal producer identities have no current live source and are retained as blocked dependencies rather than synthesized: three Atlas terminal histories and `DOS-101`, `DOS-102`, and `DOS-GOV-001`. The Fitness artifact dependency and FawxzzyWeb exclusion are recorded separately in the machine plan.
 
 ## Zero-write proof
 
-Two earlier dry runs failed closed with zero mutations while the new composition path was being connected: first because tag operations lacked the reused runtime inspector's forum identity, then because the rich forum scan had not yet been projected into the journal writer's narrower registry-scan contract. Both contracts now have focused regression coverage.
+Two earlier dry runs failed closed with zero mutations while the new composition path was being connected: first because tag operations lacked the reused runtime inspector's forum identity, then because the rich forum scan had not yet been projected into the journal writer's narrower registry-scan contract. Both contracts now have focused regression coverage. A later full-plan preflight encountered one transient incomplete readback after the throughput guard; a new exact paginated scan immediately restored the healthy `13/245` denominator, and the owner/transfer subset was still deferred rather than iterated again.
 
-The final exact-plan dry run is `dry_run_ready`: `83` owner events pending, `23` tag repairs pending or pending their planned create, `1` order repair pending, `6` completed transfers pending, zero reason codes, zero Discord mutations, and zero unknown mutation outcomes.
+The structure-only plan is generated twice with byte-identical output. Its exact dry run is `dry_run_ready`: `17` tag repairs pending, `1` order repair pending, zero owner/transfer operations, zero reason codes, zero Discord mutations, and zero unknown mutation outcomes. The later apply/readback/replay result is recorded in the terminal receipt.
 
 ## Apply and reconciliation contract
 
