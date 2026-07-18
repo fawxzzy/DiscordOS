@@ -13,7 +13,8 @@
     "mutationsPerformed": false,
     "secretsCaptured": false,
     "cronCommandCaptured": false,
-    "machinePathsCaptured": false
+    "machinePathsCaptured": false,
+    "repositorySourceCandidateAdded": true
   },
   "comparisonPolicy": {
     "encoding": "utf-8",
@@ -332,26 +333,84 @@
     {
       "slug": "discordos-update-drafts",
       "liveVersion": 5,
-      "verifyJwt": true,
+      "verifyJwt": false,
+      "deployedVerifyJwt": true,
+      "deployedSourceCommit": "bd12f6713518b3f3af3761618e3d3e5f6979f167",
+      "deployedSourceGitBlob": "75366f8ce59952e129c14ade9cf8cac9cb26fa64",
       "sourcePath": "supabase/functions/discordos-update-drafts/index.ts",
       "providerRawSource": {
         "bytes": 6703,
         "sha256": "b0658e5a52534a34cb14abec5776cdaab8969c0fa04f7c3b64b4652c83272050"
       },
       "canonicalSource": {
-        "bytes": 6703,
-        "sha256": "b0658e5a52534a34cb14abec5776cdaab8969c0fa04f7c3b64b4652c83272050"
+        "bytes": 507,
+        "sha256": "04c01e908b0b409dc5896f86ac0ea507eb68315ebd01f5d3cd3fdd96c79e01c7"
       },
       "providerBundleSha256": "fc366e5b614f9a776ff15f291a41d8dc3173375a6fa5dcd86e5e5b65eec229fa"
+    }
+  ],
+  "sourceCandidates": [
+    {
+      "packet": "FP-DOS-UPDATE-DRAFTS-AUTH-001",
+      "baseCommit": "bd12f6713518b3f3af3761618e3d3e5f6979f167",
+      "edgeSlug": "discordos-update-drafts",
+      "serviceIdentity": "discordos-update-drafts-caller",
+      "authMode": "secret:discordos-update-drafts-caller",
+      "deployed": false,
+      "providerMutationsPerformed": false,
+      "liveParityProven": false,
+      "contractPath": "supabase/functions/discordos-update-drafts/authorization-contract.v1.json",
+      "artifacts": [
+        {
+          "path": "supabase/functions/discordos-update-drafts/index.ts",
+          "bytes": 507,
+          "sha256": "04c01e908b0b409dc5896f86ac0ea507eb68315ebd01f5d3cd3fdd96c79e01c7"
+        },
+        {
+          "path": "supabase/functions/discordos-update-drafts/handler.mjs",
+          "bytes": 17111,
+          "sha256": "9a4508c1131a63a5ace23e43212d13d1396101a15d4d2079009c62598be56354"
+        },
+        {
+          "path": "supabase/config.toml",
+          "bytes": 55,
+          "sha256": "c0a60b27cfd1633ce05c9f7bcff78d56fc6ac6869942df7c0ddfedc803577af9"
+        },
+        {
+          "path": "supabase/migrations/20260717232230_discordos_update_drafts_authorization_contract.sql",
+          "bytes": 13638,
+          "sha256": "f9d4ad2c268470f61f5727d77e2e13dd1622ba3cbe0959d0ec675bfc7c1ccaf3"
+        },
+        {
+          "path": "supabase/functions/discordos-update-drafts/authorization-contract.v1.json",
+          "bytes": 4490,
+          "sha256": "91f651b7170a077de78403c82a3bba780389b5c503c4832a5272bfe9bd809c3c"
+        },
+        {
+          "path": "tests/discordos-update-drafts-authorization.test.js",
+          "bytes": 20964,
+          "sha256": "a2d5c1e9679a8b92fe19999728f479c82a9468a645e626e8513f0d8d9464f540"
+        },
+        {
+          "path": "docs/contracts/discordos-update-drafts-authorization-v1.md",
+          "bytes": 3695,
+          "sha256": "8a248d9d8cede26f96fcff1006cf8bde75061875742ebd6adf7bf3c8ee9c88f3"
+        },
+        {
+          "path": "docs/ops/discordos-update-drafts-auth-deployment-checklist-2026-07-17.md",
+          "bytes": 2682,
+          "sha256": "0ebcb943ca0d40e390921b9cc57266c31095876b9123986402d407466e7f8dc3"
+        }
+      ]
     }
   ],
   "knownRisks": [
     {
       "id": "discordos-update-drafts-caller-authorization",
-      "status": "accepted_live_risk_outside_exact_source_recovery",
-      "evidence": "Recovered v5 source uses the service-role credential after Edge gateway JWT verification without an additional caller-role or internal shared-secret check.",
-      "boundary": "Changing this exact recovered source would alter accepted live semantics and invalidate its authenticated source digest.",
-      "nextAction": "Admit a separate Edge security remediation packet before any deployment."
+      "status": "source_remediation_candidate_not_deployed",
+      "evidence": "Recovered live v5 remains authentication-only. The source candidate uses one named secret-key identity, server-owned fields, owner-scoped RPCs, idempotent insert, and compare-and-swap update.",
+      "boundary": "The candidate is source-only. Live caller identity, provider configuration, non-production deployment proof, live parity, and cutover remain unproven.",
+      "nextAction": "Bind the exact caller and pass all four deployment-gated units under a separately authorized provider packet."
     }
   ],
   "unknowns": [
