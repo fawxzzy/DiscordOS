@@ -490,6 +490,99 @@ test("every request UUID field rejects noncanonical and oversized values before 
   }
 });
 
+test("action dispatch requires one own enumerable data property from the closed supported set", async (t) => {
+  const { ACTION_TO_RPC, validateOperation } = await modulePromise;
+  const contract = JSON.parse(
+    fs.readFileSync(
+      path.join(
+        REPO_ROOT,
+        "supabase",
+        "functions",
+        "discordos-update-drafts",
+        "authorization-contract.v1.json",
+      ),
+      "utf8",
+    ),
+  );
+  assert.deepEqual(Object.keys(ACTION_TO_RPC), contract.operations);
+  assert.deepEqual(contract.actionDispatch, {
+    property: "action",
+    propertyContract: "own_enumerable_data_property",
+    valueContract: "exact_supported_string",
+    prototypeChainAccepted: false,
+    accessorAccepted: false,
+    duplicateTopLevelKeysAccepted: false,
+    escapedDuplicateKeysAccepted: false,
+  });
+  const supported = validateOperation({ action: "list_latest", payload: {} });
+  assert.equal(supported.ok, true);
+  assert.equal(supported.rpc, ACTION_TO_RPC.list_latest);
+
+  const inherited = Object.create({ action: "list_latest" });
+  inherited.payload = {};
+  assert.deepEqual(validateOperation(inherited), {
+    ok: false,
+    status: 400,
+    error: "UNSUPPORTED_ACTION",
+  });
+
+  let accessorReads = 0;
+  const accessor = { payload: {} };
+  Object.defineProperty(accessor, "action", {
+    enumerable: true,
+    get() {
+      accessorReads += 1;
+      return "list_latest";
+    },
+  });
+  assert.deepEqual(validateOperation(accessor), {
+    ok: false,
+    status: 400,
+    error: "UNSUPPORTED_ACTION",
+  });
+  assert.equal(accessorReads, 0);
+
+  const cases = [
+    ["inherited_map_constructor", JSON.stringify({ action: "constructor", payload: {} }), "UNSUPPORTED_ACTION"],
+    ["inherited_map_to_string", JSON.stringify({ action: "toString", payload: {} }), "UNSUPPORTED_ACTION"],
+    ["proto_action_name", JSON.stringify({ action: "__proto__", payload: {} }), "UNSUPPORTED_ACTION"],
+    ["proto_pollution_object", '{"__proto__":{"action":"list_latest"},"payload":{}}', "INVALID_PAYLOAD"],
+    ["missing_action", JSON.stringify({ payload: {} }), "UNSUPPORTED_ACTION"],
+    ["null_action", JSON.stringify({ action: null, payload: {} }), "UNSUPPORTED_ACTION"],
+    ["numeric_action", JSON.stringify({ action: 1, payload: {} }), "UNSUPPORTED_ACTION"],
+    ["unknown_action", JSON.stringify({ action: "delete", payload: {} }), "UNSUPPORTED_ACTION"],
+    [
+      "duplicate_same_action",
+      '{"action":"list_latest","action":"list_latest","payload":{}}',
+      "INVALID_PAYLOAD",
+    ],
+    [
+      "duplicate_conflicting_action",
+      '{"action":"list_latest","action":"insert","payload":{}}',
+      "INVALID_PAYLOAD",
+    ],
+    [
+      "escaped_duplicate_action",
+      '{"action":"list_latest","\\u0061ction":"insert","payload":{}}',
+      "INVALID_PAYLOAD",
+    ],
+  ];
+
+  for (const [id, rawBody, expectedError] of cases) {
+    await t.test(id, async () => {
+      const { handler, store, callerBindings } = await createHarness();
+      const before = store.snapshot();
+      const result = await readResult(handler, requestFor(null, { rawBody }));
+      assert.equal(result.response.status, 400);
+      assert.equal(result.body.error, expectedError);
+      assert.equal(store.snapshot(), before);
+      assert.equal(store.calls.length, 0);
+      assert.equal(store.writes, 0);
+      assert.equal(callerBindings.length, 0);
+    });
+  }
+});
+
 test("emitted error codes exactly equal the versioned stable inventory", async (t) => {
   const { ERROR_STATUS_BY_CODE, MAX_BODY_BYTES } = await modulePromise;
   const contract = JSON.parse(

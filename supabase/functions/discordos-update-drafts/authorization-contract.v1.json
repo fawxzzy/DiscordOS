@@ -20,6 +20,15 @@
     "insert",
     "update"
   ],
+  "actionDispatch": {
+    "property": "action",
+    "propertyContract": "own_enumerable_data_property",
+    "valueContract": "exact_supported_string",
+    "prototypeChainAccepted": false,
+    "accessorAccepted": false,
+    "duplicateTopLevelKeysAccepted": false,
+    "escapedDuplicateKeysAccepted": false
+  },
   "lifecycle": {
     "initial": "draft",
     "terminalTransitions": [
@@ -142,7 +151,7 @@
     },
     "handler": {
       "path": "supabase/functions/discordos-update-drafts/handler.mjs",
-      "sha256": "64c1d32acbf8cf80b0f14d5e62dbe08042be80a2943271e369b464d2b5aa2287"
+      "sha256": "9ad62405571248f5293f8b319c641d6f9ed5e88632bed27ff7ab2e2fa2fcb14b"
     },
     "config": {
       "path": "supabase/config.toml",

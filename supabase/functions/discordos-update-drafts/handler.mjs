@@ -102,6 +102,29 @@ function isPlainObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+function hasOwnProperty(value, key) {
+  return Object.prototype.hasOwnProperty.call(value, key);
+}
+
+function ownStringEnum(value, key, allowedValues) {
+  let descriptor;
+  try {
+    descriptor = Object.getOwnPropertyDescriptor(value, key);
+  } catch {
+    return { ok: false };
+  }
+  if (
+    !descriptor ||
+    !descriptor.enumerable ||
+    !hasOwnProperty(descriptor, "value") ||
+    typeof descriptor.value !== "string" ||
+    !hasOwnProperty(allowedValues, descriptor.value)
+  ) {
+    return { ok: false };
+  }
+  return { ok: true, value: descriptor.value };
+}
+
 function hasOnlyKeys(value, allowed) {
   return Object.keys(value).every((key) => allowed.has(key));
 }
@@ -347,7 +370,8 @@ export function validateOperation(body) {
   if (!isPlainObject(body) || !hasOnlyKeys(body, new Set(["action", "payload"]))) {
     return validationError(400, "INVALID_PAYLOAD");
   }
-  if (typeof body.action !== "string" || !(body.action in ACTION_TO_RPC)) {
+  const selectedAction = ownStringEnum(body, "action", ACTION_TO_RPC);
+  if (!selectedAction.ok) {
     return validationError(400, "UNSUPPORTED_ACTION");
   }
   if (!isPlainObject(body.payload)) return validationError(422, "INVALID_OPERATION_PAYLOAD");
@@ -361,10 +385,45 @@ export function validateOperation(body) {
     insert: validateInsert,
     update: validateUpdate,
   };
-  const validated = validators[body.action](body.payload);
+  const action = selectedAction.value;
+  const validated = validators[action](body.payload);
   return validated.ok
-    ? { ...validated, action: body.action, rpc: ACTION_TO_RPC[body.action] }
+    ? { ...validated, action, rpc: ACTION_TO_RPC[action] }
     : validated;
+}
+
+function countTopLevelJsonKey(text, expectedKey) {
+  let depth = 0;
+  let count = 0;
+  let index = 0;
+  while (index < text.length) {
+    const character = text[index];
+    if (character === '"') {
+      const start = index;
+      index += 1;
+      while (index < text.length) {
+        if (text[index] === "\\") {
+          index += 2;
+          continue;
+        }
+        if (text[index] === '"') {
+          index += 1;
+          break;
+        }
+        index += 1;
+      }
+      if (depth === 1) {
+        let next = index;
+        while (/\s/.test(text[next] ?? "")) next += 1;
+        if (text[next] === ":" && JSON.parse(text.slice(start, index)) === expectedKey) count += 1;
+      }
+      continue;
+    }
+    if (character === "{" || character === "[") depth += 1;
+    if (character === "}" || character === "]") depth -= 1;
+    index += 1;
+  }
+  return count;
 }
 
 async function readJsonBody(request) {
@@ -386,6 +445,9 @@ async function readJsonBody(request) {
     }
     text += decoder.decode();
     const parsed = JSON.parse(text);
+    if (countTopLevelJsonKey(text, "action") > 1) {
+      return { ok: false, status: 400, error: "INVALID_PAYLOAD" };
+    }
     return isPlainObject(parsed)
       ? { ok: true, body: parsed }
       : { ok: false, status: 400, error: "INVALID_PAYLOAD" };

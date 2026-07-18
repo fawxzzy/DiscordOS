@@ -368,8 +368,8 @@
         },
         {
           "path": "supabase/functions/discordos-update-drafts/handler.mjs",
-          "bytes": 17884,
-          "sha256": "64c1d32acbf8cf80b0f14d5e62dbe08042be80a2943271e369b464d2b5aa2287"
+          "bytes": 19488,
+          "sha256": "9ad62405571248f5293f8b319c641d6f9ed5e88632bed27ff7ab2e2fa2fcb14b"
         },
         {
           "path": "supabase/config.toml",
@@ -383,18 +383,18 @@
         },
         {
           "path": "supabase/functions/discordos-update-drafts/authorization-contract.v1.json",
-          "bytes": 5016,
-          "sha256": "95580c907defcb54fca655a6817704865c697d58a3bbb1062120e45185f390d3"
+          "bytes": 5326,
+          "sha256": "03f98375d132fc19eae4c2a8e25e3e2610936600a4480ce390dbba80faff11b0"
         },
         {
           "path": "tests/discordos-update-drafts-authorization.test.js",
-          "bytes": 28530,
-          "sha256": "fff29de9f6b88db8b1c9c72f7bdc6fb9c1b05f4ac7fb27b2fb92fc487686263a"
+          "bytes": 31894,
+          "sha256": "dd113ea96865a81b69ee0fb031127b86f80ddc193279dd33317e1a6848d58224"
         },
         {
           "path": "docs/contracts/discordos-update-drafts-authorization-v1.md",
-          "bytes": 4542,
-          "sha256": "84f52bb4e3a2d8ca65557eb3de5139f61fdec4a1aea764c853b769f289d0f037"
+          "bytes": 4941,
+          "sha256": "1407480719cc618a4b55dc2d96d1a7fefc72ceec5c894c123c8bdd41c5f3878d"
         },
         {
           "path": "docs/ops/discordos-update-drafts-auth-deployment-checklist-2026-07-17.md",

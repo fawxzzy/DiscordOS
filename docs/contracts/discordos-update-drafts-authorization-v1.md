@@ -10,6 +10,8 @@ Stacked base: `bd12f6713518b3f3af3761618e3d3e5f6979f167`
 
 `discordos-update-drafts` is an internal service-only capability. The Edge gateway JWT check is disabled for this function only. The handler accepts exactly one named secret-key identity, `discordos-update-drafts-caller`, from the `apikey` header and the runtime-owned `SUPABASE_SECRET_KEYS` binding. It rejects bearer-token fallback, every other named key, browser origins, unsupported methods or media types, malformed/oversized bodies, batches, unknown operations, authority overrides, and server-owned fields before constructing the admin client or invoking an RPC.
 
+Dispatch requires `action` to be an enumerable own data property whose string value exactly matches one of the six operations below. Prototype-chain values, accessors, inherited names such as `constructor` or `toString`, `__proto__`, missing or non-string values, and duplicate top-level `action` keys (including escaped equivalents) are rejected before privileged client construction or RPC work.
+
 The pinned `@supabase/server@1.4.0` verifier performs constant-time secret comparison. The admin client is constructed with the same exact named key only after caller authentication and operation validation. No key value belongs in Git, receipts, logs, or diagnostics.
 
 ## Operations and ownership
