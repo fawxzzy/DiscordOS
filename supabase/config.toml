@@ -1,0 +1,2 @@
+[functions.discordos-update-drafts]
+verify_jwt = false

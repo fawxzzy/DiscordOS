@@ -1,5 +1,6 @@
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
+const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
@@ -147,8 +148,28 @@ test("all six Edge sources match the provider source catalog", () => {
     const source = canonicalSourceBuffer(edge.sourcePath);
     assert.equal(source.length, edge.canonicalSource.bytes, `${edge.slug} byte length`);
     assert.equal(sha256(source), edge.canonicalSource.sha256, `${edge.slug} SHA-256`);
-    assert.equal(edge.verifyJwt, true, `${edge.slug} verify_jwt`);
-    assertProviderRawSource(edge.sourcePath, edge.providerRawSource, edge.slug);
+    if (edge.slug === "discordos-update-drafts") {
+      assert.equal(edge.verifyJwt, false, `${edge.slug} candidate verify_jwt`);
+      assert.equal(edge.deployedVerifyJwt, true, `${edge.slug} deployed verify_jwt`);
+      const deployedSource = execFileSync(
+        "git",
+        ["show", `${edge.deployedSourceCommit}:${edge.sourcePath}`],
+        { cwd: REPO_ROOT, encoding: "buffer" },
+      );
+      assert.equal(deployedSource.length, edge.providerRawSource.bytes);
+      assert.equal(sha256(deployedSource), edge.providerRawSource.sha256);
+      assert.equal(
+        execFileSync(
+          "git",
+          ["rev-parse", `${edge.deployedSourceCommit}:${edge.sourcePath}`],
+          { cwd: REPO_ROOT, encoding: "utf8" },
+        ).trim(),
+        edge.deployedSourceGitBlob,
+      );
+    } else {
+      assert.equal(edge.verifyJwt, true, `${edge.slug} verify_jwt`);
+      assertProviderRawSource(edge.sourcePath, edge.providerRawSource, edge.slug);
+    }
   }
   assert.deepEqual(
     Object.fromEntries(
@@ -167,7 +188,10 @@ test("update-drafts separates exact source and provider bundle digest classes", 
     bytes: 6703,
     sha256: "b0658e5a52534a34cb14abec5776cdaab8969c0fa04f7c3b64b4652c83272050",
   });
-  assert.deepEqual(edge.canonicalSource, edge.providerRawSource);
+  assert.deepEqual(edge.canonicalSource, {
+    bytes: 507,
+    sha256: "04c01e908b0b409dc5896f86ac0ea507eb68315ebd01f5d3cd3fdd96c79e01c7",
+  });
   assert.equal(
     edge.providerBundleSha256,
     "fc366e5b614f9a776ff15f291a41d8dc3173375a6fa5dcd86e5e5b65eec229fa",
@@ -175,8 +199,15 @@ test("update-drafts separates exact source and provider bundle digest classes", 
   assert.notEqual(edge.providerBundleSha256, edge.providerRawSource.sha256);
 
   const raw = fs.readFileSync(path.join(REPO_ROOT, edge.sourcePath));
-  assert.equal(raw.length, 6703);
-  assert.equal(sha256(raw), edge.providerRawSource.sha256);
+  assert.equal(raw.length, edge.canonicalSource.bytes);
+  assert.equal(sha256(raw), edge.canonicalSource.sha256);
+  const deployedRaw = execFileSync(
+    "git",
+    ["show", `${edge.deployedSourceCommit}:${edge.sourcePath}`],
+    { cwd: REPO_ROOT, encoding: "buffer" },
+  );
+  assert.equal(deployedRaw.length, 6703);
+  assert.equal(sha256(deployedRaw), edge.providerRawSource.sha256);
 });
 
 test("scheduler recovery preserves the parameterized secret-reference contract", () => {
@@ -303,30 +334,44 @@ test("recovered migrations represent the exact live table, function, and trigger
   );
 });
 
-test("exact Edge recovery records the accepted caller-authorization risk without hiding it", () => {
+test("source provenance preserves the live risk and binds the un-deployed remediation", () => {
   const risk = manifest.knownRisks.find(
     ({ id }) => id === "discordos-update-drafts-caller-authorization",
   );
   assert.deepEqual(risk, {
     id: "discordos-update-drafts-caller-authorization",
-    status: "accepted_live_risk_outside_exact_source_recovery",
-    evidence: "Recovered v5 source uses the service-role credential after Edge gateway JWT verification without an additional caller-role or internal shared-secret check.",
-    boundary: "Changing this exact recovered source would alter accepted live semantics and invalidate its authenticated source digest.",
-    nextAction: "Admit a separate Edge security remediation packet before any deployment.",
+    status: "source_remediation_candidate_not_deployed",
+    evidence: "Recovered live v5 remains authentication-only. The source candidate uses one named secret-key identity, server-owned fields, owner-scoped RPCs, idempotent insert, and compare-and-swap update.",
+    boundary: "The candidate is source-only. Live caller identity, provider configuration, non-production deployment proof, live parity, and cutover remain unproven.",
+    nextAction: "Bind the exact caller and pass all four deployment-gated units under a separately authorized provider packet.",
   });
 
   const source = fs.readFileSync(
     path.join(REPO_ROOT, "supabase", "functions", "discordos-update-drafts", "index.ts"),
     "utf8",
   );
-  assert.match(source, /SUPABASE_SERVICE_ROLE_KEY/);
-  assert.doesNotMatch(source, /req\.headers|getClaims|getUser|shared.?secret/i);
+  assert.match(source, /createNamedServiceAuthenticator\(verifyAuth\)/);
+  assert.match(source, /createAdminClient/);
+  assert.doesNotMatch(source, /SUPABASE_SERVICE_ROLE_KEY|DISCORDOS_SUPABASE_SERVICE_ROLE_KEY/);
+
+  const candidate = manifest.sourceCandidates.find(
+    ({ packet }) => packet === "FP-DOS-UPDATE-DRAFTS-AUTH-001",
+  );
+  assert(candidate);
+  assert.equal(candidate.deployed, false);
+  assert.equal(candidate.providerMutationsPerformed, false);
+  for (const artifact of candidate.artifacts) {
+    const bytes = fs.readFileSync(path.join(REPO_ROOT, artifact.path));
+    assert.equal(bytes.length, artifact.bytes, artifact.path);
+    assert.equal(sha256(bytes), artifact.sha256, artifact.path);
+  }
 });
 
 test("recovered artifacts contain no credential value or machine-path shape", () => {
   const paths = [
     ...manifest.migrations.map(({ sourcePath }) => sourcePath),
     ...manifest.edgeFunctions.map(({ sourcePath }) => sourcePath),
+    ...manifest.sourceCandidates.flatMap(({ artifacts }) => artifacts.map(({ path: artifactPath }) => artifactPath)),
     "supabase/source-provenance.manifest.json",
   ];
   const contents = paths.map((relativePath) =>

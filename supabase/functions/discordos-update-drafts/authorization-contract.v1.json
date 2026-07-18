@@ -1,0 +1,184 @@
+{
+  "schemaVersion": "discordos.update-drafts-authorization.v1",
+  "packet": "FP-DOS-UPDATE-DRAFTS-AUTH-001",
+  "baseCommit": "bd12f6713518b3f3af3761618e3d3e5f6979f167",
+  "serviceIdentity": "discordos-update-drafts-caller",
+  "authentication": {
+    "gatewayVerifyJwt": false,
+    "handlerMode": "secret:discordos-update-drafts-caller",
+    "credentialHeader": "apikey",
+    "runtimeBinding": "SUPABASE_SECRET_KEYS",
+    "bearerFallback": false,
+    "browserOrigins": false,
+    "constantTimeVerifier": "@supabase/server@1.4.0"
+  },
+  "operations": [
+    "list_latest",
+    "find_by_deployment_id",
+    "find_by_id",
+    "find_by_prefix",
+    "insert",
+    "update"
+  ],
+  "actionDispatch": {
+    "property": "action",
+    "propertyContract": "own_enumerable_data_property",
+    "valueContract": "exact_supported_string",
+    "prototypeChainAccepted": false,
+    "accessorAccepted": false,
+    "duplicateTopLevelKeysAccepted": false,
+    "escapedDuplicateKeysAccepted": false
+  },
+  "lifecycle": {
+    "initial": "draft",
+    "terminalTransitions": [
+      "published",
+      "skipped",
+      "ignored",
+      "failed"
+    ],
+    "terminalMutationAllowed": false,
+    "optimisticConcurrencyField": "revision"
+  },
+  "serverOwnedFields": [
+    "id",
+    "source",
+    "status",
+    "owner_service",
+    "revision",
+    "webhook_received_at",
+    "created_at",
+    "updated_at",
+    "published_by_discord_user_id",
+    "published_at",
+    "skipped_by_discord_user_id",
+    "skipped_at",
+    "skip_reason",
+    "last_operation",
+    "last_operated_by_service",
+    "last_operated_at"
+  ],
+  "errorStatusByCode": {
+    "UNAUTHORIZED": 401,
+    "FORBIDDEN": 403,
+    "METHOD_NOT_ALLOWED": 405,
+    "UNSUPPORTED_MEDIA_TYPE": 415,
+    "PAYLOAD_TOO_LARGE": 413,
+    "INVALID_PAYLOAD": 400,
+    "UNSUPPORTED_ACTION": 400,
+    "INVALID_OPERATION_PAYLOAD": 422,
+    "INVALID_SELECTOR": 400,
+    "IMMUTABLE_FIELD": 422,
+    "INVALID_REVISION": 400,
+    "INVALID_TRANSITION": 422,
+    "EMPTY_UPDATE": 400,
+    "CONFLICT": 409,
+    "NOT_FOUND": 404,
+    "SERVICE_UNAVAILABLE": 503,
+    "PRIVILEGED_OPERATION_FAILED": 500
+  },
+  "denominator": {
+    "total": 38,
+    "sourceProvable": 34,
+    "deploymentGated": 4,
+    "negative": 23,
+    "authorized": 6,
+    "provenance": 5,
+    "deployment": 4
+  },
+  "negativeUnits": [
+    "N01_missing_service_api_key",
+    "N02_malformed_service_api_key",
+    "N03_publishable_key",
+    "N04_differently_named_secret_key",
+    "N05_legacy_anon_jwt_bearer",
+    "N06_authenticated_user_jwt",
+    "N07_anonymous_session_jwt",
+    "N08_legacy_service_role_jwt_bearer",
+    "N09_wrong_claims_jwt",
+    "N10_expired_jwt",
+    "N11_get_method",
+    "N12_browser_preflight",
+    "N13_non_browser_missing_named_key",
+    "N14_invalid_json",
+    "N15_unsupported_action",
+    "N16_invalid_selector",
+    "N17_owner_override",
+    "N18_server_owned_field_override",
+    "N19_illegal_transition",
+    "N20_batch_payload",
+    "N21_conflicting_insert_replay",
+    "N22_stale_update_revision",
+    "N23_unknown_or_downstream_failure"
+  ],
+  "authorizedUnits": [
+    "A01_list_latest",
+    "A02_find_by_deployment_id",
+    "A03_find_by_id",
+    "A04_find_by_prefix",
+    "A05_insert_idempotent",
+    "A06_update_compare_and_swap"
+  ],
+  "provenanceUnits": [
+    "P01_exact_candidate_source_digest",
+    "P02_repository_function_config",
+    "P03_forward_migration_digest",
+    "P04_manifest_binding",
+    "P05_zero_secret_values"
+  ],
+  "deploymentUnits": [
+    {
+      "id": "D01_non_production_exact_head",
+      "status": "blocked_not_executed"
+    },
+    {
+      "id": "D02_named_auth_provider_readback",
+      "status": "blocked_not_executed"
+    },
+    {
+      "id": "D03_denied_call_zero_effect_observation",
+      "status": "blocked_not_executed"
+    },
+    {
+      "id": "D04_rollback_readback",
+      "status": "blocked_not_executed"
+    }
+  ],
+  "artifacts": {
+    "entrypoint": {
+      "path": "supabase/functions/discordos-update-drafts/index.ts",
+      "sha256": "04c01e908b0b409dc5896f86ac0ea507eb68315ebd01f5d3cd3fdd96c79e01c7"
+    },
+    "handler": {
+      "path": "supabase/functions/discordos-update-drafts/handler.mjs",
+      "sha256": "9ad62405571248f5293f8b319c641d6f9ed5e88632bed27ff7ab2e2fa2fcb14b"
+    },
+    "config": {
+      "path": "supabase/config.toml",
+      "sha256": "c0a60b27cfd1633ce05c9f7bcff78d56fc6ac6869942df7c0ddfedc803577af9"
+    },
+    "migration": {
+      "path": "supabase/migrations/20260717232230_discordos_update_drafts_authorization_contract.sql",
+      "sha256": "f9d4ad2c268470f61f5727d77e2e13dd1622ba3cbe0959d0ec675bfc7c1ccaf3"
+    }
+  },
+  "callerAttribution": {
+    "packet": "FP-DOS-UPDATE-DRAFTS-CALLER-RO-001",
+    "artifactSha256": "2fc8966fd32546c84f444dea1d006992ee024c9e8414a611bbce0ba1c3be3b76",
+    "publicRepositories": 12,
+    "publicTextFiles": 9273,
+    "boundedEvidenceRoots": 15,
+    "boundedTextFiles": 11962,
+    "committedCaller": "none_found",
+    "runtimeCaller": "UNKNOWN",
+    "liveFunction": "ACTIVE_v5_verify_jwt_true",
+    "deploymentGate": "blocked_until_exact_caller_and_key_order_or_ratified_zero_invocation_plus_disable_authority"
+  },
+  "cutover": {
+    "sourceCompatibleOnly": true,
+    "liveParityProven": false,
+    "liveCallerBound": false,
+    "providerMutationAuthorized": false,
+    "targetDeploymentAuthorized": false
+  }
+}
