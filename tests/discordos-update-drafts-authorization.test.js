@@ -166,7 +166,7 @@ class FakeRpcStore {
   };
 }
 
-async function createHarness({ seed = true } = {}) {
+async function createHarness({ seed = true, authenticate } = {}) {
   const {
     createDiscordUpdateDraftsHandler,
     createNamedServiceAuthenticator,
@@ -174,7 +174,7 @@ async function createHarness({ seed = true } = {}) {
   const store = new FakeRpcStore(seed);
   const callerBindings = [];
   const handler = createDiscordUpdateDraftsHandler({
-    authenticate: createNamedServiceAuthenticator(fakeVerifyAuth),
+    authenticate: authenticate ?? createNamedServiceAuthenticator(fakeVerifyAuth),
     createRpcClient: (binding) => {
       callerBindings.push(binding);
       return store;
@@ -297,7 +297,7 @@ test("frozen 23-case negative matrix", async (t) => {
     },
     {
       id: "N20_batch_payload",
-      expected: 400,
+      expected: 422,
       build: () => requestFor({ action: "insert", payload: [{ values: { deploymentId: "dpl_new" } }] }),
     },
     { id: "N21_conflicting_insert_replay", expected: 409, special: "insert_replay" },
@@ -412,6 +412,211 @@ test("transport guards reject duplicate auth, media violations, and oversized bo
       assert.doesNotMatch(JSON.stringify(result.body), /sb_secret|Bearer redacted/);
     });
   }
+});
+
+test("every request UUID field rejects noncanonical and oversized values before privileged work", async (t) => {
+  const { validateOperation } = await modulePromise;
+  assert.deepEqual(
+    validateOperation({ action: "find_by_id", payload: { draftId: DRAFT_ID } }).rpcPayload,
+    { id: DRAFT_ID },
+  );
+  assert.deepEqual(
+    validateOperation({
+      action: "update",
+      payload: { draftId: DRAFT_ID, expectedRevision: 1, values: { userFacingTitle: "Canonical" } },
+    }).rpcPayload.id,
+    DRAFT_ID,
+  );
+  assert.deepEqual(
+    validateOperation({
+      action: "find_by_prefix",
+      payload: { lowerBound: DRAFT_ID, upperBound: SECOND_DRAFT_ID },
+    }).rpcPayload,
+    { lower_bound: DRAFT_ID, upper_bound: SECOND_DRAFT_ID },
+  );
+
+  const invalidValues = [
+    ["overlong", `${DRAFT_ID}0`],
+    ["leading_whitespace", ` ${DRAFT_ID}`],
+    ["trailing_whitespace", `${DRAFT_ID} `],
+    ["compact", DRAFT_ID.replaceAll("-", "")],
+    ["braced", `{${DRAFT_ID}}`],
+    ["ambiguous_hyphens", "-".repeat(36)],
+    ["uppercase", "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA"],
+    ["unsupported_version", "11111111-1111-7111-8111-111111111111"],
+    ["invalid_variant", "11111111-1111-4111-7111-111111111111"],
+  ];
+  const fields = [
+    {
+      id: "find_by_id.draftId",
+      build: (value) => ({ action: "find_by_id", payload: { draftId: value } }),
+    },
+    {
+      id: "update.draftId",
+      build: (value) => ({
+        action: "update",
+        payload: { draftId: value, expectedRevision: 1, values: { userFacingTitle: "Blocked" } },
+      }),
+    },
+    {
+      id: "find_by_prefix.lowerBound",
+      build: (value) => ({
+        action: "find_by_prefix",
+        payload: { lowerBound: value, upperBound: SECOND_DRAFT_ID },
+      }),
+    },
+    {
+      id: "find_by_prefix.upperBound",
+      build: (value) => ({
+        action: "find_by_prefix",
+        payload: { lowerBound: DRAFT_ID, upperBound: value },
+      }),
+    },
+  ];
+
+  for (const field of fields) {
+    for (const [shape, value] of invalidValues) {
+      await t.test(`${field.id}.${shape}`, async () => {
+        const { handler, store, callerBindings } = await createHarness();
+        const before = store.snapshot();
+        const result = await readResult(handler, requestFor(field.build(value)));
+        assert.equal(result.response.status, 400);
+        assert.deepEqual(result.body, { ok: false, error: "INVALID_SELECTOR" });
+        assert.equal(store.calls.length, 0);
+        assert.equal(callerBindings.length, 0);
+        assert.equal(store.snapshot(), before);
+      });
+    }
+  }
+});
+
+test("emitted error codes exactly equal the versioned stable inventory", async (t) => {
+  const { ERROR_STATUS_BY_CODE, MAX_BODY_BYTES } = await modulePromise;
+  const contract = JSON.parse(
+    fs.readFileSync(
+      path.join(
+        REPO_ROOT,
+        "supabase",
+        "functions",
+        "discordos-update-drafts",
+        "authorization-contract.v1.json",
+      ),
+      "utf8",
+    ),
+  );
+  assert.deepEqual(ERROR_STATUS_BY_CODE, contract.errorStatusByCode);
+
+  const basicCase = (body, options) => async () => ({
+    ...(await createHarness()),
+    request: requestFor(body, options),
+  });
+  const cases = [
+    ["UNAUTHORIZED", basicCase({ action: "list_latest", payload: {} }, { omitKey: true })],
+    ["FORBIDDEN", basicCase(
+      { action: "list_latest", payload: {} },
+      { headers: { apikey: OTHER_KEY } },
+    )],
+    ["METHOD_NOT_ALLOWED", basicCase(null, { method: "GET", omitKey: true, omitContentType: true })],
+    ["UNSUPPORTED_MEDIA_TYPE", basicCase(
+      { action: "list_latest", payload: {} },
+      { headers: { "content-type": "text/plain" } },
+    )],
+    ["PAYLOAD_TOO_LARGE", basicCase(
+      { action: "list_latest", payload: {} },
+      { headers: { "content-length": String(MAX_BODY_BYTES + 1) } },
+    )],
+    ["INVALID_PAYLOAD", basicCase(null, { rawBody: "{" })],
+    ["UNSUPPORTED_ACTION", basicCase({ action: "delete", payload: {} })],
+    ["INVALID_OPERATION_PAYLOAD", basicCase({ action: "list_latest", payload: { extra: true } })],
+    ["INVALID_SELECTOR", basicCase({ action: "find_by_id", payload: { draftId: "not-a-uuid" } })],
+    ["IMMUTABLE_FIELD", basicCase({
+      action: "insert",
+      payload: { values: { deploymentId: "dpl_inventory", status: "published" } },
+    })],
+    ["INVALID_REVISION", basicCase({
+      action: "update",
+      payload: { draftId: DRAFT_ID, expectedRevision: 0, values: { userFacingTitle: "Blocked" } },
+    })],
+    ["INVALID_TRANSITION", basicCase({
+      action: "update",
+      payload: { draftId: DRAFT_ID, expectedRevision: 1, transition: { to: "draft" } },
+    })],
+    ["EMPTY_UPDATE", basicCase({
+      action: "update",
+      payload: { draftId: DRAFT_ID, expectedRevision: 1 },
+    })],
+    ["CONFLICT", async () => {
+      const harness = await createHarness();
+      harness.store.failNext = { code: "DU003", message: "raw conflict detail" };
+      return { ...harness, request: requestFor({ action: "list_latest", payload: {} }) };
+    }],
+    ["NOT_FOUND", basicCase({
+      action: "update",
+      payload: {
+        draftId: "44444444-4444-4444-8444-444444444444",
+        expectedRevision: 1,
+        values: { userFacingTitle: "Missing" },
+      },
+    })],
+    ["SERVICE_UNAVAILABLE", async () => {
+      const harness = await createHarness({
+        authenticate: async () => {
+          throw new Error("raw authentication stack detail");
+        },
+      });
+      return { ...harness, request: requestFor({ action: "list_latest", payload: {} }) };
+    }],
+    ["PRIVILEGED_OPERATION_FAILED", async () => {
+      const harness = await createHarness();
+      harness.store.failNext = {
+        code: "XX999",
+        message: "raw provider message",
+        details: "raw provider details",
+        hint: "raw provider hint",
+        stack: "raw provider stack",
+      };
+      return { ...harness, request: requestFor({ action: "list_latest", payload: {} }) };
+    }],
+  ];
+
+  const observed = new Set();
+  for (const [expectedCode, createCase] of cases) {
+    await t.test(expectedCode, async () => {
+      const { handler, request } = await createCase();
+      const result = await readResult(handler, request);
+      assert.equal(result.response.status, ERROR_STATUS_BY_CODE[expectedCode]);
+      assert.deepEqual(result.body, { ok: false, error: expectedCode });
+      assert.doesNotMatch(
+        JSON.stringify(result.body),
+        /raw|provider|postgres|SQLSTATE|details|hint|stack|sb_secret|Bearer/i,
+      );
+      observed.add(result.body.error);
+    });
+  }
+
+  const unknownAuthentication = await createHarness({
+    authenticate: async () => ({
+      ok: false,
+      status: 418,
+      error: "RAW_AUTHENTICATION_DETAIL",
+      details: "raw secret-bearing detail",
+    }),
+  });
+  const unknownResult = await readResult(
+    unknownAuthentication.handler,
+    requestFor({ action: "list_latest", payload: {} }),
+  );
+  assert.equal(unknownResult.response.status, 500);
+  assert.deepEqual(unknownResult.body, { ok: false, error: "PRIVILEGED_OPERATION_FAILED" });
+  assert.equal(unknownAuthentication.store.calls.length, 0);
+  assert.equal(unknownAuthentication.callerBindings.length, 0);
+
+  assert.deepEqual([...observed].sort(), Object.keys(contract.errorStatusByCode).sort());
+  const contractDoc = fs.readFileSync(
+    path.join(REPO_ROOT, "docs", "contracts", "discordos-update-drafts-authorization-v1.md"),
+    "utf8",
+  );
+  for (const code of observed) assert.equal(contractDoc.includes(`\`${code}\``), true, code);
 });
 
 test("six authorized actions remain caller-bound and behaviorally distinct", async (t) => {

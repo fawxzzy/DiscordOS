@@ -14,7 +14,7 @@ The pinned `@supabase/server@1.4.0` verifier performs constant-time secret compa
 
 ## Operations and ownership
 
-The six source capabilities remain `list_latest`, `find_by_deployment_id`, `find_by_id`, `find_by_prefix`, `insert`, and `update`. Every database function scopes rows to `owner_service = 'discordos-update-drafts-caller'`. The handler supplies no caller-controlled owner, source, status, timestamp, revision, or service-audit field.
+The six source capabilities remain `list_latest`, `find_by_deployment_id`, `find_by_id`, `find_by_prefix`, `insert`, and `update`. Every database function scopes rows to `owner_service = 'discordos-update-drafts-caller'`. The handler supplies no caller-controlled owner, source, status, timestamp, revision, or service-audit field. Every request UUID is exactly 36 lowercase canonical characters with the standard hyphen positions, an admitted version nibble, and an RFC variant nibble; whitespace, uppercase, braces, loose hyphenation, oversized values, and ambiguous database-cast inputs are rejected before privileged client construction.
 
 Inserts are server-initialized as `draft`, revision `1`, and are idempotent by deployment identity. An identical immutable-provenance replay returns the canonical row without a write; a conflicting replay returns a stable conflict.
 
@@ -22,7 +22,13 @@ Updates require the exact current `revision`, increment it atomically, and may c
 
 ## Stable errors
 
-Responses expose only stable function classes: `UNAUTHORIZED`, `FORBIDDEN`, `METHOD_NOT_ALLOWED`, `UNSUPPORTED_MEDIA_TYPE`, `PAYLOAD_TOO_LARGE`, `INVALID_PAYLOAD`, `UNSUPPORTED_ACTION`, `INVALID_SELECTOR`, `IMMUTABLE_FIELD`, `INVALID_TRANSITION`, `CONFLICT`, `NOT_FOUND`, `SERVICE_UNAVAILABLE`, or `PRIVILEGED_OPERATION_FAILED`. Provider status, SQLSTATE, messages, request bodies, keys, and row diagnostics are not returned.
+The versioned machine-readable contract fixes the complete emitted set and HTTP status for every class:
+
+- `UNAUTHORIZED` (401), `FORBIDDEN` (403), `METHOD_NOT_ALLOWED` (405), `UNSUPPORTED_MEDIA_TYPE` (415), and `PAYLOAD_TOO_LARGE` (413).
+- `INVALID_PAYLOAD` (400), `UNSUPPORTED_ACTION` (400), `INVALID_OPERATION_PAYLOAD` (422), `INVALID_SELECTOR` (400), `IMMUTABLE_FIELD` (422), `INVALID_REVISION` (400), `INVALID_TRANSITION` (422), and `EMPTY_UPDATE` (400).
+- `CONFLICT` (409), `NOT_FOUND` (404), `SERVICE_UNAVAILABLE` (503), and `PRIVILEGED_OPERATION_FAILED` (500).
+
+No other error code or status is emitted. Unknown authentication, provider, database, or internal failures collapse to `PRIVILEGED_OPERATION_FAILED` (500), except explicitly recognized temporary authentication infrastructure failures, which map to `SERVICE_UNAVAILABLE` (503). Provider status, SQLSTATE, messages, request bodies, keys, details, stacks, and row diagnostics are never returned.
 
 ## Compatibility boundary
 

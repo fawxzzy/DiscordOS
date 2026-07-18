@@ -3,6 +3,26 @@ const FUNCTION_NAME = "discordos-update-drafts";
 export const SERVICE_IDENTITY = "discordos-update-drafts-caller";
 export const MAX_BODY_BYTES = 64 * 1024;
 
+export const ERROR_STATUS_BY_CODE = Object.freeze({
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
+  METHOD_NOT_ALLOWED: 405,
+  UNSUPPORTED_MEDIA_TYPE: 415,
+  PAYLOAD_TOO_LARGE: 413,
+  INVALID_PAYLOAD: 400,
+  UNSUPPORTED_ACTION: 400,
+  INVALID_OPERATION_PAYLOAD: 422,
+  INVALID_SELECTOR: 400,
+  IMMUTABLE_FIELD: 422,
+  INVALID_REVISION: 400,
+  INVALID_TRANSITION: 422,
+  EMPTY_UPDATE: 400,
+  CONFLICT: 409,
+  NOT_FOUND: 404,
+  SERVICE_UNAVAILABLE: 503,
+  PRIVILEGED_OPERATION_FAILED: 500,
+});
+
 export const ACTION_TO_RPC = Object.freeze({
   list_latest: "discordos_list_update_drafts",
   find_by_deployment_id: "discordos_get_update_draft_by_deployment_id",
@@ -14,6 +34,7 @@ export const ACTION_TO_RPC = Object.freeze({
 
 const DRAFT_STATUSES = new Set(["draft", "published", "skipped", "ignored", "failed"]);
 const TRANSITION_STATUSES = new Set(["published", "skipped", "ignored", "failed"]);
+const CANONICAL_UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const AUTHORITY_FIELDS = new Set([
   "caller",
   "owner",
@@ -60,9 +81,19 @@ const JSON_HEADERS = Object.freeze({
   "Content-Type": "application/json",
 });
 
+function stableError(status, error) {
+  return ERROR_STATUS_BY_CODE[error] === status
+    ? { status, error }
+    : {
+        status: ERROR_STATUS_BY_CODE.PRIVILEGED_OPERATION_FAILED,
+        error: "PRIVILEGED_OPERATION_FAILED",
+      };
+}
+
 function response(status, error, headers = {}) {
-  return new Response(JSON.stringify({ ok: false, error }), {
-    status,
+  const stable = stableError(status, error);
+  return new Response(JSON.stringify({ ok: false, error: stable.error }), {
+    status: stable.status,
     headers: { ...JSON_HEADERS, ...headers },
   });
 }
@@ -104,6 +135,12 @@ function optionalHttpsUrl(value) {
   }
 }
 
+function canonicalUuid(value) {
+  return typeof value === "string" && value.length === 36 && CANONICAL_UUID_PATTERN.test(value)
+    ? value
+    : null;
+}
+
 function validateMappedStrings(values, definitions) {
   const mapped = {};
   for (const [inputName, outputName, validator] of definitions) {
@@ -116,7 +153,7 @@ function validateMappedStrings(values, definitions) {
 }
 
 function validationError(status, error) {
-  return { ok: false, status, error };
+  return { ok: false, ...stableError(status, error) };
 }
 
 function validateList(payload) {
@@ -155,12 +192,9 @@ function validateDraftSelector(payload) {
   if (!hasOnlyKeys(payload, new Set(["draftId"]))) {
     return validationError(422, "INVALID_OPERATION_PAYLOAD");
   }
-  const draftId = optionalString(payload.draftId, {
-    max: 36,
-    pattern: /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-  });
-  return draftId.ok && draftId.value
-    ? { ok: true, rpcPayload: { id: draftId.value } }
+  const draftId = canonicalUuid(payload.draftId);
+  return draftId
+    ? { ok: true, rpcPayload: { id: draftId } }
     : validationError(400, "INVALID_SELECTOR");
 }
 
@@ -168,15 +202,9 @@ function validatePrefixSelector(payload) {
   if (!hasOnlyKeys(payload, new Set(["lowerBound", "upperBound", "limit"]))) {
     return validationError(422, "INVALID_OPERATION_PAYLOAD");
   }
-  const lower = optionalString(payload.lowerBound, {
-    max: 36,
-    pattern: /^[0-9a-f-]{36}$/i,
-  });
-  const upper = optionalString(payload.upperBound, {
-    max: 36,
-    pattern: /^[0-9a-f-]{36}$/i,
-  });
-  if (!lower.ok || !lower.value || !upper.ok || !upper.value || lower.value > upper.value) {
+  const lower = canonicalUuid(payload.lowerBound);
+  const upper = canonicalUuid(payload.upperBound);
+  if (!lower || !upper || lower > upper) {
     return validationError(400, "INVALID_SELECTOR");
   }
   if (payload.limit !== undefined && (!Number.isInteger(payload.limit) || payload.limit < 1 || payload.limit > 10)) {
@@ -185,8 +213,8 @@ function validatePrefixSelector(payload) {
   return {
     ok: true,
     rpcPayload: {
-      lower_bound: lower.value,
-      upper_bound: upper.value,
+      lower_bound: lower,
+      upper_bound: upper,
       ...(payload.limit === undefined ? {} : { limit: payload.limit }),
     },
   };
@@ -209,7 +237,7 @@ const INSERT_FIELDS = new Set([
 
 function validateInsert(payload) {
   if (!hasOnlyKeys(payload, new Set(["values"])) || !isPlainObject(payload.values)) {
-    return validationError(400, "INVALID_OPERATION_PAYLOAD");
+    return validationError(422, "INVALID_OPERATION_PAYLOAD");
   }
   if (hasAuthorityOverride(payload.values)) return validationError(403, "FORBIDDEN");
   if (hasServerOwnedField(payload.values) || !hasOnlyKeys(payload.values, INSERT_FIELDS)) {
@@ -221,7 +249,7 @@ function validateInsert(payload) {
     pattern: /^[A-Za-z0-9._:-]+$/,
   });
   if (!deploymentId.ok || !deploymentId.value) {
-    return validationError(400, "INVALID_OPERATION_PAYLOAD");
+    return validationError(422, "INVALID_OPERATION_PAYLOAD");
   }
 
   const mapped = validateMappedStrings(payload.values, [
@@ -284,7 +312,7 @@ function validateUpdate(payload) {
 
   let mappedValues = {};
   if (payload.values !== undefined) {
-    if (!isPlainObject(payload.values)) return validationError(400, "INVALID_OPERATION_PAYLOAD");
+    if (!isPlainObject(payload.values)) return validationError(422, "INVALID_OPERATION_PAYLOAD");
     if (hasServerOwnedField(payload.values) || !hasOnlyKeys(payload.values, UPDATE_VALUE_FIELDS)) {
       return validationError(422, "IMMUTABLE_FIELD");
     }
@@ -322,7 +350,7 @@ export function validateOperation(body) {
   if (typeof body.action !== "string" || !(body.action in ACTION_TO_RPC)) {
     return validationError(400, "UNSUPPORTED_ACTION");
   }
-  if (!isPlainObject(body.payload)) return validationError(400, "INVALID_OPERATION_PAYLOAD");
+  if (!isPlainObject(body.payload)) return validationError(422, "INVALID_OPERATION_PAYLOAD");
   if (hasAuthorityOverride(body.payload)) return validationError(403, "FORBIDDEN");
 
   const validators = {

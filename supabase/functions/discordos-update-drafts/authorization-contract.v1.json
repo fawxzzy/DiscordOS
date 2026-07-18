@@ -49,6 +49,25 @@
     "last_operated_by_service",
     "last_operated_at"
   ],
+  "errorStatusByCode": {
+    "UNAUTHORIZED": 401,
+    "FORBIDDEN": 403,
+    "METHOD_NOT_ALLOWED": 405,
+    "UNSUPPORTED_MEDIA_TYPE": 415,
+    "PAYLOAD_TOO_LARGE": 413,
+    "INVALID_PAYLOAD": 400,
+    "UNSUPPORTED_ACTION": 400,
+    "INVALID_OPERATION_PAYLOAD": 422,
+    "INVALID_SELECTOR": 400,
+    "IMMUTABLE_FIELD": 422,
+    "INVALID_REVISION": 400,
+    "INVALID_TRANSITION": 422,
+    "EMPTY_UPDATE": 400,
+    "CONFLICT": 409,
+    "NOT_FOUND": 404,
+    "SERVICE_UNAVAILABLE": 503,
+    "PRIVILEGED_OPERATION_FAILED": 500
+  },
   "denominator": {
     "total": 38,
     "sourceProvable": 34,
@@ -123,7 +142,7 @@
     },
     "handler": {
       "path": "supabase/functions/discordos-update-drafts/handler.mjs",
-      "sha256": "9a4508c1131a63a5ace23e43212d13d1396101a15d4d2079009c62598be56354"
+      "sha256": "64c1d32acbf8cf80b0f14d5e62dbe08042be80a2943271e369b464d2b5aa2287"
     },
     "config": {
       "path": "supabase/config.toml",
