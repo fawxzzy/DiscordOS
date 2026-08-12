@@ -324,6 +324,98 @@ test("registry discovery reports an uncovered live production forum", async () =
   assert(result.reasonCodes.includes("uncovered_live_board:new-forum"));
 });
 
+test("registry discovery preserves only fixed HTTP and Discord failure diagnostics", async () => {
+  const registry = JSON.parse(fs.readFileSync(path.resolve(__dirname, "..", "config", "discordos-board-registry.json"), "utf8"));
+  const secret = "registry-secret-payload-must-not-echo";
+
+  for (const [status, code] of [[401, 0], [429, 20028], [503, 0]]) {
+    let calls = 0;
+    const result = await _internals.discoverRegistryForums({
+      registry,
+      token: "registry-secret-token-must-not-echo",
+      fetchImpl: async () => {
+        calls += 1;
+        return response({
+          ok: false,
+          status,
+          payload: { code, message: secret, retry_after: -0.25 },
+        });
+      },
+    });
+
+    assert.equal(calls, status === 401 ? 1 : 3);
+    assert.deepEqual(result.reasonCodes, [
+      "board_registry_live_forum_discovery_failed",
+      `board_registry_live_forum_discovery_failed:http_status_${status}:discord_code_${code}`,
+    ]);
+    const serialized = JSON.stringify(result);
+    assert(!serialized.includes(secret));
+    assert(!serialized.includes("registry-secret-token-must-not-echo"));
+  }
+});
+
+test("registry discovery contains transport and hostile payload failures without echo", async () => {
+  const registry = JSON.parse(fs.readFileSync(path.resolve(__dirname, "..", "config", "discordos-board-registry.json"), "utf8"));
+  const transportSecret = "transport-secret-must-not-echo";
+  const transportResult = await _internals.discoverRegistryForums({
+    registry,
+    token: "token",
+    fetchImpl: async () => { throw new Error(transportSecret); },
+  });
+  assert.deepEqual(transportResult.reasonCodes, [
+    "board_registry_live_forum_discovery_failed",
+    "board_registry_live_forum_discovery_failed:transport_error",
+  ]);
+  assert(!JSON.stringify(transportResult).includes(transportSecret));
+
+  const accessorSecret = "accessor-secret-must-not-echo";
+  const hostilePayload = {};
+  Object.defineProperty(hostilePayload, "code", {
+    get() { throw new Error(accessorSecret); },
+  });
+  const hostileResult = await _internals.discoverRegistryForums({
+    registry,
+    token: "token",
+    fetchImpl: async () => response({ ok: false, status: 403, payload: hostilePayload }),
+  });
+  assert.deepEqual(hostileResult.reasonCodes, [
+    "board_registry_live_forum_discovery_failed",
+    "board_registry_live_forum_discovery_failed:http_status_403:discord_code_unknown",
+  ]);
+  assert(!JSON.stringify(hostileResult).includes(accessorSecret));
+});
+
+test("forum reads preserve fixed 403 and 404 diagnostics without response payload echo", async () => {
+  const secret = "forum-secret-payload-must-not-echo";
+
+  for (const [status, code] of [[403, 50013], [404, 10003]]) {
+    const result = await _internals.buildBoardCardConsistency({
+      payload: { boards: [{ id: "fitness", forumChannelId: "forum", role: "active" }] },
+      env: { DISCORDOS_BOT_TOKEN: "forum-secret-token-must-not-echo" },
+      fetchImpl: async () => response({ ok: false, status, payload: { code, message: secret } }),
+    });
+
+    assert(result.reasonCodes.includes("board_forum_read_failed:fitness"));
+    assert(result.reasonCodes.includes(`board_forum_read_failed:fitness:http_status_${status}:discord_code_${code}`));
+    const serialized = JSON.stringify(result);
+    assert(!serialized.includes(secret));
+    assert(!serialized.includes("forum-secret-token-must-not-echo"));
+  }
+});
+
+test("forum transport failure is fixed and non-echoing", async () => {
+  const secret = "forum-transport-secret-must-not-echo";
+  const result = await _internals.buildBoardCardConsistency({
+    payload: { boards: [{ id: "fitness", forumChannelId: "forum", role: "active" }] },
+    env: { DISCORDOS_BOT_TOKEN: "token" },
+    fetchImpl: async () => { throw new Error(secret); },
+  });
+
+  assert(result.reasonCodes.includes("board_forum_read_failed:fitness"));
+  assert(result.reasonCodes.includes("board_forum_read_failed:fitness:transport_error"));
+  assert(!JSON.stringify(result).includes(secret));
+});
+
 test("legacy input remains compatible and reports denominator discovery as not evaluated", async () => {
   const result = await _internals.buildBoardCardConsistency({
     payload: { boards: [{ id: "fitness", forumChannelId: "forum", role: "active" }] },
