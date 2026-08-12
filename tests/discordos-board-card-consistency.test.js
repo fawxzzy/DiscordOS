@@ -416,6 +416,56 @@ test("forum transport failure is fixed and non-echoing", async () => {
   assert(!JSON.stringify(result).includes(secret));
 });
 
+test("forum payload hostile guild and name access fails closed without echo", async () => {
+  for (const hostileField of ["guild_id", "name"]) {
+    const secret = `${hostileField}-getter-secret-must-not-echo`;
+    const payload = new Proxy({}, {
+      get(_target, property) {
+        if (property === hostileField) throw new Error(secret);
+        return undefined;
+      },
+    });
+    const result = await _internals.buildBoardCardConsistency({
+      payload: { boards: [{ id: "fitness", forumChannelId: "forum", role: "active" }] },
+      env: { DISCORDOS_BOT_TOKEN: "token" },
+      fetchImpl: async () => response({ payload }),
+    });
+
+    assert(result.reasonCodes.includes("board_forum_read_failed:fitness"));
+    assert(result.reasonCodes.includes("board_forum_read_failed:fitness:http_status_200:discord_code_unknown"));
+    assert(!JSON.stringify(result).includes(secret));
+  }
+});
+
+test("forum payload fields are snapshotted exactly once before downstream use", async () => {
+  const reads = { guild_id: 0, name: 0 };
+  const payload = {};
+  for (const [field, value] of [["guild_id", "guild"], ["name", "fitness"]]) {
+    Object.defineProperty(payload, field, {
+      get() {
+        reads[field] += 1;
+        if (reads[field] > 1) throw new Error(`${field}-was-read-twice`);
+        return value;
+      },
+    });
+  }
+  const result = await _internals.buildBoardCardConsistency({
+    payload: { boards: [{ id: "fitness", forumChannelId: "forum", role: "active" }] },
+    env: { DISCORDOS_BOT_TOKEN: "token" },
+    fetchImpl: async (url) => {
+      if (url.endsWith("/channels/forum")) return response({ payload });
+      if (url.endsWith("/guilds/guild/threads/active")) return response({ payload: { threads: [] } });
+      if (url.endsWith("/channels/forum/threads/archived/public?limit=100")) {
+        return response({ payload: { threads: [], has_more: false } });
+      }
+      throw new Error(`unexpected GET ${url}`);
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(reads, { guild_id: 1, name: 1 });
+});
+
 test("legacy input remains compatible and reports denominator discovery as not evaluated", async () => {
   const result = await _internals.buildBoardCardConsistency({
     payload: { boards: [{ id: "fitness", forumChannelId: "forum", role: "active" }] },
