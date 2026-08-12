@@ -386,14 +386,65 @@ function coverageResult({ inventorySource, registeredBoards, uncoveredBoards = [
   };
 }
 
+function safeDiagnosticInteger(readValue) {
+  try {
+    const value = readValue();
+    return Number.isSafeInteger(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function discordReadFailureDiagnostic(baseReason, response, transportFailed = false) {
+  if (transportFailed) return `${baseReason}:transport_error`;
+  const status = safeDiagnosticInteger(() => response.status);
+  const discordCode = safeDiagnosticInteger(() => response.payload.code);
+  return `${baseReason}:http_status_${status ?? "unknown"}:discord_code_${discordCode ?? "unknown"}`;
+}
+
+function snapshotForumChannelPayload(response) {
+  try {
+    const payload = response.payload;
+    const guildId = payload?.guild_id;
+    const name = payload?.name;
+    return { ok: true, guildId, name };
+  } catch {
+    return { ok: false, guildId: null, name: null };
+  }
+}
+
+async function guardedDiscordRequest(options) {
+  try {
+    return { transportFailed: false, response: await cardContract.discordRequest(options) };
+  } catch {
+    return { transportFailed: true, response: null };
+  }
+}
+
 async function discoverRegistryForums({ registry, token, fetchImpl = fetch }) {
-  const response = await cardContract.discordRequest({
+  const read = await guardedDiscordRequest({
     path: `/guilds/${registry.guildId}/channels`,
     token,
     fetchImpl,
   });
+  const response = read.response;
+  if (read.transportFailed) {
+    const baseReason = "board_registry_live_forum_discovery_failed";
+    return {
+      ok: false,
+      uncoveredBoards: [],
+      excludedBoards: [],
+      reasonCodes: [baseReason, discordReadFailureDiagnostic(baseReason, response, true)],
+    };
+  }
   if (!response.ok || !Array.isArray(response.payload)) {
-    return { ok: false, uncoveredBoards: [], excludedBoards: [], reasonCodes: ["board_registry_live_forum_discovery_failed"] };
+    const baseReason = "board_registry_live_forum_discovery_failed";
+    return {
+      ok: false,
+      uncoveredBoards: [],
+      excludedBoards: [],
+      reasonCodes: [baseReason, discordReadFailureDiagnostic(baseReason, response)],
+    };
   }
   const categoryId = text(registry?.discovery?.forumCategoryChannelId);
   const resolution = boardRegistry.resolveBoardChannelIdentities({ registry, channels: response.payload });
@@ -512,16 +563,21 @@ async function buildBoardCardConsistency({ payload, registry, env = process.env,
 
   const rows = [];
   for (const board of boards) {
-    const channel = await cardContract.discordRequest({ path: `/channels/${board.forumChannelId}`, token, fetchImpl });
-    if (!channel.ok || !channel.payload?.guild_id) {
-      reasonCodes.push(`board_forum_read_failed:${board.id}`);
+    const channelRead = await guardedDiscordRequest({ path: `/channels/${board.forumChannelId}`, token, fetchImpl });
+    const channel = channelRead.response;
+    const channelSnapshot = channelRead.transportFailed
+      ? { ok: false, guildId: null, name: null }
+      : snapshotForumChannelPayload(channel);
+    if (channelRead.transportFailed || !channel.ok || !channelSnapshot.ok || !channelSnapshot.guildId) {
+      const baseReason = `board_forum_read_failed:${board.id}`;
+      reasonCodes.push(baseReason, discordReadFailureDiagnostic(baseReason, channel, channelRead.transportFailed));
       continue;
     }
-    if (registry && channel.payload.guild_id !== registry.guildId) reasonCodes.push(`board_forum_guild_mismatch:${board.id}`);
-    if (registry && board.forumChannelName && channel.payload.name !== board.forumChannelName) {
+    if (registry && channelSnapshot.guildId !== registry.guildId) reasonCodes.push(`board_forum_guild_mismatch:${board.id}`);
+    if (registry && board.forumChannelName && channelSnapshot.name !== board.forumChannelName) {
       reasonCodes.push(`board_forum_name_mismatch:${board.id}`);
     }
-    const inventory = await listThreads({ board, guildId: channel.payload.guild_id, token, fetchImpl });
+    const inventory = await listThreads({ board, guildId: channelSnapshot.guildId, token, fetchImpl });
     reasonCodes.push(...inventory.reasonCodes.map((code) => `${code}:${board.id}`));
     for (const thread of inventory.threads) {
       const [threadReadback, starter, messages] = await Promise.all([
@@ -707,6 +763,10 @@ module.exports = {
     normalizeLegacyBoards,
     registryBoards,
     coverageResult,
+    safeDiagnosticInteger,
+    discordReadFailureDiagnostic,
+    snapshotForumChannelPayload,
+    guardedDiscordRequest,
     discoverRegistryForums,
     validateLegacyBoards,
     isBlockingReason,
