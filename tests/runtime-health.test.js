@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const { _internals } = require("../api/runtime-health");
+const runtimeHealthHandler = require("../api/runtime-health");
 const { _internals: readinessInternals } = require("../api/readiness");
 
 function jwtWithPayload(payload) {
@@ -96,6 +97,89 @@ test("runtime health reports operational posture when all generic runtime compon
   assert.deepEqual(snapshot.blockedReasons, []);
   assert.equal(snapshot.activation.liveCutover, true);
   assert.equal(snapshot.activation.fitnessTrafficMoved, true);
+});
+
+test("runtime health accepts an exact master project with a successful modern direct probe", () => {
+  const snapshot = _internals.buildRuntimeHealthSnapshot({
+    env: {
+      DISCORDOS_SUPABASE_PROJECT_REF: readinessInternals.MASTER_SUPABASE_REF,
+      DISCORDOS_SUPABASE_URL: `https://${readinessInternals.MASTER_SUPABASE_REF}.supabase.co`,
+      DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: `sb_secret_${"a".repeat(32)}`,
+    },
+    directServiceRoleStatus: { configured: true, reachable: true, probeOk: true, reason: "direct_service_key_probe_ok" },
+    edgeServiceRoleStatus: { configured: false, reason: "edge_service_role_not_verified" },
+    discordBotStatus: { configured: false, reason: "missing_bot_token" },
+  });
+  assert.equal(snapshot.components.supabaseProject.state, "ready");
+  assert.equal(snapshot.components.serviceRole.state, "ready");
+  assert.equal(snapshot.components.serviceRole.runtime, "vercel-env");
+  assert(!snapshot.blockedReasons.includes("modern_secret_requires_live_probe"));
+});
+
+test("runtime health rejects an unrelated project even when a supplied direct status claims success", () => {
+  const snapshot = _internals.buildRuntimeHealthSnapshot({
+    env: { DISCORDOS_SUPABASE_PROJECT_REF: "lpswxoyfniocuhljgzbc" },
+    directServiceRoleStatus: { configured: true, reason: "direct_service_key_probe_ok" },
+    edgeServiceRoleStatus: { configured: false, reason: "edge_service_role_not_verified" },
+    discordBotStatus: { configured: false, reason: "missing_bot_token" },
+  });
+  assert.equal(snapshot.components.supabaseProject.state, "blocked");
+  assert(snapshot.blockedReasons.includes("supabase_project_ref_not_configured"));
+});
+
+test("runtime health handler keeps exact master project and modern direct key ready", async () => {
+  const keys = ["DISCORDOS_SUPABASE_PROJECT_REF", "DISCORDOS_SUPABASE_URL", "DISCORDOS_SUPABASE_SERVICE_ROLE_KEY", "DISCORDOS_SUPABASE_ANON_KEY", "DISCORDOS_BOT_TOKEN"];
+  const before = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+  const originalFetch = global.fetch;
+  let payload;
+  try {
+    process.env.DISCORDOS_SUPABASE_PROJECT_REF = readinessInternals.MASTER_SUPABASE_REF;
+    process.env.DISCORDOS_SUPABASE_URL = `https://${readinessInternals.MASTER_SUPABASE_REF}.supabase.co`;
+    process.env.DISCORDOS_SUPABASE_SERVICE_ROLE_KEY = `sb_secret_${"b".repeat(32)}`;
+    process.env.DISCORDOS_SUPABASE_ANON_KEY = `sb_publishable_${"p".repeat(32)}`;
+    process.env.DISCORDOS_BOT_TOKEN = "bot-fixture";
+    global.fetch = async (url) => {
+      if (url.endsWith("/rest/v1/")) return { ok: true, status: 200 };
+      if (url.includes("/functions/v1/")) return { ok: false, status: 401, json: async () => null };
+      if (url.includes("discord.com/api/")) return { ok: true, status: 200, json: async () => ({ bot: true }) };
+      throw new Error(`unexpected_url:${url}`);
+    };
+    const res = { setHeader() {}, status(code) { this.statusCode = code; return this; }, json(value) { payload = value; return value; } };
+    await runtimeHealthHandler({ method: "GET" }, res);
+    assert.equal(payload.components.supabaseProject.state, "ready");
+    assert.equal(payload.components.serviceRole.state, "ready");
+    assert.equal(payload.components.serviceRole.runtime, "vercel-env");
+  } finally {
+    global.fetch = originalFetch;
+    for (const key of keys) before[key] === undefined ? delete process.env[key] : process.env[key] = before[key];
+  }
+});
+
+test("runtime health rejects a modern secret in the public Edge slot before fetch", async () => {
+  const keys = ["DISCORDOS_SUPABASE_PROJECT_REF", "DISCORDOS_SUPABASE_URL", "DISCORDOS_SUPABASE_SERVICE_ROLE_KEY", "DISCORDOS_SUPABASE_ANON_KEY", "DISCORDOS_BOT_TOKEN"];
+  const before = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+  const originalFetch = global.fetch;
+  let edgeCalls = 0;
+  try {
+    process.env.DISCORDOS_SUPABASE_PROJECT_REF = readinessInternals.MASTER_SUPABASE_REF;
+    process.env.DISCORDOS_SUPABASE_URL = `https://${readinessInternals.MASTER_SUPABASE_REF}.supabase.co`;
+    process.env.DISCORDOS_SUPABASE_SERVICE_ROLE_KEY = "";
+    process.env.DISCORDOS_SUPABASE_ANON_KEY = `sb_secret_${"x".repeat(32)}`;
+    process.env.DISCORDOS_BOT_TOKEN = "bot-fixture";
+    global.fetch = async (url) => {
+      if (String(url).includes("/functions/v1/")) edgeCalls += 1;
+      if (String(url).includes("discord.com/api/")) return { ok: true, status: 200, json: async () => ({ bot: true }) };
+      throw new Error(`unexpected_url:${url}`);
+    };
+    let payload;
+    const res = { setHeader() {}, status(code) { this.statusCode = code; return this; }, json(value) { payload = value; return value; } };
+    await runtimeHealthHandler({ method: "GET" }, res);
+    assert.equal(edgeCalls, 0);
+    assert.equal(payload.components.serviceRole.state, "blocked");
+  } finally {
+    global.fetch = originalFetch;
+    for (const key of keys) before[key] === undefined ? delete process.env[key] : process.env[key] = before[key];
+  }
 });
 
 test("runtime health percent rounds ready components over all components", () => {

@@ -10,6 +10,7 @@ const {
 const {
   _internals: computaInternals,
 } = require("../scripts/discordos-computa-runtime");
+const { buildSupabaseElevatedHeaders } = require("../scripts/supabase-api-key-headers");
 
 const DISCORD_INTERACTION_RESPONSE_TYPE = {
   PONG: 1,
@@ -447,8 +448,7 @@ async function upsertDiscordMemberLink({
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        apikey: serviceRoleKey,
-        Authorization: `Bearer ${serviceRoleKey}`,
+        ...buildSupabaseElevatedHeaders(serviceRoleKey),
       },
       body: JSON.stringify({
         input_fitness_user_id: fitnessUserId,

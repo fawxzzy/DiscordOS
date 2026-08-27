@@ -1,5 +1,6 @@
 const { _internals: shadowInternals } = require("./feedback-shadow");
 const { _internals: activationInternals } = require("./activation");
+const { buildSupabaseElevatedHeaders } = require("../scripts/supabase-api-key-headers");
 
 const SCHEMA = "discordos";
 const REPORTS_TABLE = "discord_feedback_reports";
@@ -124,8 +125,7 @@ async function insertFeedbackReport(row, { supabaseUrl, serviceRoleKey, fetchImp
   const response = await fetchImpl(`${cleanUrl(supabaseUrl)}/rest/v1/rpc/discordos_insert_feedback_proof`, {
     method: "POST",
     headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
+      ...buildSupabaseElevatedHeaders(serviceRoleKey),
       "Content-Type": "application/json",
       Accept: "application/json",
       Prefer: "return=representation",

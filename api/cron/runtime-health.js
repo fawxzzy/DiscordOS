@@ -5,6 +5,7 @@ const { _internals: alertDeliveryInternals } = require("../../scripts/runtime-he
 const { _internals: atlasHealthInternals } = require("../../scripts/atlas-health-watch");
 const os = require("node:os");
 const path = require("node:path");
+const { buildSupabaseElevatedHeaders } = require("../../scripts/supabase-api-key-headers");
 
 function hasValue(value) {
   return typeof value === "string" && value.trim().length > 0;
@@ -179,8 +180,7 @@ async function insertCronAuditRun(payload, { supabaseUrl, serviceRoleKey, fetchI
   const response = await fetchImpl(`${cleanUrl(supabaseUrl)}/rest/v1/rpc/discordos_insert_runtime_health_cron_run`, {
     method: "POST",
     headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
+      ...buildSupabaseElevatedHeaders(serviceRoleKey),
       "Content-Type": "application/json",
       Accept: "application/json",
       Prefer: "return=representation",
@@ -371,9 +371,23 @@ async function buildCronRuntimeHealthProof({
   minReadinessPercent = 100,
   staleSeverity = "warning",
 } = {}) {
-  const [edgeServiceRoleStatus, discordBotStatus] = await Promise.all([
+  const localServiceRoleStatus = readinessInternals.getServiceRoleStatus(
+    env.DISCORDOS_SUPABASE_SERVICE_ROLE_KEY,
+    env.DISCORDOS_SUPABASE_PROJECT_REF || readinessInternals.EXPECTED_SUPABASE_REF
+  );
+  const directServiceRolePromise = localServiceRoleStatus.reason === "modern_secret_requires_live_probe"
+    ? readinessInternals.getDirectServiceRoleStatus({
+        supabaseUrl: env.DISCORDOS_SUPABASE_URL,
+        projectRef: env.DISCORDOS_SUPABASE_PROJECT_REF,
+        serviceRoleKey: env.DISCORDOS_SUPABASE_SERVICE_ROLE_KEY,
+        fetchImpl,
+      })
+    : Promise.resolve(localServiceRoleStatus);
+  const [directServiceRoleStatus, edgeServiceRoleStatus, discordBotStatus] = await Promise.all([
+    directServiceRolePromise,
     readinessInternals.getEdgeServiceRoleStatus({
       supabaseUrl: env.DISCORDOS_SUPABASE_URL,
+      projectRef: env.DISCORDOS_SUPABASE_PROJECT_REF,
       anonKey: env.DISCORDOS_SUPABASE_ANON_KEY,
       fetchImpl,
     }),
@@ -386,6 +400,7 @@ async function buildCronRuntimeHealthProof({
   const snapshot = {
     ...runtimeHealthInternals.buildRuntimeHealthSnapshot({
       env,
+      directServiceRoleStatus,
       edgeServiceRoleStatus,
       discordBotStatus,
     }),
