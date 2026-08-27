@@ -86,6 +86,41 @@ test("product workflow live readback can use explicit edge RPC bridge", async ()
   assert.equal(JSON.parse(calls[0].init.body).rpc, "discordos_get_product_workflow_readback");
 });
 
+test("product workflow Edge RPC sends a modern publishable key as apikey only", async () => {
+  const calls = [];
+  const publishableKey = `sb_publishable_${"p".repeat(32)}`;
+  const result = await _internals.buildProductWorkflowLiveReadback({
+    live: true,
+    env: {
+      DISCORDOS_SUPABASE_URL: "https://bxtcuhkotumitoqtrcej.supabase.co",
+      DISCORDOS_SUPABASE_ANON_KEY: publishableKey,
+      DISCORDOS_SUPABASE_WORKFLOW_RPC_EDGE: "enabled",
+    },
+    fetchImpl: async (url, init) => {
+      calls.push({ url: String(url), init });
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          ok: true,
+          payload: {
+            boardCardCount: 3,
+            moderationAuditCount: 4,
+            latestBoardCard: null,
+            latestModerationAudit: null,
+            generatedAt: "2026-06-15T02:00:00Z",
+          },
+        }),
+      };
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].init.headers.apikey, publishableKey);
+  assert.equal("Authorization" in calls[0].init.headers, false);
+});
+
 test("product workflow live readback renders bounded markdown", async () => {
   const result = await _internals.buildProductWorkflowLiveReadback();
   const rendered = _internals.renderMarkdown(result);

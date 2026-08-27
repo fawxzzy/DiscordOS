@@ -1,4 +1,5 @@
 const { _internals: activationInternals } = require("./activation");
+const { buildSupabasePublicHeaders } = require("../scripts/supabase-api-key-headers");
 
 const LIVE_TRANSFER_STATUS_FUNCTION = "discordos-live-transfer-status";
 
@@ -36,8 +37,7 @@ async function invokeEdgeLiveTransferStatus({ supabaseUrl, anonKey, fetchImpl = 
   const response = await fetchImpl(`${cleanUrl(supabaseUrl)}/functions/v1/${LIVE_TRANSFER_STATUS_FUNCTION}`, {
     method: "GET",
     headers: {
-      apikey: anonKey,
-      Authorization: `Bearer ${anonKey}`,
+      ...buildSupabasePublicHeaders(anonKey),
       Accept: "application/json",
     },
   });

@@ -67,3 +67,17 @@ test("every elevated REST call site uses the canonical header builder", () => {
     assert.doesNotMatch(source, /Authorization:\s*`Bearer \$\{serviceRoleKey\}`/, relativePath);
   }
 });
+
+test("every public Edge call site uses the canonical header builder", () => {
+  const relativePaths = [
+    "api/feedback-persist.js",
+    "api/cron/runtime-health.js",
+    "api/live-transfer-status.js",
+    "scripts/discordos-supabase-service-rpc.js",
+  ];
+  for (const relativePath of relativePaths) {
+    const source = fs.readFileSync(path.join(__dirname, "..", relativePath), "utf8");
+    assert.match(source, /buildSupabasePublicHeaders\(anonKey\)/, relativePath);
+    assert.doesNotMatch(source, /Authorization:\s*`Bearer \$\{anonKey\}`/, relativePath);
+  }
+});

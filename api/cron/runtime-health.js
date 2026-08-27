@@ -5,7 +5,10 @@ const { _internals: alertDeliveryInternals } = require("../../scripts/runtime-he
 const { _internals: atlasHealthInternals } = require("../../scripts/atlas-health-watch");
 const os = require("node:os");
 const path = require("node:path");
-const { buildSupabaseElevatedHeaders } = require("../../scripts/supabase-api-key-headers");
+const {
+  buildSupabaseElevatedHeaders,
+  buildSupabasePublicHeaders,
+} = require("../../scripts/supabase-api-key-headers");
 
 function hasValue(value) {
   return typeof value === "string" && value.trim().length > 0;
@@ -208,8 +211,7 @@ async function invokeEdgeCronAuditWriter(payload, { supabaseUrl, anonKey, fetchI
   const response = await fetchImpl(`${cleanUrl(supabaseUrl)}/functions/v1/discordos-runtime-health-cron-audit`, {
     method: "POST",
     headers: {
-      apikey: anonKey,
-      Authorization: `Bearer ${anonKey}`,
+      ...buildSupabasePublicHeaders(anonKey),
       "Content-Type": "application/json",
       Accept: "application/json",
     },
