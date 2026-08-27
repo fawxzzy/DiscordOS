@@ -1,3 +1,5 @@
+const { buildSupabaseElevatedHeaders } = require("./supabase-api-key-headers");
+
 function hasValue(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
@@ -107,8 +109,7 @@ async function callServiceRoleRpc({
   const response = await fetchImpl(endpoint, {
     method: "POST",
     headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
+      ...buildSupabaseElevatedHeaders(serviceRoleKey),
       "Content-Type": "application/json",
       Accept: "application/json",
     },

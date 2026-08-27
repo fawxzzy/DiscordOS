@@ -27,26 +27,28 @@ function percentFromComponents(components) {
 
 function buildRuntimeHealthSnapshot({
   env = process.env,
+  directServiceRoleStatus,
   edgeServiceRoleStatus,
   discordBotStatus,
 } = {}) {
   const activationStatus = activationInternals.getActivationGuardStatus(env);
   const persistedWriterConfig = persistInternals.getPersistedWriterConfig(env);
   const liveTransferStatusConfig = liveTransferInternals.getLiveTransferStatusConfig(env);
-  const directServiceRoleStatus = readinessInternals.getServiceRoleStatus(env.DISCORDOS_SUPABASE_SERVICE_ROLE_KEY);
-  const serviceRoleConfigured = directServiceRoleStatus.configured || edgeServiceRoleStatus?.configured === true;
+  const resolvedDirectServiceRoleStatus = directServiceRoleStatus || readinessInternals.getServiceRoleStatus(
+    env.DISCORDOS_SUPABASE_SERVICE_ROLE_KEY,
+    env.DISCORDOS_SUPABASE_PROJECT_REF || readinessInternals.EXPECTED_SUPABASE_REF
+  );
+  const serviceRoleConfigured = resolvedDirectServiceRoleStatus.configured || edgeServiceRoleStatus?.configured === true;
+  const projectRefConfigured = readinessInternals.isAllowedSupabaseProjectRef(env.DISCORDOS_SUPABASE_PROJECT_REF);
 
   const components = {
     supabaseProject: {
-      state: env.DISCORDOS_SUPABASE_PROJECT_REF === readinessInternals.EXPECTED_SUPABASE_REF ? "ready" : "blocked",
-      blockedReasons:
-        env.DISCORDOS_SUPABASE_PROJECT_REF === readinessInternals.EXPECTED_SUPABASE_REF
-          ? []
-          : ["supabase_project_ref_not_configured"],
+      state: projectRefConfigured ? "ready" : "blocked",
+      blockedReasons: projectRefConfigured ? [] : ["supabase_project_ref_not_configured"],
     },
     serviceRole: {
       state: serviceRoleConfigured ? "ready" : "blocked",
-      runtime: directServiceRoleStatus.configured
+      runtime: resolvedDirectServiceRoleStatus.configured
         ? "vercel-env"
         : edgeServiceRoleStatus?.configured === true
           ? "supabase-edge-function"
@@ -54,7 +56,7 @@ function buildRuntimeHealthSnapshot({
       blockedReasons: serviceRoleConfigured
         ? []
         : unique([
-            directServiceRoleStatus.reason,
+            resolvedDirectServiceRoleStatus.reason,
             edgeServiceRoleStatus?.reason || "edge_service_role_not_verified",
           ]),
     },
@@ -107,14 +109,21 @@ module.exports = async function runtimeHealth(req, res) {
   }
 
   const configuredSupabaseUrl = process.env.DISCORDOS_SUPABASE_URL || null;
+  const directServiceRoleStatus = await readinessInternals.getDirectServiceRoleStatus({
+    supabaseUrl: configuredSupabaseUrl,
+    projectRef: process.env.DISCORDOS_SUPABASE_PROJECT_REF,
+    serviceRoleKey: process.env.DISCORDOS_SUPABASE_SERVICE_ROLE_KEY,
+  });
   const edgeServiceRoleStatus = await readinessInternals.getEdgeServiceRoleStatus({
     supabaseUrl: configuredSupabaseUrl,
+    projectRef: process.env.DISCORDOS_SUPABASE_PROJECT_REF,
     anonKey: process.env.DISCORDOS_SUPABASE_ANON_KEY,
   });
   const discordBotStatus = await readinessInternals.getDiscordBotStatus({
     token: process.env.DISCORDOS_BOT_TOKEN,
   });
   const snapshot = buildRuntimeHealthSnapshot({
+    directServiceRoleStatus,
     edgeServiceRoleStatus,
     discordBotStatus,
   });

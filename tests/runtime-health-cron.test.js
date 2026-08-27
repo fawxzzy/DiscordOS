@@ -26,7 +26,10 @@ function operationalEnv() {
     CRON_SECRET: "cron-secret",
     DISCORDOS_SUPABASE_PROJECT_REF: readinessInternals.EXPECTED_SUPABASE_REF,
     DISCORDOS_SUPABASE_URL: "https://nwexsktuuenfdegzrbut.supabase.co",
-    DISCORDOS_SUPABASE_ANON_KEY: "anon-test-key",
+    DISCORDOS_SUPABASE_ANON_KEY: jwtWithPayload({
+      role: "anon",
+      ref: readinessInternals.EXPECTED_SUPABASE_REF,
+    }),
     DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: jwtWithPayload({
       role: readinessInternals.SERVICE_ROLE,
       ref: readinessInternals.EXPECTED_SUPABASE_REF,
@@ -148,6 +151,78 @@ test("cron runtime health builds no-side-effect passing proof", async () => {
   assert.equal(proof.snapshot.posture, "operational");
   assert.equal(proof.alert.event.type, "discordos.runtime_health.alert_clear");
   assert.equal(proof.event.type, "discordos.runtime_health.cron_pass");
+});
+
+test("cron runtime health accepts exact master modern direct-key readiness", async () => {
+  const env = {
+    ...operationalEnv(),
+    DISCORDOS_SUPABASE_PROJECT_REF: readinessInternals.MASTER_SUPABASE_REF,
+    DISCORDOS_SUPABASE_URL: `https://${readinessInternals.MASTER_SUPABASE_REF}.supabase.co`,
+    DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: `sb_secret_${"c".repeat(32)}`,
+    DISCORDOS_SUPABASE_ANON_KEY: `sb_publishable_${"p".repeat(32)}`,
+  };
+  let directCalls = 0;
+  const proof = await _internals.buildCronRuntimeHealthProof({
+    env,
+    now: new Date("2026-06-13T04:00:00.000Z"),
+    fetchImpl: async (url) => {
+      if (String(url).endsWith("/rest/v1/")) { directCalls += 1; return response({}); }
+      if (String(url).includes("/functions/v1/")) return response(null, { ok: false, status: 401 });
+      if (String(url).includes("/users/@me")) return response({ bot: true });
+      throw new Error(`unexpected fetch: ${url}`);
+    },
+  });
+  assert.equal(directCalls, 1);
+  assert.equal(proof.snapshot.components.supabaseProject.state, "ready");
+  assert.equal(proof.snapshot.components.serviceRole.state, "ready");
+  assert.equal(proof.snapshot.components.serviceRole.runtime, "vercel-env");
+  assert.equal(proof.ok, true);
+});
+
+test("cron runtime health rejects a modern secret in the public Edge slot before fetch", async () => {
+  const env = {
+    ...operationalEnv(),
+    DISCORDOS_SUPABASE_PROJECT_REF: readinessInternals.MASTER_SUPABASE_REF,
+    DISCORDOS_SUPABASE_URL: `https://${readinessInternals.MASTER_SUPABASE_REF}.supabase.co`,
+    DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: `sb_secret_${"c".repeat(32)}`,
+    DISCORDOS_SUPABASE_ANON_KEY: `sb_secret_${"x".repeat(32)}`,
+  };
+  let edgeCalls = 0;
+  const proof = await _internals.buildCronRuntimeHealthProof({
+    env,
+    fetchImpl: async (url) => {
+      if (String(url).endsWith("/rest/v1/")) return response({});
+      if (String(url).includes("/functions/v1/")) { edgeCalls += 1; return response({}); }
+      if (String(url).includes("/users/@me")) return response({ bot: true });
+      throw new Error(`unexpected fetch: ${url}`);
+    },
+  });
+  assert.equal(edgeCalls, 0);
+  assert.equal(proof.snapshot.components.supabaseProject.state, "ready");
+  assert.equal(proof.snapshot.components.serviceRole.state, "ready");
+});
+
+test("cron runtime health rejects unrelated modern project binding before direct fetch", async () => {
+  const env = {
+    ...operationalEnv(),
+    DISCORDOS_SUPABASE_PROJECT_REF: "lpswxoyfniocuhljgzbc",
+    DISCORDOS_SUPABASE_URL: "https://lpswxoyfniocuhljgzbc.supabase.co",
+    DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: `sb_secret_${"d".repeat(32)}`,
+  };
+  let directCalls = 0;
+  const proof = await _internals.buildCronRuntimeHealthProof({
+    env,
+    fetchImpl: async (url) => {
+      if (String(url).endsWith("/rest/v1/")) { directCalls += 1; return response({}); }
+      if (String(url).includes("/functions/v1/")) return response(null, { ok: false, status: 401 });
+      if (String(url).includes("/users/@me")) return response({ bot: true });
+      throw new Error(`unexpected fetch: ${url}`);
+    },
+  });
+  assert.equal(directCalls, 0);
+  assert.equal(proof.snapshot.components.supabaseProject.state, "blocked");
+  assert.equal(proof.snapshot.components.serviceRole.state, "blocked");
+  assert.equal(proof.ok, false);
 });
 
 test("cron runtime health audit writer skips by default", async () => {

@@ -1,4 +1,5 @@
 const DEFAULT_BASE_URL = "https://nwexsktuuenfdegzrbut.supabase.co";
+const { buildSupabaseElevatedHeaders } = require("./supabase-api-key-headers");
 const DEFAULT_EXPECTED_SCHEDULE_NAME = "vercel-daily-runtime-health";
 const DEFAULT_MAX_AGE_HOURS = 30;
 
@@ -60,8 +61,7 @@ async function fetchCronAuditStatus({ supabaseUrl, serviceRoleKey, fetchImpl = f
   const response = await fetchImpl(endpoint, {
     method: "POST",
     headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
+      ...buildSupabaseElevatedHeaders(serviceRoleKey),
       "Content-Type": "application/json",
       Accept: "application/json",
     },
