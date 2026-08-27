@@ -185,6 +185,33 @@ test("persisted writer invokes edge writer with anon authorization", async () =>
   assert.equal(calls[0].init.headers.Authorization, "Bearer anon-test-key");
 });
 
+test("persisted writer sends a modern publishable key as apikey only", async () => {
+  const calls = [];
+  const publishableKey = `sb_publishable_${"p".repeat(32)}`;
+  const result = await _internals.invokeEdgePersistWriter(
+    { report_id: "modern-edge-persist-proof", report_type: "bug" },
+    {
+      supabaseUrl: "https://bxtcuhkotumitoqtrcej.supabase.co/",
+      anonKey: publishableKey,
+      fetchImpl: async (url, init) => {
+        calls.push({ url, init });
+        return {
+          ok: true,
+          status: 201,
+          async json() {
+            return { ok: true, persisted: true, row: { report_id: "modern-edge-persist-proof" } };
+          },
+        };
+      },
+    }
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].init.headers.apikey, publishableKey);
+  assert.equal("Authorization" in calls[0].init.headers, false);
+});
+
 test("persisted writer forwards transfer secret to edge writer when supplied", async () => {
   const calls = [];
   const result = await _internals.invokeEdgePersistWriter(

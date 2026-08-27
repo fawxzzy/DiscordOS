@@ -481,6 +481,27 @@ test("cron runtime health audit writer can use Supabase Edge persistence", async
   assert.equal(audit.runId, "runtime-health-cron-vercel-daily-runtime-health-20260613T040000000Z");
 });
 
+test("cron Edge audit writer sends a modern publishable key as apikey only", async () => {
+  const calls = [];
+  const publishableKey = `sb_publishable_${"p".repeat(32)}`;
+  const result = await _internals.invokeEdgeCronAuditWriter(
+    { run_id: "modern-cron-audit-proof" },
+    {
+      supabaseUrl: "https://bxtcuhkotumitoqtrcej.supabase.co/",
+      anonKey: publishableKey,
+      fetchImpl: async (url, init) => {
+        calls.push({ url, init });
+        return response({ ok: true, row: { run_id: "modern-cron-audit-proof" } }, { status: 201 });
+      },
+    }
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].init.headers.apikey, publishableKey);
+  assert.equal("Authorization" in calls[0].init.headers, false);
+});
+
 test("cron runtime health sends enabled critical alerts only", async () => {
   const env = {
     ...operationalEnv(),

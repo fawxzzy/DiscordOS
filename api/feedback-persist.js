@@ -1,6 +1,9 @@
 const { _internals: shadowInternals } = require("./feedback-shadow");
 const { _internals: activationInternals } = require("./activation");
-const { buildSupabaseElevatedHeaders } = require("../scripts/supabase-api-key-headers");
+const {
+  buildSupabaseElevatedHeaders,
+  buildSupabasePublicHeaders,
+} = require("../scripts/supabase-api-key-headers");
 
 const SCHEMA = "discordos";
 const REPORTS_TABLE = "discord_feedback_reports";
@@ -147,8 +150,7 @@ async function insertFeedbackReport(row, { supabaseUrl, serviceRoleKey, fetchImp
 
 async function invokeEdgePersistWriter(row, { supabaseUrl, anonKey, transferSecret = null, fetchImpl = fetch }) {
   const headers = {
-    apikey: anonKey,
-    Authorization: `Bearer ${anonKey}`,
+    ...buildSupabasePublicHeaders(anonKey),
     "Content-Type": "application/json",
     Accept: "application/json",
   };

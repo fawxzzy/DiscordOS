@@ -57,6 +57,30 @@ test("live transfer status invokes the edge reader with anon authorization", asy
   assert.equal(calls[0].init.headers.Authorization, "Bearer anon-test-key");
 });
 
+test("live transfer status sends a modern publishable key as apikey only", async () => {
+  const calls = [];
+  const publishableKey = `sb_publishable_${"p".repeat(32)}`;
+  const result = await _internals.invokeEdgeLiveTransferStatus({
+    supabaseUrl: "https://bxtcuhkotumitoqtrcej.supabase.co/",
+    anonKey: publishableKey,
+    fetchImpl: async (url, init) => {
+      calls.push({ url, init });
+      return {
+        ok: true,
+        status: 200,
+        async json() {
+          return { ok: true, liveSignedTransferReady: true };
+        },
+      };
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].init.headers.apikey, publishableKey);
+  assert.equal("Authorization" in calls[0].init.headers, false);
+});
+
 test("live transfer status reports edge reader failures without secret values", async () => {
   const result = await _internals.invokeEdgeLiveTransferStatus({
     supabaseUrl: "https://nwexsktuuenfdegzrbut.supabase.co",
