@@ -2503,23 +2503,23 @@
     {
       "id": "mazer-run-quality-metric-contract-v2",
       "title": "mazer: run-quality metric contract v2",
-      "state": "open",
+      "state": "completed",
       "priority": "high",
       "category": "mazer",
       "markerName": "Telemetry-first run quality definitions",
-      "completionPercent": 0,
+      "completionPercent": 100,
       "summary": "Define versioned, topology-aware run-quality metrics before exposing them as score, rank, leaderboard, or achievement signals.",
       "whyItMatters": "Completion alone cannot distinguish a clean route from exploration. A shared contract creates useful post-run insight without locking progression to an arbitrary canonical solution path.",
-      "currentStatus": "Planning admission only. Existing telemetry records shortest viable path, route overrun, wrong turns, backtracks, and bounded path previews, but it does not yet define player-facing fidelity, coverage, exploration, or revisit semantics across multi-route and wrap mazes.",
+      "currentStatus": "Completed source contract: Mazer PR #73 merged the versioned run-quality metric definitions and fixture coverage. This is telemetry-contract completion only; player score, rank, leaderboard, and achievement adoption remain separately governed.",
       "workBreakdown": [
-        "Define optimal steps, actual accepted steps, unique visited tiles, walkable tiles, coverage, exploration, revisit steps, and clean-run semantics.",
-        "Use the playable graph and shortest-path corridor union rather than one arbitrary generator solution path for multi-route fidelity.",
-        "Specify edge-wrap, reset, failed-run, and path-preview truncation behavior plus a forward-only versioning policy.",
-        "Decide which metrics remain telemetry-only and which are eligible for later player-facing adoption."
+        "Defined optimal steps, actual accepted steps, unique visited tiles, walkable tiles, coverage, exploration, revisit steps, and clean-run semantics.",
+        "Bound multi-route fidelity to the playable graph and shortest-path corridor union rather than one arbitrary generator solution path.",
+        "Specified edge-wrap, reset, failed-run, and path-preview truncation behavior with forward-only versioning.",
+        "Kept the completed contract telemetry-only and separated later player-facing adoption."
       ],
       "nextActions": [
-        "Write the metric glossary and denominator rules with representative single-route, multi-route, and wrap fixtures.",
-        "Obtain an explicit product decision on score/rank use after telemetry definitions are reviewed.",
+        "Use the completed metric contract as provenance for future player-facing adoption packets only.",
+        "Obtain an explicit product decision before any score, rank, leaderboard, or achievement use.",
         "Do not recompute or rewrite historical receipts."
       ],
       "acceptanceCriteria": [
@@ -2529,19 +2529,19 @@
         "Rank and score remain unchanged until a later approved adoption card."
       ],
       "proofPlan": [
-        "Run pure metric fixtures for single-route, multi-route, wrap, reset, failure, and truncated-history cases.",
-        "Review a redacted sample against the existing telemetry fields without Supabase writes."
+        "Merged Mazer PR #73 provides the source-linked contract and fixture evidence for single-route, multi-route, wrap, reset, failure, and truncated-history cases.",
+        "The completed contract required no Supabase writes."
       ],
-      "reference": "repos/mazer/src/legacy-runtime/mazeCycleTelemetry.ts",
+      "reference": "repos/mazer/docs/ops/MAZER-RUN-QUALITY-METRIC-CONTRACT-V2-PACKET-2026-07-15.md",
       "nextCommand": "npm run ops:discordos:mazer-feedback-board:json -- --card-id mazer-run-quality-metric-contract-v2",
       "relatedCardIds": [
         "mazer-ai-run-corpus-quality-calibration",
         "mazer-ai-level-rank-progression",
         "mazer-edge-wrap-topology-and-notch-fill"
       ],
-      "reactionStatus": "failure",
-      "reactionEmojiName": "failure",
-      "reactionEmojiId": "1507384094424694785",
+      "reactionStatus": "success",
+      "reactionEmojiName": "success",
+      "reactionEmojiId": "1507384062166302851",
       "liveThreadId": "1526284203464065185",
       "liveMessageId": "1526284203464065185"
     },
