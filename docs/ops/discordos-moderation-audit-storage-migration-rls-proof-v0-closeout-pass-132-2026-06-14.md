@@ -8,7 +8,7 @@ Date: 2026-06-14
 
 ## Completed Work
 
-- Added `supabase/migrations/20260614232000_discordos_moderation_audit_log.sql`.
+- Added `supabase/migrations/20260615005542_discordos_moderation_audit_log.sql`.
 - Extended `scripts/discordos-storage-migration-rls-proof.js` for moderation audit storage proof.
 - Added moderation coverage to `tests/discordos-storage-migration-rls-proof.test.js`.
 - Added `npm run ops:discordos:moderation-storage-migration-rls-proof`.

@@ -13,7 +13,7 @@ Closed the guarded storage writer execution lane for board/card and moderation a
 What changed:
 - Added shared Supabase RPC helper support for direct service-role REST and explicit JWT-protected Edge bridge routing.
 - Added `supabase/functions/discordos-product-workflow-rpc/index.ts` so service-role material stays inside Supabase runtime when production Vercel env exposes only anon JWT material.
-- Added `supabase/migrations/20260615012500_discordos_board_moderation_writer_rpcs.sql` with service-role-only invoker RPCs for guarded board writes, moderation audit writes, live readback, and sanitized audit search.
+- Added `supabase/migrations/20260615020059_discordos_board_moderation_writer_rpcs.sql` with service-role-only invoker RPCs for guarded board writes, moderation audit writes, live readback, and sanitized audit search.
 - Updated board and moderation guarded writer commands so actual storage execution requires explicit apply flags, feature env gates, and a configured Supabase transport.
 
 Proof:
