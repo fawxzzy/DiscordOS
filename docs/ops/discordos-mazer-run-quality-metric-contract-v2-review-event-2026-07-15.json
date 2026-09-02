@@ -1,0 +1,72 @@
+{
+  "schemaVersion": "atlas.board-card-journal.v1",
+  "eventId": "mazer-run-quality-metric-contract-v2-review-20260715",
+  "occurredAt": "2026-07-15T11:08:55.437Z",
+  "actor": "Mazer",
+  "card": {
+    "id": "mazer-run-quality-metric-contract-v2",
+    "project": "Mazer",
+    "sourceForumChannelId": "1524889569475170478",
+    "threadId": "1526284203464065185",
+    "title": "mazer: run-quality metric contract v2",
+    "type": "feature",
+    "state": "review",
+    "priority": "High",
+    "owner": "Mazer",
+    "progress": "94%",
+    "summary": "Define and implement one versioned, topology-aware run-quality contract before downstream score, rank, leaderboard, achievement, or player-facing adoption.",
+    "objective": "Keep runtime, progression, reports, audits, calibration, and future receipts correlated to playable wrap-aware shortest-path truth while preserving historical stored-versus-recomputed boundaries.",
+    "acceptanceCriteria": [
+      "Every metric has a deterministic numerator, denominator, version, and undefined-state policy.",
+      "Equally short valid routes score equivalently and legal edge wrap remains playable graph movement.",
+      "Clean Run and Explorer remain compatible with historical immutability and later UI adoption.",
+      "Public rank and player-facing score remain unchanged until separate adoption cards are admitted."
+    ],
+    "discoveries": [
+      "Shortest-path corridor fidelity must use the union of every equally short route, not one generator solution path.",
+      "Complete topology aggregates must be computed before bounded path storage; previews cannot support truthful reconstruction.",
+      "Legacy single-solution wrong-turn counters cannot disqualify an otherwise legal alternate or wrap clean run."
+    ],
+    "nextActions": [
+      "Review and merge Mazer draft PR #73 if the private/internal total and telemetry-only topology contract are accepted.",
+      "After merge, admit downstream capture and player-results cards without redefining the v1 denominators.",
+      "Keep historical receipts immutable and never synthesize missing topology metrics from previews."
+    ],
+    "blockers": [],
+    "evidence": [
+      "Mazer draft PR #73 https://github.com/fawxzzy/mazer/pull/73",
+      "Mazer commits a7ccba02 and 371457ccfcf7b50dae78a4c3112210403e15209f",
+      "Focused run-quality contract proof: 54/54 passed",
+      "Full serial Mazer verification: 51/51 files and 370/370 tests passed",
+      "TypeScript no-emit, production bundle build, and five-seed deterministic calibration passed"
+    ]
+  },
+  "entry": {
+    "kind": "review",
+    "headline": "Versioned run-quality and topology contract is review-ready",
+    "completed": [
+      "Unified runtime, progression, reporting, audit, calibration, and receipt score authority.",
+      "Defined optimal/accepted steps, coverage, corridor union fidelity, exploration, revisits, Clean Run, Explorer, and undefined policies.",
+      "Proved equal-route parity, legal wrap, reset, incomplete run, bounded storage, and historical immutability behavior."
+    ],
+    "discovered": [
+      "Topology metrics are private telemetry in this packet; downstream public score/rank adoption remains separately governed."
+    ],
+    "next": [
+      "Review PR #73, then merge or return focused contract feedback."
+    ],
+    "blockers": [],
+    "evidence": [
+      "PR #73 / 371457cc",
+      "54/54 focused and 370/370 full serial tests passed",
+      "Build, type check, calibration, and diff check passed"
+    ]
+  },
+  "correlation": {
+    "taskId": "Mazer",
+    "jobId": "mazer-run-quality-metric-contract-v2-20260715",
+    "branch": "codex/run-quality-metric-contract-v2",
+    "commit": "371457ccfcf7b50dae78a4c3112210403e15209f",
+    "receipt": "docs/ops/discordos-mazer-run-quality-metric-contract-v2-review-receipt-2026-07-15.md"
+  }
+}

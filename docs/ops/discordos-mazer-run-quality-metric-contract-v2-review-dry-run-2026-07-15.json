@@ -1,0 +1,65 @@
+{
+  "ok": true,
+  "status": "dry_run",
+  "apply": false,
+  "admission": {
+    "requested": false,
+    "admitted": false,
+    "status": "journal_guard_not_requested",
+    "reasonCodes": []
+  },
+  "eventCount": 1,
+  "liveIdentityPreflight": {
+    "ok": true,
+    "status": "admitted",
+    "registryPath": "config/discordos-board-registry.json",
+    "scanStartedAt": "2026-07-15T11:09:38.413Z",
+    "scanCompletedAt": "2026-07-15T11:11:29.523Z",
+    "scanStatus": "consistent",
+    "scanReasonCodes": [],
+    "scanBlockingReasonCodes": [],
+    "currentIdentityCount": 236,
+    "proposedIdentityCount": 1,
+    "checks": [
+      {
+        "eventIndex": 0,
+        "eventId": "mazer-run-quality-metric-contract-v2-review-20260715",
+        "cardId": "mazer-run-quality-metric-contract-v2",
+        "normalizedCardId": "mazer-run-quality-metric-contract-v2",
+        "targetThreadId": "1526284203464065185",
+        "matchingLocations": [
+          {
+            "boardId": "mazer-active",
+            "forumChannelId": "1524889569475170478",
+            "threadId": "1526284203464065185",
+            "title": "run-quality metric contract v2",
+            "cardId": "mazer-run-quality-metric-contract-v2"
+          }
+        ],
+        "collisionLocations": [],
+        "admitted": true,
+        "reasonCodes": []
+      }
+    ],
+    "reasonCodes": []
+  },
+  "results": [
+    {
+      "ok": true,
+      "status": "dry_run",
+      "apply": false,
+      "eventId": "mazer-run-quality-metric-contract-v2-review-20260715",
+      "cardId": "mazer-run-quality-metric-contract-v2",
+      "preview": {
+        "matchedBy": "explicit_thread_id",
+        "action": "update_card_and_append_journal",
+        "threadId": "1526284203464065185",
+        "canonicalTitle": "run-quality metric contract v2",
+        "canonicalBody": "<!-- ATLAS-CARD:START -->\nATLAS-CARD-ID: `mazer-run-quality-metric-contract-v2`\n- project: `Mazer`\n- type: `feature`\n- state: `review`\n- priority: `High`\n- owner: `Mazer`\n- progress: `94%`\n- autonomous implementation: `not_admitted`\n- updated: `2026-07-15T11:08:55.437Z`\n\n## Summary\nDefine and implement one versioned, topology-aware run-quality contract before downstream score, rank, leaderboard, achievement, or player-facing adoption.\n\n## Objective\n- Keep runtime, progression, reports, audits, calibration, and future receipts correlated to playable wrap-aware shortest-path truth while... [see journal/source]\n\n## Acceptance criteria\n- Every metric has a deterministic numerator, denominator, version, and undefined-state policy.\n- Equally short valid routes score equivalently and legal edge wrap remains playable graph movement.\n- 2 more item(s) in journal/source\n\n## Discoveries\n- Shortest-path corridor fidelity must use the union of every equally short route, not one generator solution path.\n- 2 more item(s) in journal/source\n\n## Next actions\n- Review and merge Mazer draft PR #73 if the private/internal total and telemetry-only topology contract are accepted.\n- After merge, admit downstream capture and player-results cards without redefining the v1 denominators.\n- Keep historical receipts immutable and never synthesize missing topology metrics from previews.\n\n## Blockers\n- None\n\n## Evidence\n- Mazer draft PR #73 https://github.com/fawxzzy/mazer/pull/73\n- 4 more item(s) in journal/source\n<!-- ATLAS-CARD:END -->",
+        "journalBody": "ATLAS-JOURNAL-EVENT-ID: `mazer-run-quality-metric-contract-v2-review-20260715`\n- card: `mazer-run-quality-metric-contract-v2`\n- idempotency: `mazer-run-quality-metric-contract-v2-review-20260715`\n## Versioned run-quality and topology contract is review-ready\n- kind: `review`\n- state: `review`\n- actor: `Mazer`\n- occurred: `2026-07-15T11:08:55.437Z`\n\n## Completed\n- Unified runtime, progression, reporting, audit, calibration, and receipt score authority.\n- Defined optimal/accepted steps, coverage, corridor union fidelity, exploration, revisits, Clean Run, Explorer, and undefined policies.\n- Proved equal-route parity, legal wrap, reset, incomplete run, bounded storage, and historical immutability behavior.\n\n## Discovered\n- Topology metrics are private telemetry in this packet; downstream public score/rank adoption remains separately governed.\n\n## Next\n- Review PR #73, then merge or return focused contract feedback.\n\n## Blockers\n- None\n\n## Evidence\n- PR #73 / 371457cc\n- 54/54 focused and 370/370 full serial tests passed\n- Build, type check, calibration, and diff check passed\n\n## Correlation\n- task: `Mazer`\n- job: `mazer-run-quality-metric-contract-v2-20260715`\n- branch: `codex/run-quality-metric-contract-v2`\n- commit: `371457ccfcf7b50dae78a4c3112210403e15209f`\n- receipt: `docs/ops/discordos-mazer-run-quality-metric-contract-v2-review-receipt-2026-07-15.md`"
+      },
+      "reasonCodes": []
+    }
+  ],
+  "reasonCodes": []
+}
