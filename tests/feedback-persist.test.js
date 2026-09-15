@@ -13,6 +13,7 @@ test("persisted writer config fails closed by default", () => {
     "persisted_writer_not_enabled",
     "writer_mode_not_shadow_or_active",
     "missing_supabase_url",
+    "missing_supabase_project_ref",
     "missing_service_role_key",
     "missing_edge_persist_config",
   ]);
@@ -22,6 +23,7 @@ test("persisted writer config requires service role even in shadow mode", () => 
   const config = _internals.getPersistedWriterConfig({
     DISCORDOS_PERSISTED_WRITER_ENABLED: "true",
     DISCORDOS_WRITER_MODE: "shadow",
+    DISCORDOS_SUPABASE_PROJECT_REF: "nwexsktuuenfdegzrbut",
     DISCORDOS_SUPABASE_URL: "https://nwexsktuuenfdegzrbut.supabase.co",
   });
 
@@ -39,6 +41,7 @@ test("persisted writer config allows edge persistence without direct service rol
   const config = _internals.getPersistedWriterConfig({
     DISCORDOS_PERSISTED_WRITER_ENABLED: "true",
     DISCORDOS_WRITER_MODE: "shadow",
+    DISCORDOS_SUPABASE_PROJECT_REF: "nwexsktuuenfdegzrbut",
     DISCORDOS_SUPABASE_URL: "https://nwexsktuuenfdegzrbut.supabase.co",
     DISCORDOS_SUPABASE_ANON_KEY: "anon-test-key",
   });
@@ -47,6 +50,36 @@ test("persisted writer config allows edge persistence without direct service rol
   assert.equal(config.serviceRoleConfigured, false);
   assert.equal(config.edgePersistAvailable, true);
   assert.deepEqual(config.blockedReasons, []);
+});
+
+test("persisted writer requires the direct service role on master and never selects the legacy Edge fallback", () => {
+  const config = _internals.getPersistedWriterConfig({
+    DISCORDOS_PERSISTED_WRITER_ENABLED: "true",
+    DISCORDOS_WRITER_MODE: "shadow",
+    DISCORDOS_SUPABASE_PROJECT_REF: "bxtcuhkotumitoqtrcej",
+    DISCORDOS_SUPABASE_URL: "https://bxtcuhkotumitoqtrcej.supabase.co",
+    DISCORDOS_SUPABASE_ANON_KEY: `sb_publishable_${"p".repeat(32)}`,
+  });
+
+  assert.equal(config.canAttemptPersistence, false);
+  assert.equal(config.masterBound, true);
+  assert.equal(config.edgePersistAvailable, false);
+  assert.equal(config.transport, "none");
+  assert(config.blockedReasons.includes("master_direct_service_role_required"));
+});
+
+test("persisted writer names the exact direct master transport", () => {
+  const config = _internals.getPersistedWriterConfig({
+    DISCORDOS_PERSISTED_WRITER_ENABLED: "true",
+    DISCORDOS_WRITER_MODE: "shadow",
+    DISCORDOS_SUPABASE_PROJECT_REF: "bxtcuhkotumitoqtrcej",
+    DISCORDOS_SUPABASE_URL: "https://bxtcuhkotumitoqtrcej.supabase.co",
+    DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: `sb_secret_${"s".repeat(32)}`,
+  });
+
+  assert.equal(config.canAttemptPersistence, true);
+  assert.equal(config.directPersistAvailable, true);
+  assert.equal(config.transport, "master_direct_service_role");
 });
 
 test("transfer secret status requires configured matching header", () => {

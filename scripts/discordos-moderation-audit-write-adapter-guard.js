@@ -2,8 +2,8 @@ const {
   _internals: shadowPersistenceInternals,
 } = require("./discordos-moderation-audit-shadow-persistence");
 const {
-  _internals: supabaseRpcInternals,
-} = require("./discordos-supabase-service-rpc");
+  _internals: boardModerationRpcInternals,
+} = require("./discordos-board-moderation-supabase-rpc");
 
 const STORAGE_WRITE_ENV = "DISCORDOS_MODERATION_AUDIT_WRITE_ADAPTER";
 const STORAGE_WRITE_ENV_VALUE = "enabled";
@@ -118,8 +118,13 @@ function buildStorageWritePayload(shadowAdmission, input = {}) {
 }
 
 async function executeStorageWrite({ payload, env, fetchImpl }) {
-  const config = supabaseRpcInternals.getServiceRoleRpcConfig(env);
-  if (!config.ok) {
+  const rpcResult = await boardModerationRpcInternals.callBoardModerationRpc({
+    env,
+    functionName: STORAGE_WRITE_RPC,
+    payload: { payload },
+    fetchImpl,
+  });
+  if (!rpcResult.attempted) {
     return {
       ok: false,
       attempted: false,
@@ -127,16 +132,9 @@ async function executeStorageWrite({ payload, env, fetchImpl }) {
       rpc: STORAGE_WRITE_RPC,
       httpStatus: null,
       row: null,
-      reasonCodes: config.reasonCodes,
+      reasonCodes: rpcResult.reasonCodes,
     };
   }
-
-  const rpcResult = await supabaseRpcInternals.callServiceRoleRpc({
-    ...config,
-    functionName: STORAGE_WRITE_RPC,
-    payload: { payload },
-    fetchImpl,
-  });
 
   return {
     ok: rpcResult.ok,

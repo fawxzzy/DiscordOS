@@ -1,5 +1,6 @@
 const { _internals: runtimeHealthInternals } = require("../runtime-health");
 const { _internals: readinessInternals } = require("../readiness");
+const { _internals: liveTransferInternals } = require("../live-transfer-status");
 const { _internals: alertInternals } = require("../../scripts/runtime-health-alert");
 const { _internals: alertDeliveryInternals } = require("../../scripts/runtime-health-alert-delivery");
 const { _internals: atlasHealthInternals } = require("../../scripts/atlas-health-watch");
@@ -116,6 +117,41 @@ function getCronAlertCooldownHours(env = process.env) {
 
 function getCronAuditWriteEnabled(env = process.env) {
   return env.DISCORDOS_RUNTIME_HEALTH_CRON_AUDIT_WRITE === "enabled";
+}
+
+function getCronAuditWriterConfig(env = process.env) {
+  const projectRef = hasValue(env.DISCORDOS_SUPABASE_PROJECT_REF)
+    ? env.DISCORDOS_SUPABASE_PROJECT_REF.trim()
+    : null;
+  const supabaseUrl = hasValue(env.DISCORDOS_SUPABASE_URL)
+    ? cleanUrl(env.DISCORDOS_SUPABASE_URL.trim())
+    : null;
+  const expectedUrl = projectRef === null ? null : `https://${projectRef}.supabase.co`;
+  const projectBindingMatches = supabaseUrl !== null && expectedUrl !== null && supabaseUrl === expectedUrl;
+  const masterBound = projectRef === readinessInternals.MASTER_SUPABASE_REF && projectBindingMatches;
+  const legacyBound = projectRef === readinessInternals.EXPECTED_SUPABASE_REF && projectBindingMatches;
+  const directAvailable = (masterBound || legacyBound) && hasValue(env.DISCORDOS_SUPABASE_SERVICE_ROLE_KEY);
+  const edgeAvailable = legacyBound && hasValue(env.DISCORDOS_SUPABASE_ANON_KEY);
+  const transport = directAvailable
+    ? masterBound ? "master_direct_service_role" : "legacy_direct_service_role"
+    : edgeAvailable
+      ? "legacy_edge_fallback"
+      : "none";
+
+  return {
+    ok: transport !== "none",
+    projectRef,
+    supabaseUrl,
+    projectBindingMatches,
+    masterBound,
+    legacyBound,
+    directAvailable,
+    edgeAvailable,
+    transport,
+    reasonCodes: transport !== "none"
+      ? []
+      : [masterBound ? "master_direct_service_role_required" : "cron_audit_config_missing"],
+  };
 }
 
 function getCronAtlasHealthWatchEnabled(env = process.env) {
@@ -247,31 +283,19 @@ async function writeCronAuditRun({ proof, env, fetchImpl }) {
     };
   }
 
-  if (!hasValue(env.DISCORDOS_SUPABASE_URL)) {
+  const writerConfig = getCronAuditWriterConfig(env);
+  if (!writerConfig.ok) {
     return {
       ok: false,
       enabled,
       status: "config_missing",
       written: false,
-      reasonCodes: ["cron_audit_config_missing"],
-    };
-  }
-
-  const directServiceRoleConfigured = hasValue(env.DISCORDOS_SUPABASE_SERVICE_ROLE_KEY);
-  const edgeWriterConfigured = hasValue(env.DISCORDOS_SUPABASE_ANON_KEY);
-
-  if (!directServiceRoleConfigured && !edgeWriterConfigured) {
-    return {
-      ok: false,
-      enabled,
-      status: "config_missing",
-      written: false,
-      reasonCodes: ["cron_audit_config_missing"],
+      reasonCodes: writerConfig.reasonCodes,
     };
   }
 
   const payload = buildCronAuditPayload(proof);
-  const inserted = directServiceRoleConfigured
+  const inserted = writerConfig.directAvailable
     ? await insertCronAuditRun(payload, {
         supabaseUrl: env.DISCORDOS_SUPABASE_URL,
         serviceRoleKey: env.DISCORDOS_SUPABASE_SERVICE_ROLE_KEY,
@@ -300,7 +324,7 @@ async function writeCronAuditRun({ proof, env, fetchImpl }) {
     enabled,
     status: "written",
     written: true,
-    runtime: directServiceRoleConfigured ? "vercel-env-service-role" : "supabase-edge-function",
+    runtime: writerConfig.transport,
     httpStatus: inserted.status,
     runId: inserted.row?.run_id || payload.run_id,
     generatedAt: inserted.row?.generated_at || payload.generated_at,
@@ -385,7 +409,8 @@ async function buildCronRuntimeHealthProof({
         fetchImpl,
       })
     : Promise.resolve(localServiceRoleStatus);
-  const [directServiceRoleStatus, edgeServiceRoleStatus, discordBotStatus] = await Promise.all([
+  const liveTransferStatusConfig = liveTransferInternals.getLiveTransferStatusConfig(env);
+  const [directServiceRoleStatus, edgeServiceRoleStatus, discordBotStatus, liveTransferStatus] = await Promise.all([
     directServiceRolePromise,
     readinessInternals.getEdgeServiceRoleStatus({
       supabaseUrl: env.DISCORDOS_SUPABASE_URL,
@@ -397,6 +422,7 @@ async function buildCronRuntimeHealthProof({
       token: env.DISCORDOS_BOT_TOKEN,
       fetchImpl,
     }),
+    liveTransferInternals.invokeLiveTransferStatus(liveTransferStatusConfig, { fetchImpl }),
   ]);
   const generatedAt = now.toISOString();
   const snapshot = {
@@ -405,6 +431,7 @@ async function buildCronRuntimeHealthProof({
       directServiceRoleStatus,
       edgeServiceRoleStatus,
       discordBotStatus,
+      liveTransferStatus,
     }),
     generatedAt,
   };
@@ -531,6 +558,7 @@ module.exports._internals = {
   getCronAlertSuppressionDir,
   getCronAlertCooldownHours,
   getCronAuditWriteEnabled,
+  getCronAuditWriterConfig,
   getCronAtlasHealthWatchEnabled,
   getCronAtlasHealthAlertSendEnabled,
   getCronAtlasHealthSuppressionDir,

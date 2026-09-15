@@ -8,25 +8,30 @@ test("transfer proof config fails closed outside shadow traffic mode", () => {
     DISCORDOS_PERSISTED_WRITER_ENABLED: "true",
     DISCORDOS_WRITER_MODE: "shadow",
     DISCORDOS_TRAFFIC_TRANSFER_MODE: "none",
-    DISCORDOS_SUPABASE_URL: "https://nwexsktuuenfdegzrbut.supabase.co",
-    DISCORDOS_SUPABASE_ANON_KEY: "anon-test-key",
+    DISCORDOS_SUPABASE_URL: "https://bxtcuhkotumitoqtrcej.supabase.co",
+    DISCORDOS_SUPABASE_PROJECT_REF: "bxtcuhkotumitoqtrcej",
+    DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: "secret-test-key",
   });
 
   assert.equal(config.canAttemptShadowTransferProof, false);
   assert.deepEqual(config.blockedReasons, ["traffic_transfer_mode_not_shadow"]);
 });
 
-test("transfer proof config allows proof-only shadow traffic with edge persistence", () => {
+test("transfer proof config allows proof-only shadow traffic with direct master persistence", () => {
   const config = _internals.getTransferProofConfig({
     DISCORDOS_PERSISTED_WRITER_ENABLED: "true",
     DISCORDOS_WRITER_MODE: "shadow",
     DISCORDOS_TRAFFIC_TRANSFER_MODE: "shadow",
     DISCORDOS_SHADOW_PARITY_PROOF_ID: "discordos-shadow-proof",
-    DISCORDOS_SUPABASE_URL: "https://nwexsktuuenfdegzrbut.supabase.co",
-    DISCORDOS_SUPABASE_ANON_KEY: "anon-test-key",
+    DISCORDOS_SUPABASE_URL: "https://bxtcuhkotumitoqtrcej.supabase.co",
+    DISCORDOS_SUPABASE_PROJECT_REF: "bxtcuhkotumitoqtrcej",
+    DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: "secret-test-key",
   });
 
   assert.equal(config.canAttemptShadowTransferProof, true);
+  assert.equal(config.writerConfig.transport, "master_direct_service_role");
+  assert.equal(config.writerConfig.directPersistAvailable, true);
+  assert.equal(config.writerConfig.edgePersistAvailable, false);
   assert.equal(config.activationStatus.shadowWorkflowParityProved, true);
   assert.equal(config.activationStatus.liveWorkflowParityProved, false);
 });

@@ -2,6 +2,11 @@ const { _internals: activationInternals } = require("./activation");
 const { _internals: persistInternals } = require("./feedback-persist");
 const { _internals: liveTransferInternals } = require("./live-transfer-status");
 const { _internals: readinessInternals } = require("./readiness");
+const {
+  _internals: interactionReviewInternals,
+} = require("../scripts/discordos-interaction-reliability-review");
+
+const INTERACTION_REVIEW_SURFACE = "interaction-reliability-review";
 
 function hasValue(value) {
   return typeof value === "string" && value.trim().length > 0;
@@ -25,11 +30,27 @@ function percentFromComponents(components) {
   return Math.round((readyCount / values.length) * 100);
 }
 
+function isInteractionReliabilityReviewRequest(req) {
+  return req?.query?.surface === INTERACTION_REVIEW_SURFACE;
+}
+
+function runtimeIdentity(env = process.env) {
+  return {
+    sourceRevision: env.VERCEL_GIT_COMMIT_SHA || "UNKNOWN",
+    deploymentId: env.VERCEL_DEPLOYMENT_ID || null,
+    runtimeUrl: env.VERCEL_URL
+      ? `https://${env.VERCEL_URL}`
+      : "https://fawxzzy-discordos.vercel.app",
+    environment: env.VERCEL_ENV || "local",
+  };
+}
+
 function buildRuntimeHealthSnapshot({
   env = process.env,
   directServiceRoleStatus,
   edgeServiceRoleStatus,
   discordBotStatus,
+  liveTransferStatus,
 } = {}) {
   const activationStatus = activationInternals.getActivationGuardStatus(env);
   const persistedWriterConfig = persistInternals.getPersistedWriterConfig(env);
@@ -73,8 +94,14 @@ function buildRuntimeHealthSnapshot({
       blockedReasons: persistedWriterConfig.blockedReasons,
     },
     liveTransferStatus: {
-      state: liveTransferStatusConfig.canCheckLiveTransferStatus ? "ready" : "blocked",
-      blockedReasons: liveTransferStatusConfig.blockedReasons,
+      state: liveTransferStatus?.ok === true ? "ready" : "blocked",
+      runtime: liveTransferStatus?.transport || liveTransferStatusConfig.transport,
+      blockedReasons: liveTransferStatus?.ok === true
+        ? []
+        : unique([
+            ...liveTransferStatusConfig.blockedReasons,
+            liveTransferStatus?.code || "live_transfer_status_probe_not_executed",
+          ]),
     },
   };
   const blockedReasons = unique(Object.values(components).flatMap((component) => component.blockedReasons));
@@ -108,6 +135,15 @@ module.exports = async function runtimeHealth(req, res) {
     });
   }
 
+  if (isInteractionReliabilityReviewRequest(req)) {
+    const review = interactionReviewInternals.buildInteractionReliabilityReview(runtimeIdentity());
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("X-DiscordOS-Canary", "interaction-reliability-review-v1");
+    res.setHeader("X-DiscordOS-Review-Id", review.reviewId);
+    res.setHeader("X-DiscordOS-Review-Digest", review.reviewDigest);
+    return res.status(review.ok ? 200 : 409).json(review);
+  }
+
   const configuredSupabaseUrl = process.env.DISCORDOS_SUPABASE_URL || null;
   const directServiceRoleStatus = await readinessInternals.getDirectServiceRoleStatus({
     supabaseUrl: configuredSupabaseUrl,
@@ -122,10 +158,13 @@ module.exports = async function runtimeHealth(req, res) {
   const discordBotStatus = await readinessInternals.getDiscordBotStatus({
     token: process.env.DISCORDOS_BOT_TOKEN,
   });
+  const liveTransferStatusConfig = liveTransferInternals.getLiveTransferStatusConfig(process.env);
+  const liveTransferStatus = await liveTransferInternals.invokeLiveTransferStatus(liveTransferStatusConfig);
   const snapshot = buildRuntimeHealthSnapshot({
     directServiceRoleStatus,
     edgeServiceRoleStatus,
     discordBotStatus,
+    liveTransferStatus,
   });
 
   return res.status(snapshot.ok ? 200 : 409).json({
@@ -138,4 +177,7 @@ module.exports._internals = {
   buildRuntimeHealthSnapshot,
   percentFromComponents,
   stateFromBlockedReasons,
+  isInteractionReliabilityReviewRequest,
+  runtimeIdentity,
+  INTERACTION_REVIEW_SURFACE,
 };

@@ -4,26 +4,63 @@ const test = require("node:test");
 const { _internals } = require("../api/live-transfer-status");
 
 test("live transfer status config fails closed without Supabase edge config", () => {
-  assert.deepEqual(_internals.getLiveTransferStatusConfig({}), {
-    supabaseUrl: null,
-    anonKey: null,
-    edgeFunctionUrl: null,
-    canCheckLiveTransferStatus: false,
-    blockedReasons: ["missing_supabase_url", "missing_supabase_anon_key"],
-  });
+  const config = _internals.getLiveTransferStatusConfig({});
+  assert.equal(config.canCheckLiveTransferStatus, false);
+  assert.equal(config.transport, "none");
+  assert.deepEqual(config.blockedReasons, ["missing_supabase_url", "missing_supabase_project_ref"]);
 });
 
 test("live transfer status config builds the edge function URL", () => {
-  assert.deepEqual(_internals.getLiveTransferStatusConfig({
+  const config = _internals.getLiveTransferStatusConfig({
+    DISCORDOS_SUPABASE_PROJECT_REF: "nwexsktuuenfdegzrbut",
     DISCORDOS_SUPABASE_URL: "https://nwexsktuuenfdegzrbut.supabase.co/",
     DISCORDOS_SUPABASE_ANON_KEY: "anon-test-key",
-  }), {
-    supabaseUrl: "https://nwexsktuuenfdegzrbut.supabase.co",
-    anonKey: "anon-test-key",
-    edgeFunctionUrl: "https://nwexsktuuenfdegzrbut.supabase.co/functions/v1/discordos-live-transfer-status",
-    canCheckLiveTransferStatus: true,
-    blockedReasons: [],
   });
+  assert.equal(config.edgeFunctionUrl, "https://nwexsktuuenfdegzrbut.supabase.co/functions/v1/discordos-live-transfer-status");
+  assert.equal(config.canCheckLiveTransferStatus, true);
+  assert.equal(config.transport, "legacy_edge_fallback");
+  assert.deepEqual(config.blockedReasons, []);
+});
+
+test("live transfer status uses the direct service-role RPC for master", async () => {
+  const secret = `sb_secret_${"s".repeat(32)}`;
+  const config = _internals.getLiveTransferStatusConfig({
+    DISCORDOS_SUPABASE_PROJECT_REF: "bxtcuhkotumitoqtrcej",
+    DISCORDOS_SUPABASE_URL: "https://bxtcuhkotumitoqtrcej.supabase.co/",
+    DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: secret,
+    DISCORDOS_SUPABASE_ANON_KEY: `sb_publishable_${"p".repeat(32)}`,
+  });
+  const calls = [];
+  const result = await _internals.invokeLiveTransferStatus(config, {
+    fetchImpl: async (url, init) => {
+      calls.push({ url, init });
+      return {
+        ok: true,
+        status: 200,
+        async json() { return { liveSignedTransferReady: true }; },
+      };
+    },
+  });
+
+  assert.equal(config.transport, "direct_service_role_rpc");
+  assert.equal(result.ok, true);
+  assert.equal(result.transport, "direct_service_role_rpc");
+  assert.equal(calls[0].url, "https://bxtcuhkotumitoqtrcej.supabase.co/rest/v1/rpc/discordos_get_live_transfer_status");
+  assert.equal(calls[0].init.method, "POST");
+  assert.equal(calls[0].init.headers.apikey, secret);
+  assert.equal("Authorization" in calls[0].init.headers, false);
+  assert.equal(calls[0].init.body, "{}");
+});
+
+test("live transfer status rejects a master Edge-only configuration", () => {
+  const config = _internals.getLiveTransferStatusConfig({
+    DISCORDOS_SUPABASE_PROJECT_REF: "bxtcuhkotumitoqtrcej",
+    DISCORDOS_SUPABASE_URL: "https://bxtcuhkotumitoqtrcej.supabase.co",
+    DISCORDOS_SUPABASE_ANON_KEY: `sb_publishable_${"p".repeat(32)}`,
+  });
+  assert.equal(config.canCheckLiveTransferStatus, false);
+  assert.equal(config.transport, "none");
+  assert.deepEqual(config.blockedReasons, ["master_direct_service_role_required"]);
 });
 
 test("live transfer status invokes the edge reader with anon authorization", async () => {
