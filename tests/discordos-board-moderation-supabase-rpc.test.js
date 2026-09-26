@@ -139,3 +139,29 @@ test("board and moderation master calls the named RPC directly without Edge mult
   assert.equal("Authorization" in calls[0].init.headers, false);
   assert.equal(String(calls[0].url).includes("discordos-product-workflow-rpc"), false);
 });
+
+test("board and moderation RPC ignores caller overrides of validated transport binding", async () => {
+  const secret = `sb_secret_${"s".repeat(32)}`;
+  const calls = [];
+  const result = await _internals.callBoardModerationRpc({
+    env: {
+      DISCORDOS_SUPABASE_PROJECT_REF: "bxtcuhkotumitoqtrcej",
+      DISCORDOS_SUPABASE_URL: "https://bxtcuhkotumitoqtrcej.supabase.co",
+      DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: secret,
+    },
+    functionName: "discordos_get_product_workflow_readback",
+    supabaseUrl: "https://lpswxoyfniocuhljgzbc.supabase.co",
+    serviceRoleKey: "synthetic-attacker-key",
+    edgeProxyEnabled: true,
+    fetchImpl: async (url, init) => {
+      calls.push({ url, init });
+      return { ok: true, status: 200, async json() { return { boardCardCount: 1 }; } };
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.runtimeTarget, "master_direct");
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, "https://bxtcuhkotumitoqtrcej.supabase.co/rest/v1/rpc/discordos_get_product_workflow_readback");
+  assert.equal(calls[0].init.headers.apikey, secret);
+});

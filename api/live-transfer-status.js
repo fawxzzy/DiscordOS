@@ -8,6 +8,12 @@ const LIVE_TRANSFER_STATUS_FUNCTION = "discordos-live-transfer-status";
 const LIVE_TRANSFER_STATUS_RPC = "discordos_get_live_transfer_status";
 const LEGACY_SUPABASE_REF = "nwexsktuuenfdegzrbut";
 const MASTER_SUPABASE_REF = "bxtcuhkotumitoqtrcej";
+const PUBLIC_COUNT_FIELDS = [
+  "fitnessLiveTransferCount",
+  "humanFitnessLiveTransferCount",
+  "nonProofFitnessLiveTransferCount",
+  "humanNonProofFitnessLiveTransferCount",
+];
 
 function hasValue(value) {
   return typeof value === "string" && value.trim().length > 0;
@@ -162,6 +168,21 @@ async function invokeLiveTransferStatus(config, { fetchImpl = fetch } = {}) {
   }
 }
 
+function publicLiveTransferStatus(payload) {
+  if (payload === null || typeof payload !== "object" || Array.isArray(payload)
+    || typeof payload.liveSignedTransferReady !== "boolean") {
+    return null;
+  }
+
+  const summary = { liveSignedTransferReady: payload.liveSignedTransferReady };
+  for (const field of PUBLIC_COUNT_FIELDS) {
+    if (Number.isSafeInteger(payload[field]) && payload[field] >= 0) {
+      summary[field] = payload[field];
+    }
+  }
+  return summary;
+}
+
 module.exports = async function liveTransferStatus(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
@@ -199,7 +220,19 @@ module.exports = async function liveTransferStatus(req, res) {
     });
   }
 
-  const liveSignedTransferReady = status.payload.liveSignedTransferReady === true;
+  const publicStatus = publicLiveTransferStatus(status.payload);
+  if (publicStatus === null) {
+    return res.status(502).json({
+      ok: false,
+      service: "discordos-live-transfer-status",
+      error: "LIVE_TRANSFER_STATUS_INVALID_SHAPE",
+      statusRuntime: status.transport,
+      activation: activationStatus,
+      generatedAt: new Date().toISOString(),
+    });
+  }
+
+  const liveSignedTransferReady = publicStatus.liveSignedTransferReady;
 
   return res.status(200).json({
     ok: true,
@@ -214,8 +247,8 @@ module.exports = async function liveTransferStatus(req, res) {
     liveCutover: activationStatus.liveCutover,
     fitnessTrafficMoved: activationStatus.fitnessTrafficMoved,
     activationBlockedReasons: activationStatus.blockedReasons,
-    status: status.payload,
-    edge: status.transport === "legacy_edge_fallback" ? status.payload : null,
+    status: publicStatus,
+    edge: status.transport === "legacy_edge_fallback" ? publicStatus : null,
     generatedAt: new Date().toISOString(),
   });
 };
@@ -229,4 +262,5 @@ module.exports._internals = {
   invokeDirectLiveTransferStatus,
   invokeEdgeLiveTransferStatus,
   invokeLiveTransferStatus,
+  publicLiveTransferStatus,
 };

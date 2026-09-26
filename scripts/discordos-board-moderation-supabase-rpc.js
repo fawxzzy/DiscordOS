@@ -58,7 +58,7 @@ function getBoardModerationRpcConfig(env = process.env) {
   };
 }
 
-async function callBoardModerationRpc({ env = process.env, ...options } = {}) {
+async function callBoardModerationRpc({ env = process.env, functionName, payload, fetchImpl } = {}) {
   const config = getBoardModerationRpcConfig(env);
   if (!config.ok) {
     return {
@@ -73,8 +73,10 @@ async function callBoardModerationRpc({ env = process.env, ...options } = {}) {
   }
 
   const result = await supabaseRpcInternals.callServiceRoleRpc({
+    functionName,
+    payload,
+    fetchImpl,
     ...config,
-    ...options,
   });
 
   return {

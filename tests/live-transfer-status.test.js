@@ -1,7 +1,91 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 
-const { _internals } = require("../api/live-transfer-status");
+const liveTransferStatus = require("../api/live-transfer-status");
+const { _internals } = liveTransferStatus;
+
+test("public live-transfer projection excludes row metadata and rejects missing readiness", () => {
+  const source = {
+    liveSignedTransferReady: true,
+    fitnessLiveTransferCount: 2,
+    humanNonProofFitnessLiveTransferCount: 1,
+    latestTransferRow: {
+      reporter_discord_user_id: "private-discord-id",
+      report_id: "private-report-id",
+    },
+  };
+  assert.deepEqual(_internals.publicLiveTransferStatus(source), {
+    liveSignedTransferReady: true,
+    fitnessLiveTransferCount: 2,
+    humanNonProofFitnessLiveTransferCount: 1,
+  });
+  assert.equal(_internals.publicLiveTransferStatus({ latestTransferRow: source.latestTransferRow }), null);
+});
+
+test("public live-transfer route never forwards private RPC rows on either transport", async () => {
+  const names = [
+    "DISCORDOS_SUPABASE_PROJECT_REF",
+    "DISCORDOS_SUPABASE_URL",
+    "DISCORDOS_SUPABASE_SERVICE_ROLE_KEY",
+    "DISCORDOS_SUPABASE_ANON_KEY",
+  ];
+  const prior = new Map(names.map((name) => [name, process.env[name]]));
+  const priorFetch = global.fetch;
+  const response = () => ({
+    setHeader() {},
+    status(code) { this.statusCode = code; return this; },
+    json(payload) { this.body = payload; return this; },
+  });
+  try {
+    global.fetch = async () => ({
+      ok: true,
+      status: 200,
+      async json() {
+        return {
+          ok: true,
+          liveSignedTransferReady: true,
+          fitnessLiveTransferCount: 2,
+          latestTransferRow: {
+            reporter_discord_user_id: "private-discord-id",
+            report_id: "private-report-id",
+          },
+        };
+      },
+    });
+    for (const [projectRef, transport] of [
+      ["bxtcuhkotumitoqtrcej", "direct_service_role_rpc"],
+      ["nwexsktuuenfdegzrbut", "legacy_edge_fallback"],
+    ]) {
+      process.env.DISCORDOS_SUPABASE_PROJECT_REF = projectRef;
+      process.env.DISCORDOS_SUPABASE_URL = `https://${projectRef}.supabase.co`;
+      if (transport === "direct_service_role_rpc") {
+        process.env.DISCORDOS_SUPABASE_SERVICE_ROLE_KEY = `sb_secret_${"s".repeat(32)}`;
+        delete process.env.DISCORDOS_SUPABASE_ANON_KEY;
+      } else {
+        delete process.env.DISCORDOS_SUPABASE_SERVICE_ROLE_KEY;
+        process.env.DISCORDOS_SUPABASE_ANON_KEY = "synthetic-anon-key";
+      }
+      const result = await liveTransferStatus({ method: "GET" }, response());
+      assert.equal(result.statusCode, 200);
+      assert.equal(result.body.statusRuntime, transport);
+      assert.deepEqual(result.body.status, {
+        liveSignedTransferReady: true,
+        fitnessLiveTransferCount: 2,
+      });
+      assert.equal(JSON.stringify(result.body).includes("private-discord-id"), false);
+      assert.equal(JSON.stringify(result.body).includes("private-report-id"), false);
+      if (transport === "legacy_edge_fallback") {
+        assert.deepEqual(result.body.edge, result.body.status);
+      }
+    }
+  } finally {
+    global.fetch = priorFetch;
+    for (const [name, value] of prior) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
+});
 
 test("live transfer status config fails closed without Supabase edge config", () => {
   const config = _internals.getLiveTransferStatusConfig({});
