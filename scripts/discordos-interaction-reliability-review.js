@@ -149,16 +149,19 @@ class InMemoryReliabilityFixture {
         .map((name) => [name, new Map()]),
     );
     this.idempotencyIndex = new Map();
+    this.publicationAttemptIndex = new Map();
     this.fixtureReads = 0;
     this.fixtureWrites = 0;
     this.trace = [];
   }
 
   seed(table, key, value) {
+    const previous = this.tables[table].get(key) || null;
     this.tables[table].set(key, structuredClone(value));
     if (table === "interactions") {
       this.idempotencyIndex.set(value.idempotencyKey, key);
     }
+    this.indexPublication(table, key, value, previous);
     this.trace.push({ operation: "seed", table, key, digest: value.digest });
   }
 
@@ -168,6 +171,7 @@ class InMemoryReliabilityFixture {
     if (table === "interactions") {
       this.idempotencyIndex.set(value.idempotencyKey, key);
     }
+    this.indexPublication(table, key, value, previous);
     this.fixtureWrites += 1;
     this.trace.push({
       operation: "write",
@@ -177,6 +181,20 @@ class InMemoryReliabilityFixture {
       digest: value.digest,
     });
     return structuredClone(value);
+  }
+
+  indexPublication(table, key, value, previous) {
+    if (table !== "publications") return;
+    if (previous?.attemptId) {
+      const oldKeys = this.publicationAttemptIndex.get(previous.attemptId);
+      oldKeys?.delete(key);
+      if (oldKeys?.size === 0) this.publicationAttemptIndex.delete(previous.attemptId);
+    }
+    if (hasValue(value.attemptId)) {
+      const keys = this.publicationAttemptIndex.get(value.attemptId) || new Set();
+      keys.add(key);
+      this.publicationAttemptIndex.set(value.attemptId, keys);
+    }
   }
 
   read(table, key) {
@@ -202,6 +220,20 @@ class InMemoryReliabilityFixture {
       resolvedKey: interactionId,
       digest: value?.digest || null,
     });
+    return value ? structuredClone(value) : null;
+  }
+
+  readPublicationByAttemptId(attemptId) {
+    const keys = [...(this.publicationAttemptIndex.get(attemptId) || [])];
+    this.fixtureReads += 1;
+    this.trace.push({
+      operation: "read",
+      table: "publication-attempt-index",
+      key: attemptId,
+      resolvedKeys: keys,
+    });
+    if (keys.length > 1) throw new Error("ambiguous_publication_attempt");
+    const value = keys.length === 1 ? this.tables.publications.get(keys[0]) : null;
     return value ? structuredClone(value) : null;
   }
 
@@ -331,7 +363,7 @@ function executeFailedScenario(sourceRevision) {
   const task = fixture.write("tasks", ids.taskId, taskObject(ids, "failed"));
   const receipt = fixture.write("receipts", ids.executionReceiptId, receiptObject(ids, "failed"));
   const response = fixture.write("responses", ids.responseId, responseObject(ids, "failure_returned"));
-  const publication = fixture.read("publications", ids.publicationAttemptId);
+  const publication = fixture.readPublicationByAttemptId(ids.publicationAttemptId);
   const readback = publicationReadback(ids, "exact_absence", publication);
 
   return {
@@ -471,7 +503,7 @@ function executeStaleScenario(sourceRevision) {
     currentAttempt: before.attempt,
   });
   const after = fixture.read("receipts", ids.executionReceiptId);
-  const publication = fixture.read("publications", ids.publicationAttemptId);
+  const publication = fixture.readPublicationByAttemptId(ids.publicationAttemptId);
   const readback = withDigest({
     id: ids.readbackId,
     mode: "exact_current_receipt_unchanged",
@@ -750,6 +782,7 @@ module.exports = {
     stableId,
     digestMatches,
     fixtureAccounting,
+    InMemoryReliabilityFixture,
     parseArgs,
     buildInteractionReliabilityReview,
     validateScenario,

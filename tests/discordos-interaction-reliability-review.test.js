@@ -158,6 +158,35 @@ test("stale receipt is rejected before writes and preserves current receipt", ()
   assert.equal(scenario.objects.publication, null);
 });
 
+test("failed and stale absence readbacks resolve the publication attempt, not a publication ID", () => {
+  const review = buildReview();
+  for (const id of ["failed", "stale-receipt"]) {
+    const scenario = review.scenarios.find((row) => row.id === id);
+    const read = scenario.fixtureTrace.find((entry) =>
+      entry.operation === "read" && entry.table === "publication-attempt-index");
+    assert.equal(read.key, scenario.correlation.publicationAttemptId);
+    assert.deepEqual(read.resolvedKeys, []);
+    assert.equal(scenario.objects.readback.publicationAbsent, true);
+  }
+});
+
+test("attempt-indexed absence detects an unexpected publication under its normal ID", () => {
+  const fixture = new _internals.InMemoryReliabilityFixture();
+  const publication = { id: "normal-publication-id", attemptId: "failed-attempt-id" };
+  fixture.write("publications", publication.id, publication);
+  assert.deepEqual(fixture.readPublicationByAttemptId(publication.attemptId), publication);
+  assert.equal(fixture.readPublicationByAttemptId("other-attempt-id"), null);
+
+  fixture.write("publications", publication.id, { ...publication, attemptId: "new-attempt-id" });
+  assert.equal(fixture.readPublicationByAttemptId(publication.attemptId), null);
+  assert.equal(fixture.readPublicationByAttemptId("new-attempt-id").id, publication.id);
+  fixture.write("publications", "second-publication-id", {
+    id: "second-publication-id", attemptId: "new-attempt-id",
+  });
+  assert.throws(() => fixture.readPublicationByAttemptId("new-attempt-id"),
+    /ambiguous_publication_attempt/);
+});
+
 test("status boundaries and prohibited-action proof remain explicit", () => {
   const review = buildReview();
 
