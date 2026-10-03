@@ -207,11 +207,15 @@ function resolveFitnessVerifyBridgeConfig(env = process.env) {
 }
 
 function resolveDiscordMemberLinkConfig(env = process.env) {
+  const dedicatedConfigured = Object.hasOwn(env, "DISCORDOS_MEMBER_LINK_SUPABASE_URL")
+    || Object.hasOwn(env, "DISCORDOS_MEMBER_LINK_SUPABASE_SERVICE_ROLE_KEY");
   return {
-    supabaseUrl: readOptionalEnv("DISCORDOS_MEMBER_LINK_SUPABASE_URL", env)
-      || readOptionalEnv("DISCORDOS_SUPABASE_URL", env),
-    serviceRoleKey: readOptionalEnv("DISCORDOS_MEMBER_LINK_SUPABASE_SERVICE_ROLE_KEY", env)
-      || readOptionalEnv("DISCORDOS_SUPABASE_SERVICE_ROLE_KEY", env),
+    supabaseUrl: dedicatedConfigured
+      ? readOptionalEnv("DISCORDOS_MEMBER_LINK_SUPABASE_URL", env)
+      : readOptionalEnv("DISCORDOS_SUPABASE_URL", env),
+    serviceRoleKey: dedicatedConfigured
+      ? readOptionalEnv("DISCORDOS_MEMBER_LINK_SUPABASE_SERVICE_ROLE_KEY", env)
+      : readOptionalEnv("DISCORDOS_SUPABASE_SERVICE_ROLE_KEY", env),
   };
 }
 
@@ -448,6 +452,7 @@ async function upsertDiscordMemberLink({
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Content-Profile": "fitness",
         ...buildSupabaseElevatedHeaders(serviceRoleKey),
       },
       body: JSON.stringify({
@@ -528,6 +533,29 @@ async function buildFitnessVerifyResponse({
 
   const config = resolveFitnessVerifyBridgeConfig(env);
   const memberLinkConfig = resolveDiscordMemberLinkConfig(env);
+  if (
+    hasValue(config.endpoint)
+    && hasValue(config.secret)
+    && (!hasValue(memberLinkConfig.supabaseUrl) || !hasValue(memberLinkConfig.serviceRoleKey))
+  ) {
+    return {
+      ok: true,
+      statusCode: 200,
+      payload: buildEphemeralMessageResponse("Verification is temporarily unavailable because the account link is not configured. DM fawxzzy and mention the member-link issue."),
+      admission: {
+        ok: true,
+        executesRoute: false,
+        route: {
+          kind: "modal_submit",
+          responseType: DISCORD_INTERACTION_RESPONSE_TYPE.CHANNEL_MESSAGE_WITH_SOURCE,
+          command: "fitness_verify_modal",
+        },
+        reasonCodes: ["verification_member_link_config_missing"],
+      },
+      execution: null,
+      reasonCodes: ["verification_member_link_config_missing"],
+    };
+  }
   const verifyResult = await postFitnessVerifyBridge({
     endpoint: config.endpoint,
     secret: config.secret,
@@ -577,7 +605,6 @@ async function buildFitnessVerifyResponse({
     };
   }
 
-  const verifiedRoleGrantedAt = new Date().toISOString();
   const roleResult = await applyVerifiedRole({
     guildId: config.guildId,
     verifiedRoleId: config.verifiedRoleId,
@@ -605,6 +632,8 @@ async function buildFitnessVerifyResponse({
       reasonCodes: [roleResult.code],
     };
   }
+
+  const verifiedRoleGrantedAt = new Date().toISOString();
 
   await clearUnverifiedRole({
     guildId: config.guildId,
@@ -642,7 +671,7 @@ async function buildFitnessVerifyResponse({
     }
   }
 
-  await upsertDiscordMemberLink({
+  const finalLink = await upsertDiscordMemberLink({
     supabaseUrl: memberLinkConfig.supabaseUrl,
     serviceRoleKey: memberLinkConfig.serviceRoleKey,
     fitnessUserId: verifyResult.fitnessUserId,
@@ -656,6 +685,26 @@ async function buildFitnessVerifyResponse({
     lastErrorCode,
     fetchImpl,
   });
+
+  if (!finalLink.ok) {
+    return {
+      ok: true,
+      statusCode: 200,
+      payload: buildEphemeralMessageResponse("Your key was accepted, but we could not finish saving your account link. Your Discord access may be active. DM fawxzzy and mention the member-link issue."),
+      admission: {
+        ok: true,
+        executesRoute: false,
+        route: {
+          kind: "modal_submit",
+          responseType: DISCORD_INTERACTION_RESPONSE_TYPE.CHANNEL_MESSAGE_WITH_SOURCE,
+          command: "fitness_verify_modal",
+        },
+        reasonCodes: [finalLink.code],
+      },
+      execution: null,
+      reasonCodes: [finalLink.code],
+    };
+  }
 
   const successMessage = Number.isInteger(verifyResult.userNumber)
     ? nicknameSyncStatus === "synced"

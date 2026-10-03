@@ -10,6 +10,8 @@ const READY_ENV = {
   DISCORDOS_FITNESS_VERIFY_ENDPOINT: "https://fitness.example.com/api/discord/verify",
   DISCORDOS_FITNESS_VERIFY_SECRET: "verification-secret",
   DISCORDOS_VERIFIED_ROLE_ID: "1515220075366580225",
+  DISCORDOS_SUPABASE_URL: "https://discordos.example.com",
+  DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: "service-role",
 };
 
 test("operator env readiness args default to markdown output", () => {
@@ -45,6 +47,8 @@ test("operator env readiness accepts normalized bot-channel targets", () => {
       DISCORDOS_FITNESS_VERIFY_ENDPOINT: "https://fitness.example.com/api/discord/verify",
       DISCORDOS_FITNESS_VERIFY_SECRET: "verification-secret",
       DISCORDOS_VERIFIED_ROLE_ID: "\uFEFF1515220075366580225\\n",
+      DISCORDOS_SUPABASE_URL: "https://discordos.example.com",
+      DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: "service-role",
     },
   });
 
@@ -84,6 +88,8 @@ test("operator env readiness reports empty pulled token separately from channel 
       DISCORDOS_FITNESS_VERIFY_SECRET: "verification-secret",
       DISCORDOS_VERIFIED_ROLE_ID: "1515220075366580225",
       DISCORDOS_BOT_TOKEN: "",
+      DISCORDOS_SUPABASE_URL: "https://discordos.example.com",
+      DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: "service-role",
     },
   });
 
@@ -145,28 +151,26 @@ test("operator env readiness blocks the Fitness verify path when bridge config i
   assert(result.readinessPlan.nextActions.includes("configure_discordos_fitness_verify_endpoint"));
 });
 
-test("operator env readiness reports incomplete optional member-link storage as advisory", () => {
+test("operator env readiness blocks incomplete dedicated member-link storage", () => {
   const partial = _internals.buildDiscordOSOperatorEnvReadiness({
     env: {
       ...READY_ENV,
-      DISCORDOS_SUPABASE_URL: "https://discordos.example.com",
+      DISCORDOS_MEMBER_LINK_SUPABASE_URL: "https://master.example.com",
     },
   });
   const complete = _internals.buildDiscordOSOperatorEnvReadiness({
     env: {
       ...READY_ENV,
-      DISCORDOS_SUPABASE_URL: "https://discordos.example.com",
-      DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: "service-role",
+      DISCORDOS_MEMBER_LINK_SUPABASE_URL: "https://master.example.com",
+      DISCORDOS_MEMBER_LINK_SUPABASE_SERVICE_ROLE_KEY: "master-role",
     },
   });
 
-  assert.equal(partial.ok, true);
+  assert.equal(partial.ok, false);
   assert.equal(partial.fitnessVerify.memberLinkReady, false);
-  assert.deepEqual(partial.reasonCodes, []);
-  assert(partial.readinessPlan.advisoryNextActions.includes(
-    "configure_discordos_member_link_storage_or_leave_all_member_link_env_unset"
-  ));
+  assert(partial.reasonCodes.includes("discord_member_link_service_role_missing"));
+  assert(partial.readinessPlan.nextActions.includes("configure_discordos_member_link_storage"));
   assert.equal(complete.ok, true);
   assert.equal(complete.fitnessVerify.memberLinkReady, true);
-  assert.deepEqual(complete.readinessPlan.advisoryNextActions, []);
+  assert.deepEqual(complete.reasonCodes, []);
 });
