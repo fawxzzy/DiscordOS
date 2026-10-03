@@ -136,6 +136,31 @@ test("live transfer status uses the direct service-role RPC for master", async (
   assert.equal(calls[0].init.body, "{}");
 });
 
+test("live transfer probe rejects malformed success bodies on both transports", async () => {
+  for (const projectRef of ["bxtcuhkotumitoqtrcej", "nwexsktuuenfdegzrbut"]) {
+    const config = _internals.getLiveTransferStatusConfig({
+      DISCORDOS_SUPABASE_PROJECT_REF: projectRef,
+      DISCORDOS_SUPABASE_URL: `https://${projectRef}.supabase.co`,
+      ...(projectRef === "bxtcuhkotumitoqtrcej"
+        ? { DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: `sb_secret_${"s".repeat(32)}` }
+        : { DISCORDOS_SUPABASE_ANON_KEY: "synthetic-anon-key" }),
+    });
+    const result = await _internals.invokeLiveTransferStatus(config, {
+      fetchImpl: async () => ({
+        ok: true,
+        status: 200,
+        async json() { return projectRef === "bxtcuhkotumitoqtrcej" ? {} : { ok: true }; },
+      }),
+    });
+    assert.deepEqual(result, {
+      ok: false,
+      status: 200,
+      code: "LIVE_TRANSFER_STATUS_INVALID_SHAPE",
+      transport: config.transport,
+    });
+  }
+});
+
 test("live transfer status rejects a master Edge-only configuration", () => {
   const config = _internals.getLiveTransferStatusConfig({
     DISCORDOS_SUPABASE_PROJECT_REF: "bxtcuhkotumitoqtrcej",

@@ -312,15 +312,38 @@ function publicationObject(ids, status, leaseId = ids.leaseId) {
   });
 }
 
+function publicationProof(value) {
+  return value === null ? null : {
+    attemptId: value.attemptId,
+    id: value.id,
+    responseId: value.responseId,
+    receiptId: value.receiptId,
+    leaseId: value.leaseId,
+    status: value.status,
+    digest: value.digest,
+  };
+}
+
+function expectedPublication(ids, mode) {
+  if (mode !== "exact_touched_object" && mode !== "exact_recovered_touched_object") return null;
+  return withDigest({
+    attemptId: ids.publicationAttemptId,
+    id: ids.publicationId,
+    responseId: ids.responseId,
+    receiptId: ids.executionReceiptId,
+    leaseId: mode === "exact_recovered_touched_object" ? ids.restartLeaseId : ids.leaseId,
+    status: mode === "exact_recovered_touched_object" ? "applied_once_after_recovery" : "applied",
+  });
+}
+
 function publicationReadback(ids, mode, observedPublication) {
-  const observed = observedPublication
-    ? { id: observedPublication.id, digest: observedPublication.digest }
-    : null;
+  const expected = publicationProof(expectedPublication(ids, mode));
+  const observed = publicationProof(observedPublication);
   return withDigest({
     id: ids.readbackId,
     mode,
-    exact: true,
-    expectedPublication: observed,
+    exact: canonicalJson(expected) === canonicalJson(observed),
+    expectedPublication: expected,
     observedPublication: observed,
     publicationAbsent: observedPublication === null,
     taskId: ids.taskId,
@@ -554,13 +577,26 @@ function validateScenario(scenario) {
   const traceWrites = scenario.fixtureTrace.filter((entry) => entry.operation === "write").length;
   const traceAccountingExact = traceReads === scenario.accounting.fixtureReads
     && traceWrites === scenario.accounting.fixtureWrites;
+  const expectedPublicationObject = expectedPublication(scenario.correlation, scenario.objects.readback?.mode);
+  const expectedPublicationProof = publicationProof(expectedPublicationObject);
   const publicationExpected = scenario.correlation.publicationId === null
-    ? scenario.objects.publication === null && scenario.objects.readback?.publicationAbsent === true
-    : scenario.objects.publication?.id === scenario.correlation.publicationId
-      && scenario.objects.readback?.expectedPublication?.id === scenario.objects.publication.id
-      && scenario.objects.readback?.expectedPublication?.digest === scenario.objects.publication.digest
-      && scenario.objects.readback?.observedPublication?.id === scenario.objects.publication.id
-      && scenario.objects.readback?.observedPublication?.digest === scenario.objects.publication.digest;
+    ? expectedPublicationObject === null
+      && scenario.objects.publication === null
+      && scenario.objects.readback?.expectedPublication === null
+      && scenario.objects.readback?.observedPublication === null
+      && scenario.objects.readback?.publicationAbsent === true
+    : expectedPublicationObject !== null
+      && canonicalJson(scenario.objects.publication) === canonicalJson(expectedPublicationObject)
+      && canonicalJson(scenario.objects.readback?.expectedPublication) === canonicalJson(expectedPublicationProof)
+      && canonicalJson(scenario.objects.readback?.observedPublication) === canonicalJson(expectedPublicationProof)
+      && scenario.objects.readback?.publicationAbsent === false
+      && scenario.objects.response?.id === scenario.correlation.responseId
+      && scenario.objects.response?.receiptId === scenario.correlation.executionReceiptId
+      && scenario.objects.receipt?.receiptId === scenario.correlation.executionReceiptId
+      && scenario.objects.receipt?.leaseId === expectedPublicationObject.leaseId
+      && scenario.objects.publication?.responseId === scenario.objects.response?.id
+      && scenario.objects.publication?.receiptId === scenario.objects.receipt?.receiptId
+      && scenario.objects.publication?.leaseId === scenario.objects.receipt?.leaseId;
   const duplicateReusedWithoutWrite = scenario.id !== "duplicate"
     || (scenario.accounting.fixtureWrites === 0
       && scenario.objects.duplicateRequest?.status === "duplicate"

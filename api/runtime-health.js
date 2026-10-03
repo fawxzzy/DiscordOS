@@ -61,6 +61,8 @@ function buildRuntimeHealthSnapshot({
   );
   const serviceRoleConfigured = resolvedDirectServiceRoleStatus.configured || edgeServiceRoleStatus?.configured === true;
   const projectRefConfigured = readinessInternals.isAllowedSupabaseProjectRef(env.DISCORDOS_SUPABASE_PROJECT_REF);
+  const liveTransferProbeValid = liveTransferStatus?.ok === true
+    && liveTransferInternals.publicLiveTransferStatus(liveTransferStatus.payload) !== null;
 
   const components = {
     supabaseProject: {
@@ -94,13 +96,15 @@ function buildRuntimeHealthSnapshot({
       blockedReasons: persistedWriterConfig.blockedReasons,
     },
     liveTransferStatus: {
-      state: liveTransferStatus?.ok === true ? "ready" : "blocked",
+      state: liveTransferProbeValid ? "ready" : "blocked",
       runtime: liveTransferStatus?.transport || liveTransferStatusConfig.transport,
-      blockedReasons: liveTransferStatus?.ok === true
+      blockedReasons: liveTransferProbeValid
         ? []
         : unique([
             ...liveTransferStatusConfig.blockedReasons,
-            liveTransferStatus?.code || "live_transfer_status_probe_not_executed",
+            liveTransferStatus?.code || (liveTransferStatus?.ok === true
+              ? "LIVE_TRANSFER_STATUS_INVALID_SHAPE"
+              : "live_transfer_status_probe_not_executed"),
           ]),
     },
   };

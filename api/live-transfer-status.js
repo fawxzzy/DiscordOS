@@ -145,19 +145,26 @@ async function invokeLiveTransferStatus(config, { fetchImpl = fetch } = {}) {
   }
 
   try {
-    if (config.transport === "direct_service_role_rpc") {
-      return await invokeDirectLiveTransferStatus({
+    const result = config.transport === "direct_service_role_rpc"
+      ? await invokeDirectLiveTransferStatus({
         supabaseUrl: config.supabaseUrl,
         serviceRoleKey: config.serviceRoleKey,
         fetchImpl,
+      })
+      : await invokeEdgeLiveTransferStatus({
+        supabaseUrl: config.supabaseUrl,
+        anonKey: config.anonKey,
+        fetchImpl,
       });
+    if (result.ok && publicLiveTransferStatus(result.payload) === null) {
+      return {
+        ok: false,
+        status: result.status,
+        code: "LIVE_TRANSFER_STATUS_INVALID_SHAPE",
+        transport: result.transport,
+      };
     }
-
-    return await invokeEdgeLiveTransferStatus({
-      supabaseUrl: config.supabaseUrl,
-      anonKey: config.anonKey,
-      fetchImpl,
-    });
+    return result;
   } catch {
     return {
       ok: false,

@@ -50,7 +50,7 @@ test("runtime health accepts edge-backed service-role readiness without direct s
       configured: false,
       reason: "missing_bot_token",
     },
-    liveTransferStatus: { ok: true, transport: "legacy_edge_fallback" },
+    liveTransferStatus: { ok: true, transport: "legacy_edge_fallback", payload: { liveSignedTransferReady: false } },
   });
 
   assert.equal(snapshot.components.supabaseProject.state, "ready");
@@ -90,7 +90,7 @@ test("runtime health reports operational posture when all generic runtime compon
       configured: true,
       reason: "discord_bot_user_ok",
     },
-    liveTransferStatus: { ok: true, transport: "direct_service_role_rpc" },
+    liveTransferStatus: { ok: true, transport: "direct_service_role_rpc", payload: { liveSignedTransferReady: true } },
   });
 
   assert.equal(snapshot.ok, true);
@@ -128,6 +128,24 @@ test("runtime health fails closed when the configured live-transfer dependency p
   assert(snapshot.blockedReasons.includes("DIRECT_LIVE_TRANSFER_STATUS_FAILED"));
 });
 
+test("runtime health blocks a successful HTTP probe with malformed live-transfer data", () => {
+  const snapshot = _internals.buildRuntimeHealthSnapshot({
+    env: {
+      DISCORDOS_SUPABASE_PROJECT_REF: readinessInternals.MASTER_SUPABASE_REF,
+      DISCORDOS_SUPABASE_URL: `https://${readinessInternals.MASTER_SUPABASE_REF}.supabase.co`,
+      DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: `sb_secret_${"a".repeat(32)}`,
+    },
+    directServiceRoleStatus: { configured: true, reason: "direct_service_key_probe_ok" },
+    edgeServiceRoleStatus: { configured: false, reason: "edge_probe_not_required_for_master" },
+    discordBotStatus: { configured: true, reason: "discord_bot_user_ok" },
+    liveTransferStatus: { ok: true, transport: "direct_service_role_rpc", payload: {} },
+  });
+
+  assert.equal(snapshot.ok, false);
+  assert.equal(snapshot.components.liveTransferStatus.state, "blocked");
+  assert(snapshot.blockedReasons.includes("LIVE_TRANSFER_STATUS_INVALID_SHAPE"));
+});
+
 test("runtime health accepts an exact master project with a successful modern direct probe", () => {
   const snapshot = _internals.buildRuntimeHealthSnapshot({
     env: {
@@ -138,7 +156,7 @@ test("runtime health accepts an exact master project with a successful modern di
     directServiceRoleStatus: { configured: true, reachable: true, probeOk: true, reason: "direct_service_key_probe_ok" },
     edgeServiceRoleStatus: { configured: false, reason: "edge_service_role_not_verified" },
     discordBotStatus: { configured: false, reason: "missing_bot_token" },
-    liveTransferStatus: { ok: true, transport: "direct_service_role_rpc" },
+    liveTransferStatus: { ok: true, transport: "direct_service_role_rpc", payload: { liveSignedTransferReady: true } },
   });
   assert.equal(snapshot.components.supabaseProject.state, "ready");
   assert.equal(snapshot.components.serviceRole.state, "ready");

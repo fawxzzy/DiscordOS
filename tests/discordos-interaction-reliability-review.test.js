@@ -97,13 +97,39 @@ test("validation recomputes object digests and publication readback", () => {
   const validation = _internals.validateScenario(scenario);
   assert.equal(validation.ok, false);
   assert.equal(validation.invalidDigestCount, 1);
-  assert.equal(validation.publicationExpected, true);
+  assert.equal(validation.publicationExpected, false);
 
   scenario.objects.readback.observedPublication.digest = "sha256:" + "0".repeat(64);
   assert.equal(_internals.validateScenario(scenario).publicationExpected, false);
 
   scenario.fixtureTrace.pop();
   assert.equal(_internals.validateScenario(scenario).traceAccountingExact, false);
+});
+
+test("publication readback rejects a consistently self-signed wrong binding", () => {
+  for (const field of ["responseId", "receiptId", "leaseId"]) {
+    const scenario = structuredClone(buildReview().scenarios[0]);
+    scenario.objects.publication[field] = `wrong-${field}`;
+    const unsignedPublication = { ...scenario.objects.publication };
+    delete unsignedPublication.digest;
+    scenario.objects.publication.digest = _internals.sha256(_internals.canonicalJson(unsignedPublication));
+
+    const claimedProof = {
+      ...scenario.objects.readback.expectedPublication,
+      [field]: scenario.objects.publication[field],
+      digest: scenario.objects.publication.digest,
+    };
+    scenario.objects.readback.expectedPublication = claimedProof;
+    scenario.objects.readback.observedPublication = { ...claimedProof };
+    const unsignedReadback = { ...scenario.objects.readback };
+    delete unsignedReadback.digest;
+    scenario.objects.readback.digest = _internals.sha256(_internals.canonicalJson(unsignedReadback));
+
+    const result = _internals.validateScenario(scenario);
+    assert.equal(result.invalidDigestCount, 0);
+    assert.equal(result.publicationExpected, false);
+    assert.equal(result.ok, false);
+  }
 });
 
 test("duplicate replay reuses terminal identities with zero writes", () => {
