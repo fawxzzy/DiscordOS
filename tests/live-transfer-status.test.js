@@ -32,7 +32,8 @@ test("public live-transfer route never forwards private RPC rows on either trans
   const prior = new Map(names.map((name) => [name, process.env[name]]));
   const priorFetch = global.fetch;
   const response = () => ({
-    setHeader() {},
+    headers: {},
+    setHeader(name, value) { this.headers[name] = value; },
     status(code) { this.statusCode = code; return this; },
     json(payload) { this.body = payload; return this; },
   });
@@ -67,6 +68,7 @@ test("public live-transfer route never forwards private RPC rows on either trans
       }
       const result = await liveTransferStatus({ method: "GET" }, response());
       assert.equal(result.statusCode, 200);
+      assert.equal(result.headers["Cache-Control"], "no-store");
       assert.equal(result.body.statusRuntime, transport);
       assert.deepEqual(result.body.status, {
         liveSignedTransferReady: true,
@@ -132,8 +134,27 @@ test("live transfer status uses the direct service-role RPC for master", async (
   assert.equal(calls[0].url, "https://bxtcuhkotumitoqtrcej.supabase.co/rest/v1/rpc/discordos_get_live_transfer_status");
   assert.equal(calls[0].init.method, "POST");
   assert.equal(calls[0].init.headers.apikey, secret);
+  assert.equal(calls[0].init.headers["Content-Profile"], "fitness");
   assert.equal("Authorization" in calls[0].init.headers, false);
   assert.equal(calls[0].init.body, "{}");
+});
+
+test("legacy direct live-transfer RPC keeps its existing default schema", async () => {
+  const config = _internals.getLiveTransferStatusConfig({
+    DISCORDOS_SUPABASE_PROJECT_REF: "nwexsktuuenfdegzrbut",
+    DISCORDOS_SUPABASE_URL: "https://nwexsktuuenfdegzrbut.supabase.co",
+    DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: "synthetic-legacy-service-key",
+  });
+  const calls = [];
+  const result = await _internals.invokeLiveTransferStatus(config, {
+    fetchImpl: async (url, init) => {
+      calls.push({ url, init });
+      return { ok: true, status: 200, json: async () => ({ liveSignedTransferReady: true }) };
+    },
+  });
+  assert.equal(result.ok, true);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].init.headers["Content-Profile"], undefined);
 });
 
 test("live transfer probe rejects malformed success bodies on both transports", async () => {
@@ -227,7 +248,7 @@ test("live transfer status sends a modern publishable key as apikey only", async
   assert.equal("Authorization" in calls[0].init.headers, false);
 });
 
-test("live transfer status reports edge reader failures without secret values", async () => {
+test("live transfer status keeps upstream edge errors private", async () => {
   const result = await _internals.invokeEdgeLiveTransferStatus({
     supabaseUrl: "https://nwexsktuuenfdegzrbut.supabase.co",
     anonKey: "anon-test-key",
@@ -246,10 +267,57 @@ test("live transfer status reports edge reader failures without secret values", 
   assert.deepEqual(result, {
     ok: false,
     status: 502,
-    code: "STATUS_QUERY_FAILED",
-    payload: {
-      ok: false,
-      error: "STATUS_QUERY_FAILED",
-    },
+    code: "EDGE_LIVE_TRANSFER_STATUS_FAILED",
   });
+});
+
+test("public live-transfer responses never cache or echo upstream errors", async () => {
+  const names = ["DISCORDOS_SUPABASE_PROJECT_REF", "DISCORDOS_SUPABASE_URL", "DISCORDOS_SUPABASE_SERVICE_ROLE_KEY", "DISCORDOS_SUPABASE_ANON_KEY"];
+  const prior = new Map(names.map((name) => [name, process.env[name]]));
+  const priorFetch = global.fetch;
+  const response = () => ({
+    headers: {},
+    setHeader(name, value) { this.headers[name] = value; },
+    status(code) { this.statusCode = code; return this; },
+    json(payload) { this.body = payload; return this; },
+  });
+  try {
+    const method = await liveTransferStatus({ method: "POST" }, response());
+    assert.equal(method.statusCode, 405);
+    assert.equal(method.headers["Cache-Control"], "no-store");
+    for (const name of names) delete process.env[name];
+    const unconfigured = await liveTransferStatus({ method: "GET" }, response());
+    assert.equal(unconfigured.statusCode, 409);
+    assert.equal(unconfigured.headers["Cache-Control"], "no-store");
+
+    for (const projectRef of ["bxtcuhkotumitoqtrcej", "nwexsktuuenfdegzrbut"]) {
+      process.env.DISCORDOS_SUPABASE_PROJECT_REF = projectRef;
+      process.env.DISCORDOS_SUPABASE_URL = `https://${projectRef}.supabase.co`;
+      if (projectRef === "bxtcuhkotumitoqtrcej") {
+        process.env.DISCORDOS_SUPABASE_SERVICE_ROLE_KEY = `sb_secret_${"s".repeat(32)}`;
+        delete process.env.DISCORDOS_SUPABASE_ANON_KEY;
+      } else {
+        delete process.env.DISCORDOS_SUPABASE_SERVICE_ROLE_KEY;
+        process.env.DISCORDOS_SUPABASE_ANON_KEY = "synthetic-anon-key";
+      }
+      global.fetch = async () => ({
+        ok: false,
+        status: 403,
+        json: async () => ({ code: "private-upstream-code", error: "private-upstream-error" }),
+      });
+      const failed = await liveTransferStatus({ method: "GET" }, response());
+      assert.equal(failed.statusCode, 502);
+      assert.equal(failed.headers["Cache-Control"], "no-store");
+      assert.equal(failed.body.databaseErrorCode, projectRef === "bxtcuhkotumitoqtrcej"
+        ? "DIRECT_LIVE_TRANSFER_STATUS_FAILED"
+        : "EDGE_LIVE_TRANSFER_STATUS_FAILED");
+      assert.equal(JSON.stringify(failed.body).includes("private-upstream"), false);
+    }
+  } finally {
+    global.fetch = priorFetch;
+    for (const [name, value] of prior) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
 });

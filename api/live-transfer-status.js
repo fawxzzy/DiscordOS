@@ -8,6 +8,12 @@ const LIVE_TRANSFER_STATUS_FUNCTION = "discordos-live-transfer-status";
 const LIVE_TRANSFER_STATUS_RPC = "discordos_get_live_transfer_status";
 const LEGACY_SUPABASE_REF = "nwexsktuuenfdegzrbut";
 const MASTER_SUPABASE_REF = "bxtcuhkotumitoqtrcej";
+const PUBLIC_STATUS_ERROR_CODES = new Set([
+  "DIRECT_LIVE_TRANSFER_STATUS_FAILED",
+  "EDGE_LIVE_TRANSFER_STATUS_FAILED",
+  "LIVE_TRANSFER_STATUS_INVALID_SHAPE",
+  "LIVE_TRANSFER_STATUS_TRANSPORT_FAILED",
+]);
 const PUBLIC_COUNT_FIELDS = [
   "fitnessLiveTransferCount",
   "humanFitnessLiveTransferCount",
@@ -78,11 +84,12 @@ function getLiveTransferStatusConfig(env = process.env) {
   };
 }
 
-async function invokeDirectLiveTransferStatus({ supabaseUrl, serviceRoleKey, fetchImpl = fetch }) {
+async function invokeDirectLiveTransferStatus({ supabaseUrl, serviceRoleKey, schema = null, fetchImpl = fetch }) {
   const response = await fetchImpl(`${cleanUrl(supabaseUrl)}/rest/v1/rpc/${LIVE_TRANSFER_STATUS_RPC}`, {
     method: "POST",
     headers: {
       ...buildSupabaseElevatedHeaders(serviceRoleKey),
+      ...(schema === null ? {} : { "Content-Profile": schema }),
       "Content-Type": "application/json",
       Accept: "application/json",
     },
@@ -94,7 +101,7 @@ async function invokeDirectLiveTransferStatus({ supabaseUrl, serviceRoleKey, fet
     return {
       ok: false,
       status: response.status,
-      code: typeof payload?.code === "string" ? payload.code : "DIRECT_LIVE_TRANSFER_STATUS_FAILED",
+      code: "DIRECT_LIVE_TRANSFER_STATUS_FAILED",
       transport: "direct_service_role_rpc",
     };
   }
@@ -121,8 +128,7 @@ async function invokeEdgeLiveTransferStatus({ supabaseUrl, anonKey, fetchImpl = 
     return {
       ok: false,
       status: response.status,
-      code: typeof payload?.error === "string" ? payload.error : "EDGE_LIVE_TRANSFER_STATUS_FAILED",
-      payload,
+      code: "EDGE_LIVE_TRANSFER_STATUS_FAILED",
     };
   }
 
@@ -149,6 +155,7 @@ async function invokeLiveTransferStatus(config, { fetchImpl = fetch } = {}) {
       ? await invokeDirectLiveTransferStatus({
         supabaseUrl: config.supabaseUrl,
         serviceRoleKey: config.serviceRoleKey,
+        schema: config.masterBound ? "fitness" : null,
         fetchImpl,
       })
       : await invokeEdgeLiveTransferStatus({
@@ -191,6 +198,7 @@ function publicLiveTransferStatus(payload) {
 }
 
 module.exports = async function liveTransferStatus(req, res) {
+  res.setHeader("Cache-Control", "no-store");
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).json({
@@ -220,7 +228,9 @@ module.exports = async function liveTransferStatus(req, res) {
       service: "discordos-live-transfer-status",
       error: "LIVE_TRANSFER_STATUS_PROBE_FAILED",
       databaseStatus: status.status,
-      databaseErrorCode: status.code,
+      databaseErrorCode: PUBLIC_STATUS_ERROR_CODES.has(status.code)
+        ? status.code
+        : "LIVE_TRANSFER_STATUS_PROBE_FAILED",
       statusRuntime: status.transport,
       activation: activationStatus,
       generatedAt: new Date().toISOString(),
