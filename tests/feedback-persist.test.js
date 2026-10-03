@@ -172,6 +172,7 @@ test("persisted writer inserts through service-role proof RPC", async () => {
   assert.equal(calls[0].init.method, "POST");
   assert.equal(calls[0].init.headers.apikey, "service-role-test-key");
   assert.equal(calls[0].init.headers.Authorization, "Bearer service-role-test-key");
+  assert.equal(calls[0].init.headers["Content-Profile"], undefined);
   assert.equal(calls[0].init.headers.Prefer, "return=representation");
   assert.deepEqual(JSON.parse(calls[0].init.body), {
     payload: {
@@ -181,6 +182,21 @@ test("persisted writer inserts through service-role proof RPC", async () => {
       completion_review_status: "not_required",
     },
   });
+});
+
+test("master feedback insert selects only the narrow DiscordOS API schema", async () => {
+  const calls = [];
+  const result = await _internals.insertFeedbackReport({ report_id: "fixture-report" }, {
+    supabaseUrl: "https://bxtcuhkotumitoqtrcej.supabase.co",
+    serviceRoleKey: "synthetic-service-key",
+    fetchImpl: async (url, init) => {
+      calls.push({ url, init });
+      return { ok: true, status: 201, json: async () => [{ report_id: "fixture-report" }] };
+    },
+  });
+  assert.equal(result.ok, true);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].init.headers["Content-Profile"], "discordos_api");
 });
 
 test("persisted writer invokes edge writer with anon authorization", async () => {

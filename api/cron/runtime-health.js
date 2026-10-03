@@ -10,6 +10,7 @@ const {
   buildSupabaseElevatedHeaders,
   buildSupabasePublicHeaders,
 } = require("../../scripts/supabase-api-key-headers");
+const { contentProfileForDirectRpc } = require("../../scripts/discordos-supabase-service-rpc");
 
 function hasValue(value) {
   return typeof value === "string" && value.trim().length > 0;
@@ -220,6 +221,9 @@ async function insertCronAuditRun(payload, { supabaseUrl, serviceRoleKey, fetchI
     method: "POST",
     headers: {
       ...buildSupabaseElevatedHeaders(serviceRoleKey),
+      ...(contentProfileForDirectRpc(supabaseUrl, "discordos_insert_runtime_health_cron_run")
+        ? { "Content-Profile": "discordos_api" }
+        : {}),
       "Content-Type": "application/json",
       Accept: "application/json",
       Prefer: "return=representation",

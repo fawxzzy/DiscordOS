@@ -354,6 +354,26 @@ test("cron audit config requires direct service-role transport on master", () =>
   assert.deepEqual(config.reasonCodes, ["master_direct_service_role_required"]);
 });
 
+test("master cron audit insert selects discordos_api and legacy keeps its current schema", async () => {
+  for (const [supabaseUrl, expectedProfile] of [
+    ["https://bxtcuhkotumitoqtrcej.supabase.co", "discordos_api"],
+    ["https://nwexsktuuenfdegzrbut.supabase.co", undefined],
+  ]) {
+    const calls = [];
+    const result = await _internals.insertCronAuditRun({ run_id: "fixture-run" }, {
+      supabaseUrl,
+      serviceRoleKey: "synthetic-service-key",
+      fetchImpl: async (url, init) => {
+        calls.push({ url, init });
+        return response([{ run_id: "fixture-run" }]);
+      },
+    });
+    assert.equal(result.ok, true);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].init.headers["Content-Profile"], expectedProfile);
+  }
+});
+
 test("cron audit config names the direct master transport", () => {
   const config = _internals.getCronAuditWriterConfig({
     DISCORDOS_SUPABASE_PROJECT_REF: readinessInternals.MASTER_SUPABASE_REF,

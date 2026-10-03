@@ -10,8 +10,15 @@ test("master direct readbacks select only the narrow DiscordOS API schema", asyn
     [masterUrl, "discordos_get_music_sesh_readback", "discordos_api"],
     [masterUrl, "discordos_get_product_workflow_readback", "discordos_api"],
     [masterUrl, "discordos_get_runtime_health_cron_run_status", "discordos_api"],
-    [masterUrl, "discordos_upsert_board_card", undefined],
+    [masterUrl, "discordos_insert_feedback_proof", "discordos_api"],
+    [masterUrl, "discordos_insert_runtime_health_cron_run", "discordos_api"],
+    [masterUrl, "discordos_upsert_board_card", "discordos_api"],
+    [masterUrl, "discordos_upsert_music_sesh_event", "discordos_api"],
+    [masterUrl, "discordos_insert_moderation_audit", "discordos_api"],
+    [masterUrl, "discordos_search_moderation_audit", "discordos_api"],
+    [masterUrl, "discordos_insert_button_route_audit", undefined],
     ["https://nwexsktuuenfdegzrbut.supabase.co", "discordos_get_product_workflow_readback", undefined],
+    ["https://nwexsktuuenfdegzrbut.supabase.co", "discordos_upsert_board_card", undefined],
   ];
   for (const [supabaseUrl, functionName, expectedProfile] of cases) {
     const calls = [];

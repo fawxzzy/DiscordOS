@@ -4,10 +4,16 @@ const {
 } = require("./supabase-api-key-headers");
 
 const MASTER_SUPABASE_URL = "https://bxtcuhkotumitoqtrcej.supabase.co";
-const MASTER_READBACK_RPCS = new Set([
+const MASTER_FACADE_RPCS = new Set([
   "discordos_get_music_sesh_readback",
   "discordos_get_product_workflow_readback",
   "discordos_get_runtime_health_cron_run_status",
+  "discordos_insert_feedback_proof",
+  "discordos_insert_runtime_health_cron_run",
+  "discordos_upsert_board_card",
+  "discordos_upsert_music_sesh_event",
+  "discordos_insert_moderation_audit",
+  "discordos_search_moderation_audit",
 ]);
 
 function hasValue(value) {
@@ -20,7 +26,7 @@ function cleanUrl(value) {
 
 function contentProfileForDirectRpc(supabaseUrl, functionName) {
   return cleanUrl(supabaseUrl) === MASTER_SUPABASE_URL
-    && MASTER_READBACK_RPCS.has(String(functionName || "").trim())
+    && MASTER_FACADE_RPCS.has(String(functionName || "").trim())
     ? "discordos_api"
     : null;
 }

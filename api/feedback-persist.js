@@ -4,6 +4,7 @@ const {
   buildSupabaseElevatedHeaders,
   buildSupabasePublicHeaders,
 } = require("../scripts/supabase-api-key-headers");
+const { contentProfileForDirectRpc } = require("../scripts/discordos-supabase-service-rpc");
 
 const SCHEMA = "discordos";
 const REPORTS_TABLE = "discord_feedback_reports";
@@ -156,6 +157,9 @@ async function insertFeedbackReport(row, { supabaseUrl, serviceRoleKey, fetchImp
     method: "POST",
     headers: {
       ...buildSupabaseElevatedHeaders(serviceRoleKey),
+      ...(contentProfileForDirectRpc(supabaseUrl, "discordos_insert_feedback_proof")
+        ? { "Content-Profile": "discordos_api" }
+        : {}),
       "Content-Type": "application/json",
       Accept: "application/json",
       Prefer: "return=representation",
