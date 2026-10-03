@@ -126,6 +126,9 @@ test("cron runtime health builds no-side-effect passing proof", async () => {
     env,
     now: new Date("2026-06-13T04:00:00.000Z"),
     fetchImpl: async (url) => {
+      if (String(url).includes("/rest/v1/rpc/discordos_get_live_transfer_status")) {
+        return response({ liveSignedTransferReady: true });
+      }
       if (String(url).includes("/functions/v1/discordos-readiness")) {
         return response({
           supabaseProjectRef: readinessInternals.EXPECTED_SUPABASE_REF,
@@ -167,12 +170,16 @@ test("cron runtime health accepts exact master modern direct-key readiness", asy
     now: new Date("2026-06-13T04:00:00.000Z"),
     fetchImpl: async (url) => {
       if (String(url).endsWith("/rest/v1/")) { directCalls += 1; return response({}); }
+      if (String(url).includes("/rest/v1/rpc/discordos_get_live_transfer_status")) {
+        directCalls += 1;
+        return response({ liveSignedTransferReady: true });
+      }
       if (String(url).includes("/functions/v1/")) return response(null, { ok: false, status: 401 });
       if (String(url).includes("/users/@me")) return response({ bot: true });
       throw new Error(`unexpected fetch: ${url}`);
     },
   });
-  assert.equal(directCalls, 1);
+  assert.equal(directCalls, 2);
   assert.equal(proof.snapshot.components.supabaseProject.state, "ready");
   assert.equal(proof.snapshot.components.serviceRole.state, "ready");
   assert.equal(proof.snapshot.components.serviceRole.runtime, "vercel-env");
@@ -192,6 +199,9 @@ test("cron runtime health rejects a modern secret in the public Edge slot before
     env,
     fetchImpl: async (url) => {
       if (String(url).endsWith("/rest/v1/")) return response({});
+      if (String(url).includes("/rest/v1/rpc/discordos_get_live_transfer_status")) {
+        return response({ liveSignedTransferReady: true });
+      }
       if (String(url).includes("/functions/v1/")) { edgeCalls += 1; return response({}); }
       if (String(url).includes("/users/@me")) return response({ bot: true });
       throw new Error(`unexpected fetch: ${url}`);
@@ -331,12 +341,60 @@ test("cron runtime health audit writer fails closed when enabled without service
   });
 });
 
+test("cron audit config requires direct service-role transport on master", () => {
+  const config = _internals.getCronAuditWriterConfig({
+    DISCORDOS_SUPABASE_PROJECT_REF: readinessInternals.MASTER_SUPABASE_REF,
+    DISCORDOS_SUPABASE_URL: `https://${readinessInternals.MASTER_SUPABASE_REF}.supabase.co`,
+    DISCORDOS_SUPABASE_ANON_KEY: `sb_publishable_${"p".repeat(32)}`,
+  });
+
+  assert.equal(config.ok, false);
+  assert.equal(config.masterBound, true);
+  assert.equal(config.edgeAvailable, false);
+  assert.deepEqual(config.reasonCodes, ["master_direct_service_role_required"]);
+});
+
+test("master cron audit insert selects discordos_api and legacy keeps its current schema", async () => {
+  for (const [supabaseUrl, expectedProfile] of [
+    ["https://bxtcuhkotumitoqtrcej.supabase.co", "discordos_api"],
+    ["https://nwexsktuuenfdegzrbut.supabase.co", undefined],
+  ]) {
+    const calls = [];
+    const result = await _internals.insertCronAuditRun({ run_id: "fixture-run" }, {
+      supabaseUrl,
+      serviceRoleKey: "synthetic-service-key",
+      fetchImpl: async (url, init) => {
+        calls.push({ url, init });
+        return response([{ run_id: "fixture-run" }]);
+      },
+    });
+    assert.equal(result.ok, true);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].init.headers["Content-Profile"], expectedProfile);
+  }
+});
+
+test("cron audit config names the direct master transport", () => {
+  const config = _internals.getCronAuditWriterConfig({
+    DISCORDOS_SUPABASE_PROJECT_REF: readinessInternals.MASTER_SUPABASE_REF,
+    DISCORDOS_SUPABASE_URL: `https://${readinessInternals.MASTER_SUPABASE_REF}.supabase.co`,
+    DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: `sb_secret_${"s".repeat(32)}`,
+  });
+
+  assert.equal(config.ok, true);
+  assert.equal(config.directAvailable, true);
+  assert.equal(config.transport, "master_direct_service_role");
+});
+
 test("cron runtime health audit writer persists sanitized run receipts", async () => {
   const env = operationalEnv();
   const proof = await _internals.buildCronRuntimeHealthProof({
     env,
     now: new Date("2026-06-13T04:00:00.000Z"),
     fetchImpl: async (url) => {
+      if (String(url).includes("/rest/v1/rpc/discordos_get_live_transfer_status")) {
+        return response({ liveSignedTransferReady: true });
+      }
       if (String(url).includes("/functions/v1/discordos-readiness")) {
         return response({
           supabaseProjectRef: readinessInternals.EXPECTED_SUPABASE_REF,
@@ -388,7 +446,7 @@ test("cron runtime health audit writer persists sanitized run receipts", async (
   assert.equal(audit.enabled, true);
   assert.equal(audit.status, "written");
   assert.equal(audit.written, true);
-  assert.equal(audit.runtime, "vercel-env-service-role");
+  assert.equal(audit.runtime, "legacy_direct_service_role");
   assert.equal(audit.httpStatus, 201);
   assert.equal(audit.runId, "runtime-health-cron-vercel-daily-runtime-health-20260613T040000000Z");
 });
@@ -450,6 +508,9 @@ test("cron runtime health audit writer can use Supabase Edge persistence", async
       if (String(url).includes("/users/@me")) {
         return response({ bot: true });
       }
+      if (String(url).includes("/functions/v1/discordos-live-transfer-status")) {
+        return response({ ok: true, liveSignedTransferReady: true });
+      }
       throw new Error(`unexpected fetch: ${url}`);
     },
   });
@@ -476,7 +537,7 @@ test("cron runtime health audit writer can use Supabase Edge persistence", async
   });
 
   assert.equal(audit.ok, true);
-  assert.equal(audit.runtime, "supabase-edge-function");
+  assert.equal(audit.runtime, "legacy_edge_fallback");
   assert.equal(audit.status, "written");
   assert.equal(audit.runId, "runtime-health-cron-vercel-daily-runtime-health-20260613T040000000Z");
 });
@@ -516,6 +577,9 @@ test("cron runtime health sends enabled critical alerts only", async () => {
     env,
     now: new Date("2026-06-13T04:00:00.000Z"),
     fetchImpl: async (url, init = {}) => {
+      if (String(url).includes("/rest/v1/rpc/discordos_get_live_transfer_status")) {
+        return response({ liveSignedTransferReady: true });
+      }
       if (String(url).includes("/functions/v1/discordos-readiness")) {
         return response({
           supabaseProjectRef: readinessInternals.EXPECTED_SUPABASE_REF,

@@ -168,6 +168,9 @@ test("readiness handler reports the exact master project and modern direct key a
     assert.equal(payload.directServiceRoleConfigured, true);
     assert.equal(payload.serviceRoleConfigured, true);
     assert.equal(payload.serviceRoleRuntime, "vercel-env");
+    assert.equal(payload.supabaseRuntimePath, "master_direct_service_role");
+    assert.equal(payload.edgeServiceRoleRequired, false);
+    assert.equal(payload.edgeServiceRoleReason, "edge_probe_not_required_for_master");
   } finally {
     global.fetch = originalFetch;
     for (const key of keys) before[key] === undefined ? delete process.env[key] : process.env[key] = before[key];
@@ -215,7 +218,7 @@ test("edge service-role status accepts DiscordOS edge probe success", async () =
   assert.equal(status.projectRefMatches, true);
 });
 
-test("edge service-role status accepts exact master probe using publishable apikey only", async () => {
+test("edge service-role status is explicitly not required on master", async () => {
   const publishable = `sb_publishable_${"b".repeat(32)}`;
   let observed;
   const status = await _internals.getEdgeServiceRoleStatus({
@@ -238,10 +241,11 @@ test("edge service-role status accepts exact master probe using publishable apik
     },
   });
 
-  assert.equal(status.configured, true);
+  assert.equal(status.configured, false);
   assert.equal(status.projectRefMatches, true);
-  assert.equal(observed.init.headers.apikey, publishable);
-  assert.equal("Authorization" in observed.init.headers, false);
+  assert.equal(status.required, false);
+  assert.equal(status.reason, "edge_probe_not_required_for_master");
+  assert.equal(observed, undefined);
 });
 
 test("edge service-role status rejects unrelated self-consistent project before fetch", async () => {
@@ -294,7 +298,9 @@ test("edge service-role status rejects cross-mode public credentials before fetc
     });
     assert.equal(status.configured, false);
     assert.equal(status.reachable, false);
-    assert.equal(status.reason, "edge_probe_credential_binding_mismatch");
+    assert.equal(status.reason, fixture.projectRef === _internals.MASTER_SUPABASE_REF
+      ? "edge_probe_not_required_for_master"
+      : "edge_probe_credential_binding_mismatch");
     assert.equal(fetchCount, 0);
   }
 });

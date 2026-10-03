@@ -2,8 +2,8 @@ const {
   _internals: moderationPreflightInternals,
 } = require("./discordos-moderation-preflight");
 const {
-  _internals: supabaseRpcInternals,
-} = require("./discordos-supabase-service-rpc");
+  _internals: boardModerationRpcInternals,
+} = require("./discordos-board-moderation-supabase-rpc");
 
 const REVIEW_SEARCH_RPC = "discordos_search_moderation_audit";
 
@@ -125,19 +125,18 @@ async function buildModerationAuditReviewSearch({
   };
 
   if (validation.ok && live) {
-    const config = supabaseRpcInternals.getServiceRoleRpcConfig(env);
-    if (!config.ok) {
+    const fetched = await boardModerationRpcInternals.callBoardModerationRpc({
+      env,
+      functionName: REVIEW_SEARCH_RPC,
+      payload: { payload },
+      fetchImpl,
+    });
+    if (!fetched.attempted) {
       rpcResult = {
         ...rpcResult,
-        reasonCodes: config.reasonCodes,
+        reasonCodes: fetched.reasonCodes,
       };
     } else {
-      const fetched = await supabaseRpcInternals.callServiceRoleRpc({
-        ...config,
-        functionName: REVIEW_SEARCH_RPC,
-        payload: { payload },
-        fetchImpl,
-      });
       rpcResult = {
         ok: fetched.ok,
         attempted: true,

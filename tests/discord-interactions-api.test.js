@@ -85,6 +85,65 @@ test("discord interactions endpoint returns the Fitness verify modal for the leg
   assert.equal(result.payload.data.custom_id, "fitness_verify_modal");
 });
 
+test("discord member-link configuration never mixes dedicated and general project credentials", () => {
+  assert.deepEqual(_internals.resolveDiscordMemberLinkConfig({
+    DISCORDOS_SUPABASE_URL: "https://legacy.example.com",
+    DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: "legacy-key",
+    DISCORDOS_MEMBER_LINK_SUPABASE_URL: "https://master.example.com",
+  }), {
+    supabaseUrl: "https://master.example.com",
+    serviceRoleKey: null,
+  });
+  assert.deepEqual(_internals.resolveDiscordMemberLinkConfig({
+    DISCORDOS_SUPABASE_URL: "https://legacy.example.com",
+    DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: "legacy-key",
+    DISCORDOS_MEMBER_LINK_SUPABASE_URL: "https://master.example.com",
+    DISCORDOS_MEMBER_LINK_SUPABASE_SERVICE_ROLE_KEY: "master-key",
+  }), {
+    supabaseUrl: "https://master.example.com",
+    serviceRoleKey: "master-key",
+  });
+});
+
+test("discord verification makes no outbound call with incomplete member-link configuration", async () => {
+  const partialConfigs = [
+    { DISCORDOS_MEMBER_LINK_SUPABASE_URL: "https://master.example.com" },
+    { DISCORDOS_MEMBER_LINK_SUPABASE_SERVICE_ROLE_KEY: "master-key" },
+    { DISCORDOS_SUPABASE_URL: undefined, DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: undefined },
+  ];
+  for (const partialConfig of partialConfigs) {
+    let fetchCount = 0;
+    const result = await _internals.buildFitnessVerifyResponse({
+      interaction: {
+        type: 5,
+        guild_id: "guild-id",
+        member: { user: { id: "discord-user-id", username: "zac" } },
+        data: {
+          custom_id: "fitness_verify_modal",
+          components: [{ components: [{ custom_id: "fitness_token", value: "FWX-ABCD-1234" }] }],
+        },
+      },
+      env: {
+        DISCORDOS_FITNESS_VERIFY_SECRET: "verification-secret",
+        DISCORDOS_FITNESS_VERIFY_ENDPOINT: "https://fitness.example.com/api/discord/verify",
+        DISCORDOS_SUPABASE_URL: "https://legacy.example.com",
+        DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: "legacy-key",
+        DISCORDOS_GUILD_ID: "guild-id",
+        DISCORDOS_VERIFIED_ROLE_ID: "verified-role",
+        DISCORDOS_BOT_TOKEN: "discord-bot-token",
+        ...partialConfig,
+      },
+      fetchImpl: async () => {
+        fetchCount += 1;
+        throw new Error("No outbound call expected");
+      },
+    });
+    assert.equal(fetchCount, 0);
+    assert(result.reasonCodes.includes("verification_member_link_config_missing"));
+    assert.match(result.payload.data.content, /account link is not configured/);
+  }
+});
+
 test("discord interactions endpoint verifies legacy Fitness modal submissions through the Fitness bridge", async () => {
   const calls = [];
   const body = JSON.stringify({
@@ -125,6 +184,8 @@ test("discord interactions endpoint verifies legacy Fitness modal submissions th
       DISCORDOS_FITNESS_VERIFY_ENDPOINT: "https://fitness.example.com/api/discord/verify",
       DISCORDOS_SUPABASE_URL: "https://discordos.example.com",
       DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: "service-role-key",
+      DISCORDOS_MEMBER_LINK_SUPABASE_URL: "https://master.example.com",
+      DISCORDOS_MEMBER_LINK_SUPABASE_SERVICE_ROLE_KEY: "master-key",
       DISCORDOS_GUILD_ID: "1504668396338413670",
       DISCORDOS_VERIFIED_ROLE_ID: "verified-role",
       DISCORDOS_UNVERIFIED_ROLE_ID: "unverified-role",
@@ -155,9 +216,10 @@ test("discord interactions endpoint verifies legacy Fitness modal submissions th
         });
       }
 
-      if (String(url) === "https://discordos.example.com/rest/v1/rpc/upsert_discord_member_link") {
+      if (String(url) === "https://master.example.com/rest/v1/rpc/upsert_discord_member_link") {
         const rpcBody = JSON.parse(String(init.body));
-        assert.equal(init.headers.apikey, "service-role-key");
+        assert.equal(init.headers.apikey, "master-key");
+        assert.equal(init.headers["Content-Profile"], "fitness");
         assert.equal(rpcBody.input_fitness_user_id, "fitness-user-id");
         assert.equal(rpcBody.input_discord_user_id, "1515220075366580224");
         assert.equal(rpcBody.input_user_number, 4);
@@ -193,6 +255,53 @@ test("discord interactions endpoint verifies legacy Fitness modal submissions th
   assert.equal(result.payload.type, 4);
   assert.equal(result.payload.data.content, "Verified as Member 4. You now have access to the server.");
   assert.equal(calls.length, 5);
+});
+
+test("discord interactions endpoint reports reconciliation when member-link save fails after role grant", async () => {
+  const calls = [];
+  const result = await _internals.buildFitnessVerifyResponse({
+    interaction: {
+      type: 5,
+      guild_id: "guild-id",
+      member: { user: { id: "discord-user-id", username: "zac" } },
+      data: {
+        custom_id: "fitness_verify_modal",
+        components: [{ components: [{ custom_id: "fitness_token", value: "FWX-ABCD-1234" }] }],
+      },
+    },
+    env: {
+      DISCORDOS_FITNESS_VERIFY_SECRET: "verification-secret",
+      DISCORDOS_FITNESS_VERIFY_ENDPOINT: "https://fitness.example.com/api/discord/verify",
+      DISCORDOS_MEMBER_LINK_SUPABASE_URL: "https://master.example.com",
+      DISCORDOS_MEMBER_LINK_SUPABASE_SERVICE_ROLE_KEY: "master-key",
+      DISCORDOS_GUILD_ID: "guild-id",
+      DISCORDOS_VERIFIED_ROLE_ID: "verified-role",
+      DISCORDOS_BOT_TOKEN: "discord-bot-token",
+    },
+    fetchImpl: async (url, init = {}) => {
+      calls.push({ url: String(url), method: init.method });
+      if (String(url) === "https://fitness.example.com/api/discord/verify") {
+        return new Response(JSON.stringify({ ok: true, memberId: "fitness-user-id", userKind: "unknown" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (String(url) === "https://discord.com/api/v10/guilds/guild-id/members/discord-user-id/roles/verified-role") {
+        return new Response(null, { status: 204 });
+      }
+      if (String(url) === "https://master.example.com/rest/v1/rpc/upsert_discord_member_link") {
+        assert.equal(init.headers["Content-Profile"], "fitness");
+        return new Response(JSON.stringify({ message: "unavailable" }), { status: 503 });
+      }
+      throw new Error(`Unexpected fetch ${String(url)}`);
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.statusCode, 200);
+  assert.match(result.payload.data.content, /could not finish saving your account link/);
+  assert(result.reasonCodes.includes("verification_member_link_upsert_failed"));
+  assert.deepEqual(calls.map(({ method }) => method), ["POST", "PUT", "POST"]);
 });
 
 test("discord interactions endpoint fails closed when bridge endpoint env is absent", async () => {

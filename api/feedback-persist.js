@@ -4,9 +4,12 @@ const {
   buildSupabaseElevatedHeaders,
   buildSupabasePublicHeaders,
 } = require("../scripts/supabase-api-key-headers");
+const { contentProfileForDirectRpc } = require("../scripts/discordos-supabase-service-rpc");
 
 const SCHEMA = "discordos";
 const REPORTS_TABLE = "discord_feedback_reports";
+const LEGACY_SUPABASE_REF = "nwexsktuuenfdegzrbut";
+const MASTER_SUPABASE_REF = "bxtcuhkotumitoqtrcej";
 
 function hasValue(value) {
   return typeof value === "string" && value.trim().length > 0;
@@ -47,10 +50,16 @@ function getPersistedWriterConfig(env = process.env) {
   const activationStatus = activationInternals.getActivationGuardStatus(env);
   const persistedWriterEnabled = enabledFlag(env.DISCORDOS_PERSISTED_WRITER_ENABLED);
   const supabaseUrlConfigured = hasValue(env.DISCORDOS_SUPABASE_URL);
+  const projectRef = hasValue(env.DISCORDOS_SUPABASE_PROJECT_REF) ? env.DISCORDOS_SUPABASE_PROJECT_REF.trim() : null;
+  const expectedUrl = projectRef === null ? null : `https://${projectRef}.supabase.co`;
+  const projectBindingMatches = supabaseUrlConfigured && cleanUrl(env.DISCORDOS_SUPABASE_URL.trim()) === expectedUrl;
+  const masterBound = projectRef === MASTER_SUPABASE_REF && projectBindingMatches;
+  const legacyBound = projectRef === LEGACY_SUPABASE_REF && projectBindingMatches;
   const anonKeyConfigured = hasValue(env.DISCORDOS_SUPABASE_ANON_KEY);
   const serviceRoleConfigured = hasValue(env.DISCORDOS_SUPABASE_SERVICE_ROLE_KEY);
   const writerModeAllowsPersistence = activationStatus.writerMode === "shadow" || activationStatus.writerMode === "active";
-  const edgePersistAvailable = supabaseUrlConfigured && anonKeyConfigured;
+  const edgePersistAvailable = legacyBound && anonKeyConfigured;
+  const directPersistAvailable = (masterBound || legacyBound) && serviceRoleConfigured;
   const blockedReasons = [];
 
   if (!persistedWriterEnabled) {
@@ -65,15 +74,28 @@ function getPersistedWriterConfig(env = process.env) {
     blockedReasons.push("missing_supabase_url");
   }
 
-  if (!serviceRoleConfigured && !edgePersistAvailable) {
+  if (projectRef === null) {
+    blockedReasons.push("missing_supabase_project_ref");
+  } else if (supabaseUrlConfigured && !projectBindingMatches) {
+    blockedReasons.push("supabase_project_binding_mismatch");
+  }
+
+  if (!directPersistAvailable && !edgePersistAvailable) {
     blockedReasons.push("missing_service_role_key");
   }
 
-  if (!edgePersistAvailable) {
+  if (masterBound && !directPersistAvailable) {
+    blockedReasons.push("master_direct_service_role_required");
+  } else if (!directPersistAvailable && !edgePersistAvailable) {
     blockedReasons.push("missing_edge_persist_config");
   }
 
-  const hasPersistenceRuntime = serviceRoleConfigured || edgePersistAvailable;
+  const hasPersistenceRuntime = directPersistAvailable || edgePersistAvailable;
+  const transport = directPersistAvailable
+    ? masterBound ? "master_direct_service_role" : "legacy_direct_service_role"
+    : edgePersistAvailable
+      ? "legacy_edge_fallback"
+      : "none";
 
   return {
     persistedWriterEnabled,
@@ -82,9 +104,15 @@ function getPersistedWriterConfig(env = process.env) {
     rollbackMode: activationStatus.rollbackMode,
     writerModeAllowsPersistence,
     supabaseUrlConfigured,
+    projectRef,
+    projectBindingMatches,
+    masterBound,
+    legacyBound,
     anonKeyConfigured,
     serviceRoleConfigured,
+    directPersistAvailable,
     edgePersistAvailable,
+    transport,
     canAttemptPersistence: persistedWriterEnabled && writerModeAllowsPersistence && hasPersistenceRuntime,
     blockedReasons,
   };
@@ -129,6 +157,9 @@ async function insertFeedbackReport(row, { supabaseUrl, serviceRoleKey, fetchImp
     method: "POST",
     headers: {
       ...buildSupabaseElevatedHeaders(serviceRoleKey),
+      ...(contentProfileForDirectRpc(supabaseUrl, "discordos_insert_feedback_proof")
+        ? { "Content-Profile": "discordos_api" }
+        : {}),
       "Content-Type": "application/json",
       Accept: "application/json",
       Prefer: "return=representation",
@@ -255,7 +286,7 @@ module.exports = async function feedbackPersist(req, res) {
     });
   }
 
-  const inserted = writerConfig.serviceRoleConfigured
+  const inserted = writerConfig.directPersistAvailable
     ? await insertFeedbackReport(normalized.value, {
         supabaseUrl: process.env.DISCORDOS_SUPABASE_URL,
         serviceRoleKey: process.env.DISCORDOS_SUPABASE_SERVICE_ROLE_KEY,
@@ -276,14 +307,14 @@ module.exports = async function feedbackPersist(req, res) {
       writesDiscord: false,
       writesFitness: false,
       trafficMoved: false,
-      persistenceRuntime: writerConfig.serviceRoleConfigured ? "vercel-env-service-role" : "supabase-edge-function",
+      persistenceRuntime: writerConfig.transport,
       databaseStatus: inserted.status,
       databaseErrorCode: inserted.code,
       generatedAt: new Date().toISOString(),
     });
   }
 
-  const row = writerConfig.serviceRoleConfigured ? inserted.row : inserted.payload.row;
+  const row = writerConfig.directPersistAvailable ? inserted.row : inserted.payload.row;
   const liveTransferProof = isLiveTransferProofRow(row, writerConfig);
 
   return res.status(201).json({
@@ -299,7 +330,7 @@ module.exports = async function feedbackPersist(req, res) {
     writerMode: writerConfig.writerMode,
     trafficTransferMode: writerConfig.trafficTransferMode,
     rollbackMode: writerConfig.rollbackMode,
-    persistenceRuntime: writerConfig.serviceRoleConfigured ? "vercel-env-service-role" : "supabase-edge-function",
+    persistenceRuntime: writerConfig.transport,
     row,
     generatedAt: new Date().toISOString(),
   });

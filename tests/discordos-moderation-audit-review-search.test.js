@@ -47,7 +47,8 @@ test("moderation audit review search fetches sanitized rows when live", async ()
     caseId: "mod-1",
     limit: 5,
     env: {
-      DISCORDOS_SUPABASE_URL: "https://example.supabase.co",
+      DISCORDOS_SUPABASE_PROJECT_REF: "bxtcuhkotumitoqtrcej",
+      DISCORDOS_SUPABASE_URL: "https://bxtcuhkotumitoqtrcej.supabase.co",
       DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: "service-role",
     },
     fetchImpl: async (url, init) => {
@@ -78,7 +79,7 @@ test("moderation audit review search fetches sanitized rows when live", async ()
   assert.equal(result.liveAttempted, true);
   assert.equal(result.returnedCount, 1);
   assert.equal(result.rows[0].actorFingerprintPresent, true);
-  assert.equal(calls[0].url, "https://example.supabase.co/rest/v1/rpc/discordos_search_moderation_audit");
+  assert.equal(calls[0].url, "https://bxtcuhkotumitoqtrcej.supabase.co/rest/v1/rpc/discordos_search_moderation_audit");
 });
 
 test("moderation audit review search renders without raw ids", async () => {
