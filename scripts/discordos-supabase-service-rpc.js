@@ -3,12 +3,26 @@ const {
   buildSupabasePublicHeaders,
 } = require("./supabase-api-key-headers");
 
+const MASTER_SUPABASE_URL = "https://bxtcuhkotumitoqtrcej.supabase.co";
+const MASTER_READBACK_RPCS = new Set([
+  "discordos_get_music_sesh_readback",
+  "discordos_get_product_workflow_readback",
+  "discordos_get_runtime_health_cron_run_status",
+]);
+
 function hasValue(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
 function cleanUrl(value) {
   return String(value || "").trim().replace(/\/+$/, "");
+}
+
+function contentProfileForDirectRpc(supabaseUrl, functionName) {
+  return cleanUrl(supabaseUrl) === MASTER_SUPABASE_URL
+    && MASTER_READBACK_RPCS.has(String(functionName || "").trim())
+    ? "discordos_api"
+    : null;
 }
 
 function getServiceRoleRpcConfig(env = process.env) {
@@ -112,6 +126,9 @@ async function callServiceRoleRpc({
     method: "POST",
     headers: {
       ...buildSupabaseElevatedHeaders(serviceRoleKey),
+      ...(contentProfileForDirectRpc(supabaseUrl, functionName) === null
+        ? {}
+        : { "Content-Profile": "discordos_api" }),
       "Content-Type": "application/json",
       Accept: "application/json",
     },
@@ -140,9 +157,11 @@ async function callServiceRoleRpc({
 }
 
 module.exports = {
+  contentProfileForDirectRpc,
   _internals: {
     hasValue,
     cleanUrl,
+    contentProfileForDirectRpc,
     getServiceRoleRpcConfig,
     callServiceRoleRpc,
   },

@@ -2,6 +2,33 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const { _internals } = require("../scripts/discordos-board-moderation-supabase-rpc");
+const { _internals: serviceRpcInternals } = require("../scripts/discordos-supabase-service-rpc");
+
+test("master direct readbacks select only the narrow DiscordOS API schema", async () => {
+  const masterUrl = "https://bxtcuhkotumitoqtrcej.supabase.co";
+  const cases = [
+    [masterUrl, "discordos_get_music_sesh_readback", "discordos_api"],
+    [masterUrl, "discordos_get_product_workflow_readback", "discordos_api"],
+    [masterUrl, "discordos_get_runtime_health_cron_run_status", "discordos_api"],
+    [masterUrl, "discordos_upsert_board_card", undefined],
+    ["https://nwexsktuuenfdegzrbut.supabase.co", "discordos_get_product_workflow_readback", undefined],
+  ];
+  for (const [supabaseUrl, functionName, expectedProfile] of cases) {
+    const calls = [];
+    const result = await serviceRpcInternals.callServiceRoleRpc({
+      supabaseUrl,
+      serviceRoleKey: "synthetic-service-key",
+      functionName,
+      fetchImpl: async (url, init) => {
+        calls.push({ url, init });
+        return { ok: true, status: 200, json: async () => ({ ok: true }) };
+      },
+    });
+    assert.equal(result.ok, true);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].init.headers["Content-Profile"], expectedProfile);
+  }
+});
 
 test("board and moderation RPC config names the direct master runtime", () => {
   const config = _internals.getBoardModerationRpcConfig({

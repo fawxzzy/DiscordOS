@@ -1,5 +1,6 @@
 const DEFAULT_BASE_URL = "https://nwexsktuuenfdegzrbut.supabase.co";
 const { buildSupabaseElevatedHeaders } = require("./supabase-api-key-headers");
+const { contentProfileForDirectRpc } = require("./discordos-supabase-service-rpc");
 const DEFAULT_EXPECTED_SCHEDULE_NAME = "vercel-daily-runtime-health";
 const DEFAULT_MAX_AGE_HOURS = 30;
 
@@ -62,6 +63,9 @@ async function fetchCronAuditStatus({ supabaseUrl, serviceRoleKey, fetchImpl = f
     method: "POST",
     headers: {
       ...buildSupabaseElevatedHeaders(serviceRoleKey),
+      ...(contentProfileForDirectRpc(supabaseUrl, "discordos_get_runtime_health_cron_run_status") === null
+        ? {}
+        : { "Content-Profile": "discordos_api" }),
       "Content-Type": "application/json",
       Accept: "application/json",
     },
