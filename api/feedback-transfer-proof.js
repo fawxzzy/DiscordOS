@@ -35,7 +35,7 @@ function parityChecksForRow(row) {
 }
 
 async function persistProofRow(row, writerConfig) {
-  if (writerConfig.serviceRoleConfigured) {
+  if (writerConfig.directPersistAvailable) {
     return persistInternals.insertFeedbackReport(row, {
       supabaseUrl: process.env.DISCORDOS_SUPABASE_URL,
       serviceRoleKey: process.env.DISCORDOS_SUPABASE_SERVICE_ROLE_KEY,
@@ -129,14 +129,14 @@ module.exports = async function feedbackTransferProof(req, res) {
       shadowTrafficTransferProved: false,
       liveTrafficMoved: false,
       rollbackExecutionProved: false,
-      persistenceRuntime: config.writerConfig.serviceRoleConfigured ? "vercel-env-service-role" : "supabase-edge-function",
+      persistenceRuntime: config.writerConfig.transport,
       databaseStatus: persisted.status,
       databaseErrorCode: persisted.code,
       generatedAt: new Date().toISOString(),
     });
   }
 
-  const row = config.writerConfig.serviceRoleConfigured ? persisted.row : persisted.payload.row;
+  const row = config.writerConfig.directPersistAvailable ? persisted.row : persisted.payload.row;
   const parityChecks = parityChecksForRow(row);
   const shadowWorkflowParityProved = Object.values(parityChecks).every(Boolean);
 
@@ -144,7 +144,7 @@ module.exports = async function feedbackTransferProof(req, res) {
     ok: true,
     service: "discordos-feedback-transfer-proof",
     persisted: true,
-    persistenceRuntime: config.writerConfig.serviceRoleConfigured ? "vercel-env-service-role" : "supabase-edge-function",
+    persistenceRuntime: config.writerConfig.transport,
     writerMode: config.activationStatus.writerMode,
     trafficTransferMode: config.activationStatus.trafficTransferMode,
     rollbackMode: config.activationStatus.rollbackMode,

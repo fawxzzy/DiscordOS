@@ -140,6 +140,17 @@ function edgeReadinessUrl(supabaseUrl) {
 }
 
 async function getEdgeServiceRoleStatus({ supabaseUrl, projectRef, anonKey, fetchImpl = fetch }) {
+  if (projectRef === MASTER_SUPABASE_REF) {
+    return {
+      configured: false,
+      reachable: false,
+      keyPresent: hasValue(anonKey),
+      probeOk: false,
+      projectRefMatches: true,
+      required: false,
+      reason: "edge_probe_not_required_for_master",
+    };
+  }
   if (!hasValue(supabaseUrl) || !hasValue(projectRef) || !hasValue(anonKey)) {
     return {
       configured: false,
@@ -272,6 +283,7 @@ module.exports = async function readiness(req, res) {
   });
   const activationGuardStatus = activationInternals.getActivationGuardStatus();
   const serviceRoleConfigured = directServiceRoleStatus.configured || edgeServiceRoleStatus.configured;
+  const masterDirectRuntime = configuredProjectRef === MASTER_SUPABASE_REF && directServiceRoleStatus.configured;
 
   return res.status(200).json({
     ok: true,
@@ -280,6 +292,13 @@ module.exports = async function readiness(req, res) {
     supabaseProjectRefConfigured: isAllowedSupabaseProjectRef(configuredProjectRef),
     supabaseUrlConfigured: hasValue(configuredSupabaseUrl),
     serviceRoleConfigured,
+    supabaseRuntimePath: masterDirectRuntime
+      ? "master_direct_service_role"
+      : directServiceRoleStatus.configured
+        ? "legacy_direct_service_role"
+        : edgeServiceRoleStatus.configured
+          ? "legacy_edge_fallback"
+          : "none",
     serviceRoleRuntime: directServiceRoleStatus.configured
       ? "vercel-env"
       : edgeServiceRoleStatus.configured
@@ -299,6 +318,7 @@ module.exports = async function readiness(req, res) {
     edgeServiceRoleProbeOk: edgeServiceRoleStatus.probeOk,
     edgeServiceRoleProjectRefMatches: edgeServiceRoleStatus.projectRefMatches || false,
     edgeServiceRoleReason: edgeServiceRoleStatus.reason,
+    edgeServiceRoleRequired: edgeServiceRoleStatus.required !== false,
     discordBotTokenConfigured: discordBotStatus.tokenPresent,
     discordBotTokenValid: discordBotStatus.configured,
     discordBotTokenPresent: discordBotStatus.tokenPresent,

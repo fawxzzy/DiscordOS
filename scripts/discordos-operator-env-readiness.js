@@ -76,18 +76,22 @@ function classifyOptionalChannelId(value, invalidReason) {
   };
 }
 
-function classifyOptionalMemberLinkConfig(env = process.env) {
+function classifyMemberLinkConfig(env = process.env) {
+  const dedicatedConfigured = Object.hasOwn(env, "DISCORDOS_MEMBER_LINK_SUPABASE_URL")
+    || Object.hasOwn(env, "DISCORDOS_MEMBER_LINK_SUPABASE_SERVICE_ROLE_KEY");
   const url = classifyHttpsUrl(
-    env.DISCORDOS_MEMBER_LINK_SUPABASE_URL || env.DISCORDOS_SUPABASE_URL,
+    dedicatedConfigured ? env.DISCORDOS_MEMBER_LINK_SUPABASE_URL : env.DISCORDOS_SUPABASE_URL,
     "discord_member_link_supabase_url_missing",
     "discord_member_link_supabase_url_shape_invalid"
   );
   const serviceRole = classifySecretPresence(
-    env.DISCORDOS_MEMBER_LINK_SUPABASE_SERVICE_ROLE_KEY || env.DISCORDOS_SUPABASE_SERVICE_ROLE_KEY,
+    dedicatedConfigured
+      ? env.DISCORDOS_MEMBER_LINK_SUPABASE_SERVICE_ROLE_KEY
+      : env.DISCORDOS_SUPABASE_SERVICE_ROLE_KEY,
     "discord_member_link_service_role_missing"
   );
   const anyPresent = url.present || serviceRole.present;
-  const ready = !anyPresent || (url.shapeValid && serviceRole.present);
+  const ready = url.shapeValid && serviceRole.present;
 
   return {
     configured: anyPresent,
@@ -136,14 +140,15 @@ function classifyOperatorEnvReadiness(env = process.env) {
     env.DISCORDOS_UNVERIFIED_ROLE_ID || env.DISCORD_UNVERIFIED_ROLE_ID,
     "fitness_verify_unverified_role_id_shape_invalid"
   );
-  const memberLink = classifyOptionalMemberLinkConfig(env);
+  const memberLink = classifyMemberLinkConfig(env);
   const updatesTargetReady = updatesChannel.shapeValid && botToken.present;
   const alertTargetReady = alertWebhook.shapeValid || (alertChannel.shapeValid && botToken.present);
   const fitnessVerifyReady = fitnessVerifyEndpoint.shapeValid
     && fitnessVerifySecret.present
     && fitnessVerifyVerifiedRole.shapeValid
     && fitnessVerifyUnverifiedRole.shapeValid
-    && botToken.present;
+    && botToken.present
+    && memberLink.ready;
   const reasonCodes = [
     ...(updatesTargetReady ? [] : updatesChannel.reasonCodes),
     ...(updatesTargetReady || botToken.present ? [] : botToken.reasonCodes),
@@ -154,6 +159,7 @@ function classifyOperatorEnvReadiness(env = process.env) {
     ...(fitnessVerifyReady ? [] : fitnessVerifyVerifiedRole.reasonCodes),
     ...(fitnessVerifyReady ? [] : fitnessVerifyUnverifiedRole.reasonCodes),
     ...(fitnessVerifyReady || botToken.present ? [] : botToken.reasonCodes),
+    ...(memberLink.ready ? [] : memberLink.reasonCodes),
   ];
   const ok = updatesTargetReady && alertTargetReady && fitnessVerifyReady;
 
@@ -298,31 +304,18 @@ function buildOperatorEnvReadinessPlan(result) {
       nextAction: "load_discordos_bot_token",
     }),
     buildReadinessCheck({
-      id: "discord_member_link_optional_storage",
+      id: "discord_member_link_storage",
       scope: "fitness_verify",
-      ready: true,
-      requiredFor: ["fitness_verify_member_link_optional_write"],
-      reasonCodes: [],
-      nextAction: null,
+      ready: result.fitnessVerify.memberLinkReady,
+      requiredFor: ["fitness_verify_member_link_write"],
+      reasonCodes: result.fitnessVerify.memberLinkReady
+        ? []
+        : result.reasonCodes.filter((code) => code.startsWith("discord_member_link_")),
+      nextAction: "configure_discordos_member_link_storage",
     }),
   ];
   const blockedChecks = checks.filter((check) => !check.ready);
-  const advisoryChecks = [
-    {
-      id: "discord_member_link_optional_storage",
-      scope: "fitness_verify",
-      ready: result.fitnessVerify.memberLinkReady,
-      requiredFor: ["fitness_verify_member_link_optional_write"],
-      reasonCodes: result.fitnessVerify.memberLinkReady
-        ? []
-        : result.fitnessVerify.memberLinkConfigured
-          ? ["discord_member_link_service_role_missing"]
-          : [],
-      nextAction: result.fitnessVerify.memberLinkReady || !result.fitnessVerify.memberLinkConfigured
-        ? null
-        : "configure_discordos_member_link_storage_or_leave_all_member_link_env_unset",
-    },
-  ];
+  const advisoryChecks = [];
   const advisoryNextActions = advisoryChecks
     .map((check) => check.nextAction)
     .filter(Boolean);

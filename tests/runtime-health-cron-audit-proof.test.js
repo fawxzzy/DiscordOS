@@ -61,6 +61,7 @@ test("cron audit proof fetches service-role-only status RPC", async () => {
       assert.equal(init.method, "POST");
       assert.equal(init.headers.apikey, "service-role");
       assert.equal(init.headers.Authorization, "Bearer service-role");
+      assert.equal(init.headers["Content-Profile"], undefined);
       assert.equal(init.body, "{}");
       return response({ totalCount: 0 });
     },
@@ -68,6 +69,26 @@ test("cron audit proof fetches service-role-only status RPC", async () => {
 
   assert.equal(result.ok, true);
   assert.equal(result.status, 200);
+});
+
+test("cron audit master readback selects discordos_api while legacy keeps its schema", async () => {
+  for (const [supabaseUrl, expectedProfile] of [
+    ["https://bxtcuhkotumitoqtrcej.supabase.co", "discordos_api"],
+    ["https://nwexsktuuenfdegzrbut.supabase.co", undefined],
+  ]) {
+    const calls = [];
+    const result = await _internals.fetchCronAuditStatus({
+      supabaseUrl,
+      serviceRoleKey: "synthetic-service-key",
+      fetchImpl: async (url, init) => {
+        calls.push({ url, init });
+        return response({ totalCount: 0 });
+      },
+    });
+    assert.equal(result.ok, true);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].init.headers["Content-Profile"], expectedProfile);
+  }
 });
 
 test("cron audit proof passes with fresh latest passing run", () => {

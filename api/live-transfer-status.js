@@ -1,7 +1,25 @@
 const { _internals: activationInternals } = require("./activation");
-const { buildSupabasePublicHeaders } = require("../scripts/supabase-api-key-headers");
+const {
+  buildSupabaseElevatedHeaders,
+  buildSupabasePublicHeaders,
+} = require("../scripts/supabase-api-key-headers");
 
 const LIVE_TRANSFER_STATUS_FUNCTION = "discordos-live-transfer-status";
+const LIVE_TRANSFER_STATUS_RPC = "discordos_get_live_transfer_status";
+const LEGACY_SUPABASE_REF = "nwexsktuuenfdegzrbut";
+const MASTER_SUPABASE_REF = "bxtcuhkotumitoqtrcej";
+const PUBLIC_STATUS_ERROR_CODES = new Set([
+  "DIRECT_LIVE_TRANSFER_STATUS_FAILED",
+  "EDGE_LIVE_TRANSFER_STATUS_FAILED",
+  "LIVE_TRANSFER_STATUS_INVALID_SHAPE",
+  "LIVE_TRANSFER_STATUS_TRANSPORT_FAILED",
+]);
+const PUBLIC_COUNT_FIELDS = [
+  "fitnessLiveTransferCount",
+  "humanFitnessLiveTransferCount",
+  "nonProofFitnessLiveTransferCount",
+  "humanNonProofFitnessLiveTransferCount",
+];
 
 function hasValue(value) {
   return typeof value === "string" && value.trim().length > 0;
@@ -13,6 +31,10 @@ function cleanUrl(value) {
 
 function getLiveTransferStatusConfig(env = process.env) {
   const supabaseUrl = hasValue(env.DISCORDOS_SUPABASE_URL) ? cleanUrl(env.DISCORDOS_SUPABASE_URL.trim()) : null;
+  const projectRef = hasValue(env.DISCORDOS_SUPABASE_PROJECT_REF) ? env.DISCORDOS_SUPABASE_PROJECT_REF.trim() : null;
+  const serviceRoleKey = hasValue(env.DISCORDOS_SUPABASE_SERVICE_ROLE_KEY)
+    ? env.DISCORDOS_SUPABASE_SERVICE_ROLE_KEY.trim()
+    : null;
   const anonKey = hasValue(env.DISCORDOS_SUPABASE_ANON_KEY) ? env.DISCORDOS_SUPABASE_ANON_KEY.trim() : null;
   const blockedReasons = [];
 
@@ -20,16 +42,75 @@ function getLiveTransferStatusConfig(env = process.env) {
     blockedReasons.push("missing_supabase_url");
   }
 
-  if (anonKey === null) {
-    blockedReasons.push("missing_supabase_anon_key");
+  if (projectRef === null) {
+    blockedReasons.push("missing_supabase_project_ref");
+  }
+
+  const expectedUrl = projectRef === null ? null : `https://${projectRef}.supabase.co`;
+  const projectBindingMatches = supabaseUrl !== null && expectedUrl !== null && supabaseUrl === expectedUrl;
+  if (supabaseUrl !== null && projectRef !== null && !projectBindingMatches) {
+    blockedReasons.push("supabase_project_binding_mismatch");
+  }
+
+  const masterBound = projectRef === MASTER_SUPABASE_REF && projectBindingMatches;
+  const legacyBound = projectRef === LEGACY_SUPABASE_REF && projectBindingMatches;
+  const directRpcAvailable = (masterBound || legacyBound) && serviceRoleKey !== null;
+  const edgeFallbackAvailable = legacyBound && anonKey !== null;
+  const transport = directRpcAvailable
+    ? "direct_service_role_rpc"
+    : edgeFallbackAvailable
+      ? "legacy_edge_fallback"
+      : "none";
+
+  if (masterBound && serviceRoleKey === null) {
+    blockedReasons.push("master_direct_service_role_required");
+  } else if (!directRpcAvailable && !edgeFallbackAvailable && supabaseUrl !== null && projectRef !== null && projectBindingMatches) {
+    blockedReasons.push("missing_live_transfer_status_credential");
   }
 
   return {
     supabaseUrl,
+    projectRef,
+    serviceRoleKey,
     anonKey,
+    masterBound,
+    legacyBound,
+    projectBindingMatches,
+    transport,
+    directRpcUrl: supabaseUrl === null ? null : `${supabaseUrl}/rest/v1/rpc/${LIVE_TRANSFER_STATUS_RPC}`,
     edgeFunctionUrl: supabaseUrl === null ? null : `${supabaseUrl}/functions/v1/${LIVE_TRANSFER_STATUS_FUNCTION}`,
-    canCheckLiveTransferStatus: supabaseUrl !== null && anonKey !== null,
+    canCheckLiveTransferStatus: blockedReasons.length === 0 && transport !== "none",
     blockedReasons,
+  };
+}
+
+async function invokeDirectLiveTransferStatus({ supabaseUrl, serviceRoleKey, schema = null, fetchImpl = fetch }) {
+  const response = await fetchImpl(`${cleanUrl(supabaseUrl)}/rest/v1/rpc/${LIVE_TRANSFER_STATUS_RPC}`, {
+    method: "POST",
+    headers: {
+      ...buildSupabaseElevatedHeaders(serviceRoleKey),
+      ...(schema === null ? {} : { "Content-Profile": schema }),
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: "{}",
+  });
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok || payload === null || typeof payload !== "object" || Array.isArray(payload)) {
+    return {
+      ok: false,
+      status: response.status,
+      code: "DIRECT_LIVE_TRANSFER_STATUS_FAILED",
+      transport: "direct_service_role_rpc",
+    };
+  }
+
+  return {
+    ok: true,
+    status: response.status,
+    payload,
+    transport: "direct_service_role_rpc",
   };
 }
 
@@ -47,8 +128,7 @@ async function invokeEdgeLiveTransferStatus({ supabaseUrl, anonKey, fetchImpl = 
     return {
       ok: false,
       status: response.status,
-      code: typeof payload?.error === "string" ? payload.error : "EDGE_LIVE_TRANSFER_STATUS_FAILED",
-      payload,
+      code: "EDGE_LIVE_TRANSFER_STATUS_FAILED",
     };
   }
 
@@ -56,10 +136,69 @@ async function invokeEdgeLiveTransferStatus({ supabaseUrl, anonKey, fetchImpl = 
     ok: true,
     status: response.status,
     payload,
+    transport: "legacy_edge_fallback",
   };
 }
 
+async function invokeLiveTransferStatus(config, { fetchImpl = fetch } = {}) {
+  if (!config?.canCheckLiveTransferStatus) {
+    return {
+      ok: false,
+      status: null,
+      code: "LIVE_TRANSFER_STATUS_NOT_CONFIGURED",
+      transport: config?.transport || "none",
+    };
+  }
+
+  try {
+    const result = config.transport === "direct_service_role_rpc"
+      ? await invokeDirectLiveTransferStatus({
+        supabaseUrl: config.supabaseUrl,
+        serviceRoleKey: config.serviceRoleKey,
+        schema: config.masterBound ? "fitness" : null,
+        fetchImpl,
+      })
+      : await invokeEdgeLiveTransferStatus({
+        supabaseUrl: config.supabaseUrl,
+        anonKey: config.anonKey,
+        fetchImpl,
+      });
+    if (result.ok && publicLiveTransferStatus(result.payload) === null) {
+      return {
+        ok: false,
+        status: result.status,
+        code: "LIVE_TRANSFER_STATUS_INVALID_SHAPE",
+        transport: result.transport,
+      };
+    }
+    return result;
+  } catch {
+    return {
+      ok: false,
+      status: null,
+      code: "LIVE_TRANSFER_STATUS_TRANSPORT_FAILED",
+      transport: config.transport,
+    };
+  }
+}
+
+function publicLiveTransferStatus(payload) {
+  if (payload === null || typeof payload !== "object" || Array.isArray(payload)
+    || typeof payload.liveSignedTransferReady !== "boolean") {
+    return null;
+  }
+
+  const summary = { liveSignedTransferReady: payload.liveSignedTransferReady };
+  for (const field of PUBLIC_COUNT_FIELDS) {
+    if (Number.isSafeInteger(payload[field]) && payload[field] >= 0) {
+      summary[field] = payload[field];
+    }
+  }
+  return summary;
+}
+
 module.exports = async function liveTransferStatus(req, res) {
+  res.setHeader("Cache-Control", "no-store");
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).json({
@@ -81,29 +220,42 @@ module.exports = async function liveTransferStatus(req, res) {
     });
   }
 
-  const status = await invokeEdgeLiveTransferStatus({
-    supabaseUrl: config.supabaseUrl,
-    anonKey: config.anonKey,
-  });
+  const status = await invokeLiveTransferStatus(config);
 
   if (!status.ok) {
     return res.status(502).json({
       ok: false,
       service: "discordos-live-transfer-status",
-      error: "EDGE_LIVE_TRANSFER_STATUS_FAILED",
-      edgeStatus: status.status,
-      edgeErrorCode: status.code,
+      error: "LIVE_TRANSFER_STATUS_PROBE_FAILED",
+      databaseStatus: status.status,
+      databaseErrorCode: PUBLIC_STATUS_ERROR_CODES.has(status.code)
+        ? status.code
+        : "LIVE_TRANSFER_STATUS_PROBE_FAILED",
+      statusRuntime: status.transport,
       activation: activationStatus,
       generatedAt: new Date().toISOString(),
     });
   }
 
-  const liveSignedTransferReady = status.payload.liveSignedTransferReady === true;
+  const publicStatus = publicLiveTransferStatus(status.payload);
+  if (publicStatus === null) {
+    return res.status(502).json({
+      ok: false,
+      service: "discordos-live-transfer-status",
+      error: "LIVE_TRANSFER_STATUS_INVALID_SHAPE",
+      statusRuntime: status.transport,
+      activation: activationStatus,
+      generatedAt: new Date().toISOString(),
+    });
+  }
+
+  const liveSignedTransferReady = publicStatus.liveSignedTransferReady;
 
   return res.status(200).json({
     ok: true,
     service: "discordos-live-transfer-status",
     runtime: "vercel-serverless-function",
+    statusRuntime: status.transport,
     liveSignedTransferReady,
     liveWorkflowParityProved: activationStatus.liveWorkflowParityProved,
     liveTrafficProofIdPresent: activationStatus.liveTrafficProofIdPresent,
@@ -112,13 +264,20 @@ module.exports = async function liveTransferStatus(req, res) {
     liveCutover: activationStatus.liveCutover,
     fitnessTrafficMoved: activationStatus.fitnessTrafficMoved,
     activationBlockedReasons: activationStatus.blockedReasons,
-    edge: status.payload,
+    status: publicStatus,
+    edge: status.transport === "legacy_edge_fallback" ? publicStatus : null,
     generatedAt: new Date().toISOString(),
   });
 };
 
 module.exports._internals = {
   LIVE_TRANSFER_STATUS_FUNCTION,
+  LIVE_TRANSFER_STATUS_RPC,
+  LEGACY_SUPABASE_REF,
+  MASTER_SUPABASE_REF,
   getLiveTransferStatusConfig,
+  invokeDirectLiveTransferStatus,
   invokeEdgeLiveTransferStatus,
+  invokeLiveTransferStatus,
+  publicLiveTransferStatus,
 };

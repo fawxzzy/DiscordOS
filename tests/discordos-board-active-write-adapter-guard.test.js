@@ -103,7 +103,8 @@ test("board active write adapter guard executes storage RPC only when applied an
     apply: true,
     env: {
       DISCORDOS_BOARD_ACTIVE_WRITE_ADAPTER: "enabled",
-      DISCORDOS_SUPABASE_URL: "https://example.supabase.co",
+      DISCORDOS_SUPABASE_PROJECT_REF: "bxtcuhkotumitoqtrcej",
+      DISCORDOS_SUPABASE_URL: "https://bxtcuhkotumitoqtrcej.supabase.co",
       DISCORDOS_SUPABASE_SERVICE_ROLE_KEY: "service-role",
     },
     fetchImpl: async (url, init) => {
@@ -120,7 +121,7 @@ test("board active write adapter guard executes storage RPC only when applied an
   assert.equal(result.executesStorageWrite, true);
   assert.equal(result.adapterStatus, "storage_write_executed");
   assert.equal(result.storageWriteResult.status, "written");
-  assert.equal(calls[0].url, "https://example.supabase.co/rest/v1/rpc/discordos_upsert_board_card");
+  assert.equal(calls[0].url, "https://bxtcuhkotumitoqtrcej.supabase.co/rest/v1/rpc/discordos_upsert_board_card");
   assert.equal(JSON.parse(calls[0].init.body).payload.card_id, "board-1");
   assert.equal(calls[0].init.headers.Authorization, "Bearer service-role");
 });
