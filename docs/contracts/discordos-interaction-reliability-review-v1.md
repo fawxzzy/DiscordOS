@@ -15,9 +15,17 @@ readbacks, and accounting from the resulting operation trace; it does not
 declare a scenario healthy from preassembled terminal objects.
 
 Fixture request counts are the sum of the explicit fixture reads and writes for
-each scenario. The hosted GET is counted separately from those logical fixture
-operations, so the receipt does not conflate one HTTP request with its bounded
-in-memory transition proof.
+each scenario. The CLI and default builder are always `local_fixture`, including
+when supplied Preview/Production identity flags or Vercel environment variables.
+They report zero hosted requests and leave exact hosted execution UNKNOWN. A
+successful local `ok`/exit code establishes fixture validity only; its status is
+`interaction_reliability_fixture_ready`.
+
+Only the GET handler selects the internal `hosted_get` execution surface. It
+reports one received hosted GET when Preview/Production runtime metadata is
+present, separately from logical fixture operations. That is a server-reported
+count, not an independently observed network request. Execution surface is bound
+into the review digest, so local and handler results cannot share that digest.
 
 ## Correlation contract
 
@@ -50,11 +58,14 @@ adoption of this review contract. Adoption by the existing production
 message-command path is also UNKNOWN: the fixed canary does not import, invoke,
 or mutate that path.
 
-This still satisfies the selector's owner-side hosted reliability-review
-admission because the exact candidate revision executes the complete five-case
-contract on the authorized safe hosted test surface. It is evidence for the
-interaction correlation contract, not evidence that production traffic already
-uses that contract.
+Hosted reliability-review admission requires an independently observed response
+from the exact authorized deployment URL, with its source revision and deployment
+ID compared against provider evidence. A supplied identity or local fixture
+receipt cannot satisfy this gate. Even a handler result leaves
+`independent_transport_and_deployment_binding` UNKNOWN and marks identity as
+`independentlyVerified: false`; the release collector must record that separate
+observation. This evidence concerns the interaction correlation contract, not
+production traffic adoption or migration runtime acceptance.
 
 ## Hosted route
 
@@ -64,8 +75,9 @@ mounted on the existing read-only runtime-health function so the review does
 not increase the Vercel serverless-function denominator. Other methods return
 `405`. The surface does not accept caller-controlled scenario input and cannot
 address product cards. Ordinary `/api/runtime-health` behavior is unchanged.
+The handler uses runtime environment identity, never caller query identity.
 Hosted proof fails closed unless the runtime provides an exact 40-character
-Git source revision and, for Preview or Production, a deployment ID. An
+Git source revision, Preview/Production environment, and a deployment ID. An
 identity failure returns a failed review and removes exact-head execution from
 the proven scope. The review digest binds both the source revision and exact
 deployment ID so a receipt cannot be replayed as evidence for another hosted

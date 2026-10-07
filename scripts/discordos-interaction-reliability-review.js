@@ -23,7 +23,7 @@ const UNKNOWN_SCOPE = [
   "production_message_command_path_adoption",
   "production_adoption_of_this_review_contract",
 ];
-const ADMISSION_RATIONALE = "Owner-side hosted execution proves the reliability contract on an exact candidate head through the selector-authorized safe test surface; it does not claim production-path adoption.";
+const ADMISSION_RATIONALE = "The fixed scenarios prove the fixture correlation contract. Hosted admission requires an independently observed GET bound to the exact deployment and source revision; this output does not claim production-path adoption.";
 
 function canonicalValue(value) {
   if (Array.isArray(value)) {
@@ -647,7 +647,10 @@ function buildInteractionReliabilityReview({
   runtimeUrl = DEFAULT_RUNTIME_URL,
   environment = "local",
   generatedAt = new Date().toISOString(),
-} = {}) {
+} = {}, { executionSurface = "local_fixture" } = {}) {
+  if (!["local_fixture", "hosted_get"].includes(executionSurface)) {
+    throw new Error("unsupported_execution_surface");
+  }
   const successfulExecution = executeSuccessfulScenario(sourceRevision);
   const successful = successfulExecution.scenario;
   const scenarios = [
@@ -662,29 +665,39 @@ function buildInteractionReliabilityReview({
   const fixtureWrites = scenarios.reduce((total, scenario) => total + scenario.accounting.fixtureWrites, 0);
   const validationsExact = scenarios.every((scenario) => scenario.validation.ok);
   const hostedEnvironment = environment === "preview" || environment === "production";
+  const hostedHandler = executionSurface === "hosted_get";
+  const hostedExecution = hostedHandler && hostedEnvironment;
   const identityProof = {
     sourceRevisionExact: isExactGitRevision(sourceRevision),
     deploymentIdPresent: hasValue(deploymentId),
     hostedEnvironment,
+    provenance: hostedHandler ? "runtime_reported_identity" : "caller_supplied_fixture_identity",
+    independentlyVerified: false,
   };
   identityProof.exact = identityProof.sourceRevisionExact
-    && (!hostedEnvironment || identityProof.deploymentIdPresent);
+    && (!hostedEnvironment || identityProof.deploymentIdPresent)
+    && (!hostedHandler || hostedEnvironment);
   identityProof.blockedReasons = [
     ...(identityProof.sourceRevisionExact ? [] : ["source_revision_not_exact_git_sha"]),
     ...(!hostedEnvironment || identityProof.deploymentIdPresent ? [] : ["hosted_deployment_id_missing"]),
+    ...(!hostedHandler || hostedEnvironment ? [] : ["hosted_environment_missing"]),
   ];
+  const hostedCandidateReported = hostedExecution && identityProof.exact && validationsExact;
   const proofScope = {
-    proven: identityProof.exact
+    proven: hostedCandidateReported
       ? PROVEN_SCOPE
       : PROVEN_SCOPE.filter((item) => item !== "exact_candidate_head_executes_the_fixed_hosted_canary"),
-    unknown: identityProof.exact
-      ? UNKNOWN_SCOPE
-      : [...UNKNOWN_SCOPE, "exact_candidate_head_execution"],
+    unknown: [
+      ...UNKNOWN_SCOPE,
+      "independent_transport_and_deployment_binding",
+      ...(hostedCandidateReported ? [] : ["exact_candidate_head_execution"]),
+    ],
     admissionRationale: ADMISSION_RATIONALE,
   };
   const stablePayload = {
     schemaVersion: SCHEMA_VERSION,
     sourceRevision,
+    executionSurface,
     deploymentIdentity: {
       deploymentId,
       environment,
@@ -699,7 +712,9 @@ function buildInteractionReliabilityReview({
   return {
     schemaVersion: SCHEMA_VERSION,
     ok: reviewReady,
-    status: reviewReady ? "interaction_reliability_review_ready" : "interaction_reliability_review_failed",
+    status: reviewReady
+      ? hostedHandler ? "interaction_reliability_review_ready" : "interaction_reliability_fixture_ready"
+      : "interaction_reliability_review_failed",
     generatedAt,
     reviewId: stableId("dirr", sourceRevision, SCHEMA_VERSION),
     reviewDigest: sha256(canonicalJson(stablePayload)),
@@ -708,7 +723,7 @@ function buildInteractionReliabilityReview({
       deploymentId,
       url: runtimeUrl,
       environment,
-      surface: "fixed_test_owned_hosted_canary",
+      surface: hostedHandler ? "fixed_test_owned_hosted_canary" : "local_fixture",
       identityProof,
       productionDeploymentPerformed: false,
     },
@@ -728,13 +743,11 @@ function buildInteractionReliabilityReview({
       recovered: ["interrupted-restarted"],
       stale: ["stale-receipt"],
       blocked: ["failed", "stale-receipt"],
-      unknown: [
-        ...UNKNOWN_SCOPE,
-      ],
+      unknown: proofScope.unknown,
     },
     proofScope,
     accounting: {
-      hostedCanaryRequests: 1,
+      hostedCanaryRequests: hostedExecution ? 1 : 0,
       fixtureRequests,
       fixtureReads,
       fixtureWrites,
@@ -772,6 +785,9 @@ function renderMarkdown(review) {
     `- review digest: \`${review.reviewDigest}\``,
     `- source revision: \`${review.runtime.sourceRevision}\``,
     `- deployment id: \`${review.runtime.deploymentId || "unknown"}\``,
+    `- execution surface: \`${review.runtime.surface}\``,
+    `- hosted requests reported: \`${review.accounting.hostedCanaryRequests}\``,
+    `- independent transport/deployment verification: \`required separately\``,
     `- external writes: \`${review.accounting.externalWrites}\``,
     "",
     "## Scenario Matrix",

@@ -140,7 +140,9 @@ module.exports = async function runtimeHealth(req, res) {
   }
 
   if (isInteractionReliabilityReviewRequest(req)) {
-    const review = interactionReviewInternals.buildInteractionReliabilityReview(runtimeIdentity());
+    const review = interactionReviewInternals.buildInteractionReliabilityReview(
+      runtimeIdentity(), { executionSurface: "hosted_get" },
+    );
     res.setHeader("Cache-Control", "no-store");
     res.setHeader("X-DiscordOS-Canary", "interaction-reliability-review-v1");
     res.setHeader("X-DiscordOS-Review-Id", review.reviewId);

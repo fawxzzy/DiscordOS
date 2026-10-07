@@ -1,5 +1,7 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
+const { spawnSync } = require("node:child_process");
+const path = require("node:path");
 
 const handler = require("../api/runtime-health");
 const {
@@ -36,6 +38,77 @@ function responseRecorder() {
     },
   };
 }
+
+test("local fixture identity cannot establish hosted execution", () => {
+  const review = buildReview();
+  assert.equal(review.ok, true);
+  assert.equal(review.status, "interaction_reliability_fixture_ready");
+  assert.equal(review.runtime.surface, "local_fixture");
+  assert.equal(review.runtime.identityProof.provenance, "caller_supplied_fixture_identity");
+  assert.equal(review.runtime.identityProof.independentlyVerified, false);
+  assert.equal(review.accounting.hostedCanaryRequests, 0);
+  assert(!review.proofScope.proven.includes("exact_candidate_head_executes_the_fixed_hosted_canary"));
+  assert(review.proofScope.unknown.includes("exact_candidate_head_execution"));
+  assert.deepEqual(review.statusBoundaries.unknown, review.proofScope.unknown);
+  assert.match(_internals.renderMarkdown(review), /execution surface: `local_fixture`/);
+});
+
+test("CLI hosted-looking arguments and environment remain offline fixture evidence", () => {
+  for (const useEnvironment of [false, true]) {
+    const syntheticEnv = {
+      ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}),
+      ...(useEnvironment ? {
+        VERCEL_GIT_COMMIT_SHA: REVISION,
+        VERCEL_DEPLOYMENT_ID: "dpl_synthetic_cli",
+        VERCEL_ENV: "production",
+        VERCEL_URL: "synthetic.example.test",
+      } : {}),
+    };
+    const args = useEnvironment ? [] : [
+      "--source-revision", REVISION, "--deployment-id", "dpl_synthetic_cli",
+      "--environment", "preview", "--runtime-url", "https://synthetic.example.test",
+    ];
+    const result = spawnSync(process.execPath, [
+      path.join(__dirname, "../scripts/discordos-interaction-reliability-review.js"),
+      "--json", ...args,
+    ], { encoding: "utf8", env: syntheticEnv });
+    assert.equal(result.status, 0, result.stderr);
+    const review = JSON.parse(result.stdout);
+    assert.equal(review.ok, true);
+    assert.equal(review.runtime.surface, "local_fixture");
+    assert.equal(review.accounting.hostedCanaryRequests, 0);
+    assert.equal(review.accounting.externalRequests, 0);
+    assert(!review.proofScope.proven.includes("exact_candidate_head_executes_the_fixed_hosted_canary"));
+    assert(review.proofScope.unknown.includes("exact_candidate_head_execution"));
+  }
+});
+
+test("execution surface is bound into the digest independently of supplied identity", () => {
+  const identity = {
+    sourceRevision: REVISION, deploymentId: "dpl_test_owned", environment: "preview",
+  };
+  const local = _internals.buildInteractionReliabilityReview(identity);
+  const hosted = _internals.buildInteractionReliabilityReview(identity, { executionSurface: "hosted_get" });
+  assert.notEqual(local.reviewDigest, hosted.reviewDigest);
+  assert.equal(hosted.runtime.identityProof.provenance, "runtime_reported_identity");
+  assert.equal(hosted.runtime.identityProof.independentlyVerified, false);
+  assert(hosted.proofScope.unknown.includes("independent_transport_and_deployment_binding"));
+  assert.throws(() => _internals.buildInteractionReliabilityReview(identity, {
+    executionSurface: "unsupported",
+  }), /unsupported_execution_surface/);
+});
+
+test("hosted handler evidence fails closed without hosted runtime metadata", () => {
+  for (const identity of [
+    { sourceRevision: REVISION, deploymentId: "dpl_test_owned", environment: "local" },
+    { sourceRevision: REVISION, environment: "preview" },
+  ]) {
+    const review = _internals.buildInteractionReliabilityReview(identity, { executionSurface: "hosted_get" });
+    assert.equal(review.ok, false);
+    assert(!review.proofScope.proven.includes("exact_candidate_head_executes_the_fixed_hosted_canary"));
+    assert(review.proofScope.unknown.includes("exact_candidate_head_execution"));
+  }
+});
 
 test("review proves exactly the five frozen scenarios with complete correlation", () => {
   const review = buildReview();
@@ -245,7 +318,10 @@ test("hosted canary endpoint is GET-only and side-effect free", async () => {
 
   const response = responseRecorder();
   try {
-    await handler({ method: "GET", query: { surface: "interaction-reliability-review" } }, response);
+    await handler({ method: "GET", query: {
+      surface: "interaction-reliability-review", sourceRevision: "b".repeat(40),
+      deploymentId: "dpl_query_override", environment: "production",
+    } }, response);
   } finally {
     for (const [key, value] of Object.entries(previous)) {
       if (value === undefined) {
@@ -262,6 +338,14 @@ test("hosted canary endpoint is GET-only and side-effect free", async () => {
   assert.equal(response.headers["x-discordos-review-id"], response.body.reviewId);
   assert.equal(response.headers["x-discordos-review-digest"], response.body.reviewDigest);
   assert.equal(response.body.ok, true);
+  assert.equal(response.body.runtime.sourceRevision, REVISION);
+  assert.equal(response.body.runtime.deploymentId, "dpl_test_owned");
+  assert.equal(response.body.runtime.environment, "preview");
+  assert.equal(response.body.runtime.surface, "fixed_test_owned_hosted_canary");
+  assert.equal(response.body.runtime.identityProof.independentlyVerified, false);
+  assert.equal(response.body.accounting.hostedCanaryRequests, 1);
+  assert(response.body.proofScope.proven.includes("exact_candidate_head_executes_the_fixed_hosted_canary"));
+  assert(response.body.proofScope.unknown.includes("independent_transport_and_deployment_binding"));
   assert.equal(response.body.accounting.externalWrites, 0);
 
   const rejected = responseRecorder();
@@ -327,6 +411,7 @@ test("hosted canary dispatch requires the exact frozen runtime-health selector",
 
 test("CLI arguments reject unsupported or malformed values", () => {
   assert.throws(() => _internals.parseArgs(["--unknown"]), /unsupported_argument/);
+  assert.throws(() => _internals.parseArgs(["--execution-surface", "hosted_get"]), /unsupported_argument/);
   assert.throws(() => _internals.parseArgs(["--generated-at", "not-a-date"]), /invalid_generated_at/);
   const parsed = _internals.parseArgs(["--json", "--source-revision", REVISION]);
   assert.equal(parsed.json, true);
